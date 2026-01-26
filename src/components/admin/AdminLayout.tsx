@@ -6,6 +6,7 @@ import {
   ShoppingCart,
   Palette,
   FolderOpen,
+  Tag,
   LogOut,
   Menu,
   X,
@@ -28,6 +29,7 @@ const navItems = [
   { href: '/admin/commandes', label: 'Commandes', icon: ShoppingCart },
   { href: '/admin/personnalisations', label: 'Personnalisations', icon: Palette },
   { href: '/admin/categories', label: 'Catégories', icon: FolderOpen },
+  { href: '/admin/types', label: 'Types de Produits', icon: Tag },
 ];
 
 const AdminLayout = ({ children, title, breadcrumbs }: AdminLayoutProps) => {

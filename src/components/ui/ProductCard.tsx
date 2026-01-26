@@ -1,9 +1,7 @@
 import { Link } from 'react-router-dom';
-import { Heart, ShoppingBag } from 'lucide-react';
-import { Product } from '@/types/product';
+import { Heart, Eye } from 'lucide-react';
+import { Product, goldTypeLabels } from '@/types/product';
 import { formatPrice } from '@/data/products';
-import { useCart } from '@/contexts/CartContext';
-import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
@@ -14,17 +12,6 @@ interface ProductCardProps {
 }
 
 const ProductCard = ({ product, className }: ProductCardProps) => {
-  const { addToCart } = useCart();
-
-  const handleAddToCart = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (product.inStock) {
-      addToCart(product);
-      toast.success(`${product.name} ajouté au panier`);
-    }
-  };
-
   const getBadgeClass = (badge: string) => {
     switch (badge) {
       case 'new':
@@ -104,16 +91,12 @@ const ProductCard = ({ product, className }: ProductCardProps) => {
           </button>
         </div>
 
-        {/* Add to cart button */}
+        {/* View button */}
         <div className="absolute bottom-0 left-0 right-0 p-4 translate-y-full group-hover:translate-y-0 transition-transform duration-300">
-          <Button
-            onClick={handleAddToCart}
-            disabled={!product.inStock}
-            className="w-full bg-charcoal hover:bg-charcoal/90 text-white font-body uppercase tracking-wider text-sm"
-          >
-            <ShoppingBag className="w-4 h-4 mr-2" />
-            Ajouter au panier
-          </Button>
+          <div className="w-full bg-charcoal hover:bg-charcoal/90 text-white font-body uppercase tracking-wider text-sm py-3 rounded-lg flex items-center justify-center gap-2">
+            <Eye className="w-4 h-4" />
+            Voir le produit
+          </div>
         </div>
       </div>
 
@@ -125,6 +108,11 @@ const ProductCard = ({ product, className }: ProductCardProps) => {
         <p className="font-body text-sm text-muted-foreground line-clamp-2">
           {product.description}
         </p>
+        <div className="flex items-center gap-2 pt-1">
+          <Badge variant="outline" className="font-body text-xs">
+            {goldTypeLabels[product.goldType]}
+          </Badge>
+        </div>
         <div className="flex items-center justify-between pt-2">
           <span className="font-display text-xl text-primary font-semibold">
             {formatPrice(product.price)}

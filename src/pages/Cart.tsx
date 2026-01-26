@@ -4,7 +4,7 @@ import Layout from '@/components/layout/Layout';
 import { Button } from '@/components/ui/button';
 import { useCart } from '@/contexts/CartContext';
 import { formatPrice } from '@/data/products';
-import { cn } from '@/lib/utils';
+import { goldTypeLabels } from '@/types/product';
 
 const Cart = () => {
   const { items, updateQuantity, removeFromCart, getTotal, clearCart } = useCart();
@@ -45,9 +45,9 @@ const Cart = () => {
           <div className="grid lg:grid-cols-3 gap-8">
             {/* Cart Items */}
             <div className="lg:col-span-2 space-y-4">
-              {items.map((item) => (
+              {items.map((item, index) => (
                 <div
-                  key={item.product.id}
+                  key={`${item.product.id}-${item.selectedSize}-${item.selectedGoldType}-${index}`}
                   className="flex gap-4 p-4 bg-card rounded-lg shadow-card"
                 >
                   {/* Image */}
@@ -73,6 +73,16 @@ const Cart = () => {
                     <p className="font-body text-sm text-muted-foreground mt-1">
                       {item.product.category === 'beldi' ? 'Beldi' : 'Moderne'} • {item.product.weight}g
                     </p>
+                    {item.selectedGoldType && (
+                      <p className="font-body text-sm text-muted-foreground">
+                        {goldTypeLabels[item.selectedGoldType]}
+                      </p>
+                    )}
+                    {item.selectedSize && (
+                      <p className="font-body text-sm text-muted-foreground">
+                        Taille: {item.selectedSize}
+                      </p>
+                    )}
                     <p className="font-display text-lg text-primary mt-2">
                       {formatPrice(item.product.price)}
                     </p>
@@ -81,7 +91,7 @@ const Cart = () => {
                   {/* Quantity & Remove */}
                   <div className="flex flex-col items-end justify-between">
                     <button
-                      onClick={() => removeFromCart(item.product.id)}
+                      onClick={() => removeFromCart(item.product.id, item.selectedSize, item.selectedGoldType)}
                       className="p-2 text-muted-foreground hover:text-destructive transition-colors"
                       aria-label="Supprimer"
                     >
@@ -90,14 +100,14 @@ const Cart = () => {
                     
                     <div className="flex items-center border border-border rounded-lg">
                       <button
-                        onClick={() => updateQuantity(item.product.id, item.quantity - 1)}
+                        onClick={() => updateQuantity(item.product.id, item.quantity - 1, item.selectedSize, item.selectedGoldType)}
                         className="p-2 hover:bg-muted transition-colors"
                       >
                         <Minus className="w-4 h-4" />
                       </button>
                       <span className="px-3 font-body">{item.quantity}</span>
                       <button
-                        onClick={() => updateQuantity(item.product.id, item.quantity + 1)}
+                        onClick={() => updateQuantity(item.product.id, item.quantity + 1, item.selectedSize, item.selectedGoldType)}
                         className="p-2 hover:bg-muted transition-colors"
                         disabled={item.quantity >= item.product.stockQuantity}
                       >
@@ -163,7 +173,7 @@ const Cart = () => {
                 </Button>
 
                 <p className="font-body text-xs text-muted-foreground text-center mt-4">
-                  Paiement à la livraison uniquement
+                  Paiement en ligne ou à la livraison
                 </p>
               </div>
             </div>
