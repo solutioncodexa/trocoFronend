@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { products as initialProducts, formatPrice } from '@/data/products';
-import { Product, ProductCategory, ProductType } from '@/types/product';
+import { Product, ProductCategory, ProductType, GoldType, goldTypeLabels, defaultProductTypes, ringSizes, necklaceSizes, braceletSizes } from '@/types/product';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
@@ -26,6 +26,7 @@ const AdminProducts = () => {
     weight: '',
     category: 'beldi' as ProductCategory,
     type: 'bracelet' as ProductType,
+    goldType: 'yellow' as GoldType,
     stockQuantity: '',
     badges: [] as string[],
     images: [] as string[],
@@ -38,6 +39,19 @@ const AdminProducts = () => {
     return matchesSearch && matchesCategory;
   });
 
+  const getAvailableSizes = (type: ProductType) => {
+    switch (type) {
+      case 'ring':
+        return ringSizes;
+      case 'necklace':
+        return necklaceSizes;
+      case 'bracelet':
+        return braceletSizes;
+      default:
+        return undefined;
+    }
+  };
+
   const handleOpenModal = (product?: Product) => {
     if (product) {
       setEditingProduct(product);
@@ -48,6 +62,7 @@ const AdminProducts = () => {
         weight: product.weight.toString(),
         category: product.category,
         type: product.type,
+        goldType: product.goldType,
         stockQuantity: product.stockQuantity.toString(),
         badges: product.badges,
         images: product.images,
@@ -61,6 +76,7 @@ const AdminProducts = () => {
         weight: '',
         category: 'beldi',
         type: 'bracelet',
+        goldType: 'yellow',
         stockQuantity: '',
         badges: [],
         images: [],
@@ -85,6 +101,8 @@ const AdminProducts = () => {
       weight: parseFloat(formData.weight),
       category: formData.category,
       type: formData.type,
+      goldType: formData.goldType,
+      availableSizes: getAvailableSizes(formData.type),
       stockQuantity: parseInt(formData.stockQuantity),
       inStock: parseInt(formData.stockQuantity) > 0,
       badges: formData.badges as ('new' | 'bestseller')[],
@@ -170,6 +188,7 @@ const AdminProducts = () => {
               <tr>
                 <th className="px-4 py-3 text-left font-body text-sm font-medium text-muted-foreground">Produit</th>
                 <th className="px-4 py-3 text-left font-body text-sm font-medium text-muted-foreground">Catégorie</th>
+                <th className="px-4 py-3 text-left font-body text-sm font-medium text-muted-foreground">Type d'or</th>
                 <th className="px-4 py-3 text-left font-body text-sm font-medium text-muted-foreground">Prix</th>
                 <th className="px-4 py-3 text-left font-body text-sm font-medium text-muted-foreground">Stock</th>
                 <th className="px-4 py-3 text-left font-body text-sm font-medium text-muted-foreground">Badges</th>
@@ -197,12 +216,17 @@ const AdminProducts = () => {
                       {product.category === 'beldi' ? 'Beldi' : 'Moderne'}
                     </Badge>
                   </td>
+                  <td className="px-4 py-3">
+                    <Badge variant="outline">
+                      {goldTypeLabels[product.goldType]}
+                    </Badge>
+                  </td>
                   <td className="px-4 py-3 font-body">{formatPrice(product.price)}</td>
                   <td className="px-4 py-3">
                     <span className={cn(
                       'font-body',
                       product.stockQuantity === 0 ? 'text-destructive' : 
-                      product.stockQuantity < 3 ? 'text-yellow-600' : 'text-green-600'
+                      product.stockQuantity < 3 ? 'text-amber-600' : 'text-emerald-600'
                     )}>
                       {product.stockQuantity}
                     </span>
@@ -279,11 +303,9 @@ const AdminProducts = () => {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="bracelet">Bracelet</SelectItem>
-                    <SelectItem value="ring">Bague</SelectItem>
-                    <SelectItem value="necklace">Collier</SelectItem>
-                    <SelectItem value="earrings">Boucles d'oreilles</SelectItem>
-                    <SelectItem value="set">Parure</SelectItem>
+                    {defaultProductTypes.map(type => (
+                      <SelectItem key={type.id} value={type.id}>{type.name}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -301,7 +323,7 @@ const AdminProducts = () => {
               />
             </div>
 
-            <div className="grid md:grid-cols-3 gap-4">
+            <div className="grid md:grid-cols-4 gap-4">
               <div>
                 <Label htmlFor="price">Prix (MAD) *</Label>
                 <Input
@@ -334,6 +356,22 @@ const AdminProducts = () => {
                   required
                   className="mt-1"
                 />
+              </div>
+              <div>
+                <Label>Type d'or *</Label>
+                <Select
+                  value={formData.goldType}
+                  onValueChange={(value: GoldType) => setFormData(prev => ({ ...prev, goldType: value }))}
+                >
+                  <SelectTrigger className="mt-1">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="yellow">Or Jaune</SelectItem>
+                    <SelectItem value="white">Or Blanc</SelectItem>
+                    <SelectItem value="rose">Or Rose</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
 

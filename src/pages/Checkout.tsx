@@ -1,19 +1,23 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Check, ArrowLeft } from 'lucide-react';
+import { Check, ArrowLeft, CreditCard, Banknote } from 'lucide-react';
 import Layout from '@/components/layout/Layout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useCart } from '@/contexts/CartContext';
 import { formatPrice } from '@/data/products';
 import { toast } from 'sonner';
+import { PaymentMethod, goldTypeLabels } from '@/types/product';
+import { cn } from '@/lib/utils';
 
 const Checkout = () => {
   const navigate = useNavigate();
   const { items, getTotal, clearCart } = useCart();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('cash_on_delivery');
   const [formData, setFormData] = useState({
     fullName: '',
     phone: '',
@@ -59,7 +63,10 @@ const Checkout = () => {
           <h1 className="font-display text-3xl mb-4">Commande Confirmée!</h1>
           <p className="font-body text-muted-foreground mb-8">
             Merci pour votre commande, {formData.fullName}! 
-            Nous vous contacterons au {formData.phone} pour confirmer la livraison.
+            {paymentMethod === 'cash_on_delivery' 
+              ? ` Nous vous contacterons au ${formData.phone} pour confirmer la livraison.`
+              : ' Vous recevrez un email de confirmation avec les instructions de paiement.'
+            }
           </p>
           <div className="bg-card rounded-lg p-6 mb-8 text-left">
             <h3 className="font-display text-lg mb-4">Détails de livraison</h3>
@@ -68,6 +75,7 @@ const Checkout = () => {
               <p><span className="text-muted-foreground">Téléphone:</span> {formData.phone}</p>
               <p><span className="text-muted-foreground">Adresse:</span> {formData.address}</p>
               <p><span className="text-muted-foreground">Ville:</span> {formData.city}</p>
+              <p><span className="text-muted-foreground">Paiement:</span> {paymentMethod === 'cash_on_delivery' ? 'À la livraison' : 'En ligne'}</p>
             </div>
           </div>
           <Button asChild size="lg" className="font-body uppercase tracking-wider">
@@ -172,12 +180,66 @@ const Checkout = () => {
                     />
                   </div>
 
-                  <div className="bg-muted/50 rounded-lg p-4">
-                    <p className="font-body text-sm text-muted-foreground">
-                      💵 <strong>Paiement à la livraison</strong><br />
-                      Vous payerez en espèces à la réception de votre commande.
-                    </p>
+                  {/* Payment Method Selection */}
+                  <div className="pt-4 border-t border-border">
+                    <Label className="font-body mb-4 block text-lg">Mode de paiement *</Label>
+                    <RadioGroup
+                      value={paymentMethod}
+                      onValueChange={(value) => setPaymentMethod(value as PaymentMethod)}
+                      className="space-y-3"
+                    >
+                      <div
+                        className={cn(
+                          "flex items-center space-x-3 p-4 rounded-lg border-2 cursor-pointer transition-colors",
+                          paymentMethod === 'cash_on_delivery' 
+                            ? 'border-primary bg-primary/5' 
+                            : 'border-border hover:border-primary/50'
+                        )}
+                        onClick={() => setPaymentMethod('cash_on_delivery')}
+                      >
+                        <RadioGroupItem value="cash_on_delivery" id="cash_on_delivery" />
+                        <Banknote className="w-6 h-6 text-primary" />
+                        <div className="flex-1">
+                          <Label htmlFor="cash_on_delivery" className="font-body font-semibold cursor-pointer">
+                            Paiement à la livraison
+                          </Label>
+                          <p className="font-body text-sm text-muted-foreground">
+                            Payez en espèces à la réception de votre commande
+                          </p>
+                        </div>
+                      </div>
+
+                      <div
+                        className={cn(
+                          "flex items-center space-x-3 p-4 rounded-lg border-2 cursor-pointer transition-colors",
+                          paymentMethod === 'online' 
+                            ? 'border-primary bg-primary/5' 
+                            : 'border-border hover:border-primary/50'
+                        )}
+                        onClick={() => setPaymentMethod('online')}
+                      >
+                        <RadioGroupItem value="online" id="online" />
+                        <CreditCard className="w-6 h-6 text-primary" />
+                        <div className="flex-1">
+                          <Label htmlFor="online" className="font-body font-semibold cursor-pointer">
+                            Paiement en ligne
+                          </Label>
+                          <p className="font-body text-sm text-muted-foreground">
+                            Payez par carte bancaire de manière sécurisée
+                          </p>
+                        </div>
+                      </div>
+                    </RadioGroup>
                   </div>
+
+                  {paymentMethod === 'online' && (
+                    <div className="bg-muted/50 rounded-lg p-4">
+                      <p className="font-body text-sm text-muted-foreground">
+                        💳 <strong>Paiement sécurisé</strong><br />
+                        Vous serez redirigé vers notre plateforme de paiement sécurisée après confirmation.
+                      </p>
+                    </div>
+                  )}
 
                   <Button
                     type="submit"
@@ -197,8 +259,8 @@ const Checkout = () => {
                 <h2 className="font-display text-xl mb-6">Votre commande</h2>
                 
                 <div className="space-y-4 mb-6">
-                  {items.map((item) => (
-                    <div key={item.product.id} className="flex gap-4">
+                  {items.map((item, index) => (
+                    <div key={`${item.product.id}-${item.selectedSize}-${item.selectedGoldType}-${index}`} className="flex gap-4">
                       <div className="w-16 h-16 rounded-lg overflow-hidden bg-cream flex-shrink-0">
                         <img
                           src={item.product.images[0]}
@@ -210,6 +272,8 @@ const Checkout = () => {
                         <p className="font-body text-sm line-clamp-1">{item.product.name}</p>
                         <p className="font-body text-xs text-muted-foreground">
                           Qté: {item.quantity}
+                          {item.selectedGoldType && ` • ${goldTypeLabels[item.selectedGoldType]}`}
+                          {item.selectedSize && ` • Taille: ${item.selectedSize}`}
                         </p>
                       </div>
                       <p className="font-body text-sm">
