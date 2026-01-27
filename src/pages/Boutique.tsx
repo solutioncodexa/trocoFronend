@@ -1,6 +1,6 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Filter, SlidersHorizontal, X } from 'lucide-react';
+import { Filter, SlidersHorizontal, X, Search, ArrowUpDown } from 'lucide-react';
 import Layout from '@/components/layout/Layout';
 import ProductCard from '@/components/ui/ProductCard';
 import { products } from '@/data/products';
@@ -10,8 +10,18 @@ import { Slider } from '@/components/ui/slider';
 import { Label } from '@/components/ui/label';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { Badge } from '@/components/ui/badge';
-import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { GoldType, goldTypeLabels } from '@/types/product';
+
+type SortOption = 'newest' | 'price-asc' | 'price-desc' | 'popularity';
+
+const sortOptions: { value: SortOption; label: string }[] = [
+  { value: 'newest', label: 'Plus récents' },
+  { value: 'price-asc', label: 'Prix croissant' },
+  { value: 'price-desc', label: 'Prix décroissant' },
+  { value: 'popularity', label: 'Popularité' },
+];
 
 const productTypes = [
   { id: 'bracelet', label: 'Bracelets' },
@@ -37,11 +47,44 @@ const Boutique = () => {
   const [priceRange, setPriceRange] = useState<[number, number]>([0, 100000]);
   const [inStockOnly, setInStockOnly] = useState(false);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [sortBy, setSortBy] = useState<SortOption>('newest');
+  const searchRef = useRef<HTMLDivElement>(null);
 
   const maxPrice = Math.max(...products.map(p => p.price));
 
+  // Close suggestions when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
+        setShowSuggestions(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // Search suggestions
+  const searchSuggestions = useMemo(() => {
+    if (!searchQuery.trim()) return [];
+    const query = searchQuery.toLowerCase();
+    return products
+      .filter(p => p.name.toLowerCase().includes(query))
+      .slice(0, 5);
+  }, [searchQuery]);
+
   const filteredProducts = useMemo(() => {
-    return products.filter(product => {
+    let result = products.filter(product => {
+      // Search filter
+      if (searchQuery.trim()) {
+        const query = searchQuery.toLowerCase();
+        if (!product.name.toLowerCase().includes(query) && 
+            !product.description.toLowerCase().includes(query)) {
+          return false;
+        }
+      }
+      
       // Category filter
       if (selectedCategory && product.category !== selectedCategory) return false;
       
@@ -59,7 +102,34 @@ const Boutique = () => {
       
       return true;
     });
-  }, [selectedCategory, selectedTypes, selectedGoldTypes, priceRange, inStockOnly]);
+
+    // Sort products
+    switch (sortBy) {
+      case 'price-asc':
+        result = [...result].sort((a, b) => a.price - b.price);
+        break;
+      case 'price-desc':
+        result = [...result].sort((a, b) => b.price - a.price);
+        break;
+      case 'newest':
+        result = [...result].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        break;
+      case 'popularity':
+        result = [...result].sort((a, b) => {
+          const aScore = (a.badges.includes('bestseller') ? 2 : 0) + (a.badges.includes('new') ? 1 : 0);
+          const bScore = (b.badges.includes('bestseller') ? 2 : 0) + (b.badges.includes('new') ? 1 : 0);
+          return bScore - aScore;
+        });
+        break;
+    }
+
+    return result;
+  }, [selectedCategory, selectedTypes, selectedGoldTypes, priceRange, inStockOnly, searchQuery, sortBy]);
+
+  const handleSelectSuggestion = (productName: string) => {
+    setSearchQuery(productName);
+    setShowSuggestions(false);
+  };
 
   const handleCategoryChange = (category: string | null) => {
     setSelectedCategory(category);
@@ -92,6 +162,8 @@ const Boutique = () => {
     setSelectedGoldTypes([]);
     setPriceRange([0, maxPrice]);
     setInStockOnly(false);
+    setSearchQuery('');
+    setSortBy('newest');
     setSearchParams({});
   };
 
@@ -100,7 +172,8 @@ const Boutique = () => {
     selectedTypes.length + 
     selectedGoldTypes.length +
     (priceRange[0] > 0 || priceRange[1] < maxPrice ? 1 : 0) +
-    (inStockOnly ? 1 : 0);
+    (inStockOnly ? 1 : 0) +
+    (searchQuery.trim() ? 1 : 0);
 
   const FilterContent = () => (
     <div className="space-y-8">
@@ -251,6 +324,75 @@ const Boutique = () => {
 
             {/* Main Content */}
             <div className="flex-1">
+              {/* Search Bar and Sort */}
+              <div className="flex flex-col sm:flex-row gap-4 mb-6">
+                {/* Search with Autocomplete */}
+                <div ref={searchRef} className="relative flex-1">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <Input
+                      type="text"
+                      placeholder="Rechercher un bijou..."
+                      value={searchQuery}
+                      onChange={(e) => {
+                        setSearchQuery(e.target.value);
+                        setShowSuggestions(true);
+                      }}
+                      onFocus={() => setShowSuggestions(true)}
+                      className="pl-10 pr-10 font-body"
+                    />
+                    {searchQuery && (
+                      <button
+                        onClick={() => setSearchQuery('')}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
+                  
+                  {/* Autocomplete Suggestions */}
+                  {showSuggestions && searchSuggestions.length > 0 && (
+                    <div className="absolute z-50 w-full mt-1 bg-card border border-border rounded-lg shadow-lg overflow-hidden">
+                      {searchSuggestions.map((product) => (
+                        <button
+                          key={product.id}
+                          onClick={() => handleSelectSuggestion(product.name)}
+                          className="w-full px-4 py-3 text-left hover:bg-muted flex items-center gap-3 transition-colors"
+                        >
+                          <img
+                            src={product.images[0]}
+                            alt={product.name}
+                            className="w-10 h-10 object-cover rounded"
+                          />
+                          <div className="flex-1 min-w-0">
+                            <p className="font-body text-sm truncate">{product.name}</p>
+                            <p className="font-body text-xs text-muted-foreground">
+                              {product.price.toLocaleString()} MAD
+                            </p>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Sort Dropdown */}
+                <Select value={sortBy} onValueChange={(value) => setSortBy(value as SortOption)}>
+                  <SelectTrigger className="w-full sm:w-48 font-body">
+                    <ArrowUpDown className="w-4 h-4 mr-2" />
+                    <SelectValue placeholder="Trier par" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {sortOptions.map((option) => (
+                      <SelectItem key={option.value} value={option.value} className="font-body">
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
               {/* Mobile Filter Button & Results Count */}
               <div className="flex items-center justify-between mb-6">
                 <p className="font-body text-muted-foreground">
@@ -287,6 +429,15 @@ const Boutique = () => {
                       />
                     </Badge>
                   ))}
+                  {searchQuery.trim() && (
+                    <Badge variant="secondary" className="font-body">
+                      Recherche: {searchQuery}
+                      <X
+                        className="w-3 h-3 ml-1 cursor-pointer"
+                        onClick={() => setSearchQuery('')}
+                      />
+                    </Badge>
+                  )}
                   {inStockOnly && (
                     <Badge variant="secondary" className="font-body">
                       En stock
