@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { Filter, SlidersHorizontal, X, Search, ArrowUpDown } from 'lucide-react';
 import Layout from '@/components/layout/Layout';
 import ProductCard from '@/components/ui/ProductCard';
+import ProductPagination from '@/components/ui/ProductPagination';
 import { products } from '@/data/products';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -13,6 +14,8 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { GoldType, goldTypeLabels } from '@/types/product';
+
+const PRODUCTS_PER_PAGE = 12;
 
 type SortOption = 'newest' | 'price-asc' | 'price-desc' | 'popularity';
 
@@ -50,6 +53,7 @@ const Boutique = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [sortBy, setSortBy] = useState<SortOption>('newest');
+  const [currentPage, setCurrentPage] = useState(1);
   const searchRef = useRef<HTMLDivElement>(null);
 
   const maxPrice = Math.max(...products.map(p => p.price));
@@ -125,6 +129,23 @@ const Boutique = () => {
 
     return result;
   }, [selectedCategory, selectedTypes, selectedGoldTypes, priceRange, inStockOnly, searchQuery, sortBy]);
+
+  // Pagination
+  const totalPages = Math.ceil(filteredProducts.length / PRODUCTS_PER_PAGE);
+  const paginatedProducts = useMemo(() => {
+    const startIndex = (currentPage - 1) * PRODUCTS_PER_PAGE;
+    return filteredProducts.slice(startIndex, startIndex + PRODUCTS_PER_PAGE);
+  }, [filteredProducts, currentPage]);
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [selectedCategory, selectedTypes, selectedGoldTypes, priceRange, inStockOnly, searchQuery, sortBy]);
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
   const handleSelectSuggestion = (productName: string) => {
     setSearchQuery(productName);
@@ -472,18 +493,27 @@ const Boutique = () => {
               </div>
 
               {/* Products Grid */}
-              {filteredProducts.length > 0 ? (
-                <div className="grid sm:grid-cols-2 xl:grid-cols-3 gap-6">
-                  {filteredProducts.map((product, index) => (
-                    <div
-                      key={product.id}
-                      className="animate-fade-in"
-                      style={{ animationDelay: `${index * 0.05}s` }}
-                    >
-                      <ProductCard product={product} />
-                    </div>
-                  ))}
-                </div>
+              {paginatedProducts.length > 0 ? (
+                <>
+                  <div className="grid sm:grid-cols-2 xl:grid-cols-3 gap-6">
+                    {paginatedProducts.map((product, index) => (
+                      <div
+                        key={product.id}
+                        className="animate-fade-in"
+                        style={{ animationDelay: `${index * 0.05}s` }}
+                      >
+                        <ProductCard product={product} />
+                      </div>
+                    ))}
+                  </div>
+                  
+                  {/* Pagination */}
+                  <ProductPagination
+                    currentPage={currentPage}
+                    totalPages={totalPages}
+                    onPageChange={handlePageChange}
+                  />
+                </>
               ) : (
                 <div className="text-center py-20">
                   <p className="font-display text-2xl text-muted-foreground mb-4">

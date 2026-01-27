@@ -4,6 +4,7 @@ import { Product, goldTypeLabels } from '@/types/product';
 import { formatPrice } from '@/data/products';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
+import { useWishlist } from '@/contexts/WishlistContext';
 import { toast } from 'sonner';
 
 interface ProductCardProps {
@@ -12,6 +13,20 @@ interface ProductCardProps {
 }
 
 const ProductCard = ({ product, className }: ProductCardProps) => {
+  const { isInWishlist, toggleWishlist } = useWishlist();
+  const isFavorite = isInWishlist(product.id);
+
+  const handleWishlistToggle = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    toggleWishlist(product.id);
+    if (isFavorite) {
+      toast.info('Retiré des favoris');
+    } else {
+      toast.success('Ajouté aux favoris');
+    }
+  };
+
   const getBadgeClass = (badge: string) => {
     switch (badge) {
       case 'new':
@@ -78,16 +93,18 @@ const ProductCard = ({ product, className }: ProductCardProps) => {
         )}
 
         {/* Quick actions */}
-        <div className="absolute top-3 right-3 flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+        <div className="absolute top-3 right-3 flex flex-col gap-2">
           <button
-            className="w-10 h-10 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center hover:bg-primary hover:text-primary-foreground transition-colors shadow-md"
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              toast.success('Ajouté aux favoris');
-            }}
+            className={cn(
+              'w-10 h-10 rounded-full backdrop-blur-sm flex items-center justify-center transition-all shadow-md',
+              isFavorite 
+                ? 'bg-primary text-primary-foreground' 
+                : 'bg-white/90 hover:bg-primary hover:text-primary-foreground opacity-0 group-hover:opacity-100'
+            )}
+            style={isFavorite ? { opacity: 1 } : undefined}
+            onClick={handleWishlistToggle}
           >
-            <Heart className="w-5 h-5" />
+            <Heart className={cn('w-5 h-5', isFavorite && 'fill-current')} />
           </button>
         </div>
 
