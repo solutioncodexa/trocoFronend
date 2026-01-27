@@ -4,12 +4,14 @@ import { Search, ShoppingBag, Menu, X, Heart } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useCart } from '@/contexts/CartContext';
+import { useWishlist } from '@/contexts/WishlistContext';
 import { cn } from '@/lib/utils';
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const { getItemCount } = useCart();
+  const { wishlistCount } = useWishlist();
   const location = useLocation();
   const itemCount = getItemCount();
 
@@ -104,11 +106,16 @@ const Header = () => {
 
             {/* Wishlist */}
             <Link
-              to="/wishlist"
-              className="hidden md:block p-2 hover:text-primary transition-colors"
+              to="/favoris"
+              className="relative hidden md:block p-2 hover:text-primary transition-colors"
               aria-label="Favoris"
             >
               <Heart className="w-5 h-5" />
+              {wishlistCount > 0 && (
+                <span className="absolute -top-1 -right-1 bg-primary text-primary-foreground text-xs w-5 h-5 rounded-full flex items-center justify-center font-semibold animate-scale-in">
+                  {wishlistCount}
+                </span>
+              )}
             </Link>
 
             {/* Cart */}

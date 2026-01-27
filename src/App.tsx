@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { CartProvider } from "@/contexts/CartContext";
 import { AdminProvider } from "@/contexts/AdminContext";
+import { WishlistProvider } from "@/contexts/WishlistContext";
 
 // Public pages
 import Index from "./pages/Index";
@@ -13,6 +14,7 @@ import ProductDetail from "./pages/ProductDetail";
 import Cart from "./pages/Cart";
 import Checkout from "./pages/Checkout";
 import CustomOrder from "./pages/CustomOrder";
+import Wishlist from "./pages/Wishlist";
 import NotFound from "./pages/NotFound";
 
 // Admin pages
@@ -31,31 +33,34 @@ const App = () => (
     <TooltipProvider>
       <AdminProvider>
         <CartProvider>
-          <Toaster />
-          <Sonner />
-          <BrowserRouter>
-            <Routes>
-              {/* Public Routes */}
-              <Route path="/" element={<Index />} />
-              <Route path="/boutique" element={<Boutique />} />
-              <Route path="/produit/:id" element={<ProductDetail />} />
-              <Route path="/panier" element={<Cart />} />
-              <Route path="/checkout" element={<Checkout />} />
-              <Route path="/commande-personnalisee" element={<CustomOrder />} />
-              
-              {/* Admin Routes */}
-              <Route path="/admin" element={<AdminLogin />} />
-              <Route path="/admin/dashboard" element={<AdminDashboard />} />
-              <Route path="/admin/produits" element={<AdminProducts />} />
-              <Route path="/admin/commandes" element={<AdminOrders />} />
-              <Route path="/admin/personnalisations" element={<AdminCustomRequests />} />
-              <Route path="/admin/categories" element={<AdminCategories />} />
-              <Route path="/admin/types" element={<AdminProductTypes />} />
-              
-              {/* Catch-all */}
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </BrowserRouter>
+          <WishlistProvider>
+            <Toaster />
+            <Sonner />
+            <BrowserRouter>
+              <Routes>
+                {/* Public Routes */}
+                <Route path="/" element={<Index />} />
+                <Route path="/boutique" element={<Boutique />} />
+                <Route path="/produit/:id" element={<ProductDetail />} />
+                <Route path="/panier" element={<Cart />} />
+                <Route path="/checkout" element={<Checkout />} />
+                <Route path="/commande-personnalisee" element={<CustomOrder />} />
+                <Route path="/favoris" element={<Wishlist />} />
+                
+                {/* Admin Routes */}
+                <Route path="/admin" element={<AdminLogin />} />
+                <Route path="/admin/dashboard" element={<AdminDashboard />} />
+                <Route path="/admin/produits" element={<AdminProducts />} />
+                <Route path="/admin/commandes" element={<AdminOrders />} />
+                <Route path="/admin/personnalisations" element={<AdminCustomRequests />} />
+                <Route path="/admin/categories" element={<AdminCategories />} />
+                <Route path="/admin/types" element={<AdminProductTypes />} />
+                
+                {/* Catch-all */}
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </BrowserRouter>
+          </WishlistProvider>
         </CartProvider>
       </AdminProvider>
     </TooltipProvider>
