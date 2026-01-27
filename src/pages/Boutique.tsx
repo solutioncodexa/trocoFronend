@@ -10,7 +10,8 @@ import { Slider } from '@/components/ui/slider';
 import { Label } from '@/components/ui/label';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { Badge } from '@/components/ui/badge';
-import { cn } from '@/lib/utils';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+import { GoldType, goldTypeLabels } from '@/types/product';
 
 const productTypes = [
   { id: 'bracelet', label: 'Bracelets' },
@@ -20,13 +21,21 @@ const productTypes = [
   { id: 'set', label: 'Parures' },
 ];
 
+const goldTypes: { id: GoldType; label: string; color: string }[] = [
+  { id: 'yellow', label: 'Or Jaune', color: 'bg-yellow-400' },
+  { id: 'white', label: 'Or Blanc', color: 'bg-gray-200' },
+  { id: 'rose', label: 'Or Rose', color: 'bg-rose-300' },
+];
+
 const Boutique = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const categoryParam = searchParams.get('category');
   
   const [selectedCategory, setSelectedCategory] = useState<string | null>(categoryParam);
   const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
+  const [selectedGoldTypes, setSelectedGoldTypes] = useState<GoldType[]>([]);
   const [priceRange, setPriceRange] = useState<[number, number]>([0, 100000]);
+  const [inStockOnly, setInStockOnly] = useState(false);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
 
   const maxPrice = Math.max(...products.map(p => p.price));
@@ -39,12 +48,18 @@ const Boutique = () => {
       // Type filter
       if (selectedTypes.length > 0 && !selectedTypes.includes(product.type)) return false;
       
+      // Gold type filter
+      if (selectedGoldTypes.length > 0 && !selectedGoldTypes.includes(product.goldType)) return false;
+      
       // Price filter
       if (product.price < priceRange[0] || product.price > priceRange[1]) return false;
       
+      // Stock filter
+      if (inStockOnly && !product.inStock) return false;
+      
       return true;
     });
-  }, [selectedCategory, selectedTypes, priceRange]);
+  }, [selectedCategory, selectedTypes, selectedGoldTypes, priceRange, inStockOnly]);
 
   const handleCategoryChange = (category: string | null) => {
     setSelectedCategory(category);
@@ -63,17 +78,29 @@ const Boutique = () => {
     );
   };
 
+  const handleGoldTypeToggle = (goldTypeId: GoldType) => {
+    setSelectedGoldTypes(prev =>
+      prev.includes(goldTypeId)
+        ? prev.filter(t => t !== goldTypeId)
+        : [...prev, goldTypeId]
+    );
+  };
+
   const clearFilters = () => {
     setSelectedCategory(null);
     setSelectedTypes([]);
+    setSelectedGoldTypes([]);
     setPriceRange([0, maxPrice]);
+    setInStockOnly(false);
     setSearchParams({});
   };
 
   const activeFiltersCount = 
     (selectedCategory ? 1 : 0) + 
     selectedTypes.length + 
-    (priceRange[0] > 0 || priceRange[1] < maxPrice ? 1 : 0);
+    selectedGoldTypes.length +
+    (priceRange[0] > 0 || priceRange[1] < maxPrice ? 1 : 0) +
+    (inStockOnly ? 1 : 0);
 
   const FilterContent = () => (
     <div className="space-y-8">
@@ -127,6 +154,26 @@ const Boutique = () => {
         </div>
       </div>
 
+      {/* Gold Type Filter */}
+      <div>
+        <h3 className="font-display text-lg mb-4">Type d'or</h3>
+        <div className="space-y-3">
+          {goldTypes.map(goldType => (
+            <div key={goldType.id} className="flex items-center space-x-3">
+              <Checkbox
+                id={`gold-${goldType.id}`}
+                checked={selectedGoldTypes.includes(goldType.id)}
+                onCheckedChange={() => handleGoldTypeToggle(goldType.id)}
+              />
+              <Label htmlFor={`gold-${goldType.id}`} className="font-body cursor-pointer flex items-center gap-2">
+                <span className={`w-4 h-4 rounded-full ${goldType.color} border border-border`} />
+                {goldType.label}
+              </Label>
+            </div>
+          ))}
+        </div>
+      </div>
+
       {/* Price Filter */}
       <div>
         <h3 className="font-display text-lg mb-4">Prix (MAD)</h3>
@@ -143,6 +190,20 @@ const Boutique = () => {
             <span>{priceRange[0].toLocaleString()} MAD</span>
             <span>{priceRange[1].toLocaleString()} MAD</span>
           </div>
+        </div>
+      </div>
+
+      {/* Stock Filter */}
+      <div>
+        <div className="flex items-center space-x-3">
+          <Checkbox
+            id="in-stock"
+            checked={inStockOnly}
+            onCheckedChange={(checked) => setInStockOnly(checked as boolean)}
+          />
+          <Label htmlFor="in-stock" className="font-body cursor-pointer">
+            En stock uniquement
+          </Label>
         </div>
       </div>
 
@@ -216,6 +277,25 @@ const Boutique = () => {
                       />
                     </Badge>
                   ))}
+                  {selectedGoldTypes.map(goldType => (
+                    <Badge key={goldType} variant="secondary" className="font-body flex items-center gap-1">
+                      <span className={`w-2 h-2 rounded-full ${goldTypes.find(g => g.id === goldType)?.color}`} />
+                      {goldTypes.find(g => g.id === goldType)?.label}
+                      <X
+                        className="w-3 h-3 ml-1 cursor-pointer"
+                        onClick={() => handleGoldTypeToggle(goldType)}
+                      />
+                    </Badge>
+                  ))}
+                  {inStockOnly && (
+                    <Badge variant="secondary" className="font-body">
+                      En stock
+                      <X
+                        className="w-3 h-3 ml-1 cursor-pointer"
+                        onClick={() => setInStockOnly(false)}
+                      />
+                    </Badge>
+                  )}
                 </div>
 
                 {/* Mobile Filter Button */}
