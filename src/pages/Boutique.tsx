@@ -14,36 +14,60 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { GoldType, goldTypeLabels } from '@/types/product';
-
 const PRODUCTS_PER_PAGE = 12;
-
 type SortOption = 'newest' | 'price-asc' | 'price-desc' | 'popularity';
-
-const sortOptions: { value: SortOption; label: string }[] = [
-  { value: 'newest', label: 'Plus récents' },
-  { value: 'price-asc', label: 'Prix croissant' },
-  { value: 'price-desc', label: 'Prix décroissant' },
-  { value: 'popularity', label: 'Popularité' },
-];
-
-const productTypes = [
-  { id: 'bracelet', label: 'Bracelets' },
-  { id: 'ring', label: 'Bagues' },
-  { id: 'necklace', label: 'Colliers' },
-  { id: 'earrings', label: 'Boucles d\'oreilles' },
-  { id: 'set', label: 'Parures' },
-];
-
-const goldTypes: { id: GoldType; label: string; color: string }[] = [
-  { id: 'yellow', label: 'Or Jaune', color: 'bg-yellow-400' },
-  { id: 'white', label: 'Or Blanc', color: 'bg-gray-200' },
-  { id: 'rose', label: 'Or Rose', color: 'bg-rose-300' },
-];
-
+const sortOptions: {
+  value: SortOption;
+  label: string;
+}[] = [{
+  value: 'newest',
+  label: 'Plus récents'
+}, {
+  value: 'price-asc',
+  label: 'Prix croissant'
+}, {
+  value: 'price-desc',
+  label: 'Prix décroissant'
+}, {
+  value: 'popularity',
+  label: 'Popularité'
+}];
+const productTypes = [{
+  id: 'bracelet',
+  label: 'Bracelets'
+}, {
+  id: 'ring',
+  label: 'Bagues'
+}, {
+  id: 'necklace',
+  label: 'Colliers'
+}, {
+  id: 'earrings',
+  label: 'Boucles d\'oreilles'
+}, {
+  id: 'set',
+  label: 'Parures'
+}];
+const goldTypes: {
+  id: GoldType;
+  label: string;
+  color: string;
+}[] = [{
+  id: 'yellow',
+  label: 'Or Jaune',
+  color: 'bg-yellow-400'
+}, {
+  id: 'white',
+  label: 'Or Blanc',
+  color: 'bg-gray-200'
+}, {
+  id: 'rose',
+  label: 'Or Rose',
+  color: 'bg-rose-300'
+}];
 const Boutique = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const categoryParam = searchParams.get('category');
-  
   const [selectedCategory, setSelectedCategory] = useState<string | null>(categoryParam);
   const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
   const [selectedGoldTypes, setSelectedGoldTypes] = useState<GoldType[]>([]);
@@ -55,7 +79,6 @@ const Boutique = () => {
   const [sortBy, setSortBy] = useState<SortOption>('newest');
   const [currentPage, setCurrentPage] = useState(1);
   const searchRef = useRef<HTMLDivElement>(null);
-
   const maxPrice = Math.max(...products.map(p => p.price));
 
   // Close suggestions when clicking outside
@@ -73,37 +96,32 @@ const Boutique = () => {
   const searchSuggestions = useMemo(() => {
     if (!searchQuery.trim()) return [];
     const query = searchQuery.toLowerCase();
-    return products
-      .filter(p => p.name.toLowerCase().includes(query))
-      .slice(0, 5);
+    return products.filter(p => p.name.toLowerCase().includes(query)).slice(0, 5);
   }, [searchQuery]);
-
   const filteredProducts = useMemo(() => {
     let result = products.filter(product => {
       // Search filter
       if (searchQuery.trim()) {
         const query = searchQuery.toLowerCase();
-        if (!product.name.toLowerCase().includes(query) && 
-            !product.description.toLowerCase().includes(query)) {
+        if (!product.name.toLowerCase().includes(query) && !product.description.toLowerCase().includes(query)) {
           return false;
         }
       }
-      
+
       // Category filter
       if (selectedCategory && product.category !== selectedCategory) return false;
-      
+
       // Type filter
       if (selectedTypes.length > 0 && !selectedTypes.includes(product.type)) return false;
-      
+
       // Gold type filter
       if (selectedGoldTypes.length > 0 && !selectedGoldTypes.includes(product.goldType)) return false;
-      
+
       // Price filter
       if (product.price < priceRange[0] || product.price > priceRange[1]) return false;
-      
+
       // Stock filter
       if (inStockOnly && !product.inStock) return false;
-      
       return true;
     });
 
@@ -126,7 +144,6 @@ const Boutique = () => {
         });
         break;
     }
-
     return result;
   }, [selectedCategory, selectedTypes, selectedGoldTypes, priceRange, inStockOnly, searchQuery, sortBy]);
 
@@ -141,42 +158,33 @@ const Boutique = () => {
   useEffect(() => {
     setCurrentPage(1);
   }, [selectedCategory, selectedTypes, selectedGoldTypes, priceRange, inStockOnly, searchQuery, sortBy]);
-
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    window.scrollTo({
+      top: 0,
+      behavior: 'smooth'
+    });
   };
-
   const handleSelectSuggestion = (productName: string) => {
     setSearchQuery(productName);
     setShowSuggestions(false);
   };
-
   const handleCategoryChange = (category: string | null) => {
     setSelectedCategory(category);
     if (category) {
-      setSearchParams({ category });
+      setSearchParams({
+        category
+      });
     } else {
       setSearchParams({});
     }
   };
-
   const handleTypeToggle = (typeId: string) => {
-    setSelectedTypes(prev =>
-      prev.includes(typeId)
-        ? prev.filter(t => t !== typeId)
-        : [...prev, typeId]
-    );
+    setSelectedTypes(prev => prev.includes(typeId) ? prev.filter(t => t !== typeId) : [...prev, typeId]);
   };
-
   const handleGoldTypeToggle = (goldTypeId: GoldType) => {
-    setSelectedGoldTypes(prev =>
-      prev.includes(goldTypeId)
-        ? prev.filter(t => t !== goldTypeId)
-        : [...prev, goldTypeId]
-    );
+    setSelectedGoldTypes(prev => prev.includes(goldTypeId) ? prev.filter(t => t !== goldTypeId) : [...prev, goldTypeId]);
   };
-
   const clearFilters = () => {
     setSelectedCategory(null);
     setSelectedTypes([]);
@@ -187,43 +195,19 @@ const Boutique = () => {
     setSortBy('newest');
     setSearchParams({});
   };
-
-  const activeFiltersCount = 
-    (selectedCategory ? 1 : 0) + 
-    selectedTypes.length + 
-    selectedGoldTypes.length +
-    (priceRange[0] > 0 || priceRange[1] < maxPrice ? 1 : 0) +
-    (inStockOnly ? 1 : 0) +
-    (searchQuery.trim() ? 1 : 0);
-
-  const FilterContent = () => (
-    <div className="space-y-8">
+  const activeFiltersCount = (selectedCategory ? 1 : 0) + selectedTypes.length + selectedGoldTypes.length + (priceRange[0] > 0 || priceRange[1] < maxPrice ? 1 : 0) + (inStockOnly ? 1 : 0) + (searchQuery.trim() ? 1 : 0);
+  const FilterContent = () => <div className="space-y-8">
       {/* Category Filter */}
       <div>
         <h3 className="font-display text-lg mb-4">Catégorie</h3>
         <div className="flex flex-wrap gap-2">
-          <Button
-            variant={selectedCategory === null ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => handleCategoryChange(null)}
-            className="font-body"
-          >
+          <Button variant={selectedCategory === null ? 'default' : 'outline'} size="sm" onClick={() => handleCategoryChange(null)} className="font-body">
             Toutes
           </Button>
-          <Button
-            variant={selectedCategory === 'beldi' ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => handleCategoryChange('beldi')}
-            className="font-body"
-          >
+          <Button variant={selectedCategory === 'beldi' ? 'default' : 'outline'} size="sm" onClick={() => handleCategoryChange('beldi')} className="font-body">
             Beldi
           </Button>
-          <Button
-            variant={selectedCategory === 'modern' ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => handleCategoryChange('modern')}
-            className="font-body"
-          >
+          <Button variant={selectedCategory === 'modern' ? 'default' : 'outline'} size="sm" onClick={() => handleCategoryChange('modern')} className="font-body">
             Moderne
           </Button>
         </div>
@@ -233,18 +217,12 @@ const Boutique = () => {
       <div>
         <h3 className="font-display text-lg mb-4">Type de bijou</h3>
         <div className="space-y-3">
-          {productTypes.map(type => (
-            <div key={type.id} className="flex items-center space-x-3">
-              <Checkbox
-                id={type.id}
-                checked={selectedTypes.includes(type.id)}
-                onCheckedChange={() => handleTypeToggle(type.id)}
-              />
+          {productTypes.map(type => <div key={type.id} className="flex items-center space-x-3">
+              <Checkbox id={type.id} checked={selectedTypes.includes(type.id)} onCheckedChange={() => handleTypeToggle(type.id)} />
               <Label htmlFor={type.id} className="font-body cursor-pointer">
                 {type.label}
               </Label>
-            </div>
-          ))}
+            </div>)}
         </div>
       </div>
 
@@ -252,19 +230,13 @@ const Boutique = () => {
       <div>
         <h3 className="font-display text-lg mb-4">Type d'or</h3>
         <div className="space-y-3">
-          {goldTypes.map(goldType => (
-            <div key={goldType.id} className="flex items-center space-x-3">
-              <Checkbox
-                id={`gold-${goldType.id}`}
-                checked={selectedGoldTypes.includes(goldType.id)}
-                onCheckedChange={() => handleGoldTypeToggle(goldType.id)}
-              />
+          {goldTypes.map(goldType => <div key={goldType.id} className="flex items-center space-x-3">
+              <Checkbox id={`gold-${goldType.id}`} checked={selectedGoldTypes.includes(goldType.id)} onCheckedChange={() => handleGoldTypeToggle(goldType.id)} />
               <Label htmlFor={`gold-${goldType.id}`} className="font-body cursor-pointer flex items-center gap-2">
                 <span className={`w-4 h-4 rounded-full ${goldType.color} border border-border`} />
                 {goldType.label}
               </Label>
-            </div>
-          ))}
+            </div>)}
         </div>
       </div>
 
@@ -272,14 +244,7 @@ const Boutique = () => {
       <div>
         <h3 className="font-display text-lg mb-4">Prix (MAD)</h3>
         <div className="space-y-4">
-          <Slider
-            value={priceRange}
-            onValueChange={(value) => setPriceRange(value as [number, number])}
-            min={0}
-            max={maxPrice}
-            step={1000}
-            className="py-4"
-          />
+          <Slider value={priceRange} onValueChange={value => setPriceRange(value as [number, number])} min={0} max={maxPrice} step={1000} className="py-4" />
           <div className="flex justify-between font-body text-sm text-muted-foreground">
             <span>{priceRange[0].toLocaleString()} MAD</span>
             <span>{priceRange[1].toLocaleString()} MAD</span>
@@ -290,11 +255,7 @@ const Boutique = () => {
       {/* Stock Filter */}
       <div>
         <div className="flex items-center space-x-3">
-          <Checkbox
-            id="in-stock"
-            checked={inStockOnly}
-            onCheckedChange={(checked) => setInStockOnly(checked as boolean)}
-          />
+          <Checkbox id="in-stock" checked={inStockOnly} onCheckedChange={checked => setInStockOnly(checked as boolean)} />
           <Label htmlFor="in-stock" className="font-body cursor-pointer">
             En stock uniquement
           </Label>
@@ -302,23 +263,14 @@ const Boutique = () => {
       </div>
 
       {/* Clear Filters */}
-      {activeFiltersCount > 0 && (
-        <Button
-          variant="outline"
-          onClick={clearFilters}
-          className="w-full font-body"
-        >
+      {activeFiltersCount > 0 && <Button variant="outline" onClick={clearFilters} className="w-full font-body">
           <X className="w-4 h-4 mr-2" />
           Effacer les filtres ({activeFiltersCount})
-        </Button>
-      )}
-    </div>
-  );
-
-  return (
-    <Layout>
+        </Button>}
+    </div>;
+  return <Layout>
       {/* Hero */}
-      <section className="bg-charcoal py-20">
+      <section className="py-20 bg-accent">
         <div className="container mx-auto px-4 text-center">
           <h1 className="font-display text-4xl md:text-5xl text-cream mb-4">
             Notre Collection
@@ -351,65 +303,39 @@ const Boutique = () => {
                 <div ref={searchRef} className="relative flex-1">
                   <div className="relative">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                    <Input
-                      type="text"
-                      placeholder="Rechercher un bijou..."
-                      value={searchQuery}
-                      onChange={(e) => {
-                        setSearchQuery(e.target.value);
-                        setShowSuggestions(true);
-                      }}
-                      onFocus={() => setShowSuggestions(true)}
-                      className="pl-10 pr-10 font-body"
-                    />
-                    {searchQuery && (
-                      <button
-                        onClick={() => setSearchQuery('')}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                      >
+                    <Input type="text" placeholder="Rechercher un bijou..." value={searchQuery} onChange={e => {
+                    setSearchQuery(e.target.value);
+                    setShowSuggestions(true);
+                  }} onFocus={() => setShowSuggestions(true)} className="pl-10 pr-10 font-body" />
+                    {searchQuery && <button onClick={() => setSearchQuery('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
                         <X className="w-4 h-4" />
-                      </button>
-                    )}
+                      </button>}
                   </div>
                   
                   {/* Autocomplete Suggestions */}
-                  {showSuggestions && searchSuggestions.length > 0 && (
-                    <div className="absolute z-50 w-full mt-1 bg-card border border-border rounded-lg shadow-lg overflow-hidden">
-                      {searchSuggestions.map((product) => (
-                        <button
-                          key={product.id}
-                          onClick={() => handleSelectSuggestion(product.name)}
-                          className="w-full px-4 py-3 text-left hover:bg-muted flex items-center gap-3 transition-colors"
-                        >
-                          <img
-                            src={product.images[0]}
-                            alt={product.name}
-                            className="w-10 h-10 object-cover rounded"
-                          />
+                  {showSuggestions && searchSuggestions.length > 0 && <div className="absolute z-50 w-full mt-1 bg-card border border-border rounded-lg shadow-lg overflow-hidden">
+                      {searchSuggestions.map(product => <button key={product.id} onClick={() => handleSelectSuggestion(product.name)} className="w-full px-4 py-3 text-left hover:bg-muted flex items-center gap-3 transition-colors">
+                          <img src={product.images[0]} alt={product.name} className="w-10 h-10 object-cover rounded" />
                           <div className="flex-1 min-w-0">
                             <p className="font-body text-sm truncate">{product.name}</p>
                             <p className="font-body text-xs text-muted-foreground">
                               {product.price.toLocaleString()} MAD
                             </p>
                           </div>
-                        </button>
-                      ))}
-                    </div>
-                  )}
+                        </button>)}
+                    </div>}
                 </div>
 
                 {/* Sort Dropdown */}
-                <Select value={sortBy} onValueChange={(value) => setSortBy(value as SortOption)}>
+                <Select value={sortBy} onValueChange={value => setSortBy(value as SortOption)}>
                   <SelectTrigger className="w-full sm:w-48 font-body">
                     <ArrowUpDown className="w-4 h-4 mr-2" />
                     <SelectValue placeholder="Trier par" />
                   </SelectTrigger>
                   <SelectContent>
-                    {sortOptions.map((option) => (
-                      <SelectItem key={option.value} value={option.value} className="font-body">
+                    {sortOptions.map(option => <SelectItem key={option.value} value={option.value} className="font-body">
                         {option.label}
-                      </SelectItem>
-                    ))}
+                      </SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
@@ -422,52 +348,27 @@ const Boutique = () => {
 
                 {/* Active filters badges */}
                 <div className="hidden md:flex items-center gap-2">
-                  {selectedCategory && (
-                    <Badge variant="secondary" className="font-body">
+                  {selectedCategory && <Badge variant="secondary" className="font-body">
                       {selectedCategory === 'beldi' ? 'Beldi' : 'Moderne'}
-                      <X
-                        className="w-3 h-3 ml-1 cursor-pointer"
-                        onClick={() => handleCategoryChange(null)}
-                      />
-                    </Badge>
-                  )}
-                  {selectedTypes.map(type => (
-                    <Badge key={type} variant="secondary" className="font-body">
+                      <X className="w-3 h-3 ml-1 cursor-pointer" onClick={() => handleCategoryChange(null)} />
+                    </Badge>}
+                  {selectedTypes.map(type => <Badge key={type} variant="secondary" className="font-body">
                       {productTypes.find(t => t.id === type)?.label}
-                      <X
-                        className="w-3 h-3 ml-1 cursor-pointer"
-                        onClick={() => handleTypeToggle(type)}
-                      />
-                    </Badge>
-                  ))}
-                  {selectedGoldTypes.map(goldType => (
-                    <Badge key={goldType} variant="secondary" className="font-body flex items-center gap-1">
+                      <X className="w-3 h-3 ml-1 cursor-pointer" onClick={() => handleTypeToggle(type)} />
+                    </Badge>)}
+                  {selectedGoldTypes.map(goldType => <Badge key={goldType} variant="secondary" className="font-body flex items-center gap-1">
                       <span className={`w-2 h-2 rounded-full ${goldTypes.find(g => g.id === goldType)?.color}`} />
                       {goldTypes.find(g => g.id === goldType)?.label}
-                      <X
-                        className="w-3 h-3 ml-1 cursor-pointer"
-                        onClick={() => handleGoldTypeToggle(goldType)}
-                      />
-                    </Badge>
-                  ))}
-                  {searchQuery.trim() && (
-                    <Badge variant="secondary" className="font-body">
+                      <X className="w-3 h-3 ml-1 cursor-pointer" onClick={() => handleGoldTypeToggle(goldType)} />
+                    </Badge>)}
+                  {searchQuery.trim() && <Badge variant="secondary" className="font-body">
                       Recherche: {searchQuery}
-                      <X
-                        className="w-3 h-3 ml-1 cursor-pointer"
-                        onClick={() => setSearchQuery('')}
-                      />
-                    </Badge>
-                  )}
-                  {inStockOnly && (
-                    <Badge variant="secondary" className="font-body">
+                      <X className="w-3 h-3 ml-1 cursor-pointer" onClick={() => setSearchQuery('')} />
+                    </Badge>}
+                  {inStockOnly && <Badge variant="secondary" className="font-body">
                       En stock
-                      <X
-                        className="w-3 h-3 ml-1 cursor-pointer"
-                        onClick={() => setInStockOnly(false)}
-                      />
-                    </Badge>
-                  )}
+                      <X className="w-3 h-3 ml-1 cursor-pointer" onClick={() => setInStockOnly(false)} />
+                    </Badge>}
                 </div>
 
                 {/* Mobile Filter Button */}
@@ -476,9 +377,7 @@ const Boutique = () => {
                     <Button variant="outline" className="lg:hidden font-body">
                       <Filter className="w-4 h-4 mr-2" />
                       Filtres
-                      {activeFiltersCount > 0 && (
-                        <Badge className="ml-2 bg-primary">{activeFiltersCount}</Badge>
-                      )}
+                      {activeFiltersCount > 0 && <Badge className="ml-2 bg-primary">{activeFiltersCount}</Badge>}
                     </Button>
                   </SheetTrigger>
                   <SheetContent side="left" className="w-80">
@@ -493,29 +392,18 @@ const Boutique = () => {
               </div>
 
               {/* Products Grid */}
-              {paginatedProducts.length > 0 ? (
-                <>
+              {paginatedProducts.length > 0 ? <>
                   <div className="grid sm:grid-cols-2 xl:grid-cols-3 gap-6">
-                    {paginatedProducts.map((product, index) => (
-                      <div
-                        key={product.id}
-                        className="animate-fade-in"
-                        style={{ animationDelay: `${index * 0.05}s` }}
-                      >
+                    {paginatedProducts.map((product, index) => <div key={product.id} className="animate-fade-in" style={{
+                  animationDelay: `${index * 0.05}s`
+                }}>
                         <ProductCard product={product} />
-                      </div>
-                    ))}
+                      </div>)}
                   </div>
                   
                   {/* Pagination */}
-                  <ProductPagination
-                    currentPage={currentPage}
-                    totalPages={totalPages}
-                    onPageChange={handlePageChange}
-                  />
-                </>
-              ) : (
-                <div className="text-center py-20">
+                  <ProductPagination currentPage={currentPage} totalPages={totalPages} onPageChange={handlePageChange} />
+                </> : <div className="text-center py-20">
                   <p className="font-display text-2xl text-muted-foreground mb-4">
                     Aucun produit trouvé
                   </p>
@@ -525,14 +413,11 @@ const Boutique = () => {
                   <Button onClick={clearFilters} className="font-body">
                     Effacer les filtres
                   </Button>
-                </div>
-              )}
+                </div>}
             </div>
           </div>
         </div>
       </section>
-    </Layout>
-  );
+    </Layout>;
 };
-
 export default Boutique;

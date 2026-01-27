@@ -7,7 +7,6 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
-
 const CustomOrder = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
@@ -19,18 +18,24 @@ const CustomOrder = () => {
     type: '',
     style: '',
     weight: '',
-    description: '',
+    description: ''
   });
-
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    const {
+      name,
+      value
+    } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
   };
-
   const handleSelectChange = (name: string, value: string) => {
-    setFormData(prev => ({ ...prev, [name]: value }));
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
   };
-
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -45,27 +50,21 @@ const CustomOrder = () => {
       reader.readAsDataURL(file);
     }
   };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
     if (!formData.fullName || !formData.phone || !formData.type || !formData.style) {
       toast.error('Veuillez remplir tous les champs obligatoires');
       return;
     }
-
     setIsSubmitting(true);
-    
+
     // Simulate submission
     await new Promise(resolve => setTimeout(resolve, 1500));
-    
     setIsSubmitting(false);
     setIsSuccess(true);
   };
-
   if (isSuccess) {
-    return (
-      <Layout>
+    return <Layout>
         <div className="container mx-auto px-4 py-20 text-center max-w-lg">
           <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-green-100 flex items-center justify-center">
             <Check className="w-10 h-10 text-green-600" />
@@ -75,35 +74,28 @@ const CustomOrder = () => {
             Merci pour votre demande de création sur mesure, {formData.fullName}!
             Notre équipe examinera votre projet et vous contactera sous 48h.
           </p>
-          <Button
-            onClick={() => {
-              setIsSuccess(false);
-              setFormData({
-                fullName: '',
-                phone: '',
-                email: '',
-                type: '',
-                style: '',
-                weight: '',
-                description: '',
-              });
-              setImagePreview(null);
-            }}
-            variant="outline"
-            className="font-body"
-          >
+          <Button onClick={() => {
+          setIsSuccess(false);
+          setFormData({
+            fullName: '',
+            phone: '',
+            email: '',
+            type: '',
+            style: '',
+            weight: '',
+            description: ''
+          });
+          setImagePreview(null);
+        }} variant="outline" className="font-body">
             Faire une nouvelle demande
           </Button>
         </div>
-      </Layout>
-    );
+      </Layout>;
   }
-
-  return (
-    <Layout>
+  return <Layout>
       {/* Hero */}
       <section className="bg-charcoal py-20 relative overflow-hidden">
-        <div className="absolute inset-0 opacity-20">
+        <div className="absolute inset-0 opacity-20 bg-accent">
           <div className="absolute top-0 right-0 w-96 h-96 bg-gold rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
         </div>
         
@@ -133,30 +125,14 @@ const CustomOrder = () => {
                 </p>
                 
                 <div className="relative">
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={handleImageChange}
-                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
-                  />
+                  <input type="file" accept="image/*" onChange={handleImageChange} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" />
                   
-                  {imagePreview ? (
-                    <div className="relative aspect-video rounded-lg overflow-hidden bg-cream">
-                      <img
-                        src={imagePreview}
-                        alt="Aperçu"
-                        className="w-full h-full object-contain"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setImagePreview(null)}
-                        className="absolute top-2 right-2 px-3 py-1 bg-destructive text-destructive-foreground rounded-lg font-body text-sm"
-                      >
+                  {imagePreview ? <div className="relative aspect-video rounded-lg overflow-hidden bg-cream">
+                      <img src={imagePreview} alt="Aperçu" className="w-full h-full object-contain" />
+                      <button type="button" onClick={() => setImagePreview(null)} className="absolute top-2 right-2 px-3 py-1 bg-destructive text-destructive-foreground rounded-lg font-body text-sm">
                         Supprimer
                       </button>
-                    </div>
-                  ) : (
-                    <div className="border-2 border-dashed border-border rounded-lg p-12 text-center hover:border-primary transition-colors">
+                    </div> : <div className="border-2 border-dashed border-border rounded-lg p-12 text-center hover:border-primary transition-colors">
                       <Upload className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
                       <p className="font-body text-muted-foreground">
                         Cliquez ou glissez votre image ici
@@ -164,8 +140,7 @@ const CustomOrder = () => {
                       <p className="font-body text-xs text-muted-foreground mt-2">
                         JPG, PNG ou WEBP (max 5MB)
                       </p>
-                    </div>
-                  )}
+                    </div>}
                 </div>
               </div>
 
@@ -175,10 +150,7 @@ const CustomOrder = () => {
                   <Label htmlFor="type" className="font-body">
                     Type de bijou *
                   </Label>
-                  <Select
-                    value={formData.type}
-                    onValueChange={(value) => handleSelectChange('type', value)}
-                  >
+                  <Select value={formData.type} onValueChange={value => handleSelectChange('type', value)}>
                     <SelectTrigger className="mt-2">
                       <SelectValue placeholder="Sélectionner le type" />
                     </SelectTrigger>
@@ -197,10 +169,7 @@ const CustomOrder = () => {
                   <Label htmlFor="style" className="font-body">
                     Style *
                   </Label>
-                  <Select
-                    value={formData.style}
-                    onValueChange={(value) => handleSelectChange('style', value)}
-                  >
+                  <Select value={formData.style} onValueChange={value => handleSelectChange('style', value)}>
                     <SelectTrigger className="mt-2">
                       <SelectValue placeholder="Sélectionner le style" />
                     </SelectTrigger>
@@ -216,15 +185,7 @@ const CustomOrder = () => {
                   <Label htmlFor="weight" className="font-body">
                     Poids souhaité (grammes)
                   </Label>
-                  <Input
-                    id="weight"
-                    name="weight"
-                    type="number"
-                    value={formData.weight}
-                    onChange={handleInputChange}
-                    placeholder="Ex: 25"
-                    className="mt-2"
-                  />
+                  <Input id="weight" name="weight" type="number" value={formData.weight} onChange={handleInputChange} placeholder="Ex: 25" className="mt-2" />
                 </div>
               </div>
 
@@ -233,15 +194,7 @@ const CustomOrder = () => {
                 <Label htmlFor="description" className="font-body">
                   Description détaillée
                 </Label>
-                <Textarea
-                  id="description"
-                  name="description"
-                  value={formData.description}
-                  onChange={handleInputChange}
-                  placeholder="Décrivez votre bijou idéal: matériaux, pierres, finitions, dimensions..."
-                  rows={4}
-                  className="mt-2"
-                />
+                <Textarea id="description" name="description" value={formData.description} onChange={handleInputChange} placeholder="Décrivez votre bijou idéal: matériaux, pierres, finitions, dimensions..." rows={4} className="mt-2" />
               </div>
 
               {/* Contact Info */}
@@ -253,88 +206,58 @@ const CustomOrder = () => {
                     <Label htmlFor="fullName" className="font-body">
                       Nom complet *
                     </Label>
-                    <Input
-                      id="fullName"
-                      name="fullName"
-                      value={formData.fullName}
-                      onChange={handleInputChange}
-                      placeholder="Votre nom et prénom"
-                      className="mt-2"
-                      required
-                    />
+                    <Input id="fullName" name="fullName" value={formData.fullName} onChange={handleInputChange} placeholder="Votre nom et prénom" className="mt-2" required />
                   </div>
 
                   <div>
                     <Label htmlFor="phone" className="font-body">
                       Téléphone *
                     </Label>
-                    <Input
-                      id="phone"
-                      name="phone"
-                      type="tel"
-                      value={formData.phone}
-                      onChange={handleInputChange}
-                      placeholder="06 XX XX XX XX"
-                      className="mt-2"
-                      required
-                    />
+                    <Input id="phone" name="phone" type="tel" value={formData.phone} onChange={handleInputChange} placeholder="06 XX XX XX XX" className="mt-2" required />
                   </div>
 
                   <div className="md:col-span-2">
                     <Label htmlFor="email" className="font-body">
                       Email
                     </Label>
-                    <Input
-                      id="email"
-                      name="email"
-                      type="email"
-                      value={formData.email}
-                      onChange={handleInputChange}
-                      placeholder="votre@email.com"
-                      className="mt-2"
-                    />
+                    <Input id="email" name="email" type="email" value={formData.email} onChange={handleInputChange} placeholder="votre@email.com" className="mt-2" />
                   </div>
                 </div>
               </div>
 
-              <Button
-                type="submit"
-                className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-body uppercase tracking-wider py-6"
-                size="lg"
-                disabled={isSubmitting}
-              >
-                {isSubmitting ? (
-                  'Envoi en cours...'
-                ) : (
-                  <>
+              <Button type="submit" className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-body uppercase tracking-wider py-6" size="lg" disabled={isSubmitting}>
+                {isSubmitting ? 'Envoi en cours...' : <>
                     <Send className="w-5 h-5 mr-2" />
                     Envoyer ma demande
-                  </>
-                )}
+                  </>}
               </Button>
             </form>
           </div>
 
           {/* Info cards */}
           <div className="grid md:grid-cols-3 gap-6 mt-12">
-            {[
-              { step: '1', title: 'Envoyez votre idée', desc: 'Image ou description de votre bijou' },
-              { step: '2', title: 'Devis personnalisé', desc: 'Nous vous contactons sous 48h' },
-              { step: '3', title: 'Fabrication', desc: 'Création artisanale de votre bijou' },
-            ].map((item) => (
-              <div key={item.step} className="text-center p-6 bg-cream rounded-lg">
+            {[{
+            step: '1',
+            title: 'Envoyez votre idée',
+            desc: 'Image ou description de votre bijou'
+          }, {
+            step: '2',
+            title: 'Devis personnalisé',
+            desc: 'Nous vous contactons sous 48h'
+          }, {
+            step: '3',
+            title: 'Fabrication',
+            desc: 'Création artisanale de votre bijou'
+          }].map(item => <div key={item.step} className="text-center p-6 bg-cream rounded-lg">
                 <div className="w-10 h-10 rounded-full bg-primary text-primary-foreground font-display text-lg flex items-center justify-center mx-auto mb-4">
                   {item.step}
                 </div>
                 <h3 className="font-display text-lg mb-2">{item.title}</h3>
                 <p className="font-body text-sm text-muted-foreground">{item.desc}</p>
-              </div>
-            ))}
+              </div>)}
           </div>
         </div>
       </section>
-    </Layout>
-  );
+    </Layout>;
 };
-
 export default CustomOrder;
