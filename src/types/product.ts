@@ -1,6 +1,7 @@
 export type ProductCategory = 'beldi' | 'modern';
 export type ProductType = 'bracelet' | 'ring' | 'necklace' | 'earrings' | 'set';
 export type GoldType = 'yellow' | 'white' | 'rose';
+export type ProductCollection = 'mariage' | 'homme' | 'femme';
 export type PaymentMethod = 'cash_on_delivery' | 'online';
 
 // Size options for rings and necklaces
@@ -18,13 +19,20 @@ export interface Product {
   images: string[];
   category: ProductCategory;
   type: ProductType;
-  goldType: GoldType; // or jaune, or blanc, or rose
-  availableSizes?: string[]; // for rings and necklaces
+  goldType: GoldType;
+  collection?: ProductCollection; // mariage, homme, femme
+  availableSizes?: string[];
   inStock: boolean;
   stockQuantity: number;
   badges: ('new' | 'bestseller' | 'promo')[];
   createdAt: string;
 }
+
+export const collectionLabels: Record<ProductCollection, string> = {
+  mariage: 'Mariage',
+  homme: 'Homme',
+  femme: 'Femme',
+};
 
 export interface CartItem {
   product: Product;

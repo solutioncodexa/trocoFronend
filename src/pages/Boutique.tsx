@@ -13,9 +13,12 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/co
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { GoldType, goldTypeLabels } from '@/types/product';
+import { GoldType, goldTypeLabels, ProductCollection, collectionLabels } from '@/types/product';
+
 const PRODUCTS_PER_PAGE = 12;
+
 type SortOption = 'newest' | 'price-asc' | 'price-desc' | 'popularity';
+
 const sortOptions: {
   value: SortOption;
   label: string;
@@ -32,6 +35,7 @@ const sortOptions: {
   value: 'popularity',
   label: 'Popularité'
 }];
+
 const productTypes = [{
   id: 'bracelet',
   label: 'Bracelets'
@@ -48,6 +52,7 @@ const productTypes = [{
   id: 'set',
   label: 'Parures'
 }];
+
 const goldTypes: {
   id: GoldType;
   label: string;
@@ -65,12 +70,32 @@ const goldTypes: {
   label: 'Or Rose',
   color: 'bg-rose-300'
 }];
+
+const collections: {
+  id: ProductCollection;
+  label: string;
+  icon: string;
+}[] = [{
+  id: 'mariage',
+  label: 'Mariage',
+  icon: '💍'
+}, {
+  id: 'homme',
+  label: 'Homme',
+  icon: '👔'
+}, {
+  id: 'femme',
+  label: 'Femme',
+  icon: '👗'
+}];
 const Boutique = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const categoryParam = searchParams.get('category');
   const [selectedCategory, setSelectedCategory] = useState<string | null>(categoryParam);
   const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
   const [selectedGoldTypes, setSelectedGoldTypes] = useState<GoldType[]>([]);
+  const [selectedCollections, setSelectedCollections] = useState<ProductCollection[]>([]);
+  const [showPromoOnly, setShowPromoOnly] = useState(false);
   const [priceRange, setPriceRange] = useState<[number, number]>([0, 100000]);
   const [inStockOnly, setInStockOnly] = useState(false);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
@@ -117,6 +142,12 @@ const Boutique = () => {
       // Gold type filter
       if (selectedGoldTypes.length > 0 && !selectedGoldTypes.includes(product.goldType)) return false;
 
+      // Collection filter
+      if (selectedCollections.length > 0 && (!product.collection || !selectedCollections.includes(product.collection))) return false;
+
+      // Promo filter
+      if (showPromoOnly && !product.badges.includes('promo')) return false;
+
       // Price filter
       if (product.price < priceRange[0] || product.price > priceRange[1]) return false;
 
@@ -145,7 +176,7 @@ const Boutique = () => {
         break;
     }
     return result;
-  }, [selectedCategory, selectedTypes, selectedGoldTypes, priceRange, inStockOnly, searchQuery, sortBy]);
+  }, [selectedCategory, selectedTypes, selectedGoldTypes, selectedCollections, showPromoOnly, priceRange, inStockOnly, searchQuery, sortBy]);
 
   // Pagination
   const totalPages = Math.ceil(filteredProducts.length / PRODUCTS_PER_PAGE);
@@ -157,7 +188,7 @@ const Boutique = () => {
   // Reset to page 1 when filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [selectedCategory, selectedTypes, selectedGoldTypes, priceRange, inStockOnly, searchQuery, sortBy]);
+  }, [selectedCategory, selectedTypes, selectedGoldTypes, selectedCollections, showPromoOnly, priceRange, inStockOnly, searchQuery, sortBy]);
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
     window.scrollTo({
@@ -182,6 +213,10 @@ const Boutique = () => {
   const handleTypeToggle = (typeId: string) => {
     setSelectedTypes(prev => prev.includes(typeId) ? prev.filter(t => t !== typeId) : [...prev, typeId]);
   };
+  const handleCollectionToggle = (collectionId: ProductCollection) => {
+    setSelectedCollections(prev => prev.includes(collectionId) ? prev.filter(c => c !== collectionId) : [...prev, collectionId]);
+  };
+
   const handleGoldTypeToggle = (goldTypeId: GoldType) => {
     setSelectedGoldTypes(prev => prev.includes(goldTypeId) ? prev.filter(t => t !== goldTypeId) : [...prev, goldTypeId]);
   };
@@ -189,13 +224,16 @@ const Boutique = () => {
     setSelectedCategory(null);
     setSelectedTypes([]);
     setSelectedGoldTypes([]);
+    setSelectedCollections([]);
+    setShowPromoOnly(false);
     setPriceRange([0, maxPrice]);
     setInStockOnly(false);
     setSearchQuery('');
     setSortBy('newest');
     setSearchParams({});
   };
-  const activeFiltersCount = (selectedCategory ? 1 : 0) + selectedTypes.length + selectedGoldTypes.length + (priceRange[0] > 0 || priceRange[1] < maxPrice ? 1 : 0) + (inStockOnly ? 1 : 0) + (searchQuery.trim() ? 1 : 0);
+
+  const activeFiltersCount = (selectedCategory ? 1 : 0) + selectedTypes.length + selectedGoldTypes.length + selectedCollections.length + (showPromoOnly ? 1 : 0) + (priceRange[0] > 0 || priceRange[1] < maxPrice ? 1 : 0) + (inStockOnly ? 1 : 0) + (searchQuery.trim() ? 1 : 0);
   const FilterContent = () => <div className="space-y-8">
       {/* Category Filter */}
       <div>
@@ -210,6 +248,31 @@ const Boutique = () => {
           <Button variant={selectedCategory === 'modern' ? 'default' : 'outline'} size="sm" onClick={() => handleCategoryChange('modern')} className="font-body">
             Moderne
           </Button>
+        </div>
+      </div>
+
+      {/* Collection Filter */}
+      <div>
+        <h3 className="font-display text-lg mb-4">Collection</h3>
+        <div className="space-y-3">
+          {collections.map(collection => <div key={collection.id} className="flex items-center space-x-3">
+              <Checkbox id={`collection-${collection.id}`} checked={selectedCollections.includes(collection.id)} onCheckedChange={() => handleCollectionToggle(collection.id)} />
+              <Label htmlFor={`collection-${collection.id}`} className="font-body cursor-pointer flex items-center gap-2">
+                <span>{collection.icon}</span>
+                {collection.label}
+              </Label>
+            </div>)}
+        </div>
+      </div>
+
+      {/* Promo Filter */}
+      <div>
+        <div className="flex items-center space-x-3">
+          <Checkbox id="promo-only" checked={showPromoOnly} onCheckedChange={checked => setShowPromoOnly(checked as boolean)} />
+          <Label htmlFor="promo-only" className="font-body cursor-pointer flex items-center gap-2">
+            <span className="text-destructive">🏷️</span>
+            En promotion
+          </Label>
         </div>
       </div>
 
@@ -361,6 +424,15 @@ const Boutique = () => {
                       {goldTypes.find(g => g.id === goldType)?.label}
                       <X className="w-3 h-3 ml-1 cursor-pointer" onClick={() => handleGoldTypeToggle(goldType)} />
                     </Badge>)}
+                  {selectedCollections.map(collection => <Badge key={collection} variant="secondary" className="font-body flex items-center gap-1">
+                      <span>{collections.find(c => c.id === collection)?.icon}</span>
+                      {collections.find(c => c.id === collection)?.label}
+                      <X className="w-3 h-3 ml-1 cursor-pointer" onClick={() => handleCollectionToggle(collection)} />
+                    </Badge>)}
+                  {showPromoOnly && <Badge variant="destructive" className="font-body">
+                      🏷️ Promos
+                      <X className="w-3 h-3 ml-1 cursor-pointer" onClick={() => setShowPromoOnly(false)} />
+                    </Badge>}
                   {searchQuery.trim() && <Badge variant="secondary" className="font-body">
                       Recherche: {searchQuery}
                       <X className="w-3 h-3 ml-1 cursor-pointer" onClick={() => setSearchQuery('')} />
