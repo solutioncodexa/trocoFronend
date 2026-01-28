@@ -33,6 +33,8 @@ const ProductCard = ({ product, className }: ProductCardProps) => {
         return 'bg-primary text-primary-foreground';
       case 'bestseller':
         return 'bg-gradient-gold text-charcoal';
+      case 'promo':
+        return 'bg-destructive text-destructive-foreground';
       default:
         return '';
     }
@@ -44,10 +46,17 @@ const ProductCard = ({ product, className }: ProductCardProps) => {
         return 'Nouveau';
       case 'bestseller':
         return 'Best-seller';
+      case 'promo':
+        return 'Promo';
       default:
         return badge;
     }
   };
+
+  // Calculate discount percentage
+  const discountPercentage = product.originalPrice 
+    ? Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)
+    : 0;
 
   return (
     <Link
@@ -131,9 +140,21 @@ const ProductCard = ({ product, className }: ProductCardProps) => {
           </Badge>
         </div>
         <div className="flex items-center justify-between pt-2">
-          <span className="font-display text-xl text-primary font-semibold">
-            {formatPrice(product.price)}
-          </span>
+          <div className="flex items-center gap-2">
+            <span className="font-display text-xl text-primary font-semibold">
+              {formatPrice(product.price)}
+            </span>
+            {product.originalPrice && (
+              <span className="font-body text-sm text-muted-foreground line-through">
+                {formatPrice(product.originalPrice)}
+              </span>
+            )}
+            {discountPercentage > 0 && (
+              <span className="font-body text-xs bg-destructive text-destructive-foreground px-1.5 py-0.5 rounded">
+                -{discountPercentage}%
+              </span>
+            )}
+          </div>
           <span className="font-body text-xs text-muted-foreground">
             {product.weight}g
           </span>
