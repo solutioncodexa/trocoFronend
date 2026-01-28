@@ -13,6 +13,7 @@ export interface Product {
   name: string;
   description: string;
   price: number;
+  originalPrice?: number; // Prix avant réduction
   weight: number; // in grams
   images: string[];
   category: ProductCategory;
@@ -21,7 +22,7 @@ export interface Product {
   availableSizes?: string[]; // for rings and necklaces
   inStock: boolean;
   stockQuantity: number;
-  badges: ('new' | 'bestseller')[];
+  badges: ('new' | 'bestseller' | 'promo')[];
   createdAt: string;
 }
 

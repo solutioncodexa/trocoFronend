@@ -5,7 +5,8 @@ export const products: Product[] = [
     id: '1',
     name: 'Bracelet Beldi Traditionnel',
     description: 'Un magnifique bracelet beldi en or 18 carats, travaillé à la main avec des motifs traditionnels marocains. Chaque pièce est unique et reflète le savoir-faire artisanal ancestral.',
-    price: 12500,
+    price: 10500,
+    originalPrice: 12500,
     weight: 25,
     images: [
       'https://images.unsplash.com/photo-1611652022419-a9419f74343d?w=800',
@@ -17,7 +18,7 @@ export const products: Product[] = [
     availableSizes: braceletSizes,
     inStock: true,
     stockQuantity: 5,
-    badges: ['bestseller'],
+    badges: ['bestseller', 'promo'],
     createdAt: '2024-01-15',
   },
   {
@@ -80,7 +81,8 @@ export const products: Product[] = [
     id: '5',
     name: 'Parure Complète Royale',
     description: 'Ensemble complet comprenant collier, bracelet, boucles d\'oreilles et bague. Style beldi royal avec pierres précieuses.',
-    price: 75000,
+    price: 65000,
+    originalPrice: 75000,
     weight: 120,
     images: [
       'https://images.unsplash.com/photo-1601121141461-9d6647bca1ed?w=800',
@@ -91,7 +93,7 @@ export const products: Product[] = [
     goldType: 'yellow',
     inStock: true,
     stockQuantity: 1,
-    badges: ['bestseller'],
+    badges: ['bestseller', 'promo'],
     createdAt: '2024-01-05',
   },
   {
