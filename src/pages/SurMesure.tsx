@@ -43,7 +43,7 @@ const SurMesure = () => {
           </div>
           <div className="bg-white/50 dark:bg-background-dark/50 backdrop-blur-sm p-8 md:p-12 border border-accent-beige/20 shadow-xl rounded-sm">
             <p className="text-lg md:text-xl text-secondary-dark/80 dark:text-white/80 leading-relaxed font-light italic">
-              "Donnez vie à vos rêves les plus précieux. Nos maîtres joailliers mettent leur expertise à votre service pour créer une pièce unique, reflet de votre personnalité et de votre histoire. Chaque détail est minutieusement étudié pour atteindre la perfection de l'héritage."
+              "Donnez vie à vos rêves les plus précieux. Nos maîtres joailliers mettent leur expertise à votre service pour créer une pièce unique, reflet de votre personnalité et de votre histoire. Chaque détail est minutieusement étudié pour atteindre la perfection de l'artisanat."
             </p>
           </div>
         </div>
@@ -89,7 +89,7 @@ const SurMesure = () => {
                     className="w-full bg-paper dark:bg-secondary-dark border-accent-beige/30 py-3 px-4 focus:ring-primary focus:border-primary rounded-none text-sm"
                   >
                     <option value="">Sélectionnez un style</option>
-                    <option value="beldi">Héritage Beldi (Traditionnel)</option>
+                    <option value="beldi">Style Beldi (Traditionnel)</option>
                     <option value="moderne">Moderne & Minimaliste</option>
                     <option value="fusion">Fusion (Beldi-Moderne)</option>
                   </select>

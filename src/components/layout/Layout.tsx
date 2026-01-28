@@ -2,6 +2,7 @@ import { ReactNode } from 'react';
 import Header from './Header';
 import Footer from './Footer';
 import TopBar from './TopBar';
+import PromoModal from '../ui/PromoModal';
 
 interface LayoutProps {
   children: ReactNode;
@@ -14,6 +15,7 @@ const Layout = ({ children }: LayoutProps) => {
       <Header />
       <main className="flex-grow">{children}</main>
       <Footer />
+      <PromoModal />
     </div>
   );
 };

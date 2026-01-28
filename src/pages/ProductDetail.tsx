@@ -311,7 +311,7 @@ const ProductDetail = () => {
               <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 size-2 rotate-45 border border-accent-beige bg-background-light"></div>
             </div>
             <h3 className="font-display text-3xl text-secondary-dark dark:text-white mb-2">Vous aimerez aussi</h3>
-            <p className="text-accent-beige uppercase tracking-widest text-xs">Sélection Héritage pour compléter votre parure</p>
+            <p className="text-accent-beige uppercase tracking-widest text-xs">Sélection Exclusivité pour compléter votre parure</p>
           </div>
           <div className="max-w-[1280px] mx-auto px-6">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">

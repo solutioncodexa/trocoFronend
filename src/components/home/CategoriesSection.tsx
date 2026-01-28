@@ -5,7 +5,7 @@ const categories = [
   {
     id: 'beldi',
     name: 'Bijoux Beldi',
-    description: 'L\'héritage artisanal marocain sublimé dans chaque création',
+    description: 'L\'artisanat marocain sublimé dans chaque création',
     image: 'https://images.unsplash.com/photo-1611652022419-a9419f74343d?w=800',
     link: '/boutique?category=beldi',
   },

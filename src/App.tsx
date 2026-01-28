@@ -16,6 +16,7 @@ import Checkout from "./pages/Checkout";
 import CustomOrder from "./pages/CustomOrder";
 import Wishlist from "./pages/Wishlist";
 import SurMesure from "./pages/SurMesure";
+import Contact from "./pages/Contact";
 import NotFound from "./pages/NotFound";
 
 // Admin pages
@@ -48,6 +49,7 @@ const App = () => (
                 <Route path="/checkout" element={<Checkout />} />
                 <Route path="/commande-personnalisee" element={<CustomOrder />} />
                 <Route path="/sur-mesure" element={<SurMesure />} />
+                <Route path="/contact" element={<Contact />} />
                 <Route path="/favoris" element={<Wishlist />} />
                 
                 {/* Admin Routes */}
