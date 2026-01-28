@@ -1,18 +1,20 @@
 import Layout from '@/components/layout/Layout';
 import HeroSection from '@/components/home/HeroSection';
-import CategoriesSection from '@/components/home/CategoriesSection';
-import FeaturedProducts from '@/components/home/FeaturedProducts';
-import CustomOrderCTA from '@/components/home/CustomOrderCTA';
-import PromotionBanner from '@/components/home/PromotionBanner';
+import BeldiCollection from '@/components/home/BeldiCollection';
+import HeritageSection from '@/components/home/HeritageSection';
+import SurMesureSection from '@/components/home/SurMesureSection';
+import ModernCollection from '@/components/home/ModernCollection';
+import TestimonialSection from '@/components/home/TestimonialSection';
 
 const Index = () => {
   return (
     <Layout>
       <HeroSection />
-      <PromotionBanner />
-      <CategoriesSection />
-      <FeaturedProducts />
-      <CustomOrderCTA />
+      <BeldiCollection />
+      <HeritageSection />
+      <SurMesureSection />
+      <ModernCollection />
+      <TestimonialSection />
     </Layout>
   );
 };

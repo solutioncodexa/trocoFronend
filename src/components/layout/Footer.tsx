@@ -1,112 +1,86 @@
 import { Link } from 'react-router-dom';
-import { Phone, Mail, MapPin, Instagram, Facebook } from 'lucide-react';
 
 const Footer = () => {
   return (
-    <footer className="bg-charcoal text-cream">
-      <div className="container mx-auto px-4 py-16">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12">
-          {/* Brand */}
-          <div className="space-y-4">
-            <h3 className="font-display text-2xl text-gold">Or Élégance</h3>
-            <p className="font-body text-sm text-cream/80 leading-relaxed">
-              Bijouterie de luxe proposant des créations uniques en or, alliant tradition marocaine et design contemporain.
-            </p>
-            <div className="flex space-x-4 pt-4">
-              <a
-                href="https://instagram.com"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="w-10 h-10 rounded-full bg-cream/10 flex items-center justify-center hover:bg-gold hover:text-charcoal transition-all"
-              >
-                <Instagram className="w-5 h-5" />
-              </a>
-              <a
-                href="https://facebook.com"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="w-10 h-10 rounded-full bg-cream/10 flex items-center justify-center hover:bg-gold hover:text-charcoal transition-all"
-              >
-                <Facebook className="w-5 h-5" />
-              </a>
-            </div>
-          </div>
-
-          {/* Quick Links */}
-          <div className="space-y-4">
-            <h4 className="font-display text-lg text-gold">Liens Rapides</h4>
-            <nav className="flex flex-col space-y-3">
-              <Link to="/boutique" className="font-body text-sm text-cream/80 hover:text-gold transition-colors">
-                Notre Collection
-              </Link>
-              <Link to="/boutique?category=beldi" className="font-body text-sm text-cream/80 hover:text-gold transition-colors">
-                Bijoux Beldi
-              </Link>
-              <Link to="/boutique?category=modern" className="font-body text-sm text-cream/80 hover:text-gold transition-colors">
-                Bijoux Modernes
-              </Link>
-              <Link to="/commande-personnalisee" className="font-body text-sm text-cream/80 hover:text-gold transition-colors">
-                Commande Sur Mesure
-              </Link>
-            </nav>
-          </div>
-
-          {/* Customer Service */}
-          <div className="space-y-4">
-            <h4 className="font-display text-lg text-gold">Service Client</h4>
-            <nav className="flex flex-col space-y-3">
-              <Link to="/livraison" className="font-body text-sm text-cream/80 hover:text-gold transition-colors">
-                Livraison
-              </Link>
-              <Link to="/retours" className="font-body text-sm text-cream/80 hover:text-gold transition-colors">
-                Retours & Échanges
-              </Link>
-              <Link to="/garantie" className="font-body text-sm text-cream/80 hover:text-gold transition-colors">
-                Garantie
-              </Link>
-              <Link to="/faq" className="font-body text-sm text-cream/80 hover:text-gold transition-colors">
-                FAQ
-              </Link>
-            </nav>
-          </div>
-
-          {/* Contact */}
-          <div className="space-y-4">
-            <h4 className="font-display text-lg text-gold">Contact</h4>
-            <div className="space-y-3">
-              <a
-                href="tel:+212600000000"
-                className="flex items-center space-x-3 font-body text-sm text-cream/80 hover:text-gold transition-colors"
-              >
-                <Phone className="w-4 h-4" />
-                <span>+212 6 00 00 00 00</span>
-              </a>
-              <a
-                href="mailto:contact@orelegance.ma"
-                className="flex items-center space-x-3 font-body text-sm text-cream/80 hover:text-gold transition-colors"
-              >
-                <Mail className="w-4 h-4" />
-                <span>contact@orelegance.ma</span>
-              </a>
-              <div className="flex items-start space-x-3 font-body text-sm text-cream/80">
-                <MapPin className="w-4 h-4 mt-1 flex-shrink-0" />
-                <span>123 Avenue Mohammed V<br />Casablanca, Maroc</span>
+    <footer className="bg-[#181611] text-white pt-20 pb-10 border-t-4 border-primary">
+      <div className="max-w-[1280px] mx-auto px-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 mb-16">
+          {/* Brand Col */}
+          <div className="flex flex-col gap-6">
+            <div className="flex items-center gap-2 text-primary">
+              <div className="size-6">
+                <svg fill="currentColor" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M42.1739 20.1739L27.8261 5.82609C29.1366 7.13663 28.3989 10.1876 26.2002 13.7654C24.8538 15.9564 22.9595 18.3449 20.6522 20.6522C18.3449 22.9595 15.9564 24.8538 13.7654 26.2002C10.1876 28.3989 7.13663 29.1366 5.82609 27.8261L20.1739 42.1739C21.4845 43.4845 24.5355 42.7467 28.1133 40.548C30.3042 39.2016 32.6927 37.3073 35 35C37.3073 32.6927 39.2016 30.3042 40.548 28.1133C42.7467 24.5355 43.4845 21.4845 42.1739 20.1739Z"></path>
+                </svg>
               </div>
+              <span className="text-xl font-bold font-display tracking-tight">Boutique Héritage</span>
             </div>
+            <p className="text-[#8a8060] text-sm leading-relaxed">
+              L'excellence de la joaillerie, la passion de l'or et l'amour du travail bien fait. Une maison de tradition depuis 1952.
+            </p>
+            <div className="flex gap-4">
+              <a className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center hover:bg-primary hover:text-secondary-dark transition-colors" href="#">
+                <span className="material-symbols-outlined text-sm">public</span>
+              </a>
+              <a className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center hover:bg-primary hover:text-secondary-dark transition-colors" href="#">
+                <span className="material-symbols-outlined text-sm">camera_alt</span>
+              </a>
+              <a className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center hover:bg-primary hover:text-secondary-dark transition-colors" href="#">
+                <span className="material-symbols-outlined text-sm">alternate_email</span>
+              </a>
+            </div>
+          </div>
+
+          {/* Links Col 1 */}
+          <div>
+            <h5 className="text-primary font-bold uppercase tracking-widest text-sm mb-6">Collections</h5>
+            <ul className="flex flex-col gap-3 text-sm text-[#d4d4d0]">
+              <li><Link className="hover:text-primary transition-colors" to="/boutique?category=alliances">Alliances</Link></li>
+              <li><Link className="hover:text-primary transition-colors" to="/boutique?category=solitaires">Solitaires</Link></li>
+              <li><Link className="hover:text-primary transition-colors" to="/boutique?category=beldi">Collection Beldi</Link></li>
+              <li><Link className="hover:text-primary transition-colors" to="/boutique?category=modern">Collection Moderne</Link></li>
+              <li><Link className="hover:text-primary transition-colors" to="/boutique?category=haute">Haute Joaillerie</Link></li>
+            </ul>
+          </div>
+
+          {/* Links Col 2 */}
+          <div>
+            <h5 className="text-primary font-bold uppercase tracking-widest text-sm mb-6">Informations</h5>
+            <ul className="flex flex-col gap-3 text-sm text-[#d4d4d0]">
+              <li><Link className="hover:text-primary transition-colors" to="#">La Maison</Link></li>
+              <li><Link className="hover:text-primary transition-colors" to="#">Nos Ateliers</Link></li>
+              <li><Link className="hover:text-primary transition-colors" to="#">Livraison & Retours</Link></li>
+              <li><Link className="hover:text-primary transition-colors" to="#">FAQ</Link></li>
+              <li><Link className="hover:text-primary transition-colors" to="#">Contact</Link></li>
+            </ul>
+          </div>
+
+          {/* Newsletter */}
+          <div>
+            <h5 className="text-primary font-bold uppercase tracking-widest text-sm mb-6">Newsletter</h5>
+            <p className="text-[#8a8060] text-sm mb-4">Inscrivez-vous pour recevoir nos offres exclusives et nos nouveautés.</p>
+            <form className="flex flex-col gap-3">
+              <input 
+                className="bg-white/5 border border-white/10 px-4 py-3 rounded-sm text-sm focus:outline-none focus:border-primary text-white placeholder:text-white/30" 
+                placeholder="Votre email" 
+                type="email"
+              />
+              <button 
+                className="bg-primary text-secondary-dark font-bold uppercase text-xs py-3 px-6 hover:bg-[#d9a50b] transition-colors rounded-sm" 
+                type="button"
+              >
+                S'inscrire
+              </button>
+            </form>
           </div>
         </div>
 
-        {/* Bottom bar */}
-        <div className="mt-12 pt-8 border-t border-cream/20">
-          <div className="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
-            <p className="font-body text-xs text-cream/60">
-              © 2024 Or Élégance. Tous droits réservés.
-            </p>
-            <div className="flex items-center space-x-4 text-xs text-cream/60">
-              <span className="font-body">Paiement à la livraison uniquement</span>
-              <span className="text-gold">•</span>
-              <span className="font-body">Livraison dans tout le Maroc</span>
-            </div>
+        <div className="border-t border-white/10 pt-8 flex flex-col md:flex-row justify-between items-center gap-4 text-xs text-[#8a8060]">
+          <p>© 2023 Boutique Héritage. Tous droits réservés.</p>
+          <div className="flex gap-6">
+            <Link className="hover:text-white transition-colors" to="#">Mentions Légales</Link>
+            <Link className="hover:text-white transition-colors" to="#">Confidentialité</Link>
+            <Link className="hover:text-white transition-colors" to="#">CGV</Link>
           </div>
         </div>
       </div>

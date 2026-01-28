@@ -20,7 +20,7 @@ const Header = () => {
     { href: '/boutique', label: 'Boutique' },
     { href: '/boutique?category=beldi', label: 'Beldi' },
     { href: '/boutique?category=modern', label: 'Moderne' },
-    { href: '/commande-personnalisee', label: 'Sur Mesure' },
+    { href: '/sur-mesure', label: 'Sur Mesure' },
   ];
 
   const isActive = (href: string) => {
@@ -30,13 +30,6 @@ const Header = () => {
 
   return (
     <header className="sticky top-0 z-50 bg-background/95 backdrop-blur-md border-b border-border">
-      {/* Top bar */}
-      <div className="bg-charcoal text-primary-foreground py-2 text-center text-sm">
-        <p className="font-body tracking-wide">
-          ✨ Livraison gratuite à partir de 5000 MAD d'achat ✨
-        </p>
-      </div>
-
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-20">
           {/* Mobile menu button */}
@@ -54,8 +47,8 @@ const Header = () => {
 
           {/* Logo */}
           <Link to="/" className="flex items-center space-x-2">
-            <span className="font-display text-2xl md:text-3xl font-bold text-gold-gradient">
-              Or Élégance
+            <span className="font-script text-2xl md:text-3xl text-primary">
+              NazGold
             </span>
           </Link>
 

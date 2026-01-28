@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Plus, Pencil, Trash2, Search, Upload, X } from 'lucide-react';
 import AdminLayout from '@/components/admin/AdminLayout';
 import { Button } from '@/components/ui/button';
@@ -9,12 +9,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { products as initialProducts, formatPrice } from '@/data/products';
-import { Product, ProductCategory, ProductType, GoldType, goldTypeLabels, defaultProductTypes, ringSizes, necklaceSizes, braceletSizes } from '@/types/product';
+import { Product, ProductCategory, ProductType, GoldType, goldTypeLabels, defaultProductTypes, ringSizes, necklaceSizes, braceletSizes, Collection, defaultCollections } from '@/types/product';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
 const AdminProducts = () => {
   const [products, setProducts] = useState<Product[]>(initialProducts);
+  const [collections, setCollections] = useState<Collection[]>(defaultCollections);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterCategory, setFilterCategory] = useState<string>('all');
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -23,14 +24,38 @@ const AdminProducts = () => {
     name: '',
     description: '',
     price: '',
+    originalPrice: '',
     weight: '',
     category: 'beldi' as ProductCategory,
     type: 'bracelet' as ProductType,
     goldType: 'yellow' as GoldType,
+    collection: '',
     stockQuantity: '',
     badges: [] as string[],
     images: [] as string[],
   });
+
+  // Effet pour gérer automatiquement le badge promo
+  useEffect(() => {
+    // Ne pas appliquer l'effet pendant l'édition d'un produit existant
+    if (editingProduct) return;
+    
+    const originalPriceValue = formData.originalPrice ? parseFloat(formData.originalPrice) : undefined;
+    const priceValue = formData.price ? parseFloat(formData.price) : 0;
+    
+    const hasPromo = originalPriceValue && priceValue < originalPriceValue;
+    
+    setFormData(prev => {
+      const otherBadges = prev.badges.filter(b => b !== 'promo');
+      const newBadges = hasPromo ? [...otherBadges, 'promo'] : otherBadges;
+      
+      // Éviter les mises à jour infinies
+      if (JSON.stringify(prev.badges) !== JSON.stringify(newBadges)) {
+        return { ...prev, badges: newBadges };
+      }
+      return prev;
+    });
+  }, [formData.originalPrice, formData.price, editingProduct]);
 
   const filteredProducts = products.filter(product => {
     const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -59,10 +84,12 @@ const AdminProducts = () => {
         name: product.name,
         description: product.description,
         price: product.price.toString(),
+        originalPrice: product.originalPrice?.toString() || '',
         weight: product.weight.toString(),
         category: product.category,
         type: product.type,
         goldType: product.goldType,
+        collection: product.collection || '',
         stockQuantity: product.stockQuantity.toString(),
         badges: product.badges,
         images: product.images,
@@ -73,10 +100,12 @@ const AdminProducts = () => {
         name: '',
         description: '',
         price: '',
+        originalPrice: '',
         weight: '',
         category: 'beldi',
         type: 'bracelet',
         goldType: 'yellow',
+        collection: '',
         stockQuantity: '',
         badges: [],
         images: [],
@@ -93,25 +122,48 @@ const AdminProducts = () => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
+    const originalPriceValue = formData.originalPrice ? parseFloat(formData.originalPrice) : undefined;
+    const priceValue = parseFloat(formData.price);
+    
+    // Gérer le badge promo pour la sauvegarde
+    const hasPromo = originalPriceValue && priceValue < originalPriceValue;
+    
+    // Debug pour voir les valeurs
+    console.log('Prix actuel:', priceValue);
+    console.log('Prix original:', originalPriceValue);
+    console.log('Has promo:', hasPromo);
+    
+    const badges = hasPromo 
+      ? [...formData.badges.filter(b => b !== 'promo'), 'promo'] as ('new' | 'bestseller' | 'promo')[]
+      : formData.badges.filter(b => b !== 'promo') as ('new' | 'bestseller')[];
+    
     const productData: Product = {
       id: editingProduct?.id || Date.now().toString(),
       name: formData.name,
       description: formData.description,
-      price: parseFloat(formData.price),
+      price: priceValue,
+      originalPrice: originalPriceValue,
       weight: parseFloat(formData.weight),
       category: formData.category,
       type: formData.type,
       goldType: formData.goldType,
+      collection: formData.collection || undefined,
       availableSizes: getAvailableSizes(formData.type),
       stockQuantity: parseInt(formData.stockQuantity),
       inStock: parseInt(formData.stockQuantity) > 0,
-      badges: formData.badges as ('new' | 'bestseller')[],
+      badges: badges,
       images: formData.images.length > 0 ? formData.images : ['https://images.unsplash.com/photo-1611652022419-a9419f74343d?w=800'],
       createdAt: editingProduct?.createdAt || new Date().toISOString().split('T')[0],
     };
 
+    console.log('Produit sauvegardé:', productData);
+
     if (editingProduct) {
-      setProducts(prev => prev.map(p => p.id === editingProduct.id ? productData : p));
+      setProducts(prev => {
+        const updated = prev.map(p => p.id === editingProduct.id ? productData : p);
+        console.log('Produits après mise à jour:', updated);
+        return updated;
+      });
       toast.success('Produit modifié avec succès');
     } else {
       setProducts(prev => [...prev, productData]);
@@ -129,6 +181,9 @@ const AdminProducts = () => {
   };
 
   const toggleBadge = (badge: string) => {
+    // Empêcher la modification manuelle du badge promo
+    if (badge === 'promo') return;
+    
     setFormData(prev => ({
       ...prev,
       badges: prev.badges.includes(badge)
@@ -188,6 +243,7 @@ const AdminProducts = () => {
               <tr>
                 <th className="px-4 py-3 text-left font-body text-sm font-medium text-muted-foreground">Produit</th>
                 <th className="px-4 py-3 text-left font-body text-sm font-medium text-muted-foreground">Catégorie</th>
+                <th className="px-4 py-3 text-left font-body text-sm font-medium text-muted-foreground">Collection</th>
                 <th className="px-4 py-3 text-left font-body text-sm font-medium text-muted-foreground">Type d'or</th>
                 <th className="px-4 py-3 text-left font-body text-sm font-medium text-muted-foreground">Prix</th>
                 <th className="px-4 py-3 text-left font-body text-sm font-medium text-muted-foreground">Stock</th>
@@ -217,11 +273,31 @@ const AdminProducts = () => {
                     </Badge>
                   </td>
                   <td className="px-4 py-3">
+                    {product.collection ? (
+                      <Badge variant="outline">
+                        {collections.find(c => c.id === product.collection)?.name || product.collection}
+                      </Badge>
+                    ) : (
+                      <span className="text-muted-foreground text-sm">Aucune</span>
+                    )}
+                  </td>
+                  <td className="px-4 py-3">
                     <Badge variant="outline">
                       {goldTypeLabels[product.goldType]}
                     </Badge>
                   </td>
-                  <td className="px-4 py-3 font-body">{formatPrice(product.price)}</td>
+                  <td className="px-4 py-3 font-body">
+                    <div>
+                      <span className={product.originalPrice && product.originalPrice > product.price ? 'text-green-600 font-medium' : ''}>
+                        {formatPrice(product.price)}
+                      </span>
+                      {product.originalPrice && product.originalPrice > product.price && (
+                        <div className="text-xs text-muted-foreground line-through">
+                          {formatPrice(product.originalPrice)}
+                        </div>
+                      )}
+                    </div>
+                  </td>
                   <td className="px-4 py-3">
                     <span className={cn(
                       'font-body',
@@ -234,8 +310,8 @@ const AdminProducts = () => {
                   <td className="px-4 py-3">
                     <div className="flex gap-1">
                       {product.badges.map(badge => (
-                        <Badge key={badge} variant="outline" className="text-xs">
-                          {badge === 'new' ? 'Nouveau' : 'Best-seller'}
+                        <Badge key={badge} variant={badge === 'promo' ? 'destructive' : 'outline'} className="text-xs">
+                          {badge === 'new' ? 'Nouveau' : badge === 'bestseller' ? 'Best-seller' : 'Promo'}
                         </Badge>
                       ))}
                     </div>
@@ -336,6 +412,17 @@ const AdminProducts = () => {
                 />
               </div>
               <div>
+                <Label htmlFor="originalPrice">Prix original (MAD)</Label>
+                <Input
+                  id="originalPrice"
+                  type="number"
+                  value={formData.originalPrice}
+                  onChange={(e) => setFormData(prev => ({ ...prev, originalPrice: e.target.value }))}
+                  placeholder="Pour les promotions"
+                  className="mt-1"
+                />
+              </div>
+              <div>
                 <Label htmlFor="weight">Poids (g) *</Label>
                 <Input
                   id="weight"
@@ -357,6 +444,9 @@ const AdminProducts = () => {
                   className="mt-1"
                 />
               </div>
+            </div>
+
+            <div className="grid md:grid-cols-3 gap-4">
               <div>
                 <Label>Type d'or *</Label>
                 <Select
@@ -373,9 +463,6 @@ const AdminProducts = () => {
                   </SelectContent>
                 </Select>
               </div>
-            </div>
-
-            <div className="grid md:grid-cols-2 gap-4">
               <div>
                 <Label>Catégorie *</Label>
                 <Select
@@ -392,7 +479,30 @@ const AdminProducts = () => {
                 </Select>
               </div>
               <div>
+                <Label>Collection</Label>
+                <Select
+                  value={formData.collection}
+                  onValueChange={(value: string) => setFormData(prev => ({ ...prev, collection: value }))}
+                >
+                  <SelectTrigger className="mt-1">
+                    <SelectValue placeholder="Aucune" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">Aucune</SelectItem>
+                    {collections.filter(c => c.isActive).map(collection => (
+                      <SelectItem key={collection.id} value={collection.id}>
+                        {collection.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+              <div>
                 <Label>Badges</Label>
+                <p className="text-xs text-muted-foreground mt-1 mb-2">
+                  Le badge "Promo" s'ajoute automatiquement quand un prix original est supérieur au prix actuel
+                </p>
                 <div className="flex gap-2 mt-2">
                   <Button
                     type="button"
@@ -410,9 +520,13 @@ const AdminProducts = () => {
                   >
                     Best-seller
                   </Button>
+                  {formData.badges.includes('promo') && (
+                    <Badge variant="destructive" className="text-xs">
+                      Promo (automatique)
+                    </Badge>
+                  )}
                 </div>
               </div>
-            </div>
 
             {/* Images */}
             <div>

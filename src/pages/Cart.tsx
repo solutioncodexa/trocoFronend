@@ -1,10 +1,11 @@
 import { Link } from 'react-router-dom';
-import { Trash2, Plus, Minus, ShoppingBag, ArrowRight } from 'lucide-react';
+import { Trash2, Plus, Minus, ShoppingBag, ArrowRight, ArrowLeft, X, Search, Verified } from 'lucide-react';
 import Layout from '@/components/layout/Layout';
 import { Button } from '@/components/ui/button';
 import { useCart } from '@/contexts/CartContext';
 import { formatPrice } from '@/data/products';
 import { goldTypeLabels } from '@/types/product';
+
 const Cart = () => {
   const {
     items,
@@ -13,8 +14,10 @@ const Cart = () => {
     getTotal,
     clearCart
   } = useCart();
+
   if (items.length === 0) {
-    return <Layout>
+    return (
+      <Layout>
         <div className="container mx-auto px-4 py-20 text-center">
           <ShoppingBag className="w-16 h-16 mx-auto text-muted-foreground mb-6" />
           <h1 className="font-display text-3xl mb-4">Votre panier est vide</h1>
@@ -28,118 +31,147 @@ const Cart = () => {
             </Link>
           </Button>
         </div>
-      </Layout>;
+      </Layout>
+    );
   }
-  return <Layout>
-      {/* Header */}
-      <section className="py-12 bg-accent">
-        <div className="container mx-auto px-4 text-center">
-          <h1 className="font-display text-3xl md:text-4xl text-cream">
-            Votre Panier
-          </h1>
-        </div>
-      </section>
 
-      <section className="py-12 bg-background">
-        <div className="container mx-auto px-4">
-          <div className="grid lg:grid-cols-3 gap-8">
+  const shipping = getTotal() >= 2000 ? 0 : 50;
+  const total = getTotal() + shipping;
+
+  return (
+    <Layout>
+      <main className="flex-grow bg-paper-pattern py-12 px-6">
+        <div className="max-w-[1200px] mx-auto">
+          <div className="text-center mb-12">
+            <h2 className="font-script text-6xl text-primary mb-2">Votre Panier</h2>
+            <div className="flex items-center justify-center gap-4">
+              <div className="h-px w-12 bg-accent-beige/30"></div>
+              <p className="text-accent-beige uppercase tracking-[0.3em] text-xs">Articles sélectionnés pour vous</p>
+              <div className="h-px w-12 bg-accent-beige/30"></div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-12 items-start">
             {/* Cart Items */}
-            <div className="lg:col-span-2 space-y-4">
-              {items.map((item, index) => <div key={`${item.product.id}-${item.selectedSize}-${item.selectedGoldType}-${index}`} className="flex gap-4 p-4 bg-card rounded-lg shadow-card">
-                  {/* Image */}
-                  <Link to={`/produit/${item.product.id}`} className="flex-shrink-0 w-24 h-24 md:w-32 md:h-32 rounded-lg overflow-hidden bg-cream">
-                    <img src={item.product.images[0]} alt={item.product.name} className="w-full h-full object-cover" />
-                  </Link>
-
-                  {/* Details */}
-                  <div className="flex-1 min-w-0">
-                    <Link to={`/produit/${item.product.id}`} className="font-display text-lg text-foreground hover:text-primary transition-colors line-clamp-1">
-                      {item.product.name}
-                    </Link>
-                    <p className="font-body text-sm text-muted-foreground mt-1">
-                      {item.product.category === 'beldi' ? 'Beldi' : 'Moderne'} • {item.product.weight}g
-                    </p>
-                    {item.selectedGoldType && <p className="font-body text-sm text-muted-foreground">
-                        {goldTypeLabels[item.selectedGoldType]}
-                      </p>}
-                    {item.selectedSize && <p className="font-body text-sm text-muted-foreground">
-                        Taille: {item.selectedSize}
-                      </p>}
-                    <p className="font-display text-lg text-primary mt-2">
-                      {formatPrice(item.product.price)}
-                    </p>
-                  </div>
-
-                  {/* Quantity & Remove */}
-                  <div className="flex flex-col items-end justify-between">
-                    <button onClick={() => removeFromCart(item.product.id, item.selectedSize, item.selectedGoldType)} className="p-2 text-muted-foreground hover:text-destructive transition-colors" aria-label="Supprimer">
-                      <Trash2 className="w-5 h-5" />
-                    </button>
-                    
-                    <div className="flex items-center border border-border rounded-lg">
-                      <button onClick={() => updateQuantity(item.product.id, item.quantity - 1, item.selectedSize, item.selectedGoldType)} className="p-2 hover:bg-muted transition-colors">
-                        <Minus className="w-4 h-4" />
-                      </button>
-                      <span className="px-3 font-body">{item.quantity}</span>
-                      <button onClick={() => updateQuantity(item.product.id, item.quantity + 1, item.selectedSize, item.selectedGoldType)} className="p-2 hover:bg-muted transition-colors" disabled={item.quantity >= item.product.stockQuantity}>
-                        <Plus className="w-4 h-4" />
-                      </button>
+            <div className="lg:col-span-2 space-y-8">
+              {items.map((item, index) => (
+                <div key={`${item.product.id}-${item.selectedSize}-${item.selectedGoldType}-${index}`} className="bg-white/60 dark:bg-[#2a2515]/40 backdrop-blur-sm p-6 ornate-border rounded-sm">
+                  <div className="flex flex-col md:flex-row gap-6">
+                    <div className="w-full md:w-40 aspect-square border border-accent-beige/20 p-2 bg-white dark:bg-background-dark shrink-0">
+                      <div className="w-full h-full bg-cover bg-center" style={{ backgroundImage: `url(${item.product.images[0]})` }}></div>
+                    </div>
+                    <div className="flex-grow flex flex-col justify-between">
+                      <div>
+                        <div className="flex justify-between items-start mb-2">
+                          <h3 className="text-xl font-display font-bold text-secondary-dark dark:text-white">{item.product.name}</h3>
+                          <button 
+                            onClick={() => removeFromCart(item.product.id, item.selectedSize, item.selectedGoldType)}
+                            className="text-accent-beige hover:text-red-800 transition-colors"
+                          >
+                            <X className="text-xl" />
+                          </button>
+                        </div>
+                        <div className="space-y-1 text-sm text-accent-beige">
+                          <p><span className="uppercase tracking-widest text-[10px] font-bold">Style:</span> {item.product.category === 'beldi' ? 'Beldi' : 'Moderne'}</p>
+                          <p><span className="uppercase tracking-widest text-[10px] font-bold">Poids:</span> {item.product.weight}g</p>
+                          <p><span className="uppercase tracking-widest text-[10px] font-bold">Métal:</span> {goldTypeLabels[item.selectedGoldType]}</p>
+                          {item.selectedSize && <p><span className="uppercase tracking-widest text-[10px] font-bold">Taille:</span> {item.selectedSize}</p>}
+                        </div>
+                      </div>
+                      <div className="mt-6 flex items-center justify-between">
+                        <div className="flex items-center border border-accent-beige/30">
+                          <button 
+                            onClick={() => updateQuantity(item.product.id, Math.max(1, item.quantity - 1), item.selectedSize, item.selectedGoldType)}
+                            className="px-3 py-1 text-accent-beige hover:bg-accent-beige/10 transition-colors border-r border-accent-beige/30"
+                          >
+                            -
+                          </button>
+                          <span className="px-4 py-1 text-sm font-bold text-secondary-dark dark:text-white">{item.quantity}</span>
+                          <button 
+                            onClick={() => updateQuantity(item.product.id, item.quantity + 1, item.selectedSize, item.selectedGoldType)}
+                            className="px-3 py-1 text-accent-beige hover:bg-accent-beige/10 transition-colors border-l border-accent-beige/30"
+                            disabled={item.quantity >= item.product.stockQuantity}
+                          >
+                            +
+                          </button>
+                        </div>
+                        <p className="text-lg font-bold text-primary">{formatPrice(item.product.price * item.quantity)}</p>
+                      </div>
                     </div>
                   </div>
-                </div>)}
+                </div>
+              ))}
 
-              {/* Clear Cart */}
-              <Button variant="outline" onClick={clearCart} className="font-body text-destructive border-destructive hover:bg-destructive hover:text-destructive-foreground">
-                <Trash2 className="w-4 h-4 mr-2" />
-                Vider le panier
-              </Button>
+              <div className="flex justify-between items-center px-2">
+                <Link to="/boutique" className="text-xs uppercase tracking-widest text-accent-beige hover:text-primary transition-colors flex items-center gap-2">
+                  <ArrowLeft className="text-sm" />
+                  Continuer vos achats
+                </Link>
+                <button 
+                  onClick={clearCart}
+                  className="text-xs uppercase tracking-widest text-accent-beige hover:text-red-800 transition-colors border-b border-accent-beige/30 pb-0.5"
+                >
+                  Vider le panier
+                </button>
+              </div>
             </div>
 
             {/* Order Summary */}
             <div className="lg:col-span-1">
-              <div className="bg-card rounded-lg p-6 shadow-card sticky top-24">
-                <h2 className="font-display text-xl mb-6">Récapitulatif</h2>
+              <div className="bg-paper dark:bg-[#1e1a0d] p-8 ornate-border shadow-xl">
+                <h3 className="text-lg font-bold uppercase tracking-widest mb-8 text-center text-secondary-dark dark:text-white">Récapitulatif</h3>
                 
-                <div className="space-y-4 mb-6">
-                  <div className="flex justify-between font-body">
-                    <span className="text-muted-foreground">Sous-total</span>
-                    <span>{formatPrice(getTotal())}</span>
+                <div className="space-y-4 mb-8">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-accent-beige">Sous-total</span>
+                    <span className="font-medium text-secondary-dark dark:text-white">{formatPrice(getTotal())}</span>
                   </div>
-                  <div className="flex justify-between font-body">
-                    <span className="text-muted-foreground">Livraison</span>
-                    <span className={getTotal() >= 5000 ? 'text-green-600' : ''}>
-                      {getTotal() >= 5000 ? 'Gratuite' : formatPrice(50)}
+                  <div className="flex justify-between text-sm">
+                    <span className="text-accent-beige">Livraison</span>
+                    <span className={shipping === 0 ? 'text-green-600 font-medium' : 'font-medium text-secondary-dark dark:text-white'}>
+                      {shipping === 0 ? 'Gratuite' : formatPrice(shipping)}
                     </span>
                   </div>
-                  {getTotal() < 5000 && <p className="font-body text-xs text-muted-foreground">
-                      Plus que {formatPrice(5000 - getTotal())} pour la livraison gratuite
-                    </p>}
+                  {shipping > 0 && (
+                    <p className="text-xs text-accent-beige">
+                      Plus que {formatPrice(2000 - getTotal())} pour la livraison gratuite
+                    </p>
+                  )}
                 </div>
 
-                <div className="border-t border-border pt-4 mb-6">
-                  <div className="flex justify-between">
-                    <span className="font-display text-lg">Total</span>
-                    <span className="font-display text-xl text-primary">
-                      {formatPrice(getTotal() + (getTotal() >= 5000 ? 0 : 50))}
-                    </span>
+                <div className="pt-4 border-t border-accent-beige/20 flex justify-between">
+                  <span className="text-lg font-bold uppercase tracking-widest text-secondary-dark dark:text-white">Total</span>
+                  <span className="text-xl font-bold text-primary">{formatPrice(total)}</span>
+                </div>
+
+                <div className="text-center mt-6">
+                  <p className="text-[10px] uppercase tracking-widest text-accent-beige mb-4">Paiement en ligne ou à la livraison</p>
+                  <div className="flex justify-center gap-3 opacity-60">
+                    <div className="w-12 h-8 bg-white rounded flex items-center justify-center">
+                      <svg viewBox="0 0 24 16" className="w-10 h-6">
+                        <path d="M23.4 0H.6C.3 0 0 .3 0 .6v14.8c0 .3.3.6.6.6h22.8c.3 0 .6-.3.6-.6V.6c0-.3-.3-.6-.6-.6zM7.2 9.6c-.6 0-1.2-.6-1.2-1.2s.6-1.2 1.2-1.2 1.2.6 1.2 1.2-.6 1.2-1.2-.6-1.2-1.2zm0-3.6c-.6 0-1.2-.6-1.2-1.2s.6-1.2 1.2-1.2 1.2.6 1.2 1.2-.6 1.2-1.2-.6-1.2-1.2zm0-3.6c-.6 0-1.2-.6-1.2-1.2S6.6 0 7.2 0s1.2.6 1.2 1.2-.6 1.2-1.2-.6-1.2-1.2zm3.6 7.2c-.6 0-1.2-.6-1.2-1.2s.6-1.2 1.2-1.2 1.2.6 1.2 1.2-.6 1.2-1.2-.6-1.2-1.2zm0-3.6c-.6 0-1.2-.6-1.2-1.2s.6-1.2 1.2-1.2 1.2.6 1.2 1.2-.6 1.2-1.2-.6-1.2-1.2zm0-3.6c-.6 0-1.2-.6-1.2-1.2s.6-1.2 1.2-1.2 1.2.6 1.2 1.2-.6 1.2-1.2-.6-1.2-1.2zm3.6 7.2c-.6 0-1.2-.6-1.2-1.2s.6-1.2 1.2-1.2 1.2.6 1.2 1.2-.6 1.2-1.2-.6-1.2-1.2zm0-3.6c-.6 0-1.2-.6-1.2-1.2s.6-1.2 1.2-1.2 1.2.6 1.2 1.2-.6 1.2-1.2-.6-1.2-1.2zm0-3.6c-.6 0-1.2-.6-1.2-1.2s.6-1.2 1.2-1.2 1.2.6 1.2 1.2-.6 1.2-1.2-.6-1.2-1.2zm3.6 7.2c-.6 0-1.2-.6-1.2-1.2s.6-1.2 1.2-1.2 1.2.6 1.2 1.2-.6 1.2-1.2-.6-1.2-1.2zm0-3.6c-.6 0-1.2-.6-1.2-1.2s.6-1.2 1.2-1.2 1.2.6 1.2 1.2-.6 1.2-1.2-.6-1.2-1.2zm0-3.6c-.6 0-1.2-.6-1.2-1.2s.6-1.2 1.2-1.2 1.2.6 1.2 1.2-.6 1.2-1.2-.6-1.2-1.2z" fill="#1A1F71"/>
+                      </svg>
+                    </div>
+                    <div className="w-12 h-8 bg-white rounded flex items-center justify-center">
+                      <svg viewBox="0 0 24 16" className="w-10 h-6">
+                        <path d="M23.4 0H.6C.3 0 0 .3 0 .6v14.8c0 .3.3.6.6.6h22.8c.3 0 .6-.3.6-.6V.6c0-.3-.3-.6-.6-.6zM4.2 12c-.6 0-1.2-.6-1.2-1.2s.6-1.2 1.2-1.2 1.2.6 1.2 1.2-.6 1.2-1.2-.6-1.2-1.2zm0-3.6c-.6 0-1.2-.6-1.2-1.2s.6-1.2 1.2-1.2 1.2.6 1.2 1.2-.6 1.2-1.2-.6-1.2-1.2zm0-3.6c-.6 0-1.2-.6-1.2-1.2S3.6 0 4.2 0s1.2.6 1.2 1.2-.6 1.2-1.2-.6-1.2-1.2zm3.6 7.2c-.6 0-1.2-.6-1.2-1.2s.6-1.2 1.2-1.2 1.2.6 1.2 1.2-.6 1.2-1.2-.6-1.2-1.2zm0-3.6c-.6 0-1.2-.6-1.2-1.2s.6-1.2 1.2-1.2 1.2.6 1.2 1.2-.6 1.2-1.2-.6-1.2-1.2zm0-3.6c-.6 0-1.2-.6-1.2-1.2s.6-1.2 1.2-1.2 1.2.6 1.2 1.2-.6 1.2-1.2-.6-1.2-1.2zm3.6 7.2c-.6 0-1.2-.6-1.2-1.2s.6-1.2 1.2-1.2 1.2.6 1.2 1.2-.6 1.2-1.2-.6-1.2-1.2zm0-3.6c-.6 0-1.2-.6-1.2-1.2s.6-1.2 1.2-1.2 1.2.6 1.2 1.2-.6 1.2-1.2-.6-1.2-1.2zm0-3.6c-.6 0-1.2-.6-1.2-1.2s.6-1.2 1.2-1.2 1.2.6 1.2 1.2-.6 1.2-1.2-.6-1.2-1.2zm3.6 7.2c-.6 0-1.2-.6-1.2-1.2s.6-1.2 1.2-1.2 1.2.6 1.2 1.2-.6 1.2-1.2-.6-1.2-1.2zm0-3.6c-.6 0-1.2-.6-1.2-1.2s.6-1.2 1.2-1.2 1.2.6 1.2 1.2-.6 1.2-1.2-.6-1.2-1.2zm0-3.6c-.6 0-1.2-.6-1.2-1.2s.6-1.2 1.2-1.2 1.2.6 1.2 1.2-.6 1.2-1.2-.6-1.2-1.2z" fill="#EB001B"/>
+                      </svg>
+                    </div>
                   </div>
                 </div>
 
-                <Button asChild className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-body uppercase tracking-wider" size="lg">
+                <Button asChild className="w-full bg-primary hover:bg-[#d9a50b] text-white py-4 text-sm font-bold uppercase tracking-[0.2em] transition-all shadow-lg border border-white/10 mt-6">
                   <Link to="/checkout">
                     Passer la commande
-                    <ArrowRight className="ml-2 w-5 h-5" />
                   </Link>
                 </Button>
-
-                <p className="font-body text-xs text-muted-foreground text-center mt-4">
-                  Paiement en ligne ou à la livraison
-                </p>
               </div>
             </div>
           </div>
         </div>
-      </section>
-    </Layout>;
+      </main>
+    </Layout>
+  );
 };
+
 export default Cart;

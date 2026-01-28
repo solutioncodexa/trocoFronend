@@ -15,6 +15,7 @@ import Cart from "./pages/Cart";
 import Checkout from "./pages/Checkout";
 import CustomOrder from "./pages/CustomOrder";
 import Wishlist from "./pages/Wishlist";
+import SurMesure from "./pages/SurMesure";
 import NotFound from "./pages/NotFound";
 
 // Admin pages
@@ -25,6 +26,7 @@ import AdminOrders from "./pages/admin/AdminOrders";
 import AdminCustomRequests from "./pages/admin/AdminCustomRequests";
 import AdminCategories from "./pages/admin/AdminCategories";
 import AdminProductTypes from "./pages/admin/AdminProductTypes";
+import AdminCollections from "./pages/admin/AdminCollections";
 
 const queryClient = new QueryClient();
 
@@ -45,6 +47,7 @@ const App = () => (
                 <Route path="/panier" element={<Cart />} />
                 <Route path="/checkout" element={<Checkout />} />
                 <Route path="/commande-personnalisee" element={<CustomOrder />} />
+                <Route path="/sur-mesure" element={<SurMesure />} />
                 <Route path="/favoris" element={<Wishlist />} />
                 
                 {/* Admin Routes */}
@@ -53,6 +56,7 @@ const App = () => (
                 <Route path="/admin/produits" element={<AdminProducts />} />
                 <Route path="/admin/commandes" element={<AdminOrders />} />
                 <Route path="/admin/personnalisations" element={<AdminCustomRequests />} />
+                <Route path="/admin/collections" element={<AdminCollections />} />
                 <Route path="/admin/categories" element={<AdminCategories />} />
                 <Route path="/admin/types" element={<AdminProductTypes />} />
                 

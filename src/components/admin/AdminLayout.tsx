@@ -7,6 +7,7 @@ import {
   Palette,
   FolderOpen,
   Tag,
+  Layers,
   LogOut,
   Menu,
   X,
@@ -28,6 +29,7 @@ const navItems = [
   { href: '/admin/produits', label: 'Produits', icon: Package },
   { href: '/admin/commandes', label: 'Commandes', icon: ShoppingCart },
   { href: '/admin/personnalisations', label: 'Personnalisations', icon: Palette },
+  { href: '/admin/collections', label: 'Collections', icon: Layers },
   { href: '/admin/categories', label: 'Catégories', icon: FolderOpen },
   { href: '/admin/types', label: 'Types de Produits', icon: Tag },
 ];
@@ -70,8 +72,8 @@ const AdminLayout = ({ children, title, breadcrumbs }: AdminLayoutProps) => {
       >
         {/* Logo */}
         <div className="h-16 flex items-center justify-between px-6 border-b border-cream/10">
-          <Link to="/admin/dashboard" className="font-display text-xl text-gold">
-            Or Élégance
+          <Link to="/admin/dashboard" className="font-script text-xl text-primary">
+            NazGold
           </Link>
           <button
             className="lg:hidden text-cream/60 hover:text-cream"

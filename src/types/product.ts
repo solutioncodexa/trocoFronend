@@ -1,13 +1,22 @@
 export type ProductCategory = 'beldi' | 'modern';
 export type ProductType = 'bracelet' | 'ring' | 'necklace' | 'earrings' | 'set';
 export type GoldType = 'yellow' | 'white' | 'rose';
-export type ProductCollection = 'mariage' | 'homme' | 'femme';
 export type PaymentMethod = 'cash_on_delivery' | 'online';
 
 // Size options for rings and necklaces
 export const ringSizes = ['48', '50', '52', '54', '56', '58', '60', '62', '64', '66'];
 export const necklaceSizes = ['40cm', '42cm', '45cm', '50cm', '55cm', '60cm'];
 export const braceletSizes = ['16cm', '17cm', '18cm', '19cm', '20cm', '21cm'];
+
+// Collection management
+export interface Collection {
+  id: string;
+  name: string;
+  slug: string;
+  description?: string;
+  isActive: boolean;
+  createdAt: string;
+}
 
 export interface Product {
   id: string;
@@ -20,7 +29,7 @@ export interface Product {
   category: ProductCategory;
   type: ProductType;
   goldType: GoldType;
-  collection?: ProductCollection; // mariage, homme, femme
+  collection?: string; // ID de la collection
   availableSizes?: string[];
   inStock: boolean;
   stockQuantity: number;
@@ -28,11 +37,33 @@ export interface Product {
   createdAt: string;
 }
 
-export const collectionLabels: Record<ProductCollection, string> = {
-  mariage: 'Mariage',
-  homme: 'Homme',
-  femme: 'Femme',
-};
+// Collections par défaut
+export const defaultCollections: Collection[] = [
+  {
+    id: 'mariage',
+    name: 'Mariage',
+    slug: 'mariage',
+    description: 'Collections pour les mariages et fiançailles',
+    isActive: true,
+    createdAt: '2024-01-01',
+  },
+  {
+    id: 'homme',
+    name: 'Homme',
+    slug: 'homme',
+    description: 'Collections masculines',
+    isActive: true,
+    createdAt: '2024-01-01',
+  },
+  {
+    id: 'femme',
+    name: 'Femme',
+    slug: 'femme',
+    description: 'Collections féminines',
+    isActive: true,
+    createdAt: '2024-01-01',
+  },
+];
 
 export interface CartItem {
   product: Product;

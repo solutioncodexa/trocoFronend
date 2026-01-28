@@ -4,6 +4,16 @@
 
 @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=Montserrat:wght@300;400;500;600;700&display=swap');
 
+/* Material Symbols */
+.material-symbols-outlined {
+  font-variation-settings:
+    'FILL' 0,
+    'wght' 400,
+    'GRAD' 0,
+    'opsz' 24;
+  font-family: 'Material Symbols Outlined';
+}
+
 @layer base {
   :root {
     /* Luxury Gold Jewelry Theme */
@@ -268,6 +278,41 @@
     0%, 100% { box-shadow: 0 0 0 0 hsl(43, 70%, 47%, 0.4); }
     50% { box-shadow: 0 0 0 15px hsl(43, 70%, 47%, 0); }
   }
+
+  /* Dotted gold border for upload area */
+  .dotted-gold-border {
+    border: 2px dashed #f2b90d;
+    background-image: radial-gradient(circle, #f2b90d 1px, transparent 1px);
+    background-size: 8px 8px;
+    background-color: rgba(242, 185, 13, 0.03);
+  }
+
+  /* Classic seal for product detail */
+  .classic-seal {
+    @apply relative flex items-center justify-center w-16 h-16 rounded-full border-2 border-primary bg-paper text-primary shadow-sm;
+    box-shadow: 0 0 0 2px #fbfbf9, 0 0 0 3px #f2b90d;
+  }
+  
+  .classic-seal span {
+    @apply font-script text-lg leading-none transform -rotate-12;
+  }
+
+  /* Ornate border for cart */
+  .ornate-border {
+    position: relative;
+    border: 1px solid rgba(138, 128, 96, 0.3);
+  }
+  
+  .ornate-border::before {
+    content: '';
+    position: absolute;
+    top: 4px;
+    left: 4px;
+    right: 4px;
+    bottom: 4px;
+    border: 1px solid rgba(138, 128, 96, 0.1);
+    pointer-events: none;
+  }
 }
 
 @layer utilities {
@@ -301,5 +346,37 @@
 
   .font-body {
     font-family: 'Montserrat', sans-serif;
+  }
+
+  .font-script {
+    font-family: 'Great Vibes', cursive;
+  }
+
+  .bg-background-light {
+    background-color: hsl(40, 20%, 98%);
+  }
+
+  .bg-background-dark {
+    background-color: hsl(30, 12%, 8%);
+  }
+
+  .bg-secondary-dark {
+    background-color: hsl(30, 8%, 6%);
+  }
+
+  .bg-accent-beige {
+    background-color: hsl(40, 15%, 38%);
+  }
+
+  .bg-paper {
+    background-color: hsl(40, 30%, 97%);
+  }
+
+  .text-accent-beige {
+    color: hsl(40, 15%, 38%);
+  }
+
+  .text-secondary-dark {
+    color: hsl(30, 8%, 14%);
   }
 }

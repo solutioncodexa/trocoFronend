@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Check, ArrowLeft, CreditCard, Banknote } from 'lucide-react';
+import { Check, ArrowLeft, CreditCard, Banknote, Trash2, Plus, Minus, Lock, CheckCircle, Verified } from 'lucide-react';
 import Layout from '@/components/layout/Layout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -11,12 +11,15 @@ import { formatPrice } from '@/data/products';
 import { toast } from 'sonner';
 import { PaymentMethod, goldTypeLabels } from '@/types/product';
 import { cn } from '@/lib/utils';
+
 const Checkout = () => {
   const navigate = useNavigate();
   const {
     items,
     getTotal,
-    clearCart
+    clearCart,
+    updateQuantity,
+    removeFromCart
   } = useCart();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
@@ -25,22 +28,22 @@ const Checkout = () => {
     fullName: '',
     phone: '',
     address: '',
-    city: ''
+    city: '',
+    notes: ''
   });
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const {
-      name,
-      value
-    } = e.target;
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
     setFormData(prev => ({
       ...prev,
       [name]: value
     }));
   };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.fullName || !formData.phone || !formData.address || !formData.city) {
-      toast.error('Veuillez remplir tous les champs');
+      toast.error('Veuillez remplir tous les champs obligatoires');
       return;
     }
     setIsSubmitting(true);
@@ -51,10 +54,12 @@ const Checkout = () => {
     setIsSuccess(true);
     clearCart();
   };
+
   if (items.length === 0 && !isSuccess) {
     navigate('/panier');
     return null;
   }
+
   if (isSuccess) {
     return <Layout>
         <div className="container mx-auto px-4 py-20 text-center max-w-lg">
@@ -84,153 +89,207 @@ const Checkout = () => {
         </div>
       </Layout>;
   }
-  const shipping = getTotal() >= 5000 ? 0 : 50;
+
+  const shipping = getTotal() >= 2000 ? 0 : 50;
   const total = getTotal() + shipping;
-  return <Layout>
-      {/* Header */}
-      <section className="py-12 bg-accent">
-        <div className="container mx-auto px-4 text-center">
-          <h1 className="font-display text-3xl md:text-4xl text-cream">
-            Finaliser la Commande
-          </h1>
-        </div>
-      </section>
 
-      <section className="py-12 bg-background">
-        <div className="container mx-auto px-4">
-          <div className="grid lg:grid-cols-2 gap-12">
-            {/* Checkout Form */}
-            <div>
-              <Link to="/panier" className="inline-flex items-center font-body text-sm text-muted-foreground hover:text-primary mb-6">
-                <ArrowLeft className="w-4 h-4 mr-2" />
-                Retour au panier
-              </Link>
-
-              <div className="bg-card rounded-lg p-6 shadow-card">
-                <h2 className="font-display text-xl mb-6">Informations de livraison</h2>
-                
-                <form onSubmit={handleSubmit} className="space-y-6">
-                  <div>
-                    <Label htmlFor="fullName" className="font-body">
-                      Nom complet *
-                    </Label>
-                    <Input id="fullName" name="fullName" value={formData.fullName} onChange={handleInputChange} placeholder="Votre nom et prénom" className="mt-2" required />
-                  </div>
-
-                  <div>
-                    <Label htmlFor="phone" className="font-body">
-                      Téléphone *
-                    </Label>
-                    <Input id="phone" name="phone" type="tel" value={formData.phone} onChange={handleInputChange} placeholder="06 XX XX XX XX" className="mt-2" required />
-                  </div>
-
-                  <div>
-                    <Label htmlFor="address" className="font-body">
-                      Adresse *
-                    </Label>
-                    <Input id="address" name="address" value={formData.address} onChange={handleInputChange} placeholder="Votre adresse complète" className="mt-2" required />
-                  </div>
-
-                  <div>
-                    <Label htmlFor="city" className="font-body">
-                      Ville *
-                    </Label>
-                    <Input id="city" name="city" value={formData.city} onChange={handleInputChange} placeholder="Casablanca, Rabat, Marrakech..." className="mt-2" required />
-                  </div>
-
-                  {/* Payment Method Selection */}
-                  <div className="pt-4 border-t border-border">
-                    <Label className="font-body mb-4 block text-lg">Mode de paiement *</Label>
-                    <RadioGroup value={paymentMethod} onValueChange={value => setPaymentMethod(value as PaymentMethod)} className="space-y-3">
-                      <div className={cn("flex items-center space-x-3 p-4 rounded-lg border-2 cursor-pointer transition-colors", paymentMethod === 'cash_on_delivery' ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50')} onClick={() => setPaymentMethod('cash_on_delivery')}>
-                        <RadioGroupItem value="cash_on_delivery" id="cash_on_delivery" />
-                        <Banknote className="w-6 h-6 text-primary" />
-                        <div className="flex-1">
-                          <Label htmlFor="cash_on_delivery" className="font-body font-semibold cursor-pointer">
-                            Paiement à la livraison
-                          </Label>
-                          <p className="font-body text-sm text-muted-foreground">
-                            Payez en espèces à la réception de votre commande
-                          </p>
-                        </div>
-                      </div>
-
-                      <div className={cn("flex items-center space-x-3 p-4 rounded-lg border-2 cursor-pointer transition-colors", paymentMethod === 'online' ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50')} onClick={() => setPaymentMethod('online')}>
-                        <RadioGroupItem value="online" id="online" />
-                        <CreditCard className="w-6 h-6 text-primary" />
-                        <div className="flex-1">
-                          <Label htmlFor="online" className="font-body font-semibold cursor-pointer">
-                            Paiement en ligne
-                          </Label>
-                          <p className="font-body text-sm text-muted-foreground">
-                            Payez par carte bancaire de manière sécurisée
-                          </p>
-                        </div>
-                      </div>
-                    </RadioGroup>
-                  </div>
-
-                  {paymentMethod === 'online' && <div className="bg-muted/50 rounded-lg p-4">
-                      <p className="font-body text-sm text-muted-foreground">
-                        💳 <strong>Paiement sécurisé</strong><br />
-                        Vous serez redirigé vers notre plateforme de paiement sécurisée après confirmation.
-                      </p>
-                    </div>}
-
-                  <Button type="submit" className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-body uppercase tracking-wider py-6" size="lg" disabled={isSubmitting}>
-                    {isSubmitting ? 'Traitement en cours...' : 'Confirmer la commande'}
-                  </Button>
-                </form>
-              </div>
+  return (
+    <Layout>
+      <main className="max-w-[1280px] mx-auto px-6 py-12">
+        <div className="flex flex-col lg:flex-row gap-16">
+          {/* Left Column - Form */}
+          <div className="flex-1 max-w-2xl">
+            <div className="mb-10 text-center lg:text-left">
+              <h2 className="text-3xl font-display text-secondary-dark dark:text-white mb-2">Validation de votre Commande</h2>
+              <p className="text-accent-beige font-script text-3xl">
+                {paymentMethod === 'online' ? 'Paiement en ligne' : 'Paiement à la livraison'}
+              </p>
             </div>
 
-            {/* Order Summary */}
-            <div>
-              <div className="bg-card rounded-lg p-6 shadow-card sticky top-24">
-                <h2 className="font-display text-xl mb-6">Votre commande</h2>
-                
-                <div className="space-y-4 mb-6">
-                  {items.map((item, index) => <div key={`${item.product.id}-${item.selectedSize}-${item.selectedGoldType}-${index}`} className="flex gap-4">
-                      <div className="w-16 h-16 rounded-lg overflow-hidden bg-cream flex-shrink-0">
-                        <img src={item.product.images[0]} alt={item.product.name} className="w-full h-full object-cover" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-body text-sm line-clamp-1">{item.product.name}</p>
-                        <p className="font-body text-xs text-muted-foreground">
-                          Qté: {item.quantity}
-                          {item.selectedGoldType && ` • ${goldTypeLabels[item.selectedGoldType]}`}
-                          {item.selectedSize && ` • Taille: ${item.selectedSize}`}
-                        </p>
-                      </div>
-                      <p className="font-body text-sm">
-                        {formatPrice(item.product.price * item.quantity)}
-                      </p>
-                    </div>)}
+            <form onSubmit={handleSubmit} className="space-y-8 bg-paper dark:bg-[#2a2515] p-8 md:p-10 border border-accent-beige/20 shadow-sm">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="col-span-full md:col-span-1">
+                  <Label className="block text-xs uppercase tracking-widest text-accent-beige mb-2 font-bold" htmlFor="fullname">Nom Complet</Label>
+                  <Input 
+                    id="fullname"
+                    name="fullName"
+                    value={formData.fullName}
+                    onChange={handleInputChange}
+                    placeholder="Ex: Jean Dupont" 
+                    className="w-full bg-transparent border-0 border-b border-accent-beige/30 focus:ring-0 focus:border-primary px-0 py-3 text-secondary-dark dark:text-white placeholder:text-gray-300 font-display italic" 
+                    required 
+                  />
                 </div>
+                <div className="col-span-full md:col-span-1">
+                  <Label className="block text-xs uppercase tracking-widest text-accent-beige mb-2 font-bold" htmlFor="phone">Téléphone</Label>
+                  <Input 
+                    id="phone"
+                    name="phone"
+                    type="tel"
+                    value={formData.phone}
+                    onChange={handleInputChange}
+                    placeholder="+212 6..." 
+                    className="w-full bg-transparent border-0 border-b border-accent-beige/30 focus:ring-0 focus:border-primary px-0 py-3 text-secondary-dark dark:text-white placeholder:text-gray-300 font-display italic" 
+                    required 
+                  />
+                </div>
+                <div className="col-span-full">
+                  <Label className="block text-xs uppercase tracking-widest text-accent-beige mb-2 font-bold" htmlFor="address">Adresse de livraison</Label>
+                  <Input 
+                    id="address"
+                    name="address"
+                    value={formData.address}
+                    onChange={handleInputChange}
+                    placeholder="Rue, n° d'appartement..." 
+                    className="w-full bg-transparent border-0 border-b border-accent-beige/30 focus:ring-0 focus:border-primary px-0 py-3 text-secondary-dark dark:text-white placeholder:text-gray-300 font-display italic" 
+                    required 
+                  />
+                </div>
+                <div className="col-span-full">
+                  <Label className="block text-xs uppercase tracking-widest text-accent-beige mb-2 font-bold" htmlFor="city">Ville</Label>
+                  <Input 
+                    id="city"
+                    name="city"
+                    value={formData.city}
+                    onChange={handleInputChange}
+                    placeholder="Ex: Casablanca" 
+                    className="w-full bg-transparent border-0 border-b border-accent-beige/30 focus:ring-0 focus:border-primary px-0 py-3 text-secondary-dark dark:text-white placeholder:text-gray-300 font-display italic" 
+                    required 
+                  />
+                </div>
+                <div className="col-span-full">
+                  <Label className="block text-xs uppercase tracking-widest text-accent-beige mb-2 font-bold" htmlFor="notes">Notes de commande (Optionnel)</Label>
+                  <textarea 
+                    id="notes"
+                    name="notes"
+                    value={formData.notes}
+                    onChange={handleInputChange}
+                    placeholder="Précisions pour le livreur..." 
+                    rows={3}
+                    className="w-full bg-transparent border-0 border-b border-accent-beige/30 focus:ring-0 focus:border-primary px-0 py-3 text-secondary-dark dark:text-white placeholder:text-gray-300 font-display italic resize-none" 
+                  />
+                </div>
+              </div>
 
-                <div className="border-t border-border pt-4 space-y-3">
-                  <div className="flex justify-between font-body text-sm">
-                    <span className="text-muted-foreground">Sous-total</span>
-                    <span>{formatPrice(getTotal())}</span>
+              {/* Mode de paiement */}
+              <div>
+                <Label className="block text-xs uppercase tracking-widest text-accent-beige mb-2 font-bold">Mode de paiement *</Label>
+                <div className="space-y-3">
+                  <div 
+                    className={`flex items-center space-x-3 p-4 rounded-lg border-2 cursor-pointer transition-colors ${paymentMethod === 'cash_on_delivery' ? 'border-primary bg-primary/5' : 'border-accent-beige/30 hover:border-primary/50'}`}
+                    onClick={() => setPaymentMethod('cash_on_delivery')}
+                  >
+                    <div className={`w-4 h-4 rounded-full border-2 ${paymentMethod === 'cash_on_delivery' ? 'border-primary bg-primary' : 'border-accent-beige/30'} flex items-center justify-center`}>
+                      {paymentMethod === 'cash_on_delivery' && <div className="w-2 h-2 rounded-full bg-white"></div>}
+                    </div>
+                    <Banknote className="w-5 h-5 text-primary" />
+                    <div className="flex-1">
+                      <span className="font-medium cursor-pointer">
+                        Paiement à la livraison
+                      </span>
+                      <p className="text-xs text-accent-beige leading-relaxed">Payez en espèces à la réception de votre commande</p>
+                    </div>
                   </div>
-                  <div className="flex justify-between font-body text-sm">
-                    <span className="text-muted-foreground">Livraison</span>
-                    <span className={shipping === 0 ? 'text-green-600' : ''}>
-                      {shipping === 0 ? 'Gratuite' : formatPrice(shipping)}
-                    </span>
-                  </div>
-                  <div className="flex justify-between pt-3 border-t border-border">
-                    <span className="font-display text-lg">Total</span>
-                    <span className="font-display text-xl text-primary">
-                      {formatPrice(total)}
-                    </span>
+
+                  <div 
+                    className={`flex items-center space-x-3 p-4 rounded-lg border-2 cursor-pointer transition-colors ${paymentMethod === 'online' ? 'border-primary bg-primary/5' : 'border-accent-beige/30 hover:border-primary/50'}`}
+                    onClick={() => setPaymentMethod('online')}
+                  >
+                    <div className={`w-4 h-4 rounded-full border-2 ${paymentMethod === 'online' ? 'border-primary bg-primary' : 'border-accent-beige/30'} flex items-center justify-center`}>
+                      {paymentMethod === 'online' && <div className="w-2 h-2 rounded-full bg-white"></div>}
+                    </div>
+                    <CreditCard className="w-5 h-5 text-primary" />
+                    <div className="flex-1">
+                      <span className="font-medium cursor-pointer">
+                        Paiement en ligne
+                      </span>
+                      <p className="text-xs text-accent-beige leading-relaxed">Payez par carte bancaire de manière sécurisée</p>
+                    </div>
                   </div>
                 </div>
+              </div>
+
+              <div className="flex items-center justify-center py-4">
+                <div className="w-full h-px bg-accent-beige/20"></div>
+                <div className="mx-4 size-2 rotate-45 border border-accent-beige bg-paper"></div>
+                <div className="w-full h-px bg-accent-beige/20"></div>
+              </div>
+
+              <div className="bg-accent-beige/5 p-4 border border-accent-beige/10 rounded-sm">
+                <div className="flex gap-4 items-start">
+                  <Verified className="text-primary" />
+                  <div>
+                    <h4 className="text-sm font-bold uppercase tracking-wide text-secondary-dark dark:text-white mb-1">Confirmation Immédiate</h4>
+                    <p className="text-xs text-accent-beige leading-relaxed">En cliquant sur confirmer, votre commande sera enregistrée. Notre service client vous contactera par téléphone pour confirmer les détails de livraison.</p>
+                  </div>
+                </div>
+              </div>
+
+              <Button 
+                type="submit" 
+                className="w-full bg-primary hover:bg-[#d9a50b] text-white py-5 text-sm uppercase tracking-[0.3em] font-bold transition-all shadow-xl flex items-center justify-center gap-3" 
+                disabled={isSubmitting}
+              >
+                <CheckCircle className="text-lg" />
+                {isSubmitting ? 'Traitement en cours...' : 'Confirmer la commande'}
+              </Button>
+            </form>
+          </div>
+
+          {/* Right Column - Cart Summary */}
+          <div className="w-full lg:w-[400px]">
+            <div className="sticky top-24 bg-white dark:bg-[#181611] border border-accent-beige/20 p-8 shadow-md">
+              <h3 className="text-xl font-display text-secondary-dark dark:text-white mb-6 border-b border-accent-beige/10 pb-4 uppercase tracking-widest text-sm font-bold">Résumé du Panier</h3>
+              
+              <div className="space-y-6 mb-8">
+                {items.map((item, index) => (
+                  <div key={`${item.product.id}-${item.selectedSize}-${item.selectedGoldType}-${index}`} className="flex gap-4">
+                    <div className="size-20 bg-background-light border border-accent-beige/10 overflow-hidden rounded-sm flex-shrink-0">
+                      <img src={item.product.images[0]} alt={item.product.name} className="w-full h-full object-cover" />
+                    </div>
+                    <div className="flex-1 flex flex-col justify-between py-1">
+                      <div>
+                        <h4 className="text-sm font-bold font-display text-secondary-dark dark:text-white leading-tight">{item.product.name}</h4>
+                        <p className="text-[10px] text-accent-beige uppercase tracking-widest mt-1">Or 18 carats</p>
+                      </div>
+                      <div className="flex justify-between items-end">
+                        <span className="text-xs text-gray-400">Qté: {item.quantity}</span>
+                        <span className="text-sm font-bold text-primary">{formatPrice(item.product.price * item.quantity)}</span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="border-t border-accent-beige/10 pt-6 space-y-3">
+                <div className="flex justify-between text-sm">
+                  <span className="text-accent-beige uppercase tracking-wider">Sous-total</span>
+                  <span className="text-secondary-dark dark:text-white">{formatPrice(getTotal())}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-accent-beige uppercase tracking-wider">Livraison</span>
+                  <span className={shipping === 0 ? 'text-green-600 font-medium' : 'text-secondary-dark dark:text-white'}>
+                    {shipping === 0 ? 'Offerte' : formatPrice(shipping)}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center pt-4 border-t border-accent-beige/10 mt-4">
+                  <span className="text-base font-bold uppercase tracking-[0.2em]">Total</span>
+                  <span className="text-2xl font-bold text-primary">{formatPrice(total)}</span>
+                </div>
+              </div>
+
+              <div className="mt-8 flex items-center gap-3 py-4 border-y border-accent-beige/5">
+                <Verified className="text-primary text-xl" />
+                <p className="text-[10px] uppercase tracking-widest text-accent-beige leading-relaxed">
+                  Certificat d'authenticité inclus & Garantie à vie
+                </p>
               </div>
             </div>
           </div>
         </div>
-      </section>
-    </Layout>;
+      </main>
+    </Layout>
+  );
 };
+
 export default Checkout;
