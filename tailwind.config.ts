@@ -65,6 +65,8 @@ export default {
         "secondary-dark": "#181611",
         "accent-beige": "#8a8060",
         "paper": "#fbfbf9",
+        "royal-bordeaux": "#4a0404",
+        "ivory-text": "#fdfcf0",
         sidebar: {
           DEFAULT: "hsl(var(--sidebar-background))",
           foreground: "hsl(var(--sidebar-foreground))",

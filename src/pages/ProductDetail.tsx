@@ -233,6 +233,12 @@ const ProductDetail = () => {
                         ))}
                       </SelectContent>
                     </Select>
+                    <div className="mt-2 text-sm">
+                      <Link to="/guide-tailles" className="text-primary hover:underline flex items-center gap-1">
+                        <span className="material-symbols-outlined text-sm">straighten</span>
+                        Guide des tailles
+                      </Link>
+                    </div>
                   </div>
                 )}
 

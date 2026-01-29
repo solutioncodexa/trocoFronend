@@ -17,6 +17,9 @@ import CustomOrder from "./pages/CustomOrder";
 import Wishlist from "./pages/Wishlist";
 import SurMesure from "./pages/SurMesure";
 import Contact from "./pages/Contact";
+import LivraisonRetours from "./pages/LivraisonRetours";
+import FAQ from "./pages/FAQ";
+import GuideTailles from "./pages/GuideTailles";
 import NotFound from "./pages/NotFound";
 
 // Admin pages
@@ -50,6 +53,9 @@ const App = () => (
                 <Route path="/commande-personnalisee" element={<CustomOrder />} />
                 <Route path="/sur-mesure" element={<SurMesure />} />
                 <Route path="/contact" element={<Contact />} />
+                <Route path="/livraison-retours" element={<LivraisonRetours />} />
+                <Route path="/faq" element={<FAQ />} />
+                <Route path="/guide-tailles" element={<GuideTailles />} />
                 <Route path="/favoris" element={<Wishlist />} />
                 
                 {/* Admin Routes */}

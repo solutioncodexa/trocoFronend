@@ -150,7 +150,7 @@ const Contact = () => {
                       <div className="size-8 rounded-full bg-primary/10 flex items-center justify-center">
                         <span className="material-symbols-outlined text-primary text-lg">mail</span>
                       </div>
-                      <a className="text-secondary-dark font-medium hover:text-primary transition-colors" href="mailto:contact@nazgold.com">contact@nazgold.com</a>
+                      <a className="text-secondary-dark font-medium hover:text-primary transition-colors" href="mailto:contact@yaragold.com">contact@yaragold.com</a>
                     </div>
                   </div>
                 </div>
@@ -168,7 +168,7 @@ const Contact = () => {
                     <div className="size-4 bg-primary/20 rounded-full blur-sm absolute bottom-0 left-1/2 -translate-x-1/2"></div>
                   </div>
                   <div className="mt-2 bg-white px-4 py-2 border border-accent-beige/30 shadow-lg inline-block text-xs uppercase tracking-widest font-bold whitespace-nowrap">
-                    Maison NazGold
+                    Maison YaraGold
                   </div>
                 </div>
               </div>

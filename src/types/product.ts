@@ -4,7 +4,7 @@ export type GoldType = 'yellow' | 'white' | 'rose';
 export type PaymentMethod = 'cash_on_delivery' | 'online';
 
 // Size options for rings and necklaces
-export const ringSizes = ['48', '50', '52', '54', '56', '58', '60', '62', '64', '66'];
+export const ringSizes = ['41', '43', '45', '47', '49', '51', '52', '53', '54', '55', '56', '57', '58', '59', '60', '61', '62', '63', '64', '65', '66', '67', '68', '69', '70', '71', '72'];
 export const necklaceSizes = ['40cm', '42cm', '45cm', '50cm', '55cm', '60cm'];
 export const braceletSizes = ['16cm', '17cm', '18cm', '19cm', '20cm', '21cm'];
 

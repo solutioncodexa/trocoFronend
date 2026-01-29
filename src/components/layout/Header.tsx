@@ -48,7 +48,7 @@ const Header = () => {
           {/* Logo */}
           <Link to="/" className="flex items-center space-x-2">
             <span className="font-script text-2xl md:text-3xl text-primary">
-              NazGold
+              YaraGold
             </span>
           </Link>
 

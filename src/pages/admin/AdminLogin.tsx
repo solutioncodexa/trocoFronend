@@ -51,7 +51,7 @@ const AdminLogin = () => {
       <div className="w-full max-w-md relative z-10">
         {/* Logo */}
         <div className="text-center mb-8">
-          <h1 className="font-script text-3xl text-primary mb-2">NazGold</h1>
+          <h1 className="font-script text-3xl text-primary mb-2">YaraGold</h1>
           <p className="text-accent-beige text-sm uppercase tracking-widest">
             Administration
           </p>

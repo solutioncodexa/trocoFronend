@@ -73,7 +73,7 @@ const AdminLayout = ({ children, title, breadcrumbs }: AdminLayoutProps) => {
         {/* Logo */}
         <div className="h-16 flex items-center justify-between px-6 border-b border-cream/10">
           <Link to="/admin/dashboard" className="font-script text-xl text-primary">
-            NazGold
+            YaraGold
           </Link>
           <button
             className="lg:hidden text-cream/60 hover:text-cream"
