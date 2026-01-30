@@ -1,9 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { X } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 
 const PromoModal = () => {
   const [isOpen, setIsOpen] = useState(false);
+  const [countdown, setCountdown] = useState(5);
+  const countdownRef = useRef<NodeJS.Timeout | null>(null);
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -11,24 +13,48 @@ const PromoModal = () => {
     // N'afficher que sur la page d'accueil
     if (location.pathname !== '/') return;
     
-    // Pour le développement : réinitialiser le localStorage
-    localStorage.removeItem('hasSeenPromoModal');
+    // Pour le développement : réinitialiser le sessionStorage
+    // sessionStorage.removeItem('hasSeenPromoModal');
     
-    // Vérifier si le modal a déjà été montré
-    const hasSeenModal = localStorage.getItem('hasSeenPromoModal');
+    // Vérifier si le modal a déjà été montré dans cette session
+    const hasSeenModal = sessionStorage.getItem('hasSeenPromoModal');
     if (!hasSeenModal) {
       // Attendre un peu avant d'afficher le modal
       const timer = setTimeout(() => {
         setIsOpen(true);
+        // Démarrer le compte à rebours
+        startCountdown();
       }, 1500);
       return () => clearTimeout(timer);
     }
   }, [location.pathname]);
 
+  const startCountdown = () => {
+    let seconds = 5;
+    setCountdown(seconds);
+    
+    countdownRef.current = setInterval(() => {
+      seconds -= 1;
+      setCountdown(seconds);
+      
+      if (seconds <= 0) {
+        handleClose();
+      }
+    }, 1000);
+  };
+
+  const stopCountdown = () => {
+    if (countdownRef.current) {
+      clearInterval(countdownRef.current);
+      countdownRef.current = null;
+    }
+  };
+
   const handleClose = () => {
+    stopCountdown();
     setIsOpen(false);
-    // Marquer que l'utilisateur a vu le modal
-    localStorage.setItem('hasSeenPromoModal', 'true');
+    // Marquer que l'utilisateur a vu le modal dans cette session
+    sessionStorage.setItem('hasSeenPromoModal', 'true');
   };
 
   const handleViewCollection = () => {
@@ -42,12 +68,13 @@ const PromoModal = () => {
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-sm px-4">
       <div className="relative bg-charcoal max-w-4xl w-full flex flex-col md:flex-row shadow-[0_25px_60px_rgba(0,0,0,0.6)] border-2 border-primary/40 rounded-sm overflow-hidden">
-        {/* Bouton fermer */}
+        {/* Bouton fermer avec countdown */}
         <button 
           onClick={handleClose}
-          className="absolute top-4 right-4 z-20 text-primary hover:text-white transition-colors"
+          className="absolute top-4 right-4 z-20 text-primary hover:text-white transition-colors flex flex-col items-center gap-1"
         >
           <X className="w-6 h-6" />
+          <span className="text-xs font-mono">{countdown}s</span>
         </button>
 
         {/* Image côté gauche */}
@@ -82,6 +109,11 @@ const PromoModal = () => {
             <h2 className="text-primary font-script text-5xl mb-6 tracking-wide">
               Offre Exclusive Beldi
             </h2>
+            
+            {/* Compte à rebours */}
+            <div className="text-accent-beige/60 text-xs uppercase tracking-[0.2em] mb-4">
+              Fermeture automatique dans {countdown} secondes
+            </div>
             
             {/* Ligne décorative */}
             <div className="w-12 h-px bg-primary/40 mx-auto mb-8"></div>
