@@ -1,17 +1,21 @@
 import { useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { ChevronLeft, ChevronRight, ShoppingBag, Heart, Truck, Shield, RotateCcw, Search, Mail, Verified } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import { ChevronLeft, ChevronRight, ShoppingBag, Heart, Truck, Shield, RotateCcw, Search, Mail, Verified, Loader2 } from 'lucide-react';
 import Layout from '@/components/layout/Layout';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { getProductById, formatPrice, getFeaturedProducts } from '@/data/products';
+import { formatPrice } from '@/utils/formatPrice';
 import { useCart } from '@/contexts/CartContext';
 import ProductCard from '@/components/ui/ProductCard';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
-import { GoldType, goldTypeLabels } from '@/types/product';
+import { GoldType } from '@/types/product';
+import { productsApi } from '@/services/api';
+import { useGoldTypes } from '@/hooks/useGoldTypes';
+import { mapProductDTOToProduct, mapProductDTOListToProducts } from '@/utils/productMapper';
 
 const ProductDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -22,8 +26,43 @@ const ProductDetail = () => {
   const [selectedSize, setSelectedSize] = useState<string>('');
   const [selectedGoldType, setSelectedGoldType] = useState<GoldType | ''>('');
 
-  const product = id ? getProductById(id) : undefined;
-  const relatedProducts = getFeaturedProducts().filter(p => p.id !== id).slice(0, 4);
+  // Charger le produit depuis l'API
+  const { data: product, isLoading: isLoadingProduct } = useQuery({
+    queryKey: ['product', id],
+    queryFn: async () => {
+      if (!id) return null;
+      const productDTO = await productsApi.getProductById(id);
+      return mapProductDTOToProduct(productDTO);
+    },
+    enabled: !!id,
+    retry: 1,
+    onError: () => {
+      toast.error('Erreur lors du chargement du produit');
+    },
+  });
+
+  // Charger les produits similaires
+  const { data: relatedProductsData } = useQuery({
+    queryKey: ['products', 'featured'],
+    queryFn: async () => {
+      const response = await productsApi.getAllProducts({ page: 0, size: 4 });
+      return mapProductDTOListToProducts(response.content);
+    },
+    enabled: !!product,
+  });
+
+  const relatedProducts = (relatedProductsData || []).filter(p => p.id !== id).slice(0, 4);
+
+  if (isLoadingProduct) {
+    return (
+      <Layout>
+        <div className="container mx-auto px-4 py-20 text-center">
+          <Loader2 className="w-8 h-8 animate-spin text-primary mx-auto mb-4" />
+          <p className="font-body text-muted-foreground">Chargement du produit...</p>
+        </div>
+      </Layout>
+    );
+  }
 
   if (!product) {
     return (
@@ -210,7 +249,7 @@ const ProductDetail = () => {
                     <SelectContent>
                       {goldTypes.map((type) => (
                         <SelectItem key={type} value={type}>
-                          {goldTypeLabels[type]}
+                          {goldTypeLabels[type] ?? type}
                         </SelectItem>
                       ))}
                     </SelectContent>

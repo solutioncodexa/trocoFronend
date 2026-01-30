@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import { useMutation } from '@tanstack/react-query';
 import { Check, ArrowLeft, CreditCard, Banknote, Trash2, Plus, Minus, Lock, CheckCircle, Verified } from 'lucide-react';
 import Layout from '@/components/layout/Layout';
 import { Button } from '@/components/ui/button';
@@ -7,10 +8,12 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useCart } from '@/contexts/CartContext';
-import { formatPrice } from '@/data/products';
+import { formatPrice } from '@/utils/formatPrice';
 import { toast } from 'sonner';
-import { PaymentMethod, goldTypeLabels } from '@/types/product';
+import { PaymentMethod } from '@/types/product';
 import { cn } from '@/lib/utils';
+import { ordersApi } from '@/services/api';
+import { OrderDTO, CartItemDTO } from '@/types/api';
 
 const Checkout = () => {
   const navigate = useNavigate();
@@ -40,6 +43,23 @@ const Checkout = () => {
     }));
   };
 
+  // Mutation pour créer une commande
+  const createOrderMutation = useMutation({
+    mutationFn: async (orderData: OrderDTO) => {
+      return await ordersApi.createOrder(orderData);
+    },
+    onSuccess: () => {
+      setIsSubmitting(false);
+      setIsSuccess(true);
+      clearCart();
+      toast.success('Commande créée avec succès!');
+    },
+    onError: (error: Error) => {
+      setIsSubmitting(false);
+      toast.error(error.message || 'Erreur lors de la création de la commande');
+    },
+  });
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.fullName || !formData.phone || !formData.address || !formData.city) {
@@ -48,11 +68,51 @@ const Checkout = () => {
     }
     setIsSubmitting(true);
 
-    // Simulate order submission
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    setIsSubmitting(false);
-    setIsSuccess(true);
-    clearCart();
+    // Convertir les items du panier en CartItemDTO
+    const cartItems: CartItemDTO[] = items.map(item => ({
+      product: {
+        id: item.product.id,
+        name: item.product.name,
+        description: item.product.description,
+        price: item.product.price,
+        originalPrice: item.product.originalPrice,
+        weight: item.product.weight,
+        images: item.product.images,
+        category: item.product.category,
+        type: item.product.type,
+        goldType: item.product.goldType,
+        collection: item.product.collection,
+        availableSizes: item.product.availableSizes,
+        inStock: item.product.inStock,
+        stockQuantity: item.product.stockQuantity,
+        badges: item.product.badges,
+        createdAt: item.product.createdAt,
+      },
+      quantity: item.quantity,
+      selectedSize: item.selectedSize,
+      selectedGoldType: item.selectedGoldType,
+    }));
+
+    const shipping = getTotal() >= 2000 ? 0 : 50;
+    const total = getTotal() + shipping;
+
+    // Créer l'objet OrderDTO
+    const orderDTO: OrderDTO = {
+      id: '', // Sera généré par le backend
+      items: cartItems,
+      customer: {
+        fullName: formData.fullName,
+        phone: formData.phone,
+        address: formData.address,
+        city: formData.city,
+      },
+      total: total,
+      paymentMethod: paymentMethod,
+      status: 'new',
+      createdAt: new Date().toISOString(),
+    };
+
+    createOrderMutation.mutate(orderDTO);
   };
 
   if (items.length === 0 && !isSuccess) {

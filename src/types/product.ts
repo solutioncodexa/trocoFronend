@@ -33,6 +33,8 @@ export interface Product {
   availableSizes?: string[];
   inStock: boolean;
   stockQuantity: number;
+  /** Marge / gain du produit (MAD). Prix = (poids × prix_au_gramme) + marginGain */
+  marginGain?: number;
   badges: ('new' | 'bestseller' | 'promo')[];
   createdAt: string;
 }

@@ -1,49 +1,76 @@
 import { useState } from 'react';
-import { Plus, Pencil, Trash2, FolderOpen } from 'lucide-react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { Plus, Pencil, Trash2, FolderOpen, Loader2 } from 'lucide-react';
 import AdminLayout from '@/components/admin/AdminLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { categories as initialCategories } from '@/data/adminMockData';
-import { products } from '@/data/products';
+import { categoriesApi } from '@/services/api';
+import { CategoryDTO } from '@/types/api';
 import { toast } from 'sonner';
 
-interface Category {
-  id: string;
-  name: string;
-  description: string;
-  productCount: number;
-}
-
 const AdminCategories = () => {
-  const [categories, setCategories] = useState<Category[]>(() => {
-    // Calculate real product counts
-    return initialCategories.map(cat => ({
-      ...cat,
-      productCount: products.filter(p => p.category === cat.id).length,
-    }));
-  });
+  const queryClient = useQueryClient();
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingCategory, setEditingCategory] = useState<Category | null>(null);
+  const [editingCategory, setEditingCategory] = useState<CategoryDTO | null>(null);
   const [formData, setFormData] = useState({
     name: '',
     description: '',
+    slug: '',
   });
 
-  const handleOpenModal = (category?: Category) => {
+  const { data: categories = [], isLoading } = useQuery({
+    queryKey: ['categories'],
+    queryFn: () => categoriesApi.getAllCategories(),
+  });
+
+  const createMutation = useMutation({
+    mutationFn: (data: { name: string; description?: string; slug: string }) =>
+      categoriesApi.createCategory({ name: data.name, description: data.description || '', slug: data.slug }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['categories'] });
+      toast.success('Catégorie créée avec succès');
+      handleCloseModal();
+    },
+    onError: (e: Error) => toast.error(e.message || 'Erreur lors de la création'),
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: ({ id, data }: { id: number; data: { name: string; description?: string; slug: string } }) =>
+      categoriesApi.updateCategory(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['categories'] });
+      toast.success('Catégorie modifiée avec succès');
+      handleCloseModal();
+    },
+    onError: (e: Error) => toast.error(e.message || 'Erreur lors de la modification'),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: number) => categoriesApi.deleteCategory(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['categories'] });
+      toast.success('Catégorie supprimée');
+    },
+    onError: (e: Error) => toast.error(e.message || 'Erreur lors de la suppression'),
+  });
+
+  const handleOpenModal = (category?: CategoryDTO) => {
     if (category) {
       setEditingCategory(category);
       setFormData({
         name: category.name,
-        description: category.description,
+        description: category.description || '',
+        slug: category.slug,
       });
     } else {
       setEditingCategory(null);
       setFormData({
         name: '',
         description: '',
+        slug: '',
       });
     }
     setIsModalOpen(true);
@@ -54,57 +81,45 @@ const AdminCategories = () => {
     setEditingCategory(null);
   };
 
+  const generateSlug = (name: string) =>
+    name
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/\s+/g, '-')
+      .replace(/[^a-z0-9-]/g, '');
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-
+    const slug = formData.slug || generateSlug(formData.name);
     if (editingCategory) {
-      // Prevent editing default categories IDs
-      setCategories(prev =>
-        prev.map(c =>
-          c.id === editingCategory.id
-            ? { ...c, name: formData.name, description: formData.description }
-            : c
-        )
-      );
-      toast.success('Catégorie modifiée avec succès');
+      updateMutation.mutate({
+        id: Number(editingCategory.id),
+        data: { name: formData.name, description: formData.description, slug },
+      });
     } else {
-      const newCategory: Category = {
-        id: formData.name.toLowerCase().replace(/\s+/g, '-'),
-        name: formData.name,
-        description: formData.description,
-        productCount: 0,
-      };
-      setCategories(prev => [...prev, newCategory]);
-      toast.success('Catégorie créée avec succès');
+      createMutation.mutate({ name: formData.name, description: formData.description, slug });
     }
-
-    handleCloseModal();
   };
 
-  const handleDelete = (categoryId: string) => {
-    // Prevent deleting default categories
-    if (['beldi', 'modern'].includes(categoryId)) {
-      toast.error('Cette catégorie ne peut pas être supprimée');
-      return;
-    }
-
-    const category = categories.find(c => c.id === categoryId);
-    if (category && category.productCount > 0) {
-      toast.error(`Cette catégorie contient ${category.productCount} produit(s)`);
-      return;
-    }
-
+  const handleDelete = (category: CategoryDTO) => {
     if (confirm('Êtes-vous sûr de vouloir supprimer cette catégorie ?')) {
-      setCategories(prev => prev.filter(c => c.id !== categoryId));
-      toast.success('Catégorie supprimée');
+      deleteMutation.mutate(Number(category.id));
     }
   };
 
-  const isDefaultCategory = (id: string) => ['beldi', 'modern'].includes(id);
+  if (isLoading) {
+    return (
+      <AdminLayout title="Gestion des Catégories" breadcrumbs={[{ label: 'Catégories' }]}>
+        <div className="flex items-center justify-center py-12">
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        </div>
+      </AdminLayout>
+    );
+  }
 
   return (
     <AdminLayout title="Gestion des Catégories" breadcrumbs={[{ label: 'Catégories' }]}>
-      {/* Header */}
       <div className="flex justify-between items-center mb-6">
         <p className="font-body text-muted-foreground">
           Gérez les catégories de produits de votre boutique
@@ -115,7 +130,6 @@ const AdminCategories = () => {
         </Button>
       </div>
 
-      {/* Categories Grid */}
       <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
         {categories.map((category) => (
           <div
@@ -126,57 +140,38 @@ const AdminCategories = () => {
               <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center">
                 <FolderOpen className="w-6 h-6 text-primary" />
               </div>
-              {!isDefaultCategory(category.id) && (
-                <div className="flex gap-2">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleOpenModal(category)}
-                  >
-                    <Pencil className="w-4 h-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="text-destructive hover:text-destructive"
-                    onClick={() => handleDelete(category.id)}
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
-                </div>
-              )}
+              <div className="flex gap-2">
+                <Button variant="ghost" size="sm" onClick={() => handleOpenModal(category)}>
+                  <Pencil className="w-4 h-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-destructive hover:text-destructive"
+                  onClick={() => handleDelete(category)}
+                >
+                  <Trash2 className="w-4 h-4" />
+                </Button>
+              </div>
             </div>
 
             <h3 className="font-display text-xl mb-2">{category.name}</h3>
             <p className="font-body text-sm text-muted-foreground mb-4 line-clamp-2">
-              {category.description}
+              {category.description || '—'}
             </p>
-
-            <div className="flex items-center justify-between pt-4 border-t border-border">
-              <span className="font-body text-sm text-muted-foreground">
-                {category.productCount} produit{category.productCount > 1 ? 's' : ''}
-              </span>
-              {isDefaultCategory(category.id) && (
-                <span className="font-body text-xs text-primary bg-primary/10 px-2 py-1 rounded">
-                  Par défaut
-                </span>
-              )}
-            </div>
+            <p className="font-body text-xs text-muted-foreground">Slug: {category.slug}</p>
           </div>
         ))}
       </div>
 
-      {/* Info box */}
       <div className="mt-8 p-4 bg-muted/50 rounded-lg border border-border">
         <h4 className="font-display text-lg mb-2">À propos des catégories</h4>
         <ul className="font-body text-sm text-muted-foreground space-y-1">
-          <li>• Les catégories "Beldi" et "Moderne" sont des catégories par défaut et ne peuvent pas être supprimées</li>
-          <li>• Vous pouvez créer des catégories personnalisées pour organiser vos produits</li>
-          <li>• Une catégorie ne peut être supprimée que si elle ne contient aucun produit</li>
+          <li>• Les catégories permettent de filtrer les produits (ex: Beldi, Moderne)</li>
+          <li>• Le slug est utilisé dans les URLs et filtres (ex: beldi, modern)</li>
         </ul>
       </div>
 
-      {/* Category Modal */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
@@ -191,19 +186,34 @@ const AdminCategories = () => {
               <Input
                 id="name"
                 value={formData.name}
-                onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                placeholder="Ex: Mariage, Fiançailles..."
+                onChange={(e) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    name: e.target.value,
+                    slug: prev.slug || generateSlug(e.target.value),
+                  }))
+                }
+                placeholder="Ex: Beldi, Moderne..."
                 required
                 className="mt-1"
               />
             </div>
-
+            <div>
+              <Label htmlFor="slug">Slug *</Label>
+              <Input
+                id="slug"
+                value={formData.slug}
+                onChange={(e) => setFormData((prev) => ({ ...prev, slug: e.target.value }))}
+                placeholder="beldi, modern..."
+                className="mt-1"
+              />
+            </div>
             <div>
               <Label htmlFor="description">Description</Label>
               <Textarea
                 id="description"
                 value={formData.description}
-                onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+                onChange={(e) => setFormData((prev) => ({ ...prev, description: e.target.value }))}
                 placeholder="Description de la catégorie..."
                 rows={3}
                 className="mt-1"
@@ -214,7 +224,10 @@ const AdminCategories = () => {
               <Button type="button" variant="outline" onClick={handleCloseModal}>
                 Annuler
               </Button>
-              <Button type="submit">
+              <Button
+                type="submit"
+                disabled={createMutation.isPending || updateMutation.isPending}
+              >
                 {editingCategory ? 'Enregistrer' : 'Créer'}
               </Button>
             </DialogFooter>

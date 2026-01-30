@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import { Upload, Send, Check, Palette } from 'lucide-react';
 import Layout from '@/components/layout/Layout';
 import { Button } from '@/components/ui/button';
@@ -7,7 +8,18 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
+import { customOrdersApi, productTypesApi, categoriesApi } from '@/services/api';
+import { CustomOrderDTO } from '@/types/api';
+
 const CustomOrder = () => {
+  const { data: productTypes = [] } = useQuery({
+    queryKey: ['productTypes'],
+    queryFn: () => productTypesApi.getAllProductTypes(),
+  });
+  const { data: categories = [] } = useQuery({
+    queryKey: ['categories'],
+    queryFn: () => categoriesApi.getAllCategories(),
+  });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
@@ -50,6 +62,22 @@ const CustomOrder = () => {
       reader.readAsDataURL(file);
     }
   };
+  // Mutation pour créer une commande personnalisée
+  const createCustomOrderMutation = useMutation({
+    mutationFn: async (customOrderData: Partial<CustomOrderDTO>) => {
+      return await customOrdersApi.createCustomOrder(customOrderData);
+    },
+    onSuccess: () => {
+      setIsSubmitting(false);
+      setIsSuccess(true);
+      toast.success('Demande de commande personnalisée envoyée avec succès!');
+    },
+    onError: (error: Error) => {
+      setIsSubmitting(false);
+      toast.error(error.message || 'Erreur lors de l\'envoi de la demande');
+    },
+  });
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.fullName || !formData.phone || !formData.type || !formData.style) {
@@ -58,10 +86,23 @@ const CustomOrder = () => {
     }
     setIsSubmitting(true);
 
-    // Simulate submission
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    setIsSubmitting(false);
-    setIsSuccess(true);
+    // Créer l'objet CustomOrderDTO
+    const customOrderDTO: Partial<CustomOrderDTO> = {
+      imageUrl: imagePreview || undefined,
+      description: formData.description || `Commande personnalisée de type ${formData.type} en style ${formData.style}`,
+      type: formData.type,
+      weight: formData.weight ? parseFloat(formData.weight) : undefined,
+      style: formData.style,
+      customer: {
+        fullName: formData.fullName,
+        phone: formData.phone,
+        email: formData.email || undefined,
+      },
+      status: 'pending',
+      createdAt: new Date().toISOString(),
+    };
+
+    createCustomOrderMutation.mutate(customOrderDTO);
   };
   if (isSuccess) {
     return <Layout>
@@ -155,12 +196,11 @@ const CustomOrder = () => {
                       <SelectValue placeholder="Sélectionner le type" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="bracelet">Bracelet</SelectItem>
-                      <SelectItem value="ring">Bague</SelectItem>
-                      <SelectItem value="necklace">Collier</SelectItem>
-                      <SelectItem value="earrings">Boucles d'oreilles</SelectItem>
-                      <SelectItem value="set">Parure complète</SelectItem>
-                      <SelectItem value="other">Autre</SelectItem>
+                      {productTypes.map((pt) => (
+                        <SelectItem key={pt.id} value={pt.code.toLowerCase()}>
+                          {pt.name}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
@@ -174,9 +214,11 @@ const CustomOrder = () => {
                       <SelectValue placeholder="Sélectionner le style" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="beldi">Beldi (Traditionnel)</SelectItem>
-                      <SelectItem value="modern">Moderne</SelectItem>
-                      <SelectItem value="mixed">Mixte</SelectItem>
+                      {categories.map((cat) => (
+                        <SelectItem key={cat.id} value={cat.slug}>
+                          {cat.name}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>

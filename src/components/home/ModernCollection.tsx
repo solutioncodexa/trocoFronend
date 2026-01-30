@@ -1,14 +1,20 @@
+import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
-import { getProductsByCategory } from '@/data/products';
 import ProductCard from '@/components/ui/ProductCard';
+import { productsApi } from '@/services/api/products';
+import { mapProductDTOListToProducts } from '@/utils/productMapper';
 
 const ModernCollection = () => {
-  const modernProducts = getProductsByCategory('modern').slice(0, 4);
+  const { data: products } = useQuery({
+    queryKey: ['products', 'modern'],
+    queryFn: () => productsApi.filterProducts({ category: 'modern' }),
+  });
+
+  const modernProducts = products ? mapProductDTOListToProducts(products).slice(0, 4) : [];
 
   return (
     <section className="py-16 md:py-24 bg-white dark:bg-background-dark">
       <div className="max-w-[1280px] mx-auto px-6">
-        {/* Section Header */}
         <div className="flex flex-col items-center mb-16 text-center">
           <div className="w-16 h-px bg-primary/60 mb-4"></div>
           <h2 className="font-script text-6xl text-secondary-dark dark:text-white mb-2">Collection Moderne</h2>
@@ -16,7 +22,6 @@ const ModernCollection = () => {
           <div className="w-16 h-px bg-primary/60 mt-4"></div>
         </div>
 
-        {/* Product Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
           {modernProducts.map((product) => (
             <ProductCard key={product.id} product={product} />
@@ -24,8 +29,8 @@ const ModernCollection = () => {
         </div>
 
         <div className="mt-12 text-center">
-          <Link 
-            className="inline-block border-b border-primary pb-1 text-primary hover:text-accent-beige transition-colors text-sm uppercase tracking-widest font-medium" 
+          <Link
+            className="inline-block border-b border-primary pb-1 text-primary hover:text-accent-beige transition-colors text-sm uppercase tracking-widest font-medium"
             to="/boutique?category=modern"
           >
             Voir toute la collection Moderne

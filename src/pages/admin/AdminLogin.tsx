@@ -26,17 +26,14 @@ const AdminLogin = () => {
     setError('');
     setIsLoading(true);
 
-    // Simulate API call delay
-    await new Promise(resolve => setTimeout(resolve, 800));
+    const success = await login(email, password);
 
-    const success = login(email, password);
-    
     if (success) {
       navigate('/admin/dashboard');
     } else {
       setError('Email ou mot de passe incorrect');
     }
-    
+
     setIsLoading(false);
   };
 
@@ -86,7 +83,7 @@ const AdminLogin = () => {
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="admin@orelegance.ma"
+                  placeholder="admin@goldyara.ma"
                   className="pl-10"
                   required
                 />
@@ -129,7 +126,7 @@ const AdminLogin = () => {
           {/* Demo credentials */}
           <div className="mt-6 p-4 bg-muted rounded-lg">
             <p className="font-body text-xs text-muted-foreground text-center">
-              <strong>Démo:</strong> admin@orelegance.ma / admin123
+              <strong>Démo:</strong> admin@goldyara.ma / Admin1234
             </p>
           </div>
         </div>

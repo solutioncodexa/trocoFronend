@@ -1,6 +1,9 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Product } from '@/types/product';
-import { products } from '@/data/products';
+import { wishlistApi } from '@/services/api';
+import { mapProductDTOListToProducts } from '@/utils/productMapper';
+import { toast } from 'sonner';
 
 interface WishlistContextType {
   wishlist: string[];
@@ -15,24 +18,79 @@ interface WishlistContextType {
 const WishlistContext = createContext<WishlistContextType | undefined>(undefined);
 
 export const WishlistProvider = ({ children }: { children: ReactNode }) => {
-  const [wishlist, setWishlist] = useState<string[]>(() => {
-    const saved = localStorage.getItem('wishlist');
-    return saved ? JSON.parse(saved) : [];
+  const queryClient = useQueryClient();
+  
+  // Charger la wishlist depuis l'API
+  const { data: wishlistProductsData } = useQuery({
+    queryKey: ['wishlist'],
+    queryFn: async () => {
+      try {
+        const products = await wishlistApi.getWishlist();
+        return mapProductDTOListToProducts(products);
+      } catch (error) {
+        // Si erreur, retourner un tableau vide
+        return [];
+      }
+    },
+    retry: 1,
   });
 
+  const [wishlist, setWishlist] = useState<string[]>([]);
+
+  // Synchroniser avec les données de l'API
   useEffect(() => {
-    localStorage.setItem('wishlist', JSON.stringify(wishlist));
-  }, [wishlist]);
+    if (wishlistProductsData) {
+      const productIds = wishlistProductsData.map(p => p.id);
+      setWishlist(productIds);
+      localStorage.setItem('wishlist', JSON.stringify(productIds));
+    }
+  }, [wishlistProductsData]);
+
+  // Mutation pour ajouter à la wishlist
+  const addToWishlistMutation = useMutation({
+    mutationFn: async (productId: string) => {
+      return await wishlistApi.addToWishlist(productId);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['wishlist'] });
+      toast.success('Produit ajouté aux favoris');
+    },
+    onError: () => {
+      toast.error('Erreur lors de l\'ajout aux favoris');
+    },
+  });
+
+  // Mutation pour supprimer de la wishlist
+  const removeFromWishlistMutation = useMutation({
+    mutationFn: async (productId: string) => {
+      return await wishlistApi.removeFromWishlist(productId);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['wishlist'] });
+      toast.success('Produit retiré des favoris');
+    },
+    onError: () => {
+      toast.error('Erreur lors de la suppression des favoris');
+    },
+  });
 
   const addToWishlist = (productId: string) => {
     setWishlist(prev => {
       if (prev.includes(productId)) return prev;
-      return [...prev, productId];
+      const newWishlist = [...prev, productId];
+      localStorage.setItem('wishlist', JSON.stringify(newWishlist));
+      return newWishlist;
     });
+    addToWishlistMutation.mutate(productId);
   };
 
   const removeFromWishlist = (productId: string) => {
-    setWishlist(prev => prev.filter(id => id !== productId));
+    setWishlist(prev => {
+      const newWishlist = prev.filter(id => id !== productId);
+      localStorage.setItem('wishlist', JSON.stringify(newWishlist));
+      return newWishlist;
+    });
+    removeFromWishlistMutation.mutate(productId);
   };
 
   const isInWishlist = (productId: string) => {
@@ -48,7 +106,7 @@ export const WishlistProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const getWishlistProducts = () => {
-    return products.filter(p => wishlist.includes(p.id));
+    return wishlistProductsData || [];
   };
 
   return (

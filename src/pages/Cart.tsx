@@ -3,8 +3,8 @@ import { Trash2, Plus, Minus, ShoppingBag, ArrowRight, ArrowLeft, X, Search, Ver
 import Layout from '@/components/layout/Layout';
 import { Button } from '@/components/ui/button';
 import { useCart } from '@/contexts/CartContext';
-import { formatPrice } from '@/data/products';
-import { goldTypeLabels } from '@/types/product';
+import { formatPrice } from '@/utils/formatPrice';
+import { useGoldTypes } from '@/hooks/useGoldTypes';
 
 const Cart = () => {
   const {
@@ -74,7 +74,7 @@ const Cart = () => {
                         <div className="space-y-1 text-sm text-accent-beige">
                           <p><span className="uppercase tracking-widest text-[10px] font-bold">Style:</span> {item.product.category === 'beldi' ? 'Beldi' : 'Moderne'}</p>
                           <p><span className="uppercase tracking-widest text-[10px] font-bold">Poids:</span> {item.product.weight}g</p>
-                          <p><span className="uppercase tracking-widest text-[10px] font-bold">Métal:</span> {goldTypeLabels[item.selectedGoldType]}</p>
+                          <p><span className="uppercase tracking-widest text-[10px] font-bold">Métal:</span> {getGoldTypeName(item.selectedGoldType ?? '')}</p>
                           {item.selectedSize && <p><span className="uppercase tracking-widest text-[10px] font-bold">Taille:</span> {item.selectedSize}</p>}
                         </div>
                       </div>

@@ -1,7 +1,8 @@
 import { Link } from 'react-router-dom';
 import { Heart, Eye } from 'lucide-react';
-import { Product, goldTypeLabels } from '@/types/product';
-import { formatPrice } from '@/data/products';
+import { Product } from '@/types/product';
+import { useGoldTypes } from '@/hooks/useGoldTypes';
+import { formatPrice } from '@/utils/formatPrice';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { useWishlist } from '@/contexts/WishlistContext';
@@ -14,6 +15,7 @@ interface ProductCardProps {
 
 const ProductCard = ({ product, className }: ProductCardProps) => {
   const { isInWishlist, toggleWishlist } = useWishlist();
+  const { getGoldTypeName } = useGoldTypes();
   const isFavorite = isInWishlist(product.id);
 
   const handleWishlistToggle = (e: React.MouseEvent) => {
@@ -114,7 +116,7 @@ const ProductCard = ({ product, className }: ProductCardProps) => {
             {product.name}
           </h4>
           <p className="text-xs text-accent-beige mb-3 uppercase tracking-wide">
-            {goldTypeLabels[product.goldType]}
+            {getGoldTypeName(product.goldType)}
           </p>
           <div className="flex items-center justify-center gap-2">
             <span className="text-primary font-medium text-lg">

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Eye, Search, Phone, Mail, MessageSquare, ExternalLink, FileText, Calculator, Check, X } from 'lucide-react';
 import AdminLayout from '@/components/admin/AdminLayout';
 import { Button } from '@/components/ui/button';
@@ -8,29 +9,44 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { mockCustomRequests } from '@/data/adminMockData';
-import { CustomFabricationRequest, goldTypeLabels } from '@/types/product';
+import { customOrdersApi } from '@/services/api/customOrders';
+import { CustomOrderDTO } from '@/types/api';
+import { useGoldTypes } from '@/hooks/useGoldTypes';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import QuoteDialog, { QuoteData } from '@/components/admin/QuoteDialog';
 
 const AdminCustomRequests = () => {
-  const [requests, setRequests] = useState<CustomFabricationRequest[]>(mockCustomRequests);
+  const queryClient = useQueryClient();
+  const { data: requests = [], isLoading } = useQuery({
+    queryKey: ['customOrders'],
+    queryFn: () => customOrdersApi.getAllCustomOrders(),
+  });
+
+  const updateStatusMutation = useMutation({
+    mutationFn: ({ id, status }: { id: string; status: string }) =>
+      customOrdersApi.updateCustomOrderStatus(id, status),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['customOrders'] });
+      toast.success('Statut mis à jour');
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState<string>('all');
-  const [selectedRequest, setSelectedRequest] = useState<CustomFabricationRequest | null>(null);
+  const [selectedRequest, setSelectedRequest] = useState<CustomOrderDTO | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [adminNotes, setAdminNotes] = useState<Record<string, string>>({});
-  
-  // Quote management
+
   const [isQuoteOpen, setIsQuoteOpen] = useState(false);
   const [quotes, setQuotes] = useState<Record<string, QuoteData>>({});
 
-  const filteredRequests = requests.filter(request => {
-    const matchesSearch = 
+  const filteredRequests = requests.filter((request) => {
+    const matchesSearch =
       request.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      request.customer.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      request.customer.email.toLowerCase().includes(searchTerm.toLowerCase());
+      request.customer?.fullName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (request.customer?.email ?? '').toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = filterStatus === 'all' || request.status === filterStatus;
     return matchesSearch && matchesStatus;
   });
@@ -85,23 +101,15 @@ const AdminCustomRequests = () => {
     return labels[status];
   };
 
-  const handleViewRequest = (request: CustomFabricationRequest) => {
+  const handleViewRequest = (request: CustomOrderDTO) => {
     setSelectedRequest(request);
     setIsDetailOpen(true);
   };
 
   const handleStatusChange = (requestId: string, newStatus: string) => {
-    setRequests(prev =>
-      prev.map(r =>
-        r.id === requestId
-          ? { ...r, status: newStatus as CustomFabricationRequest['status'] }
-          : r
-      )
-    );
-    toast.success(`Statut de la demande ${requestId} mis à jour`);
-    
+    updateStatusMutation.mutate({ id: requestId, status: newStatus });
     if (selectedRequest?.id === requestId) {
-      setSelectedRequest(prev => prev ? { ...prev, status: newStatus as CustomFabricationRequest['status'] } : null);
+      setSelectedRequest((prev) => (prev ? { ...prev, status: newStatus } : null));
     }
   };
 
@@ -109,7 +117,7 @@ const AdminCustomRequests = () => {
     toast.success('Notes enregistrées');
   };
 
-  const handleCreateQuote = (request: CustomFabricationRequest) => {
+  const handleCreateQuote = (request: CustomOrderDTO) => {
     setSelectedRequest(request);
     setIsQuoteOpen(true);
     setIsDetailOpen(false);
@@ -153,6 +161,14 @@ const AdminCustomRequests = () => {
       maximumFractionDigits: 0,
     }).format(price);
   };
+
+  if (isLoading) {
+    return (
+      <AdminLayout title="Demandes de Personnalisation" breadcrumbs={[{ label: 'Personnalisations' }]}>
+        <div className="p-8 text-center text-muted-foreground">Chargement...</div>
+      </AdminLayout>
+    );
+  }
 
   return (
     <AdminLayout title="Demandes de Personnalisation" breadcrumbs={[{ label: 'Personnalisations' }]}>
@@ -225,7 +241,7 @@ const AdminCustomRequests = () => {
               <div className="p-4 space-y-3">
                 <div className="flex justify-between items-start">
                   <div>
-                    <p className="font-body font-medium">{request.customer.fullName}</p>
+                    <p className="font-body font-medium">{request.customer?.fullName}</p>
                     <p className="font-body text-xs text-muted-foreground">{request.id}</p>
                   </div>
                   <Badge variant="outline">
@@ -309,18 +325,20 @@ const AdminCustomRequests = () => {
               {/* Image */}
               <div className="relative aspect-video rounded-lg overflow-hidden bg-muted">
                 <img
-                  src={selectedRequest.imageUrl}
+                  src={selectedRequest.imageUrl ?? '/placeholder.svg'}
                   alt="Modèle"
                   className="w-full h-full object-contain"
                 />
-                <a
-                  href={selectedRequest.imageUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="absolute top-2 right-2 p-2 bg-charcoal/80 text-cream rounded-lg hover:bg-charcoal"
-                >
-                  <ExternalLink className="w-4 h-4" />
-                </a>
+                {selectedRequest.imageUrl && (
+                  <a
+                    href={selectedRequest.imageUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="absolute top-2 right-2 p-2 bg-charcoal/80 text-cream rounded-lg hover:bg-charcoal"
+                  >
+                    <ExternalLink className="w-4 h-4" />
+                  </a>
+                )}
               </div>
 
               {/* Status and Type */}
@@ -351,7 +369,7 @@ const AdminCustomRequests = () => {
                   <div className="grid sm:grid-cols-3 gap-4 text-sm">
                     <div>
                       <p className="text-muted-foreground">Type d'or</p>
-                      <p className="font-medium">{goldTypeLabels[quotes[selectedRequest.id].goldType]}</p>
+                      <p className="font-medium">{getGoldTypeName(quotes[selectedRequest.id].goldType)}</p>
                     </div>
                     <div>
                       <p className="text-muted-foreground">Poids</p>
@@ -398,17 +416,18 @@ const AdminCustomRequests = () => {
                 <h3 className="font-display text-lg">Informations client</h3>
                 <div className="grid sm:grid-cols-2 gap-4">
                   <div>
-                    <p className="font-body font-medium">{selectedRequest.customer.fullName}</p>
+                    <p className="font-body font-medium">{selectedRequest.customer?.fullName}</p>
                   </div>
                   <div className="flex items-center gap-2">
                     <Phone className="w-4 h-4 text-muted-foreground" />
                     <a
-                      href={`tel:${selectedRequest.customer.phone}`}
+                      href={`tel:${selectedRequest.customer?.phone}`}
                       className="font-body text-primary hover:underline"
                     >
-                      {selectedRequest.customer.phone}
+                      {selectedRequest.customer?.phone}
                     </a>
                   </div>
+                  {selectedRequest.customer?.email && (
                   <div className="flex items-center gap-2 sm:col-span-2">
                     <Mail className="w-4 h-4 text-muted-foreground" />
                     <a
@@ -418,6 +437,7 @@ const AdminCustomRequests = () => {
                       {selectedRequest.customer.email}
                     </a>
                   </div>
+                  )}
                 </div>
               </div>
 
@@ -484,17 +504,19 @@ const AdminCustomRequests = () => {
                 </Select>
                 <div className="flex gap-2">
                   <Button variant="outline" asChild>
-                    <a href={`tel:${selectedRequest.customer.phone}`}>
+                    <a href={`tel:${selectedRequest.customer?.phone}`}>
                       <Phone className="w-4 h-4 mr-2" />
                       Appeler
                     </a>
                   </Button>
+                  {selectedRequest.customer?.email && (
                   <Button variant="outline" asChild>
                     <a href={`mailto:${selectedRequest.customer.email}`}>
                       <Mail className="w-4 h-4 mr-2" />
                       Email
                     </a>
                   </Button>
+                  )}
                 </div>
               </DialogFooter>
             </div>

@@ -1,16 +1,25 @@
+import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import ProductCard from '@/components/ui/ProductCard';
-import { getFeaturedProducts } from '@/data/products';
+import { productsApi } from '@/services/api/products';
+import { mapProductDTOListToProducts } from '@/utils/productMapper';
 
 const FeaturedProducts = () => {
-  const featuredProducts = getFeaturedProducts();
+  const { data: productsPage } = useQuery({
+    queryKey: ['products', 'featured'],
+    queryFn: () => productsApi.getAllProducts({ page: 0, size: 20, sortBy: 'createdAt', sortDir: 'DESC' }),
+  });
+
+  const allProducts = productsPage ? mapProductDTOListToProducts(productsPage.content) : [];
+  const featuredProducts = allProducts.filter((p) => p.badges && p.badges.length > 0).slice(0, 4);
+  const fallback = featuredProducts.length < 4 ? allProducts.slice(0, 4) : featuredProducts;
+  const displayProducts = fallback.length > 0 ? fallback : featuredProducts;
 
   return (
     <section className="py-20 bg-background">
       <div className="container mx-auto px-4">
-        {/* Section header */}
         <div className="flex flex-col md:flex-row md:items-end justify-between mb-12">
           <div>
             <h2 className="font-display text-3xl md:text-4xl text-foreground mb-4">
@@ -32,9 +41,8 @@ const FeaturedProducts = () => {
           </Button>
         </div>
 
-        {/* Products grid */}
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {featuredProducts.map((product, index) => (
+          {displayProducts.map((product, index) => (
             <div
               key={product.id}
               className="animate-fade-in"

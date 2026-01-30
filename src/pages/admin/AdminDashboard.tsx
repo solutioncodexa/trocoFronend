@@ -1,46 +1,69 @@
-import { Package, ShoppingCart, Palette, TrendingUp, DollarSign, Users } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import { Package, ShoppingCart, Palette, DollarSign, TrendingUp } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import AdminLayout from '@/components/admin/AdminLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { products } from '@/data/products';
-import { mockOrders, mockCustomRequests } from '@/data/adminMockData';
+import { productsApi } from '@/services/api/products';
+import { ordersApi } from '@/services/api/orders';
+import { customOrdersApi } from '@/services/api/customOrders';
+import { formatPrice } from '@/utils/formatPrice';
 
 const AdminDashboard = () => {
+  const { data: productsPage } = useQuery({
+    queryKey: ['products', 'dashboard'],
+    queryFn: () => productsApi.getAllProducts({ page: 0, size: 1 }),
+  });
+  const { data: orders = [] } = useQuery({
+    queryKey: ['orders'],
+    queryFn: () => ordersApi.getAllOrders(),
+  });
+  const { data: customOrders = [] } = useQuery({
+    queryKey: ['customOrders'],
+    queryFn: () => customOrdersApi.getAllCustomOrders(),
+  });
+
+  const productCount = productsPage?.totalElements ?? 0;
+  const newOrdersCount = orders.filter((o) => o.status === 'new').length;
+  const pendingCustomCount = customOrders.filter((r) => r.status === 'pending').length;
+  const totalRevenue = orders
+    .filter((o) => o.status === 'delivered')
+    .reduce((sum, o) => sum + (o.total ?? 0), 0);
+
   const stats = [
     {
       title: 'Total Produits',
-      value: products.length,
+      value: productCount,
       icon: Package,
       color: 'bg-blue-500',
       href: '/admin/produits',
     },
     {
       title: 'Commandes',
-      value: mockOrders.length,
-      subValue: `${mockOrders.filter(o => o.status === 'new').length} nouvelles`,
+      value: orders.length,
+      subValue: `${newOrdersCount} nouvelles`,
       icon: ShoppingCart,
       color: 'bg-green-500',
       href: '/admin/commandes',
     },
     {
       title: 'Personnalisations',
-      value: mockCustomRequests.length,
-      subValue: `${mockCustomRequests.filter(r => r.status === 'pending').length} en attente`,
+      value: customOrders.length,
+      subValue: `${pendingCustomCount} en attente`,
       icon: Palette,
       color: 'bg-purple-500',
       href: '/admin/personnalisations',
     },
     {
-      title: 'Chiffre d\'affaires',
-      value: '101,400 MAD',
-      subValue: 'Ce mois',
+      title: "Chiffre d'affaires",
+      value: formatPrice(totalRevenue),
+      subValue: 'Livrées',
       icon: DollarSign,
       color: 'bg-primary',
     },
   ];
 
-  const recentOrders = mockOrders.slice(0, 5);
-  const pendingRequests = mockCustomRequests.filter(r => r.status === 'pending');
+  const recentOrders = orders.slice(0, 5);
+  const pendingRequests = customOrders.filter((r) => r.status === 'pending');
 
   const getStatusBadge = (status: string) => {
     const styles: Record<string, string> = {
@@ -50,6 +73,7 @@ const AdminDashboard = () => {
       cancelled: 'bg-red-100 text-red-800',
       pending: 'bg-orange-100 text-orange-800',
       contacted: 'bg-purple-100 text-purple-800',
+      completed: 'bg-green-100 text-green-800',
     };
     const labels: Record<string, string> = {
       new: 'Nouvelle',
@@ -58,17 +82,17 @@ const AdminDashboard = () => {
       cancelled: 'Annulée',
       pending: 'En attente',
       contacted: 'Contacté',
+      completed: 'Terminée',
     };
     return (
-      <span className={`px-2 py-1 rounded-full text-xs font-body ${styles[status]}`}>
-        {labels[status]}
+      <span className={`px-2 py-1 rounded-full text-xs font-body ${styles[status] ?? 'bg-gray-100 text-gray-800'}`}>
+        {labels[status] ?? status}
       </span>
     );
   };
 
   return (
     <AdminLayout title="Tableau de bord" breadcrumbs={[{ label: 'Tableau de bord' }]}>
-      {/* Stats Grid */}
       <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         {stats.map((stat, index) => (
           <Card key={index} className="hover:shadow-lg transition-shadow">
@@ -99,9 +123,8 @@ const AdminDashboard = () => {
       </div>
 
       <div className="grid lg:grid-cols-2 gap-6">
-        {/* Recent Orders */}
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="font-display text-lg">Commandes récentes</CardTitle>
             <Link to="/admin/commandes" className="font-body text-sm text-primary hover:underline">
               Voir tout
@@ -117,22 +140,26 @@ const AdminDashboard = () => {
                   <div>
                     <p className="font-body font-medium">{order.id}</p>
                     <p className="font-body text-sm text-muted-foreground">
-                      {order.customer.fullName}
+                      {order.customer?.fullName}
                     </p>
                   </div>
                   <div className="text-right">
-                    <p className="font-body font-medium">{order.total.toLocaleString()} MAD</p>
+                    <p className="font-body font-medium">{formatPrice(order.total ?? 0)}</p>
                     {getStatusBadge(order.status)}
                   </div>
                 </div>
               ))}
+              {recentOrders.length === 0 && (
+                <p className="font-body text-muted-foreground text-center py-4">
+                  Aucune commande
+                </p>
+              )}
             </div>
           </CardContent>
         </Card>
 
-        {/* Pending Custom Requests */}
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="font-display text-lg">Personnalisations en attente</CardTitle>
             <Link to="/admin/personnalisations" className="font-body text-sm text-primary hover:underline">
               Voir tout
@@ -146,14 +173,20 @@ const AdminDashboard = () => {
                     key={request.id}
                     className="flex items-center gap-4 p-3 bg-muted/50 rounded-lg"
                   >
-                    <img
-                      src={request.imageUrl}
-                      alt="Modèle"
-                      className="w-12 h-12 rounded-lg object-cover"
-                    />
+                    {request.imageUrl ? (
+                      <img
+                        src={request.imageUrl}
+                        alt="Modèle"
+                        className="w-12 h-12 rounded-lg object-cover"
+                      />
+                    ) : (
+                      <div className="w-12 h-12 rounded-lg bg-muted flex items-center justify-center">
+                        <Palette className="w-6 h-6 text-muted-foreground" />
+                      </div>
+                    )}
                     <div className="flex-1 min-w-0">
                       <p className="font-body font-medium truncate">
-                        {request.customer.fullName}
+                        {request.customer?.fullName}
                       </p>
                       <p className="font-body text-sm text-muted-foreground capitalize">
                         {request.type} - {request.style}
@@ -172,7 +205,6 @@ const AdminDashboard = () => {
         </Card>
       </div>
 
-      {/* Quick Actions */}
       <div className="mt-8">
         <h2 className="font-display text-lg mb-4">Actions rapides</h2>
         <div className="grid sm:grid-cols-3 gap-4">

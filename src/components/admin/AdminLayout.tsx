@@ -8,6 +8,7 @@ import {
   FolderOpen,
   Tag,
   Layers,
+  Gem,
   LogOut,
   Menu,
   X,
@@ -24,15 +25,29 @@ interface AdminLayoutProps {
   breadcrumbs?: { label: string; href?: string }[];
 }
 
-const navItems = [
-  { href: '/admin/dashboard', label: 'Tableau de bord', icon: LayoutDashboard },
-  { href: '/admin/produits', label: 'Produits', icon: Package },
-  { href: '/admin/commandes', label: 'Commandes', icon: ShoppingCart },
-  { href: '/admin/personnalisations', label: 'Personnalisations', icon: Palette },
-  { href: '/admin/collections', label: 'Collections', icon: Layers },
-  { href: '/admin/categories', label: 'Catégories', icon: FolderOpen },
-  { href: '/admin/types', label: 'Types de Produits', icon: Tag },
+const navSections = [
+  {
+    label: 'Principal',
+    items: [
+      { href: '/admin/dashboard', label: 'Tableau de bord', icon: LayoutDashboard },
+      { href: '/admin/commandes', label: 'Commandes', icon: ShoppingCart },
+      { href: '/admin/personnalisations', label: 'Personnalisations', icon: Palette },
+    ],
+  },
+  {
+    label: 'Catalogue',
+    items: [
+      { href: '/admin/produits', label: 'Produits', icon: Package },
+      { href: '/admin/types', label: 'Types de Produits', icon: Tag },
+      { href: '/admin/types-or', label: "Types d'or", icon: Gem },
+      { href: '/admin/categories', label: 'Catégories', icon: FolderOpen },
+      { href: '/admin/collections', label: 'Collections', icon: Layers },
+    ],
+  },
 ];
+
+// Liste plate pour compatibilité (évite "navItems is not defined" si cache ancien)
+const navItems = navSections.flatMap((s) => s.items);
 
 const AdminLayout = ({ children, title, breadcrumbs }: AdminLayoutProps) => {
   const location = useLocation();
@@ -66,12 +81,12 @@ const AdminLayout = ({ children, title, breadcrumbs }: AdminLayoutProps) => {
       {/* Sidebar */}
       <aside
         className={cn(
-          'fixed lg:static inset-y-0 left-0 z-50 w-64 bg-charcoal text-cream transform transition-transform duration-300 lg:translate-x-0',
+          'fixed lg:static inset-y-0 left-0 z-50 w-64 bg-charcoal text-cream transform transition-transform duration-300 lg:translate-x-0 flex flex-col',
           isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
         )}
       >
         {/* Logo */}
-        <div className="h-16 flex items-center justify-between px-6 border-b border-cream/10">
+        <div className="h-16 shrink-0 flex items-center justify-between px-6 border-b border-cream/10">
           <Link to="/admin/dashboard" className="font-script text-xl text-primary">
             YaraGold
           </Link>
@@ -83,28 +98,37 @@ const AdminLayout = ({ children, title, breadcrumbs }: AdminLayoutProps) => {
           </button>
         </div>
 
-        {/* Navigation */}
-        <nav className="p-4 space-y-2">
-          {navItems.map((item) => (
-            <Link
-              key={item.href}
-              to={item.href}
-              onClick={() => setIsSidebarOpen(false)}
-              className={cn(
-                'flex items-center gap-3 px-4 py-3 rounded-lg font-body text-sm transition-all',
-                isActive(item.href)
-                  ? 'bg-gold text-charcoal font-medium'
-                  : 'text-cream/70 hover:bg-cream/10 hover:text-cream'
-              )}
-            >
-              <item.icon className="w-5 h-5" />
-              {item.label}
-            </Link>
+        {/* Navigation - scrollable pour afficher toutes les interfaces */}
+        <nav className="flex-1 min-h-0 overflow-y-auto p-4 space-y-6">
+          {navSections.map((section) => (
+            <div key={section.label}>
+              <p className="px-4 mb-2 text-xs font-semibold uppercase tracking-wider text-cream/50">
+                {section.label}
+              </p>
+              <div className="space-y-1">
+                {section.items.map((item) => (
+                  <Link
+                    key={item.href}
+                    to={item.href}
+                    onClick={() => setIsSidebarOpen(false)}
+                    className={cn(
+                      'flex items-center gap-3 px-4 py-3 rounded-lg font-body text-sm transition-all',
+                      isActive(item.href)
+                        ? 'bg-gold text-charcoal font-medium'
+                        : 'text-cream/70 hover:bg-cream/10 hover:text-cream'
+                    )}
+                  >
+                    <item.icon className="w-5 h-5 shrink-0" />
+                    {item.label}
+                  </Link>
+                ))}
+              </div>
+            </div>
           ))}
         </nav>
 
         {/* Footer */}
-        <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-cream/10">
+        <div className="shrink-0 p-4 border-t border-cream/10">
           <Link
             to="/"
             className="block text-center font-body text-xs text-cream/50 hover:text-cream mb-4"

@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
+import { useGoldTypes } from '@/hooks/useGoldTypes';
 
 const SurMesure = () => {
   const [formData, setFormData] = useState({
@@ -24,11 +25,7 @@ const SurMesure = () => {
     // Handle form submission logic here
   };
 
-  const goldTypes = [
-    { id: 'yellow', label: 'Or Jaune', color: '#FFD700' },
-    { id: 'white', label: 'Or Blanc', color: '#E5E4E2' },
-    { id: 'rose', label: 'Or Rose', color: '#B76E79' }
-  ];
+  const { goldTypesWithColors: goldTypes } = useGoldTypes();
 
   return (
     <Layout>

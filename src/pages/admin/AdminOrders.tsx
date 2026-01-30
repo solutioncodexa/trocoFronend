@@ -1,29 +1,45 @@
 import { useState } from 'react';
-import { Eye, Search, Phone, MapPin, Package } from 'lucide-react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { Eye, Search, Phone, MapPin } from 'lucide-react';
 import AdminLayout from '@/components/admin/AdminLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
-import { mockOrders } from '@/data/adminMockData';
-import { Order } from '@/types/product';
-import { formatPrice } from '@/data/products';
+import { ordersApi } from '@/services/api/orders';
+import { OrderDTO } from '@/types/api';
+import { formatPrice } from '@/utils/formatPrice';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
 const AdminOrders = () => {
-  const [orders, setOrders] = useState<Order[]>(mockOrders);
+  const queryClient = useQueryClient();
+  const { data: orders = [], isLoading } = useQuery({
+    queryKey: ['orders'],
+    queryFn: () => ordersApi.getAllOrders(),
+  });
+
+  const updateStatusMutation = useMutation({
+    mutationFn: ({ id, status }: { id: string; status: string }) =>
+      ordersApi.updateOrderStatus(id, status),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['orders'] });
+      toast.success('Statut mis à jour');
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState<string>('all');
-  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  const [selectedOrder, setSelectedOrder] = useState<OrderDTO | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
 
-  const filteredOrders = orders.filter(order => {
-    const matchesSearch = 
+  const filteredOrders = orders.filter((order) => {
+    const matchesSearch =
       order.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      order.customer.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      order.customer.phone.includes(searchTerm);
+      order.customer?.fullName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      order.customer?.phone?.includes(searchTerm);
     const matchesStatus = filterStatus === 'all' || order.status === filterStatus;
     return matchesSearch && matchesStatus;
   });
@@ -35,7 +51,7 @@ const AdminOrders = () => {
       delivered: 'bg-green-100 text-green-800 border-green-200',
       cancelled: 'bg-red-100 text-red-800 border-red-200',
     };
-    return styles[status] || '';
+    return styles[status] ?? '';
   };
 
   const getStatusLabel = (status: string) => {
@@ -45,26 +61,18 @@ const AdminOrders = () => {
       delivered: 'Livrée',
       cancelled: 'Annulée',
     };
-    return labels[status] || status;
+    return labels[status] ?? status;
   };
 
-  const handleViewOrder = (order: Order) => {
+  const handleViewOrder = (order: OrderDTO) => {
     setSelectedOrder(order);
     setIsDetailOpen(true);
   };
 
   const handleStatusChange = (orderId: string, newStatus: string) => {
-    setOrders(prev =>
-      prev.map(o =>
-        o.id === orderId
-          ? { ...o, status: newStatus as Order['status'] }
-          : o
-      )
-    );
-    toast.success(`Statut de la commande ${orderId} mis à jour`);
-    
+    updateStatusMutation.mutate({ id: orderId, status: newStatus });
     if (selectedOrder?.id === orderId) {
-      setSelectedOrder(prev => prev ? { ...prev, status: newStatus as Order['status'] } : null);
+      setSelectedOrder((prev) => (prev ? { ...prev, status: newStatus } : null));
     }
   };
 
@@ -78,12 +86,19 @@ const AdminOrders = () => {
     });
   };
 
+  if (isLoading) {
+    return (
+      <AdminLayout title="Gestion des Commandes" breadcrumbs={[{ label: 'Commandes' }]}>
+        <div className="p-8 text-center text-muted-foreground">Chargement...</div>
+      </AdminLayout>
+    );
+  }
+
   return (
     <AdminLayout title="Gestion des Commandes" breadcrumbs={[{ label: 'Commandes' }]}>
-      {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-        {['new', 'confirmed', 'delivered', 'cancelled'].map(status => {
-          const count = orders.filter(o => o.status === status).length;
+        {['new', 'confirmed', 'delivered', 'cancelled'].map((status) => {
+          const count = orders.filter((o) => o.status === status).length;
           return (
             <div key={status} className="bg-card rounded-lg p-4 border border-border">
               <Badge className={cn('mb-2', getStatusStyle(status))}>
@@ -95,7 +110,6 @@ const AdminOrders = () => {
         })}
       </div>
 
-      {/* Toolbar */}
       <div className="flex flex-col sm:flex-row gap-4 mb-6">
         <div className="flex-1 relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
@@ -120,7 +134,6 @@ const AdminOrders = () => {
         </Select>
       </div>
 
-      {/* Orders Table */}
       <div className="bg-card rounded-lg border border-border overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full">
@@ -140,13 +153,13 @@ const AdminOrders = () => {
                 <tr key={order.id} className="hover:bg-muted/30">
                   <td className="px-4 py-3 font-body font-medium">{order.id}</td>
                   <td className="px-4 py-3">
-                    <p className="font-body">{order.customer.fullName}</p>
-                    <p className="font-body text-xs text-muted-foreground">{order.customer.phone}</p>
+                    <p className="font-body">{order.customer?.fullName}</p>
+                    <p className="font-body text-xs text-muted-foreground">{order.customer?.phone}</p>
                   </td>
-                  <td className="px-4 py-3 font-body text-muted-foreground">{order.customer.city}</td>
-                  <td className="px-4 py-3 font-body font-medium">{formatPrice(order.total)}</td>
+                  <td className="px-4 py-3 font-body text-muted-foreground">{order.customer?.city ?? '—'}</td>
+                  <td className="px-4 py-3 font-body font-medium">{formatPrice(order.total ?? 0)}</td>
                   <td className="px-4 py-3 font-body text-sm text-muted-foreground">
-                    {formatDate(order.createdAt)}
+                    {order.createdAt ? formatDate(order.createdAt) : '—'}
                   </td>
                   <td className="px-4 py-3">
                     <Select
@@ -165,11 +178,7 @@ const AdminOrders = () => {
                     </Select>
                   </td>
                   <td className="px-4 py-3 text-right">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleViewOrder(order)}
-                    >
+                    <Button variant="outline" size="sm" onClick={() => handleViewOrder(order)}>
                       <Eye className="w-4 h-4 mr-2" />
                       Détails
                     </Button>
@@ -187,7 +196,6 @@ const AdminOrders = () => {
         )}
       </div>
 
-      {/* Order Detail Modal */}
       <Dialog open={isDetailOpen} onOpenChange={setIsDetailOpen}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
@@ -198,80 +206,75 @@ const AdminOrders = () => {
 
           {selectedOrder && (
             <div className="space-y-6">
-              {/* Status */}
               <div className="flex items-center justify-between">
                 <Badge className={cn('text-sm', getStatusStyle(selectedOrder.status))}>
                   {getStatusLabel(selectedOrder.status)}
                 </Badge>
                 <span className="font-body text-sm text-muted-foreground">
-                  {formatDate(selectedOrder.createdAt)}
+                  {selectedOrder.createdAt ? formatDate(selectedOrder.createdAt) : '—'}
                 </span>
               </div>
 
-              {/* Customer Info */}
               <div className="bg-muted/50 rounded-lg p-4 space-y-3">
                 <h3 className="font-display text-lg">Informations client</h3>
                 <div className="grid sm:grid-cols-2 gap-4">
                   <div className="flex items-center gap-2">
-                    <span className="font-body">{selectedOrder.customer.fullName}</span>
+                    <span className="font-body">{selectedOrder.customer?.fullName}</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <Phone className="w-4 h-4 text-muted-foreground" />
                     <a
-                      href={`tel:${selectedOrder.customer.phone}`}
+                      href={`tel:${selectedOrder.customer?.phone}`}
                       className="font-body text-primary hover:underline"
                     >
-                      {selectedOrder.customer.phone}
+                      {selectedOrder.customer?.phone}
                     </a>
                   </div>
                   <div className="flex items-start gap-2 sm:col-span-2">
                     <MapPin className="w-4 h-4 text-muted-foreground mt-0.5" />
                     <span className="font-body">
-                      {selectedOrder.customer.address}, {selectedOrder.customer.city}
+                      {selectedOrder.customer?.address ?? '—'}, {selectedOrder.customer?.city ?? '—'}
                     </span>
                   </div>
                 </div>
               </div>
 
-              {/* Order Items */}
               <div>
                 <h3 className="font-display text-lg mb-4">Articles commandés</h3>
                 <div className="space-y-3">
-                  {selectedOrder.items.map((item, index) => (
+                  {(selectedOrder.items ?? []).map((item, index) => (
                     <div
                       key={index}
                       className="flex items-center gap-4 p-3 bg-muted/30 rounded-lg"
                     >
                       <img
-                        src={item.product.images[0]}
-                        alt={item.product.name}
+                        src={item.product?.images?.[0]}
+                        alt={item.product?.name}
                         className="w-16 h-16 rounded-lg object-cover"
                       />
                       <div className="flex-1">
-                        <p className="font-body font-medium">{item.product.name}</p>
+                        <p className="font-body font-medium">{item.product?.name}</p>
                         <p className="font-body text-sm text-muted-foreground">
-                          {item.product.weight}g • Qté: {item.quantity}
+                          {item.product?.weight}g • Qté: {item.quantity}
                         </p>
                       </div>
                       <p className="font-body font-medium">
-                        {formatPrice(item.product.price * item.quantity)}
+                        {formatPrice((item.product?.price ?? 0) * item.quantity)}
                       </p>
                     </div>
                   ))}
                 </div>
               </div>
 
-              {/* Total */}
               <div className="border-t border-border pt-4">
                 <div className="flex justify-between items-center">
                   <span className="font-display text-lg">Total</span>
                   <span className="font-display text-2xl text-primary">
-                    {formatPrice(selectedOrder.total)}
+                    {formatPrice(selectedOrder.total ?? 0)}
                   </span>
                 </div>
               </div>
 
-              {/* Actions */}
               <div className="flex gap-3">
                 <Select
                   value={selectedOrder.status}

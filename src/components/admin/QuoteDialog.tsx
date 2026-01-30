@@ -7,11 +7,13 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Separator } from '@/components/ui/separator';
-import { CustomFabricationRequest, GoldType, goldTypeLabels } from '@/types/product';
+import { GoldType } from '@/types/product';
+import { CustomOrderDTO } from '@/types/api';
+import { useGoldTypes } from '@/hooks/useGoldTypes';
 import { toast } from 'sonner';
 
 interface QuoteDialogProps {
-  request: CustomFabricationRequest | null;
+  request: CustomOrderDTO | null;
   isOpen: boolean;
   onClose: () => void;
   onQuoteSent: (requestId: string, quote: QuoteData) => void;
@@ -42,6 +44,7 @@ const DEFAULT_GOLD_PRICES: Record<GoldType, number> = {
 };
 
 const QuoteDialog = ({ request, isOpen, onClose, onQuoteSent }: QuoteDialogProps) => {
+  const { goldTypeLabels } = useGoldTypes();
   const [goldType, setGoldType] = useState<GoldType>('yellow');
   const [weight, setWeight] = useState<number>(0);
   const [goldPricePerGram, setGoldPricePerGram] = useState<number>(DEFAULT_GOLD_PRICES.yellow);

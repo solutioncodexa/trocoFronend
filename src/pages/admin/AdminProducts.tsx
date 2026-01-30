@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, Pencil, Trash2, Search, Upload, X } from 'lucide-react';
+import { Plus, Pencil, Trash2, Search, Upload, X, Settings2 } from 'lucide-react';
 import AdminLayout from '@/components/admin/AdminLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,15 +8,45 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
-import { products as initialProducts, formatPrice } from '@/data/products';
-import { Product, ProductCategory, ProductType, GoldType, goldTypeLabels, defaultProductTypes, ringSizes, necklaceSizes, braceletSizes, Collection, defaultCollections } from '@/types/product';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { Product, ProductCategory, ProductType, GoldType } from '@/types/product';
+import { categoriesApi, productTypesApi, collectionsApi, goldPriceSettingsApi, calculatePrice, getImageUrl } from '@/services/api';
+import { ProductFormData } from '@/services/api/products';
+import { useGoldTypes } from '@/hooks/useGoldTypes';
+import { productsApi } from '@/services/api/products';
+import { mapProductDTOToProduct, mapProductDTOListToProducts } from '@/utils/productMapper';
+import { formatPrice } from '@/utils/formatPrice';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
 const AdminProducts = () => {
-  const [products, setProducts] = useState<Product[]>(initialProducts);
-  const [collections, setCollections] = useState<Collection[]>(defaultCollections);
+  const queryClient = useQueryClient();
+  const { data: productsPage, isLoading } = useQuery({
+    queryKey: ['products', 'admin'],
+    queryFn: () => productsApi.getAllProducts({ page: 0, size: 500 }),
+  });
+  const products = productsPage ? mapProductDTOListToProducts(productsPage.content) : [];
+
+  const { data: categories = [] } = useQuery({
+    queryKey: ['categories'],
+    queryFn: () => categoriesApi.getAllCategories(),
+  });
+  const { data: productTypes = [] } = useQuery({
+    queryKey: ['productTypes'],
+    queryFn: () => productTypesApi.getAllProductTypes(),
+  });
+  const { data: collections = [] } = useQuery({
+    queryKey: ['collections'],
+    queryFn: () => collectionsApi.getAllCollections(),
+  });
+  const { data: goldPriceSettings } = useQuery({
+    queryKey: ['goldPriceSettings'],
+    queryFn: () => goldPriceSettingsApi.getSettings(),
+  });
+  const { goldTypes, getGoldTypeName } = useGoldTypes();
   const [searchTerm, setSearchTerm] = useState('');
+  const [isPriceSettingsOpen, setIsPriceSettingsOpen] = useState(false);
+  const [priceSettingsForm, setPriceSettingsForm] = useState({ pricePerGram: '' });
   const [filterCategory, setFilterCategory] = useState<string>('all');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
@@ -24,38 +54,34 @@ const AdminProducts = () => {
     name: '',
     description: '',
     price: '',
-    originalPrice: '',
     weight: '',
+    marginGain: '500',
     category: 'beldi' as ProductCategory,
     type: 'bracelet' as ProductType,
-    goldType: 'yellow' as GoldType,
+    goldType: 'yellow',
     collection: '',
-    stockQuantity: '',
     badges: [] as string[],
-    images: [] as string[],
   });
+  // Fichiers images à envoyer (nouveaux uploads)
+  const [imageFiles, setImageFiles] = useState<File[]>([]);
+  // URLs des images existantes (pour affichage en mode édition)
+  const [existingImageUrls, setExistingImageUrls] = useState<string[]>([]);
 
-  // Effet pour gérer automatiquement le badge promo
+  // Prix calculé : (grammes × prix au gramme) + marge du produit
   useEffect(() => {
-    // Ne pas appliquer l'effet pendant l'édition d'un produit existant
-    if (editingProduct) return;
-    
-    const originalPriceValue = formData.originalPrice ? parseFloat(formData.originalPrice) : undefined;
-    const priceValue = formData.price ? parseFloat(formData.price) : 0;
-    
-    const hasPromo = originalPriceValue && priceValue < originalPriceValue;
-    
-    setFormData(prev => {
-      const otherBadges = prev.badges.filter(b => b !== 'promo');
-      const newBadges = hasPromo ? [...otherBadges, 'promo'] : otherBadges;
-      
-      // Éviter les mises à jour infinies
-      if (JSON.stringify(prev.badges) !== JSON.stringify(newBadges)) {
-        return { ...prev, badges: newBadges };
-      }
-      return prev;
+    if (!goldPriceSettings) return;
+    const weight = parseFloat(formData.weight);
+    const marginGain = parseFloat(formData.marginGain);
+    if (Number.isNaN(weight) || weight <= 0) return;
+    const margin = Number.isNaN(marginGain) || marginGain < 0 ? 500 : marginGain;
+    const calculated = Math.round(
+      calculatePrice(weight, goldPriceSettings.pricePerGram, margin)
+    );
+    setFormData((prev) => {
+      if (prev.price === String(calculated)) return prev;
+      return { ...prev, price: String(calculated) };
     });
-  }, [formData.originalPrice, formData.price, editingProduct]);
+  }, [formData.weight, formData.marginGain, goldPriceSettings?.pricePerGram]);
 
   const filteredProducts = products.filter(product => {
     const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -64,17 +90,9 @@ const AdminProducts = () => {
     return matchesSearch && matchesCategory;
   });
 
-  const getAvailableSizes = (type: ProductType) => {
-    switch (type) {
-      case 'ring':
-        return ringSizes;
-      case 'necklace':
-        return necklaceSizes;
-      case 'bracelet':
-        return braceletSizes;
-      default:
-        return undefined;
-    }
+  const getAvailableSizes = (typeCode: string) => {
+    const pt = productTypes.find((p) => p.code.toLowerCase() === typeCode.toLowerCase());
+    return pt?.sizeOptions;
   };
 
   const handleOpenModal = (product?: Product) => {
@@ -84,32 +102,32 @@ const AdminProducts = () => {
         name: product.name,
         description: product.description,
         price: product.price.toString(),
-        originalPrice: product.originalPrice?.toString() || '',
         weight: product.weight.toString(),
+        marginGain: (product.marginGain ?? 500).toString(),
         category: product.category,
         type: product.type,
         goldType: product.goldType,
         collection: product.collection || '',
-        stockQuantity: product.stockQuantity.toString(),
         badges: product.badges,
-        images: product.images,
       });
+      setExistingImageUrls(product.images || []);
+      setImageFiles([]);
     } else {
       setEditingProduct(null);
       setFormData({
         name: '',
         description: '',
         price: '',
-        originalPrice: '',
         weight: '',
+        marginGain: '500',
         category: 'beldi',
         type: 'bracelet',
         goldType: 'yellow',
         collection: '',
-        stockQuantity: '',
         badges: [],
-        images: [],
       });
+      setExistingImageUrls([]);
+      setImageFiles([]);
     }
     setIsModalOpen(true);
   };
@@ -117,73 +135,99 @@ const AdminProducts = () => {
   const handleCloseModal = () => {
     setIsModalOpen(false);
     setEditingProduct(null);
+    setImageFiles([]);
+    setExistingImageUrls([]);
   };
+
+  const createMutation = useMutation({
+    mutationFn: ({ product, images }: { product: ProductFormData; images: File[] }) =>
+      productsApi.createProduct(product, images),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['products'] });
+      toast.success('Produit ajouté avec succès');
+      handleCloseModal();
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: ({ id, product, images }: { id: string; product: ProductFormData; images?: File[] }) =>
+      productsApi.updateProduct(id, product, images),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['products'] });
+      toast.success('Produit modifié avec succès');
+      handleCloseModal();
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => productsApi.deleteProduct(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['products'] });
+      toast.success('Produit supprimé');
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+
+  const updatePriceSettingsMutation = useMutation({
+    mutationFn: (pricePerGram: number) => goldPriceSettingsApi.updateSettings(pricePerGram),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['goldPriceSettings'] });
+      toast.success('Paramètres de prix enregistrés');
+      setIsPriceSettingsOpen(false);
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
-    const originalPriceValue = formData.originalPrice ? parseFloat(formData.originalPrice) : undefined;
-    const priceValue = parseFloat(formData.price);
-    
-    // Gérer le badge promo pour la sauvegarde
-    const hasPromo = originalPriceValue && priceValue < originalPriceValue;
-    
-    // Debug pour voir les valeurs
-    console.log('Prix actuel:', priceValue);
-    console.log('Prix original:', originalPriceValue);
-    console.log('Has promo:', hasPromo);
-    
-    const badges = hasPromo 
-      ? [...formData.badges.filter(b => b !== 'promo'), 'promo'] as ('new' | 'bestseller' | 'promo')[]
-      : formData.badges.filter(b => b !== 'promo') as ('new' | 'bestseller')[];
-    
-    const productData: Product = {
-      id: editingProduct?.id || Date.now().toString(),
+
+    // Validation: au moins une image (nouvelle ou existante)
+    if (imageFiles.length === 0 && existingImageUrls.length === 0) {
+      toast.error('Veuillez ajouter au moins une image');
+      return;
+    }
+
+    const weightNum = parseFloat(formData.weight);
+    const marginGainNum = parseFloat(formData.marginGain);
+    const margin = Number.isNaN(marginGainNum) || marginGainNum < 0 ? 500 : marginGainNum;
+    let priceValue = parseFloat(formData.price);
+    if ((Number.isNaN(priceValue) || priceValue <= 0) && goldPriceSettings && !Number.isNaN(weightNum) && weightNum > 0) {
+      priceValue = Math.round(calculatePrice(weightNum, goldPriceSettings.pricePerGram, margin));
+    }
+
+    const typeCode = productTypes.find((pt) => pt.code.toLowerCase() === formData.type)?.code ?? (formData.type as string).toUpperCase();
+    const productPayload: ProductFormData = {
       name: formData.name,
       description: formData.description,
       price: priceValue,
-      originalPrice: originalPriceValue,
       weight: parseFloat(formData.weight),
+      marginGain: margin,
       category: formData.category,
-      type: formData.type,
+      type: typeCode,
       goldType: formData.goldType,
       collection: formData.collection || undefined,
-      availableSizes: getAvailableSizes(formData.type),
-      stockQuantity: parseInt(formData.stockQuantity),
-      inStock: parseInt(formData.stockQuantity) > 0,
-      badges: badges,
-      images: formData.images.length > 0 ? formData.images : ['https://images.unsplash.com/photo-1611652022419-a9419f74343d?w=800'],
-      createdAt: editingProduct?.createdAt || new Date().toISOString().split('T')[0],
+      availableSizes: getAvailableSizes(formData.type) ? getAvailableSizes(formData.type)!.split(',').map((s) => s.trim()) : undefined,
+      stockQuantity: 1,
+      badges: formData.badges,
     };
 
-    console.log('Produit sauvegardé:', productData);
-
     if (editingProduct) {
-      setProducts(prev => {
-        const updated = prev.map(p => p.id === editingProduct.id ? productData : p);
-        console.log('Produits après mise à jour:', updated);
-        return updated;
-      });
-      toast.success('Produit modifié avec succès');
+      // En mise à jour : envoie les nouveaux fichiers seulement si ajoutés
+      updateMutation.mutate({ id: editingProduct.id, product: productPayload, images: imageFiles.length > 0 ? imageFiles : undefined });
     } else {
-      setProducts(prev => [...prev, productData]);
-      toast.success('Produit ajouté avec succès');
+      createMutation.mutate({ product: productPayload, images: imageFiles });
     }
-
-    handleCloseModal();
   };
 
   const handleDelete = (productId: string) => {
     if (confirm('Êtes-vous sûr de vouloir supprimer ce produit ?')) {
-      setProducts(prev => prev.filter(p => p.id !== productId));
-      toast.success('Produit supprimé');
+      deleteMutation.mutate(productId);
     }
   };
 
   const toggleBadge = (badge: string) => {
-    // Empêcher la modification manuelle du badge promo
-    if (badge === 'promo') return;
-    
     setFormData(prev => ({
       ...prev,
       badges: prev.badges.includes(badge)
@@ -192,19 +236,30 @@ const AdminProducts = () => {
     }));
   };
 
-  const addImageUrl = () => {
-    const url = prompt('Entrez l\'URL de l\'image:');
-    if (url) {
-      setFormData(prev => ({ ...prev, images: [...prev.images, url] }));
-    }
+  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files?.length) return;
+    const newFiles = Array.from(files);
+    setImageFiles((prev) => [...prev, ...newFiles]);
+    toast.success(newFiles.length === 1 ? 'Image ajoutée' : `${newFiles.length} images ajoutées`);
+    e.target.value = '';
   };
 
-  const removeImage = (index: number) => {
-    setFormData(prev => ({
-      ...prev,
-      images: prev.images.filter((_, i) => i !== index),
-    }));
+  const removeImageFile = (index: number) => {
+    setImageFiles((prev) => prev.filter((_, i) => i !== index));
   };
+
+  const removeExistingImage = (index: number) => {
+    setExistingImageUrls((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  if (isLoading) {
+    return (
+      <AdminLayout title="Gestion des Produits" breadcrumbs={[{ label: 'Produits' }]}>
+        <div className="p-8 text-center text-muted-foreground">Chargement...</div>
+      </AdminLayout>
+    );
+  }
 
   return (
     <AdminLayout title="Gestion des Produits" breadcrumbs={[{ label: 'Produits' }]}>
@@ -233,6 +288,18 @@ const AdminProducts = () => {
           <Plus className="w-4 h-4 mr-2" />
           Ajouter
         </Button>
+        <Button
+          variant="outline"
+          onClick={() => {
+            if (goldPriceSettings) {
+              setPriceSettingsForm({ pricePerGram: String(goldPriceSettings.pricePerGram) });
+            }
+            setIsPriceSettingsOpen(true);
+          }}
+        >
+          <Settings2 className="w-4 h-4 mr-2" />
+          Paramètres prix
+        </Button>
       </div>
 
       {/* Products Table */}
@@ -246,7 +313,6 @@ const AdminProducts = () => {
                 <th className="px-4 py-3 text-left font-body text-sm font-medium text-muted-foreground">Collection</th>
                 <th className="px-4 py-3 text-left font-body text-sm font-medium text-muted-foreground">Type d'or</th>
                 <th className="px-4 py-3 text-left font-body text-sm font-medium text-muted-foreground">Prix</th>
-                <th className="px-4 py-3 text-left font-body text-sm font-medium text-muted-foreground">Stock</th>
                 <th className="px-4 py-3 text-left font-body text-sm font-medium text-muted-foreground">Badges</th>
                 <th className="px-4 py-3 text-right font-body text-sm font-medium text-muted-foreground">Actions</th>
               </tr>
@@ -257,7 +323,7 @@ const AdminProducts = () => {
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-3">
                       <img
-                        src={product.images[0]}
+                        src={product.images?.[0] ? getImageUrl(product.images[0]) : 'https://images.unsplash.com/photo-1611652022419-a9419f74343d?w=100'}
                         alt={product.name}
                         className="w-12 h-12 rounded-lg object-cover"
                       />
@@ -275,7 +341,7 @@ const AdminProducts = () => {
                   <td className="px-4 py-3">
                     {product.collection ? (
                       <Badge variant="outline">
-                        {collections.find(c => c.id === product.collection)?.name || product.collection}
+                        {collections.find((c) => c.slug === product.collection)?.name || product.collection}
                       </Badge>
                     ) : (
                       <span className="text-muted-foreground text-sm">Aucune</span>
@@ -283,7 +349,7 @@ const AdminProducts = () => {
                   </td>
                   <td className="px-4 py-3">
                     <Badge variant="outline">
-                      {goldTypeLabels[product.goldType]}
+                      {getGoldTypeName(product.goldType)}
                     </Badge>
                   </td>
                   <td className="px-4 py-3 font-body">
@@ -297,15 +363,6 @@ const AdminProducts = () => {
                         </div>
                       )}
                     </div>
-                  </td>
-                  <td className="px-4 py-3">
-                    <span className={cn(
-                      'font-body',
-                      product.stockQuantity === 0 ? 'text-destructive' : 
-                      product.stockQuantity < 3 ? 'text-amber-600' : 'text-emerald-600'
-                    )}>
-                      {product.stockQuantity}
-                    </span>
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex gap-1">
@@ -379,8 +436,10 @@ const AdminProducts = () => {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {defaultProductTypes.map(type => (
-                      <SelectItem key={type.id} value={type.id}>{type.name}</SelectItem>
+                    {productTypes.map((pt) => (
+                      <SelectItem key={pt.id} value={pt.code.toLowerCase()}>
+                        {pt.name}
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -399,29 +458,7 @@ const AdminProducts = () => {
               />
             </div>
 
-            <div className="grid md:grid-cols-4 gap-4">
-              <div>
-                <Label htmlFor="price">Prix (MAD) *</Label>
-                <Input
-                  id="price"
-                  type="number"
-                  value={formData.price}
-                  onChange={(e) => setFormData(prev => ({ ...prev, price: e.target.value }))}
-                  required
-                  className="mt-1"
-                />
-              </div>
-              <div>
-                <Label htmlFor="originalPrice">Prix original (MAD)</Label>
-                <Input
-                  id="originalPrice"
-                  type="number"
-                  value={formData.originalPrice}
-                  onChange={(e) => setFormData(prev => ({ ...prev, originalPrice: e.target.value }))}
-                  placeholder="Pour les promotions"
-                  className="mt-1"
-                />
-              </div>
+            <div className="grid md:grid-cols-2 lg:grid-cols-5 gap-4">
               <div>
                 <Label htmlFor="weight">Poids (g) *</Label>
                 <Input
@@ -430,19 +467,38 @@ const AdminProducts = () => {
                   value={formData.weight}
                   onChange={(e) => setFormData(prev => ({ ...prev, weight: e.target.value }))}
                   required
+                  min={0.1}
+                  step={0.1}
                   className="mt-1"
                 />
               </div>
               <div>
-                <Label htmlFor="stock">Stock *</Label>
+                <Label htmlFor="price">Prix (MAD) *</Label>
                 <Input
-                  id="stock"
+                  id="price"
                   type="number"
-                  value={formData.stockQuantity}
-                  onChange={(e) => setFormData(prev => ({ ...prev, stockQuantity: e.target.value }))}
-                  required
+                  value={formData.price}
+                  readOnly
+                  className="mt-1 bg-muted"
+                />
+                {goldPriceSettings && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Calculé : (grammes × {goldPriceSettings.pricePerGram} + marge) MAD
+                  </p>
+                )}
+              </div>
+              <div>
+                <Label htmlFor="marginGain">Marge / gain (MAD)</Label>
+                <Input
+                  id="marginGain"
+                  type="number"
+                  min={0}
+                  step={1}
+                  value={formData.marginGain}
+                  onChange={(e) => setFormData(prev => ({ ...prev, marginGain: e.target.value }))}
                   className="mt-1"
                 />
+                <p className="text-xs text-muted-foreground mt-1">Par produit (ex: 500, 200…)</p>
               </div>
             </div>
 
@@ -457,9 +513,11 @@ const AdminProducts = () => {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="yellow">Or Jaune</SelectItem>
-                    <SelectItem value="white">Or Blanc</SelectItem>
-                    <SelectItem value="rose">Or Rose</SelectItem>
+                    {goldTypes.map((gt) => (
+                      <SelectItem key={gt.id} value={gt.code.toLowerCase()}>
+                        {gt.name}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -473,25 +531,28 @@ const AdminProducts = () => {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="beldi">Beldi</SelectItem>
-                    <SelectItem value="modern">Moderne</SelectItem>
+                    {categories.map((cat) => (
+                      <SelectItem key={cat.id} value={cat.slug}>
+                        {cat.name}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
               <div>
                 <Label>Collection</Label>
                 <Select
-                  value={formData.collection}
-                  onValueChange={(value: string) => setFormData(prev => ({ ...prev, collection: value }))}
+                  value={formData.collection || '__none__'}
+                  onValueChange={(value: string) => setFormData(prev => ({ ...prev, collection: value === '__none__' ? '' : value }))}
                 >
                   <SelectTrigger className="mt-1">
                     <SelectValue placeholder="Aucune" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Aucune</SelectItem>
-                    {collections.filter(c => c.isActive).map(collection => (
-                      <SelectItem key={collection.id} value={collection.id}>
-                        {collection.name}
+                    <SelectItem value="__none__">Aucune</SelectItem>
+                    {collections.filter((c) => c.isActive).map((col) => (
+                      <SelectItem key={col.id} value={col.slug}>
+                        {col.name}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -501,7 +562,7 @@ const AdminProducts = () => {
               <div>
                 <Label>Badges</Label>
                 <p className="text-xs text-muted-foreground mt-1 mb-2">
-                  Le badge "Promo" s'ajoute automatiquement quand un prix original est supérieur au prix actuel
+                  Badges affichés sur la fiche produit
                 </p>
                 <div className="flex gap-2 mt-2">
                   <Button
@@ -520,43 +581,70 @@ const AdminProducts = () => {
                   >
                     Best-seller
                   </Button>
-                  {formData.badges.includes('promo') && (
-                    <Badge variant="destructive" className="text-xs">
-                      Promo (automatique)
-                    </Badge>
-                  )}
+                  <Button
+                    type="button"
+                    variant={formData.badges.includes('promo') ? 'destructive' : 'outline'}
+                    size="sm"
+                    onClick={() => toggleBadge('promo')}
+                  >
+                    Promo
+                  </Button>
                 </div>
               </div>
 
             {/* Images */}
             <div>
-              <Label>Images du produit</Label>
+              <Label>Images du produit *</Label>
               <div className="mt-2 space-y-2">
                 <div className="flex flex-wrap gap-2">
-                  {formData.images.map((url, index) => (
-                    <div key={index} className="relative group">
+                  {/* Images existantes (mode édition) */}
+                  {existingImageUrls.map((url, index) => (
+                    <div key={`existing-${index}`} className="relative group">
                       <img
-                        src={url}
-                        alt={`Image ${index + 1}`}
+                        src={getImageUrl(url)}
+                        alt={`Image existante ${index + 1}`}
                         className="w-20 h-20 rounded-lg object-cover"
                       />
                       <button
                         type="button"
-                        onClick={() => removeImage(index)}
+                        onClick={() => removeExistingImage(index)}
                         className="absolute -top-2 -right-2 w-5 h-5 bg-destructive text-destructive-foreground rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
                       >
                         <X className="w-3 h-3" />
                       </button>
                     </div>
                   ))}
-                  <button
-                    type="button"
-                    onClick={addImageUrl}
-                    className="w-20 h-20 rounded-lg border-2 border-dashed border-border flex items-center justify-center hover:border-primary transition-colors"
-                  >
+                  {/* Nouvelles images (fichiers à uploader) */}
+                  {imageFiles.map((file, index) => (
+                    <div key={`new-${index}`} className="relative group">
+                      <img
+                        src={URL.createObjectURL(file)}
+                        alt={`Nouvelle image ${index + 1}`}
+                        className="w-20 h-20 rounded-lg object-cover border-2 border-primary"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => removeImageFile(index)}
+                        className="absolute -top-2 -right-2 w-5 h-5 bg-destructive text-destructive-foreground rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </div>
+                  ))}
+                  <label className="w-20 h-20 rounded-lg border-2 border-dashed border-border flex items-center justify-center hover:border-primary transition-colors cursor-pointer">
+                    <input
+                      type="file"
+                      accept="image/jpeg,image/png,image/gif,image/webp"
+                      multiple
+                      className="sr-only"
+                      onChange={handleImageSelect}
+                    />
                     <Upload className="w-6 h-6 text-muted-foreground" />
-                  </button>
+                  </label>
                 </div>
+                <p className="text-xs text-muted-foreground">
+                  {imageFiles.length > 0 ? `${imageFiles.length} nouvelle(s) image(s) à envoyer` : 'Cliquez pour ajouter des images'}
+                </p>
               </div>
             </div>
 
@@ -569,6 +657,50 @@ const AdminProducts = () => {
               </Button>
             </DialogFooter>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Paramètres : prix au gramme (la marge est par produit) */}
+      <Dialog open={isPriceSettingsOpen} onOpenChange={setIsPriceSettingsOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Prix au gramme</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            Prix produit = (grammes × prix au gramme) + marge. La marge est définie par produit.
+          </p>
+          <div className="space-y-4 py-4">
+            <div>
+              <Label htmlFor="pricePerGram">Prix au gramme (MAD)</Label>
+              <Input
+                id="pricePerGram"
+                type="number"
+                min={0}
+                step={1}
+                value={priceSettingsForm.pricePerGram}
+                onChange={(e) => setPriceSettingsForm((prev) => ({ ...prev, pricePerGram: e.target.value }))}
+                className="mt-1"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsPriceSettingsOpen(false)}>
+              Annuler
+            </Button>
+            <Button
+              onClick={() => {
+                const pricePerGram = parseFloat(priceSettingsForm.pricePerGram);
+                if (Number.isNaN(pricePerGram) || pricePerGram <= 0) {
+                  toast.error('Prix au gramme invalide');
+                  return;
+                }
+                updatePriceSettingsMutation.mutate(pricePerGram);
+              }}
+              disabled={updatePriceSettingsMutation.isPending}
+            >
+              Enregistrer
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </AdminLayout>

@@ -2,11 +2,12 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { CartProvider } from "@/contexts/CartContext";
 import { AdminProvider } from "@/contexts/AdminContext";
 import { WishlistProvider } from "@/contexts/WishlistContext";
 import ScrollToTop from "@/components/ui/ScrollToTop";
+import { ProtectedAdminRoute } from "@/components/ProtectedAdminRoute";
 
 // Public pages
 import Index from "./pages/Index";
@@ -32,6 +33,7 @@ import AdminCustomRequests from "./pages/admin/AdminCustomRequests";
 import AdminCategories from "./pages/admin/AdminCategories";
 import AdminProductTypes from "./pages/admin/AdminProductTypes";
 import AdminCollections from "./pages/admin/AdminCollections";
+import AdminGoldTypes from "./pages/admin/AdminGoldTypes";
 
 const queryClient = new QueryClient();
 
@@ -62,13 +64,15 @@ const App = () => (
                 
                 {/* Admin Routes */}
                 <Route path="/admin" element={<AdminLogin />} />
-                <Route path="/admin/dashboard" element={<AdminDashboard />} />
-                <Route path="/admin/produits" element={<AdminProducts />} />
-                <Route path="/admin/commandes" element={<AdminOrders />} />
-                <Route path="/admin/personnalisations" element={<AdminCustomRequests />} />
-                <Route path="/admin/collections" element={<AdminCollections />} />
-                <Route path="/admin/categories" element={<AdminCategories />} />
-                <Route path="/admin/types" element={<AdminProductTypes />} />
+                <Route path="/admin/dashboard" element={<ProtectedAdminRoute><AdminDashboard /></ProtectedAdminRoute>} />
+                <Route path="/admin/produits" element={<ProtectedAdminRoute><AdminProducts /></ProtectedAdminRoute>} />
+                <Route path="/admin/commandes" element={<ProtectedAdminRoute><AdminOrders /></ProtectedAdminRoute>} />
+                <Route path="/admin/personnalisations" element={<ProtectedAdminRoute><AdminCustomRequests /></ProtectedAdminRoute>} />
+                <Route path="/admin/collections" element={<ProtectedAdminRoute><AdminCollections /></ProtectedAdminRoute>} />
+                <Route path="/admin/categories" element={<ProtectedAdminRoute><AdminCategories /></ProtectedAdminRoute>} />
+                <Route path="/admin/types" element={<ProtectedAdminRoute><AdminProductTypes /></ProtectedAdminRoute>} />
+                <Route path="/admin/types-or" element={<ProtectedAdminRoute><AdminGoldTypes /></ProtectedAdminRoute>} />
+                <Route path="/admin/*" element={<Navigate to="/admin" replace />} />
                 
                 {/* Catch-all */}
                 <Route path="*" element={<NotFound />} />

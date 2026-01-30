@@ -1,15 +1,19 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { X } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import { X, Loader2 } from 'lucide-react';
 import Layout from '@/components/layout/Layout';
 import ProductCard from '@/components/ui/ProductCard';
-import { products } from '@/data/products';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Slider } from '@/components/ui/slider';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { GoldType } from '@/types/product';
+import { GoldType, Product } from '@/types/product';
+import { productsApi, ProductFilters, categoriesApi, productTypesApi, collectionsApi } from '@/services/api';
+import { useGoldTypes } from '@/hooks/useGoldTypes';
+import { mapProductDTOListToProducts } from '@/utils/productMapper';
+import { toast } from 'sonner';
 
 const PRODUCTS_PER_PAGE = 12;
 
@@ -22,21 +26,8 @@ const sortOptions = [
   { value: 'popularity', label: 'Meilleures ventes' }
 ];
 
-const productTypes = [
-  { id: 'bracelet', label: 'Bracelets' },
-  { id: 'ring', label: 'Bagues' },
-  { id: 'necklace', label: 'Colliers' },
-  { id: 'earrings', label: 'Boucles d\'oreilles' },
-  { id: 'set', label: 'Parures' }
-];
-
-const goldTypes = [
-  { id: 'yellow', label: 'Or Jaune', color: '#FFD700' },
-  { id: 'white', label: 'Or Blanc', color: '#E5E4E2' },
-  { id: 'rose', label: 'Or Rose', color: '#B76E79' }
-];
-
 const Boutique = () => {
+  const { goldTypesWithColors: goldTypes } = useGoldTypes();
   const [searchParams, setSearchParams] = useSearchParams();
   const categoryParam = searchParams.get('category');
   const [selectedCategory, setSelectedCategory] = useState<string | null>(categoryParam);
@@ -49,50 +40,145 @@ const Boutique = () => {
   const [sortBy, setSortBy] = useState<SortOption>('newest');
   const [currentPage, setCurrentPage] = useState(1);
 
+  // Données dynamiques: catégories, types de produits, collections
+  const { data: categories = [] } = useQuery({
+    queryKey: ['categories'],
+    queryFn: () => categoriesApi.getAllCategories(),
+    retry: 1,
+  });
+  const { data: productTypes = [] } = useQuery({
+    queryKey: ['productTypes'],
+    queryFn: () => productTypesApi.getAllProductTypes(),
+    retry: 1,
+  });
+  const { data: collections = [] } = useQuery({
+    queryKey: ['collections'],
+    queryFn: () => collectionsApi.getActiveCollections(),
+    retry: 1,
+  });
+
+  // Déterminer si on doit utiliser l'API de filtrage ou l'API paginée
+  const hasActiveFilters = useMemo(() => {
+    return selectedCategory !== null || 
+           selectedTypes.length > 0 || 
+           selectedGoldTypes.length > 0 || 
+           selectedCollections.length > 0 || 
+           priceRange[0] > 0 || 
+           priceRange[1] < 50000 || 
+           inStockOnly ||
+           searchQuery.trim() !== '';
+  }, [selectedCategory, selectedTypes, selectedGoldTypes, selectedCollections, priceRange, inStockOnly, searchQuery]);
+
+  // Requête pour les produits filtrés
+  const { data: filteredProductsData, isLoading: isLoadingFiltered } = useQuery({
+    queryKey: ['products', 'filtered', selectedCategory, selectedTypes, selectedGoldTypes, selectedCollections, priceRange, inStockOnly],
+    queryFn: async () => {
+      const filters: ProductFilters = {};
+      if (selectedCategory) filters.category = selectedCategory; // slug
+      if (selectedTypes.length > 0) filters.type = selectedTypes[0]; // code lowercase (bracelet, ring...)
+      if (selectedGoldTypes.length > 0) filters.goldType = selectedGoldTypes[0]; // API prend un seul goldType
+      if (selectedCollections.length > 0) filters.collection = selectedCollections[0];
+      if (priceRange[0] > 0) filters.minPrice = priceRange[0];
+      if (priceRange[1] < 50000) filters.maxPrice = priceRange[1];
+      if (inStockOnly) filters.inStock = true;
+      
+      const products = await productsApi.filterProducts(filters);
+      return mapProductDTOListToProducts(products);
+    },
+    enabled: hasActiveFilters && !searchQuery.trim(),
+    retry: 1,
+    onError: () => {
+      toast.error('Erreur lors du chargement des produits');
+    },
+  });
+
+  // Requête pour les produits paginés (sans filtres complexes)
+  const { data: paginatedProductsData, isLoading: isLoadingPaginated } = useQuery({
+    queryKey: ['products', 'paginated', currentPage, sortBy],
+    queryFn: async () => {
+      const sortByMap: Record<SortOption, { sortBy: string; sortDir: 'ASC' | 'DESC' }> = {
+        'newest': { sortBy: 'createdAt', sortDir: 'DESC' },
+        'price-asc': { sortBy: 'price', sortDir: 'ASC' },
+        'price-desc': { sortBy: 'price', sortDir: 'DESC' },
+        'popularity': { sortBy: 'createdAt', sortDir: 'DESC' }, // Fallback
+      };
+      
+      const { sortBy: apiSortBy, sortDir } = sortByMap[sortBy];
+      const response = await productsApi.getAllProducts({
+        page: currentPage - 1,
+        size: PRODUCTS_PER_PAGE,
+        sortBy: apiSortBy,
+        sortDir,
+      });
+      return {
+        products: mapProductDTOListToProducts(response.content),
+        totalPages: response.totalPages,
+        totalElements: response.totalElements,
+      };
+    },
+    enabled: !hasActiveFilters && !searchQuery.trim(),
+    retry: 1,
+    onError: () => {
+      toast.error('Erreur lors du chargement des produits');
+    },
+  });
+
+  const isLoading = isLoadingFiltered || isLoadingPaginated;
+
+  // Produits à afficher
   const filteredProducts = useMemo(() => {
-    let result = products.filter(product => {
-      if (searchQuery.trim()) {
-        const query = searchQuery.toLowerCase();
-        if (!product.name.toLowerCase().includes(query) && !product.description.toLowerCase().includes(query)) {
-          return false;
-        }
-      }
-
-      if (selectedCategory && product.category !== selectedCategory) return false;
-      if (selectedTypes.length > 0 && !selectedTypes.includes(product.type)) return false;
-      if (selectedGoldTypes.length > 0 && !selectedGoldTypes.includes(product.goldType)) return false;
-      if (selectedCollections.length > 0 && !selectedCollections.includes(product.collection || '')) return false;
-      if (product.price < priceRange[0] || product.price > priceRange[1]) return false;
-      if (inStockOnly && !product.inStock) return false;
-      return true;
-    });
-
-    switch (sortBy) {
-      case 'price-asc':
-        result = [...result].sort((a, b) => a.price - b.price);
-        break;
-      case 'price-desc':
-        result = [...result].sort((a, b) => b.price - a.price);
-        break;
-      case 'newest':
-        result = [...result].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-        break;
-      case 'popularity':
-        result = [...result].sort((a, b) => {
-          const aScore = (a.badges.includes('bestseller') ? 2 : 0) + (a.badges.includes('new') ? 1 : 0);
-          const bScore = (b.badges.includes('bestseller') ? 2 : 0) + (b.badges.includes('new') ? 1 : 0);
-          return bScore - aScore;
-        });
-        break;
+    let products: Product[] = [];
+    
+    if (hasActiveFilters && filteredProductsData) {
+      products = filteredProductsData;
+    } else if (paginatedProductsData) {
+      products = paginatedProductsData.products;
     }
-    return result;
-  }, [selectedCategory, selectedTypes, selectedGoldTypes, selectedCollections, priceRange, inStockOnly, searchQuery, sortBy]);
 
-  const totalPages = Math.ceil(filteredProducts.length / PRODUCTS_PER_PAGE);
+    // Appliquer le filtre de recherche côté client si nécessaire
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      products = products.filter(product => 
+        product.name.toLowerCase().includes(query) || 
+        product.description.toLowerCase().includes(query)
+      );
+    }
+
+    // Appliquer le tri côté client pour les filtres complexes
+    if (hasActiveFilters) {
+      switch (sortBy) {
+        case 'price-asc':
+          products = [...products].sort((a, b) => a.price - b.price);
+          break;
+        case 'price-desc':
+          products = [...products].sort((a, b) => b.price - a.price);
+          break;
+        case 'newest':
+          products = [...products].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+          break;
+        case 'popularity':
+          products = [...products].sort((a, b) => {
+            const aScore = (a.badges.includes('bestseller') ? 2 : 0) + (a.badges.includes('new') ? 1 : 0);
+            const bScore = (b.badges.includes('bestseller') ? 2 : 0) + (b.badges.includes('new') ? 1 : 0);
+            return bScore - aScore;
+          });
+          break;
+      }
+    }
+
+    return products;
+  }, [filteredProductsData, paginatedProductsData, hasActiveFilters, searchQuery, sortBy]);
+
+  const totalPages = paginatedProductsData?.totalPages || Math.ceil(filteredProducts.length / PRODUCTS_PER_PAGE);
   const paginatedProducts = useMemo(() => {
+    // Si on utilise la pagination API, les produits sont déjà paginés
+    if (!hasActiveFilters && paginatedProductsData) {
+      return filteredProducts;
+    }
+    // Sinon, paginer côté client
     const startIndex = (currentPage - 1) * PRODUCTS_PER_PAGE;
     return filteredProducts.slice(startIndex, startIndex + PRODUCTS_PER_PAGE);
-  }, [filteredProducts, currentPage]);
+  }, [filteredProducts, currentPage, hasActiveFilters, paginatedProductsData]);
 
   useEffect(() => {
     setCurrentPage(1);
@@ -148,7 +234,7 @@ const Boutique = () => {
         <div className="flex flex-col lg:flex-row gap-12">
           {/* Sidebar Filters */}
           <aside className="w-full lg:w-72 shrink-0 space-y-10">
-            {/* Category Filter */}
+            {/* Category Filter - dynamique depuis l'API */}
             <div>
               <h3 className="text-xs uppercase tracking-[0.3em] font-bold text-secondary-dark dark:text-white mb-6 flex items-center gap-2">
                 Catégorie
@@ -165,136 +251,62 @@ const Boutique = () => {
                     Toutes
                   </label>
                 </li>
-                <li>
-                  <label className="flex items-center gap-3 text-sm text-accent-beige hover:text-primary cursor-pointer transition-colors">
-                    <Checkbox 
-                      checked={selectedCategory === 'beldi'} 
-                      onCheckedChange={() => handleCategoryChange('beldi')}
-                      className="rounded border-accent-beige/30 text-primary focus:ring-primary size-4" 
-                    />
-                    Beldi
-                  </label>
-                </li>
-                <li>
-                  <label className="flex items-center gap-3 text-sm text-accent-beige hover:text-primary cursor-pointer transition-colors">
-                    <Checkbox 
-                      checked={selectedCategory === 'modern'} 
-                      onCheckedChange={() => handleCategoryChange('modern')}
-                      className="rounded border-accent-beige/30 text-primary focus:ring-primary size-4" 
-                    />
-                    Moderne
-                  </label>
-                </li>
+                {categories.map((cat) => (
+                  <li key={cat.id}>
+                    <label className="flex items-center gap-3 text-sm text-accent-beige hover:text-primary cursor-pointer transition-colors">
+                      <Checkbox 
+                        checked={selectedCategory === cat.slug} 
+                        onCheckedChange={() => handleCategoryChange(cat.slug)}
+                        className="rounded border-accent-beige/30 text-primary focus:ring-primary size-4" 
+                      />
+                      {cat.name}
+                    </label>
+                  </li>
+                ))}
               </ul>
             </div>
 
-            {/* Collection Filter */}
+            {/* Collection Filter - dynamique depuis l'API */}
             <div>
               <h3 className="text-xs uppercase tracking-[0.3em] font-bold text-secondary-dark dark:text-white mb-6 flex items-center gap-2">
                 Collection
                 <div className="h-px flex-grow bg-accent-beige/20"></div>
               </h3>
               <ul className="space-y-3">
-                <li>
-                  <label className="flex items-center gap-3 text-sm text-accent-beige hover:text-primary cursor-pointer transition-colors">
-                    <Checkbox 
-                      checked={selectedCollections.includes('mariage')} 
-                      onCheckedChange={() => handleCollectionToggle('mariage')}
-                      className="rounded border-accent-beige/30 text-primary focus:ring-primary size-4" 
-                    />
-                    Mariage
-                  </label>
-                </li>
-                <li>
-                  <label className="flex items-center gap-3 text-sm text-accent-beige hover:text-primary cursor-pointer transition-colors">
-                    <Checkbox 
-                      checked={selectedCollections.includes('homme')} 
-                      onCheckedChange={() => handleCollectionToggle('homme')}
-                      className="rounded border-accent-beige/30 text-primary focus:ring-primary size-4" 
-                    />
-                    Homme
-                  </label>
-                </li>
-                <li>
-                  <label className="flex items-center gap-3 text-sm text-accent-beige hover:text-primary cursor-pointer transition-colors">
-                    <Checkbox 
-                      checked={selectedCollections.includes('femme')} 
-                      onCheckedChange={() => handleCollectionToggle('femme')}
-                      className="rounded border-accent-beige/30 text-primary focus:ring-primary size-4" 
-                    />
-                    Femme
-                  </label>
-                </li>
-                <li>
-                  <label className="flex items-center gap-3 text-sm text-accent-beige hover:text-primary cursor-pointer transition-colors">
-                    <Checkbox 
-                      checked={selectedCollections.includes('promo')} 
-                      onCheckedChange={() => handleCollectionToggle('promo')}
-                      className="rounded border-accent-beige/30 text-primary focus:ring-primary size-4" 
-                    />
-                    En promotion
-                  </label>
-                </li>
+                {collections.map((col) => (
+                  <li key={col.id}>
+                    <label className="flex items-center gap-3 text-sm text-accent-beige hover:text-primary cursor-pointer transition-colors">
+                      <Checkbox 
+                        checked={selectedCollections.includes(col.slug)} 
+                        onCheckedChange={() => handleCollectionToggle(col.slug)}
+                        className="rounded border-accent-beige/30 text-primary focus:ring-primary size-4" 
+                      />
+                      {col.name}
+                    </label>
+                  </li>
+                ))}
               </ul>
             </div>
 
-            {/* Type de Bijou Filter */}
+            {/* Type de Bijou Filter - dynamique depuis l'API */}
             <div>
               <h3 className="text-xs uppercase tracking-[0.3em] font-bold text-secondary-dark dark:text-white mb-6 flex items-center gap-2">
                 Type de bijou
                 <div className="h-px flex-grow bg-accent-beige/20"></div>
               </h3>
               <ul className="space-y-3">
-                <li>
-                  <label className="flex items-center gap-3 text-sm text-accent-beige hover:text-primary cursor-pointer transition-colors">
-                    <Checkbox 
-                      checked={selectedTypes.includes('bracelet')} 
-                      onCheckedChange={() => handleTypeToggle('bracelet')}
-                      className="rounded border-accent-beige/30 text-primary focus:ring-primary size-4" 
-                    />
-                    Bracelets
-                  </label>
-                </li>
-                <li>
-                  <label className="flex items-center gap-3 text-sm text-accent-beige hover:text-primary cursor-pointer transition-colors">
-                    <Checkbox 
-                      checked={selectedTypes.includes('ring')} 
-                      onCheckedChange={() => handleTypeToggle('ring')}
-                      className="rounded border-accent-beige/30 text-primary focus:ring-primary size-4" 
-                    />
-                    Bagues
-                  </label>
-                </li>
-                <li>
-                  <label className="flex items-center gap-3 text-sm text-accent-beige hover:text-primary cursor-pointer transition-colors">
-                    <Checkbox 
-                      checked={selectedTypes.includes('necklace')} 
-                      onCheckedChange={() => handleTypeToggle('necklace')}
-                      className="rounded border-accent-beige/30 text-primary focus:ring-primary size-4" 
-                    />
-                    Colliers
-                  </label>
-                </li>
-                <li>
-                  <label className="flex items-center gap-3 text-sm text-accent-beige hover:text-primary cursor-pointer transition-colors">
-                    <Checkbox 
-                      checked={selectedTypes.includes('earrings')} 
-                      onCheckedChange={() => handleTypeToggle('earrings')}
-                      className="rounded border-accent-beige/30 text-primary focus:ring-primary size-4" 
-                    />
-                    Boucles d'oreilles
-                  </label>
-                </li>
-                <li>
-                  <label className="flex items-center gap-3 text-sm text-accent-beige hover:text-primary cursor-pointer transition-colors">
-                    <Checkbox 
-                      checked={selectedTypes.includes('set')} 
-                      onCheckedChange={() => handleTypeToggle('set')}
-                      className="rounded border-accent-beige/30 text-primary focus:ring-primary size-4" 
-                    />
-                    Parures
-                  </label>
-                </li>
+                {productTypes.map((pt) => (
+                  <li key={pt.id}>
+                    <label className="flex items-center gap-3 text-sm text-accent-beige hover:text-primary cursor-pointer transition-colors">
+                      <Checkbox 
+                        checked={selectedTypes.includes(pt.code.toLowerCase())} 
+                        onCheckedChange={() => handleTypeToggle(pt.code.toLowerCase())}
+                        className="rounded border-accent-beige/30 text-primary focus:ring-primary size-4" 
+                      />
+                      {pt.name}
+                    </label>
+                  </li>
+                ))}
               </ul>
             </div>
 
@@ -375,13 +387,23 @@ const Boutique = () => {
             </div>
 
             {/* Products Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-x-8 gap-y-12">
-              {paginatedProducts.map((product, index) => (
-                <div key={product.id} className="animate-fade-in" style={{ animationDelay: `${index * 0.05}s` }}>
-                  <ProductCard product={product} />
-                </div>
-              ))}
-            </div>
+            {isLoading ? (
+              <div className="flex items-center justify-center py-20">
+                <Loader2 className="w-8 h-8 animate-spin text-primary" />
+              </div>
+            ) : paginatedProducts.length === 0 ? (
+              <div className="text-center py-20">
+                <p className="text-accent-beige uppercase tracking-widest text-sm">Aucun produit trouvé</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-x-8 gap-y-12">
+                {paginatedProducts.map((product, index) => (
+                  <div key={product.id} className="animate-fade-in" style={{ animationDelay: `${index * 0.05}s` }}>
+                    <ProductCard product={product} />
+                  </div>
+                ))}
+              </div>
+            )}
 
             {/* Pagination */}
             {totalPages > 1 && (

@@ -1,14 +1,20 @@
+import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
-import { getProductsByCategory } from '@/data/products';
 import ProductCard from '@/components/ui/ProductCard';
+import { productsApi } from '@/services/api/products';
+import { mapProductDTOListToProducts } from '@/utils/productMapper';
 
 const BeldiCollection = () => {
-  const beldiProducts = getProductsByCategory('beldi').slice(0, 4);
+  const { data: products } = useQuery({
+    queryKey: ['products', 'beldi'],
+    queryFn: () => productsApi.filterProducts({ category: 'beldi' }),
+  });
+
+  const beldiProducts = products ? mapProductDTOListToProducts(products).slice(0, 4) : [];
 
   return (
     <section className="py-16 md:py-24 bg-bg-paper-pattern">
       <div className="max-w-[1280px] mx-auto px-6">
-        {/* Section Header */}
         <div className="flex flex-col items-center mb-16 text-center">
           <div className="w-24 h-px bg-accent-beige/40 mb-4 relative">
             <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 size-2 rotate-45 border border-accent-beige bg-background-light"></div>
@@ -20,7 +26,6 @@ const BeldiCollection = () => {
           </div>
         </div>
 
-        {/* Product Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
           {beldiProducts.map((product) => (
             <ProductCard key={product.id} product={product} />
@@ -28,8 +33,8 @@ const BeldiCollection = () => {
         </div>
 
         <div className="mt-12 text-center">
-          <Link 
-            className="inline-block border-b border-primary pb-1 text-primary hover:text-accent-beige transition-colors text-sm uppercase tracking-widest font-medium" 
+          <Link
+            className="inline-block border-b border-primary pb-1 text-primary hover:text-accent-beige transition-colors text-sm uppercase tracking-widest font-medium"
             to="/boutique?category=beldi"
           >
             Voir toute la collection Beldi
