@@ -14,6 +14,7 @@ import {
   X,
   ChevronRight,
 } from 'lucide-react';
+import AdminNotification from './AdminNotification';
 import { Button } from '@/components/ui/button';
 import { useAdmin } from '@/contexts/AdminContext';
 import { cn } from '@/lib/utils';
@@ -178,7 +179,8 @@ const AdminLayout = ({ children, title, breadcrumbs }: AdminLayoutProps) => {
             </div>
           </div>
 
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
+            <AdminNotification />
             <span className="font-body text-sm text-muted-foreground hidden md:block">
               Administrateur
             </span>

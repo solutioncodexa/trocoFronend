@@ -146,3 +146,29 @@ export interface GoldPriceSettingDTO {
   id: number;
   pricePerGram: number;
 }
+
+// Notifications
+export interface NotificationDTO {
+  id: number;
+  type: string; // ORDER, CUSTOM_ORDER
+  title: string;
+  message: string;
+  referenceId: number | null;
+  read: boolean;
+  createdAt: string;
+}
+
+// Gold price API (or.fr / goldbroker.com)
+export interface GoldPricePointDTO {
+  date: string;
+  price: number;
+}
+
+export interface GoldPriceDTO {
+  currentPrice: number;
+  currency: string;
+  metal: string;
+  weightUnit: string;
+  source: string;
+  history: GoldPricePointDTO[];
+}

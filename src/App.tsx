@@ -22,6 +22,7 @@ import Contact from "./pages/Contact";
 import LivraisonRetours from "./pages/LivraisonRetours";
 import FAQ from "./pages/FAQ";
 import GuideTailles from "./pages/GuideTailles";
+import CoursOr from "./pages/CoursOr";
 import NotFound from "./pages/NotFound";
 
 // Admin pages
@@ -69,6 +70,7 @@ const App = () => (
                 <Route path="/livraison-retours" element={<LivraisonRetours />} />
                 <Route path="/faq" element={<FAQ />} />
                 <Route path="/guide-tailles" element={<GuideTailles />} />
+                <Route path="/prix-or-maroc" element={<CoursOr />} />
                 <Route path="/favoris" element={<Wishlist />} />
                 
                 {/* Admin Routes */}

@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Eye, Search, Phone, Mail, MessageSquare, ExternalLink, FileText, Calculator, Check, X } from 'lucide-react';
 import AdminLayout from '@/components/admin/AdminLayout';
@@ -17,6 +18,8 @@ import { cn } from '@/lib/utils';
 import QuoteDialog, { QuoteData } from '@/components/admin/QuoteDialog';
 
 const AdminCustomRequests = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const idParam = searchParams.get('id');
   const queryClient = useQueryClient();
   const { getGoldTypeName } = useGoldTypes();
   const { data: requests = [], isLoading } = useQuery({
@@ -106,6 +109,16 @@ const AdminCustomRequests = () => {
     setSelectedRequest(request);
     setIsDetailOpen(true);
   };
+
+  useEffect(() => {
+    if (!idParam || requests.length === 0) return;
+    const request = requests.find((r) => String(r.id) === idParam);
+    if (request) {
+      setSelectedRequest(request);
+      setIsDetailOpen(true);
+      setSearchParams({}, { replace: true });
+    }
+  }, [idParam, requests, setSearchParams]);
 
   const handleStatusChange = (requestId: string, newStatus: string) => {
     updateStatusMutation.mutate({ id: requestId, status: newStatus });

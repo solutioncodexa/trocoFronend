@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useCart } from '@/contexts/CartContext';
 import { useWishlist } from '@/contexts/WishlistContext';
+import GoldPriceNav from './GoldPriceNav';
 import { cn } from '@/lib/utils';
 
 const Header = () => {
@@ -20,6 +21,7 @@ const Header = () => {
     { href: '/boutique', label: 'Boutique' },
     { href: '/boutique?category=beldi', label: 'Beldi' },
     { href: '/boutique?category=modern', label: 'Moderne' },
+    { href: '/prix-or-maroc', label: 'Cours de l\'Or' },
     { href: '/sur-mesure', label: 'Sur Mesure' },
   ];
 
@@ -67,6 +69,9 @@ const Header = () => {
               </Link>
             ))}
           </nav>
+
+          {/* Gold price graph */}
+          <GoldPriceNav />
 
           {/* Right side icons */}
           <div className="flex items-center space-x-4">

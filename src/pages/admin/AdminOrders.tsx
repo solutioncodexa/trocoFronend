@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Eye, Search, Phone, MapPin } from 'lucide-react';
 import AdminLayout from '@/components/admin/AdminLayout';
@@ -14,6 +15,8 @@ import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
 const AdminOrders = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const orderIdParam = searchParams.get('order');
   const queryClient = useQueryClient();
   const { data: orders = [], isLoading } = useQuery({
     queryKey: ['orders'],
@@ -68,6 +71,24 @@ const AdminOrders = () => {
     setSelectedOrder(order);
     setIsDetailOpen(true);
   };
+
+  useEffect(() => {
+    if (!orderIdParam) return;
+    const order = orders.find((o) => String(o.id) === orderIdParam);
+    if (order) {
+      setSelectedOrder(order);
+      setIsDetailOpen(true);
+      setSearchParams({}, { replace: true });
+    } else if (orders.length > 0) {
+      ordersApi.getOrderById(orderIdParam)
+        .then((o) => {
+          setSelectedOrder(o);
+          setIsDetailOpen(true);
+          setSearchParams({}, { replace: true });
+        })
+        .catch(() => {});
+    }
+  }, [orderIdParam, orders, setSearchParams]);
 
   const handleStatusChange = (orderId: string, newStatus: string) => {
     updateStatusMutation.mutate({ id: orderId, status: newStatus });
