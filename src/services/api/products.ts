@@ -23,6 +23,7 @@ export interface ProductFormData {
   name: string;
   description: string;
   price: number;
+  originalPrice?: number;
   weight: number;
   marginGain?: number;
   category: string;

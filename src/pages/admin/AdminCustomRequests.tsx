@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { customOrdersApi } from '@/services/api/customOrders';
+import { customOrdersApi, getImageUrl } from '@/services/api';
 import { CustomOrderDTO } from '@/types/api';
 import { useGoldTypes } from '@/hooks/useGoldTypes';
 import { toast } from 'sonner';
@@ -338,14 +338,20 @@ const AdminCustomRequests = () => {
             <div className="space-y-6">
               {/* Image */}
               <div className="relative aspect-video rounded-lg overflow-hidden bg-muted">
-                <img
-                  src={selectedRequest.imageUrl ?? '/placeholder.svg'}
-                  alt="Modèle"
-                  className="w-full h-full object-contain"
-                />
+                {selectedRequest.imageUrl ? (
+                  <img
+                    src={getImageUrl(selectedRequest.imageUrl)}
+                    alt="Modèle"
+                    className="w-full h-full object-contain"
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-muted-foreground text-sm">
+                    Aucune image
+                  </div>
+                )}
                 {selectedRequest.imageUrl && (
                   <a
-                    href={selectedRequest.imageUrl}
+                    href={getImageUrl(selectedRequest.imageUrl)}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="absolute top-2 right-2 p-2 bg-charcoal/80 text-cream rounded-lg hover:bg-charcoal"

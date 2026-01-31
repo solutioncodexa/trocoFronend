@@ -7,6 +7,7 @@ import { productsApi } from '@/services/api/products';
 import { ordersApi } from '@/services/api/orders';
 import { customOrdersApi } from '@/services/api/customOrders';
 import { formatPrice } from '@/utils/formatPrice';
+import { getImageUrl } from '@/services/api';
 
 const AdminDashboard = () => {
   const { data: productsPage } = useQuery({
@@ -175,7 +176,7 @@ const AdminDashboard = () => {
                   >
                     {request.imageUrl ? (
                       <img
-                        src={request.imageUrl}
+                        src={getImageUrl(request.imageUrl)}
                         alt="Modèle"
                         className="w-12 h-12 rounded-lg object-cover"
                       />

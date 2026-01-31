@@ -20,13 +20,37 @@ export const customOrdersApi = {
     return apiRequest<CustomOrderDTO[]>(url);
   },
 
-  // Créer une commande personnalisée
+  // Créer une commande personnalisée (JSON)
   createCustomOrder: async (customOrder: Partial<CustomOrderDTO>): Promise<CustomOrderDTO> => {
     const url = buildApiUrl('/custom-orders');
     return apiRequest<CustomOrderDTO>(url, {
       method: 'POST',
       body: JSON.stringify(customOrder),
     });
+  },
+
+  // Créer une commande personnalisée avec images (multipart)
+  createCustomOrderWithImages: async (
+    customOrder: Partial<CustomOrderDTO>,
+    images: File[]
+  ): Promise<CustomOrderDTO> => {
+    const url = buildApiUrl('/custom-orders/submit');
+    const formData = new FormData();
+    formData.append('order', new Blob([JSON.stringify(customOrder)], { type: 'application/json' }));
+    images.forEach((f) => formData.append('images', f));
+
+    const response = await fetch(url, {
+      method: 'POST',
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({ message: 'Erreur lors de l\'envoi' }));
+      throw new Error(err.message || `Erreur ${response.status}`);
+    }
+
+    const data = await response.json();
+    return (data?.data ?? data) as CustomOrderDTO;
   },
 
   // Mettre à jour le statut d'une commande personnalisée

@@ -17,10 +17,10 @@ export const apiRequest = async <T>(
   options: RequestInit = {}
 ): Promise<T> => {
   const token = getAuthToken();
-  const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
-    ...(options.headers as Record<string, string>),
-  };
+  const headers: Record<string, string> = { ...(options.headers as Record<string, string>) };
+  if (!headers['Content-Type'] && !(options.body instanceof FormData)) {
+    headers['Content-Type'] = 'application/json';
+  }
   if (token) {
     headers['Authorization'] = `Bearer ${token}`;
   }
@@ -36,6 +36,10 @@ export const apiRequest = async <T>(
     }
     const error = await response.json().catch(() => ({ message: 'Une erreur est survenue' }));
     throw new Error(error.message || `HTTP error! status: ${response.status}`);
+  }
+
+  if (response.status === 204 || response.headers.get('content-length') === '0') {
+    return undefined as T;
   }
 
   const data = await response.json();

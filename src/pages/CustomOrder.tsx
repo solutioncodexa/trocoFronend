@@ -27,6 +27,8 @@ const CustomOrder = () => {
     fullName: '',
     phone: '',
     email: '',
+    address: '',
+    city: '',
     type: '',
     style: '',
     weight: '',
@@ -80,7 +82,7 @@ const CustomOrder = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.fullName || !formData.phone || !formData.type || !formData.style) {
+    if (!formData.fullName || !formData.phone || !formData.address || !formData.city || !formData.type || !formData.style) {
       toast.error('Veuillez remplir tous les champs obligatoires');
       return;
     }
@@ -121,6 +123,8 @@ const CustomOrder = () => {
             fullName: '',
             phone: '',
             email: '',
+            address: '',
+            city: '',
             type: '',
             style: '',
             weight: '',
@@ -256,6 +260,20 @@ const CustomOrder = () => {
                       Téléphone *
                     </Label>
                     <Input id="phone" name="phone" type="tel" value={formData.phone} onChange={handleInputChange} placeholder="06 XX XX XX XX" className="mt-2" required />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="address" className="font-body">
+                      Adresse *
+                    </Label>
+                    <Input id="address" name="address" value={formData.address} onChange={handleInputChange} placeholder="Votre adresse complète" className="mt-2" required />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="city" className="font-body">
+                      Ville *
+                    </Label>
+                    <Input id="city" name="city" value={formData.city} onChange={handleInputChange} placeholder="Ex: Casablanca" className="mt-2" required />
                   </div>
 
                   <div className="md:col-span-2">

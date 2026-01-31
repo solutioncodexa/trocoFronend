@@ -66,6 +66,7 @@ export interface OrderDTO {
 export interface CustomOrderDTO {
   id: string;
   imageUrl?: string;
+  referenceImageUrls?: string[];
   description: string;
   type: string; // ProductType
   weight?: number;

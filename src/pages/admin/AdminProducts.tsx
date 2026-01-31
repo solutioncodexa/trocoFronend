@@ -54,6 +54,7 @@ const AdminProducts = () => {
     name: '',
     description: '',
     price: '',
+    originalPrice: '',
     weight: '',
     marginGain: '500',
     category: 'beldi' as ProductCategory,
@@ -102,6 +103,7 @@ const AdminProducts = () => {
         name: product.name,
         description: product.description,
         price: product.price.toString(),
+        originalPrice: (product.originalPrice ?? '').toString(),
         weight: product.weight.toString(),
         marginGain: (product.marginGain ?? 500).toString(),
         category: product.category,
@@ -198,17 +200,24 @@ const AdminProducts = () => {
     }
 
     const typeCode = productTypes.find((pt) => pt.code.toLowerCase() === formData.type)?.code ?? (formData.type as string).toUpperCase();
+    const isPromo = formData.badges.includes('promo');
+    const originalPriceNum = formData.originalPrice ? parseFloat(formData.originalPrice) : undefined;
     const productPayload: ProductFormData = {
       name: formData.name,
       description: formData.description,
       price: priceValue,
+      originalPrice: isPromo && originalPriceNum && originalPriceNum > priceValue ? originalPriceNum : undefined,
       weight: parseFloat(formData.weight),
       marginGain: margin,
       category: formData.category,
       type: typeCode,
       goldType: formData.goldType,
       collection: formData.collection || undefined,
-      availableSizes: getAvailableSizes(formData.type) ? getAvailableSizes(formData.type)!.split(',').map((s) => s.trim()) : undefined,
+      availableSizes: (() => {
+        const sizes = getAvailableSizes(formData.type);
+        if (!sizes) return undefined;
+        return Array.isArray(sizes) ? sizes : String(sizes).split(',').map((s) => s.trim());
+      })(),
       stockQuantity: 1,
       badges: formData.badges,
     };
@@ -228,12 +237,17 @@ const AdminProducts = () => {
   };
 
   const toggleBadge = (badge: string) => {
-    setFormData(prev => ({
-      ...prev,
-      badges: prev.badges.includes(badge)
-        ? prev.badges.filter(b => b !== badge)
-        : [...prev.badges, badge],
-    }));
+    setFormData(prev => {
+      const isAdding = !prev.badges.includes(badge);
+      const newBadges = isAdding ? [...prev.badges, badge] : prev.badges.filter(b => b !== badge);
+      if (badge === 'promo' && isAdding && !prev.originalPrice) {
+        return { ...prev, badges: newBadges, originalPrice: prev.price };
+      }
+      if (badge === 'promo' && !isAdding) {
+        return { ...prev, badges: newBadges, originalPrice: '' };
+      }
+      return { ...prev, badges: newBadges };
+    });
   };
 
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -473,20 +487,39 @@ const AdminProducts = () => {
                 />
               </div>
               <div>
-                <Label htmlFor="price">Prix (MAD) *</Label>
+                <Label htmlFor="price">
+                  {formData.badges.includes('promo') ? 'Prix promo (MAD) *' : 'Prix (MAD) *'}
+                </Label>
                 <Input
                   id="price"
                   type="number"
                   value={formData.price}
-                  readOnly
-                  className="mt-1 bg-muted"
+                  readOnly={!formData.badges.includes('promo')}
+                  onChange={formData.badges.includes('promo') ? (e) => setFormData(prev => ({ ...prev, price: e.target.value })) : undefined}
+                  className={formData.badges.includes('promo') ? 'mt-1' : 'mt-1 bg-muted'}
                 />
-                {goldPriceSettings && (
+                {goldPriceSettings && !formData.badges.includes('promo') && (
                   <p className="text-xs text-muted-foreground mt-1">
                     Calculé : (grammes × {goldPriceSettings.pricePerGram} + marge) MAD
                   </p>
                 )}
               </div>
+              {formData.badges.includes('promo') && (
+                <div>
+                  <Label htmlFor="originalPrice">Prix original avant réduction (MAD)</Label>
+                  <Input
+                    id="originalPrice"
+                    type="number"
+                    min={0}
+                    value={formData.originalPrice}
+                    onChange={(e) => setFormData(prev => ({ ...prev, originalPrice: e.target.value }))}
+                    className="mt-1"
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Prix affiché barré sur la fiche produit
+                  </p>
+                </div>
+              )}
               <div>
                 <Label htmlFor="marginGain">Marge / gain (MAD)</Label>
                 <Input

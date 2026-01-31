@@ -1,31 +1,203 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import Layout from '@/components/layout/Layout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { useGoldTypes } from '@/hooks/useGoldTypes';
+import { customOrdersApi, productTypesApi, categoriesApi } from '@/services/api';
+import { CustomOrderDTO } from '@/types/api';
+import { toast } from 'sonner';
+import { CloudUpload, X, Loader2, Check } from 'lucide-react';
+
+const MAX_FILE_SIZE = 10 * 1024 * 1024;
+const ACCEPTED_TYPES = 'image/jpeg,image/png,image/webp,.pdf';
 
 const SurMesure = () => {
+  const { goldTypesWithColors: goldTypes } = useGoldTypes();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const { data: productTypes = [] } = useQuery({
+    queryKey: ['productTypes'],
+    queryFn: () => productTypesApi.getAllProductTypes(),
+  });
+  const { data: categories = [] } = useQuery({
+    queryKey: ['categories'],
+    queryFn: () => categoriesApi.getAllCategories(),
+  });
+
+  const [imageFiles, setImageFiles] = useState<File[]>([]);
+  const [imagePreviews, setImagePreviews] = useState<string[]>([]);
+  const [isSuccess, setIsSuccess] = useState(false);
+
   const [formData, setFormData] = useState({
     type: '',
     style: '',
     poids: '',
     description: '',
-    goldType: ''
+    goldType: '',
+    fullName: '',
+    phone: '',
+    email: '',
+    address: '',
+    city: '',
   });
 
-  const handleInputChange = (field: string, value: any) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+  const handleInputChange = (field: string, value: string) => {
+    setFormData((prev) => ({ ...prev, [field]: value }));
   };
+
+  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    const validFiles: File[] = [];
+
+    for (const file of files) {
+      if (file.size > MAX_FILE_SIZE) {
+        toast.error(`${file.name} dépasse 10 MB`);
+        continue;
+      }
+      validFiles.push(file);
+    }
+
+    const imageFiles = validFiles.filter((f) => f.type.startsWith('image/'));
+    const promises = imageFiles.map(
+      (f) =>
+        new Promise<string>((res) => {
+          const r = new FileReader();
+          r.onload = () => res(r.result as string);
+          r.readAsDataURL(f);
+        })
+    );
+
+    Promise.all(promises).then((previews) => {
+      const allPreviews: string[] = [];
+      let idx = 0;
+      validFiles.forEach((f) => {
+        if (f.type.startsWith('image/')) {
+          allPreviews.push(previews[idx++] || '');
+        } else {
+          allPreviews.push('');
+        }
+      });
+      setImageFiles((prev) => [...prev, ...validFiles].slice(0, 5));
+      setImagePreviews((prev) => [...prev, ...allPreviews].slice(0, 5));
+    });
+
+    e.target.value = '';
+  };
+
+  const removeImage = (index: number) => {
+    setImageFiles((prev) => prev.filter((_, i) => i !== index));
+    setImagePreviews((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const createMutation = useMutation({
+    mutationFn: async (payload: { order: Partial<CustomOrderDTO>; images: File[] }) => {
+      if (payload.images.length > 0) {
+        return customOrdersApi.createCustomOrderWithImages(payload.order, payload.images);
+      }
+      return customOrdersApi.createCustomOrder(payload.order);
+    },
+    onSuccess: () => {
+      setIsSuccess(true);
+      toast.success('Votre demande a été envoyée avec succès !');
+    },
+    onError: (err: Error) => {
+      toast.error(err.message || 'Erreur lors de l\'envoi');
+    },
+  });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('Form submitted:', formData);
-    // Handle form submission logic here
+
+    if (!formData.fullName?.trim()) {
+      toast.error('Nom complet requis');
+      return;
+    }
+    if (!formData.phone?.trim()) {
+      toast.error('Téléphone requis');
+      return;
+    }
+    if (!formData.address?.trim()) {
+      toast.error('Adresse requise');
+      return;
+    }
+    if (!formData.city?.trim()) {
+      toast.error('Ville requise');
+      return;
+    }
+    if (!formData.type) {
+      toast.error('Type de bijou requis');
+      return;
+    }
+    if (!formData.style) {
+      toast.error('Style souhaité requis');
+      return;
+    }
+
+    const desc =
+      formData.goldType
+        ? `Type d'or: ${goldTypes.find((g) => g.id === formData.goldType)?.label || formData.goldType}. `
+        : '';
+    const fullDesc = desc + (formData.description || '');
+
+    const customOrder: Partial<CustomOrderDTO> = {
+      type: formData.type,
+      style: formData.style,
+      weight: formData.poids ? parseFloat(formData.poids) : undefined,
+      description: fullDesc || 'Commande personnalisée',
+      customer: {
+        fullName: formData.fullName.trim(),
+        phone: formData.phone.trim(),
+        email: formData.email?.trim() || undefined,
+        address: formData.address.trim(),
+        city: formData.city.trim(),
+      },
+    };
+
+    createMutation.mutate({ order: customOrder, images: imageFiles });
   };
 
-  const { goldTypesWithColors: goldTypes } = useGoldTypes();
+  const resetForm = () => {
+    setIsSuccess(false);
+    setFormData({
+      type: '',
+      style: '',
+      address: '',
+      city: '',
+      poids: '',
+      description: '',
+      goldType: '',
+      fullName: '',
+      phone: '',
+      email: '',
+    });
+    setImageFiles([]);
+    setImagePreviews([]);
+  };
+
+  if (isSuccess) {
+    return (
+      <Layout>
+        <section className="py-24 bg-paper-pattern">
+          <div className="max-w-lg mx-auto px-6 text-center">
+            <div className="w-20 h-20 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-6">
+              <Check className="w-10 h-10 text-green-600" />
+            </div>
+            <h1 className="font-script text-5xl text-primary mb-4">Demande envoyée !</h1>
+            <p className="text-secondary-dark/80 dark:text-white/80 mb-8">
+              Merci pour votre demande de création sur mesure, {formData.fullName} !
+              Notre équipe examinera votre projet et vous contactera sous 48h.
+            </p>
+            <Button onClick={resetForm} variant="outline" className="font-body">
+              Faire une nouvelle demande
+            </Button>
+          </div>
+        </section>
+      </Layout>
+    );
+  }
 
   return (
     <Layout>
@@ -40,7 +212,7 @@ const SurMesure = () => {
           </div>
           <div className="bg-white/50 dark:bg-background-dark/50 backdrop-blur-sm p-8 md:p-12 border border-accent-beige/20 shadow-xl rounded-sm">
             <p className="text-lg md:text-xl text-secondary-dark/80 dark:text-white/80 leading-relaxed font-light italic">
-              "Donnez vie à vos rêves les plus précieux. Nos maîtres joailliers mettent leur expertise à votre service pour créer une pièce unique, reflet de votre personnalité et de votre histoire. Chaque détail est minutieusement étudié pour atteindre la perfection de l'artisanat."
+              "Donnez vie à vos rêves les plus précieux. Nos maîtres joailliers mettent leur expertise à votre service pour créer une pièce unique, reflet de votre personnalité et de votre histoire."
             </p>
           </div>
         </div>
@@ -49,7 +221,6 @@ const SurMesure = () => {
       {/* Main Form Section */}
       <section className="py-20 bg-white dark:bg-background-dark border-y border-accent-beige/10">
         <div className="max-w-[1280px] mx-auto px-6 grid grid-cols-1 lg:grid-cols-2 gap-20">
-          {/* Form Section */}
           <div className="order-2 lg:order-1">
             <h2 className="text-3xl font-display mb-8 flex items-center gap-4">
               <span className="material-symbols-outlined text-4xl text-primary">edit_note</span>
@@ -58,46 +229,48 @@ const SurMesure = () => {
             <form onSubmit={handleSubmit} className="space-y-8">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <div>
-                  <Label htmlFor="type" className="block text-xs uppercase tracking-widest text-accent-beige mb-3 font-bold">
-                    Type de bijou
+                  <Label className="block text-xs uppercase tracking-widest text-accent-beige mb-3 font-bold">
+                    Type de bijou *
                   </Label>
-                  <select 
-                    id="type"
-                    value={formData.type} 
+                  <select
+                    value={formData.type}
                     onChange={(e) => handleInputChange('type', e.target.value)}
                     className="w-full bg-paper dark:bg-secondary-dark border-accent-beige/30 py-3 px-4 focus:ring-primary focus:border-primary rounded-none text-sm"
+                    required
                   >
                     <option value="">Sélectionnez un type</option>
-                    <option value="bague">Bague / Alliance</option>
-                    <option value="collier">Collier</option>
-                    <option value="bracelet">Bracelet</option>
-                    <option value="boucles">Boucles d'oreilles</option>
-                    <option value="parure">Parure complète</option>
+                    {productTypes.map((pt) => (
+                      <option key={pt.id} value={pt.code.toLowerCase()}>
+                        {pt.name}
+                      </option>
+                    ))}
                   </select>
                 </div>
                 <div>
-                  <Label htmlFor="style" className="block text-xs uppercase tracking-widest text-accent-beige mb-3 font-bold">
-                    Style souhaité
+                  <Label className="block text-xs uppercase tracking-widest text-accent-beige mb-3 font-bold">
+                    Style souhaité *
                   </Label>
-                  <select 
-                    id="style"
-                    value={formData.style} 
+                  <select
+                    value={formData.style}
                     onChange={(e) => handleInputChange('style', e.target.value)}
                     className="w-full bg-paper dark:bg-secondary-dark border-accent-beige/30 py-3 px-4 focus:ring-primary focus:border-primary rounded-none text-sm"
+                    required
                   >
                     <option value="">Sélectionnez un style</option>
-                    <option value="beldi">Style Beldi (Traditionnel)</option>
-                    <option value="moderne">Moderne & Minimaliste</option>
-                    <option value="fusion">Fusion (Beldi-Moderne)</option>
+                    {categories.map((cat) => (
+                      <option key={cat.id} value={cat.slug}>
+                        {cat.name}
+                      </option>
+                    ))}
                   </select>
                 </div>
               </div>
+
               <div>
-                <Label htmlFor="poids" className="block text-xs uppercase tracking-widest text-accent-beige mb-3 font-bold">
+                <Label className="block text-xs uppercase tracking-widest text-accent-beige mb-3 font-bold">
                   Poids estimé (grammes d'or)
                 </Label>
                 <Input
-                  id="poids"
                   type="number"
                   placeholder="Ex: 15"
                   value={formData.poids}
@@ -107,15 +280,15 @@ const SurMesure = () => {
                 <p className="text-[10px] text-accent-beige/60 mt-2 italic">Estimation indicative pour le devis initial</p>
               </div>
 
-              {/* Type d'Or */}
               <div>
                 <Label className="block text-xs uppercase tracking-widest text-accent-beige mb-3 font-bold">
                   Type d'Or
                 </Label>
                 <div className="flex gap-4">
-                  {goldTypes.map(goldType => (
+                  {goldTypes.map((goldType) => (
                     <button
                       key={goldType.id}
+                      type="button"
                       onClick={() => handleInputChange('goldType', goldType.id)}
                       className={`size-8 rounded-full border-2 border-white shadow-sm ring-1 ring-accent-beige/20 hover:scale-110 transition-transform ${formData.goldType === goldType.id ? 'ring-2 ring-primary' : ''}`}
                       style={{ backgroundColor: goldType.color }}
@@ -126,11 +299,10 @@ const SurMesure = () => {
               </div>
 
               <div>
-                <Label htmlFor="desc" className="block text-xs uppercase tracking-widest text-accent-beige mb-3 font-bold">
+                <Label className="block text-xs uppercase tracking-widest text-accent-beige mb-3 font-bold">
                   Description de votre projet
                 </Label>
                 <Textarea
-                  id="desc"
                   placeholder="Décrivez les motifs, les pierres souhaitées ou l'histoire derrière ce bijou..."
                   rows={5}
                   value={formData.description}
@@ -138,12 +310,87 @@ const SurMesure = () => {
                   className="w-full bg-paper dark:bg-secondary-dark border-accent-beige/30 py-3 px-4 focus:ring-primary focus:border-primary rounded-none text-sm"
                 />
               </div>
+
+              <div className="space-y-6 border-t border-accent-beige/20 pt-8">
+                <h3 className="font-display text-xl">Vos coordonnées *</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <Label className="block text-xs uppercase tracking-widest text-accent-beige mb-2 font-bold">
+                      Nom complet *
+                    </Label>
+                    <Input
+                      value={formData.fullName}
+                      onChange={(e) => handleInputChange('fullName', e.target.value)}
+                      placeholder="Votre nom et prénom"
+                      className="w-full bg-paper dark:bg-secondary-dark border-accent-beige/30"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <Label className="block text-xs uppercase tracking-widest text-accent-beige mb-2 font-bold">
+                      Téléphone *
+                    </Label>
+                    <Input
+                      type="tel"
+                      value={formData.phone}
+                      onChange={(e) => handleInputChange('phone', e.target.value)}
+                      placeholder="06 XX XX XX XX"
+                      className="w-full bg-paper dark:bg-secondary-dark border-accent-beige/30"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <Label className="block text-xs uppercase tracking-widest text-accent-beige mb-2 font-bold">
+                      Adresse *
+                    </Label>
+                    <Input
+                      value={formData.address}
+                      onChange={(e) => handleInputChange('address', e.target.value)}
+                      placeholder="Votre adresse complète"
+                      className="w-full bg-paper dark:bg-secondary-dark border-accent-beige/30"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <Label className="block text-xs uppercase tracking-widest text-accent-beige mb-2 font-bold">
+                      Ville *
+                    </Label>
+                    <Input
+                      value={formData.city}
+                      onChange={(e) => handleInputChange('city', e.target.value)}
+                      placeholder="Ex: Casablanca"
+                      className="w-full bg-paper dark:bg-secondary-dark border-accent-beige/30"
+                      required
+                    />
+                  </div>
+                  <div className="md:col-span-2">
+                    <Label className="block text-xs uppercase tracking-widest text-accent-beige mb-2 font-bold">
+                      Email
+                    </Label>
+                    <Input
+                      type="email"
+                      value={formData.email}
+                      onChange={(e) => handleInputChange('email', e.target.value)}
+                      placeholder="votre@email.com"
+                      className="w-full bg-paper dark:bg-secondary-dark border-accent-beige/30"
+                    />
+                  </div>
+                </div>
+              </div>
+
               <Button
                 type="submit"
-                className="w-full bg-secondary-dark text-white hover:bg-primary transition-all duration-500 py-4 px-8 text-sm uppercase tracking-[0.2em] font-bold shadow-lg flex items-center justify-center gap-3"
+                disabled={createMutation.isPending}
+                className="w-full bg-secondary-dark text-white hover:bg-primary transition-all py-4 px-8 text-sm uppercase tracking-[0.2em] font-bold shadow-lg flex items-center justify-center gap-3"
               >
-                Soumettre ma demande
-                <span className="material-symbols-outlined text-lg">auto_awesome</span>
+                {createMutation.isPending ? (
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                ) : (
+                  <>
+                    Soumettre ma demande
+                    <span className="material-symbols-outlined text-lg">auto_awesome</span>
+                  </>
+                )}
               </Button>
             </form>
           </div>
@@ -156,41 +403,95 @@ const SurMesure = () => {
                 Inspirations & Croquis
               </h2>
               <p className="text-secondary-dark/70 dark:text-white/70 mb-8 font-light leading-relaxed">
-                Si vous possédez des croquis, des photos d'inspiration ou des références de notre catalogue, merci de les joindre ici. Cela aidera nos artisans à mieux cerner votre demande.
+                Si vous possédez des croquis, des photos d'inspiration ou des références de notre catalogue, merci de les joindre ici.
               </p>
-              <div className="dotted-gold-border rounded-lg p-12 flex flex-col items-center justify-center text-center cursor-pointer transition-transform hover:scale-[1.01] group border-2">
-                <div className="size-20 rounded-full bg-white dark:bg-secondary-dark shadow-inner flex items-center justify-center mb-6 group-hover:bg-primary/10 transition-colors">
-                  <span className="material-symbols-outlined text-4xl text-primary">cloud_upload</span>
-                </div>
-                <h4 className="text-lg font-bold mb-2">Déposez vos fichiers ici</h4>
-                <p className="text-sm text-accent-beige/80 mb-6">Formats acceptés : JPG, PNG, PDF (Max 10MB)</p>
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="border border-primary text-primary px-6 py-2 text-xs uppercase tracking-widest font-bold hover:bg-primary hover:text-white transition-all"
-                >
-                  Parcourir mes dossiers
-                </Button>
+
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept={ACCEPTED_TYPES}
+                multiple
+                onChange={handleImageSelect}
+                className="hidden"
+              />
+
+              <div
+                onClick={() => fileInputRef.current?.click()}
+                className="dotted-gold-border rounded-lg p-12 flex flex-col items-center justify-center text-center cursor-pointer transition-transform hover:scale-[1.01] group border-2 min-h-[200px]"
+              >
+                {imagePreviews.length > 0 ? (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 w-full">
+                    {imagePreviews.map((preview, i) => (
+                      <div key={i} className="relative aspect-square rounded-lg overflow-hidden bg-muted">
+                        {preview ? (
+                          <img src={preview} alt="" className="w-full h-full object-cover" />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-sm text-muted-foreground">
+                            PDF
+                          </div>
+                        )}
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            removeImage(i);
+                          }}
+                          className="absolute top-1 right-1 p-1 rounded-full bg-destructive text-destructive-foreground"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                    ))}
+                    {imagePreviews.length < 5 && (
+                      <div className="aspect-square rounded-lg border-2 border-dashed border-accent-beige/40 flex flex-col items-center justify-center text-muted-foreground hover:border-primary transition-colors">
+                        <CloudUpload className="w-8 h-8 mb-2" />
+                        <span className="text-xs">Ajouter</span>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <>
+                    <div className="size-20 rounded-full bg-white dark:bg-secondary-dark shadow-inner flex items-center justify-center mb-6 group-hover:bg-primary/10 transition-colors">
+                      <CloudUpload className="w-10 h-10 text-primary" />
+                    </div>
+                    <h4 className="text-lg font-bold mb-2">Déposez vos fichiers ici</h4>
+                    <p className="text-sm text-accent-beige/80 mb-6">Formats acceptés : JPG, PNG, PDF (Max 10MB)</p>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        fileInputRef.current?.click();
+                      }}
+                      className="border border-primary text-primary px-6 py-2 text-xs uppercase tracking-widest font-bold hover:bg-primary hover:text-white transition-all"
+                    >
+                      Parcourir mes dossiers
+                    </Button>
+                  </>
+                )}
               </div>
+
+              {imagePreviews.length > 0 && imagePreviews.length < 5 && (
+                <p className="text-xs text-muted-foreground mt-4 text-center">
+                  Cliquez pour ajouter d'autres fichiers ({imagePreviews.length}/5)
+                </p>
+              )}
             </div>
 
-            {/* Expert Advice */}
             <div className="mt-12 p-8 border border-accent-beige/10 bg-paper dark:bg-secondary-dark/30 rounded-sm">
               <div className="flex items-center gap-4 mb-4">
-                <div className="size-12 rounded-full overflow-hidden border-2 border-primary/20">
-                  <img
-                    alt="Artisan"
-                    className="w-full h-full object-cover"
-                    src="https://lh3.googleusercontent.com/aida-public/AB6AXuBPWlW1V_WB8y-vOvxcgRMAegm0uaK5rCfOEXZxeM1sbC0b3WM4QohiZrFS_tVTAVuMKGz3KFGVP5H93yoocVbIzJUd0qImXuLlXwJQlUMungiFff5pLPk-Cy-om2EQSEalkdfxn1r9xXZFQ_cnkCbzIMj04DwnVYdDDvSuBX7GUdrkE2kdsoycZg8CnDeMJqMsRyiHKVgFgNDkY9VbOoFehCt_Xq_5xCLsMbit3W3NMX8Ng1WsLHFTVPEUWjL1nu54xZuFKUHJ-6Qk"
-                  />
-                </div>
+                <img
+                  alt="Artisan"
+                  className="w-12 h-12 rounded-full object-cover border-2 border-primary/20"
+                  src="https://lh3.googleusercontent.com/aida-public/AB6AXuBPWlW1V_WB8y-vOvxcgRMAegm0uaK5rCfOEXZxeM1sbC0b3WM4QohiZrFS_tVTAVuMKGz3KFGVP5H93yoocVbIzJUd0qImXuLlXwJQlUMungiFff5pLPk-Cy-om2EQSEalkdfxn1r9xXZFQ_cnkCbzIMj04DwnVYdDDvSuBX7GUdrkE2kdsoycZg8CnDeMJqMsRyiHKVgFgNDkY9VbOoFehCt_Xq_5xCLsMbit3W3NMX8Ng1WsLHFTVPEUWjL1nu54xZuKGUHJ-6Qk"
+                />
                 <div>
                   <p className="text-sm font-bold uppercase tracking-wide">Conseil d'expert</p>
                   <p className="text-xs text-accent-beige italic">Nezha, Maître Joaillière</p>
                 </div>
               </div>
               <p className="text-sm italic text-secondary-dark/70 dark:text-white/70">
-                "Pour les pièces Beldi, n'hésitez pas à mentionner si vous souhaitez une finition martelée ou lisse. C'est ce qui donne toute l'âme au bijou."
+                "Pour les pièces Beldi, n'hésitez pas à mentionner si vous souhaitez une finition martelée ou lisse."
               </p>
             </div>
           </div>
@@ -201,40 +502,23 @@ const SurMesure = () => {
       <section className="py-16 md:py-24 bg-bg-paper-pattern">
         <div className="max-w-[1280px] mx-auto px-6">
           <div className="flex flex-col items-center mb-16 text-center">
-            <div className="w-24 h-px bg-accent-beige/40 mb-4 relative">
-              <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 size-2 rotate-45 border border-accent-beige bg-background-light"></div>
-            </div>
             <h3 className="font-script text-6xl text-primary mb-2">Processus</h3>
             <p className="text-accent-beige uppercase tracking-widest text-sm">Votre bijou sur-mesure en 3 étapes</p>
-            <div className="w-24 h-px bg-accent-beige/40 mt-4 relative">
-              <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 size-2 rotate-45 border border-accent-beige bg-background-light"></div>
-            </div>
           </div>
-          
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div className="group bg-paper dark:bg-[#2a2515] p-8 border border-accent-beige/20 shadow-sm hover:shadow-lg transition-all duration-500 hover:-translate-y-1 text-center">
-              <div className="w-20 h-20 bg-primary text-white rounded-full flex items-center justify-center text-3xl font-bold mb-6 mx-auto">
-                1
+            {[
+              { n: 1, title: 'Envoyez votre idée', desc: 'Image ou description de votre bijou' },
+              { n: 2, title: 'Devis personnalisé', desc: 'Nous vous contactons sous 48h' },
+              { n: 3, title: 'Fabrication', desc: 'Création artisanale de votre bijou' },
+            ].map((item) => (
+              <div key={item.n} className="group bg-paper dark:bg-[#2a2515] p-8 border border-accent-beige/20 shadow-sm hover:shadow-lg transition-all text-center">
+                <div className="w-20 h-20 bg-primary text-white rounded-full flex items-center justify-center text-3xl font-bold mb-6 mx-auto">
+                  {item.n}
+                </div>
+                <h4 className="font-display text-lg font-bold text-secondary-dark dark:text-white mb-3">{item.title}</h4>
+                <p className="text-accent-beige text-sm leading-relaxed">{item.desc}</p>
               </div>
-              <h4 className="font-display text-lg font-bold text-secondary-dark dark:text-white mb-3">Envoyez votre idée</h4>
-              <p className="text-accent-beige text-sm leading-relaxed">Image ou description de votre bijou</p>
-            </div>
-            
-            <div className="group bg-paper dark:bg-[#2a2515] p-8 border border-accent-beige/20 shadow-sm hover:shadow-lg transition-all duration-500 hover:-translate-y-1 text-center">
-              <div className="w-20 h-20 bg-primary text-white rounded-full flex items-center justify-center text-3xl font-bold mb-6 mx-auto">
-                2
-              </div>
-              <h4 className="font-display text-lg font-bold text-secondary-dark dark:text-white mb-3">Devis personnalisé</h4>
-              <p className="text-accent-beige text-sm leading-relaxed">Nous vous contactons sous 48h</p>
-            </div>
-            
-            <div className="group bg-paper dark:bg-[#2a2515] p-8 border border-accent-beige/20 shadow-sm hover:shadow-lg transition-all duration-500 hover:-translate-y-1 text-center">
-              <div className="w-20 h-20 bg-primary text-white rounded-full flex items-center justify-center text-3xl font-bold mb-6 mx-auto">
-                3
-              </div>
-              <h4 className="font-display text-lg font-bold text-secondary-dark dark:text-white mb-3">Fabrication</h4>
-              <p className="text-accent-beige text-sm leading-relaxed">Création artisanale de votre bijou</p>
-            </div>
+            ))}
           </div>
         </div>
       </section>
