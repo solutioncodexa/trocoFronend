@@ -18,6 +18,7 @@ import QuoteDialog, { QuoteData } from '@/components/admin/QuoteDialog';
 
 const AdminCustomRequests = () => {
   const queryClient = useQueryClient();
+  const { getGoldTypeName } = useGoldTypes();
   const { data: requests = [], isLoading } = useQuery({
     queryKey: ['customOrders'],
     queryFn: () => customOrdersApi.getAllCustomOrders(),

@@ -35,8 +35,16 @@ export function useGoldTypes() {
     color: GOLD_TYPE_COLORS[gt.code.toLowerCase()] ?? '#CCCCCC',
   }));
 
-  const getGoldTypeName = (code: string): string =>
-    goldTypeLabels[code?.toLowerCase()] ?? code ?? '';
+  const getGoldTypeName = (code: string | any): string => {
+    // Handle null, undefined, or non-string values
+    if (!code) return '';
+    
+    // Convert to string if it's not already
+    const codeStr = typeof code === 'string' ? code : String(code);
+    
+    // Look up the gold type name, fallback to the code itself
+    return goldTypeLabels[codeStr.toLowerCase()] || codeStr;
+  };
 
   return {
     goldTypes,

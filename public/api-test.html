@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>API Connection Test</title>
+</head>
+<body>
+    <h1>Testing API Connection</h1>
+    <div id="results"></div>
+    
+    <script>
+        const API_BASE_URL = 'http://localhost:8080/api';
+        const results = document.getElementById('results');
+        
+        async function testAPI() {
+            try {
+                results.innerHTML = '<p>Testing API connection...</p>';
+                
+                // Test products endpoint
+                const response = await fetch(`${API_BASE_URL}/products`);
+                const data = await response.json();
+                
+                results.innerHTML = `
+                    <h2>✅ API Connection Successful!</h2>
+                    <p><strong>Status:</strong> ${response.status}</p>
+                    <p><strong>Products found:</strong> ${data.data?.content?.length || 0}</p>
+                    <p><strong>First product:</strong> ${data.data?.content?.[0]?.name || 'None'}</p>
+                    
+                    <h3>Testing Filter Endpoint:</h3>
+                `;
+                
+                // Test filter endpoint
+                const filterResponse = await fetch(`${API_BASE_URL}/products/filter?category=beldi`);
+                const filterData = await filterResponse.json();
+                
+                results.innerHTML += `
+                    <p><strong>Filter Status:</strong> ${filterResponse.status}</p>
+                    <p><strong>Beldi products found:</strong> ${filterData.data?.length || 0}</p>
+                `;
+                
+            } catch (error) {
+                results.innerHTML = `
+                    <h2>❌ API Connection Failed!</h2>
+                    <p><strong>Error:</strong> ${error.message}</p>
+                    <p><strong>Check:</strong></p>
+                    <ul>
+                        <li>Backend is running on port 8080</li>
+                        <li>No CORS issues</li>
+                        <li>Network connectivity</li>
+                    </ul>
+                `;
+            }
+        }
+        
+        // Test on page load
+        testAPI();
+    </script>
+</body>
+</html>

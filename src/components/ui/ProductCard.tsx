@@ -76,7 +76,16 @@ const ProductCard = ({ product, className }: ProductCardProps) => {
           <img
             src={product.images[0]}
             alt={product.name}
-            className="w-full h-full bg-cover bg-center transition-transform duration-700 group-hover:scale-110"
+            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+            onError={(e) => {
+              // Fallback to generic placeholder if specific placeholder fails
+              const currentSrc = e.currentTarget.src;
+              if (currentSrc.includes('placeholder-beldi-fixed.svg') || currentSrc.includes('placeholder-modern-fixed.svg')) {
+                e.currentTarget.src = '/placeholder-jewelry.svg';
+              } else {
+                e.currentTarget.src = product.category === 'beldi' ? '/placeholder-beldi-fixed.svg' : '/placeholder-modern-fixed.svg';
+              }
+            }}
           />
 
           {/* Out of stock overlay */}

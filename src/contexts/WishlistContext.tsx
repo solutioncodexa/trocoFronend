@@ -13,6 +13,7 @@ interface WishlistContextType {
   toggleWishlist: (productId: string) => void;
   getWishlistProducts: () => Product[];
   wishlistCount: number;
+  clearWishlist: () => void;
 }
 
 const WishlistContext = createContext<WishlistContextType | undefined>(undefined);
@@ -109,6 +110,15 @@ export const WishlistProvider = ({ children }: { children: ReactNode }) => {
     return wishlistProductsData || [];
   };
 
+  const clearWishlist = () => {
+    setWishlist([]);
+    localStorage.removeItem('wishlist');
+    // Clear all items from wishlist via API
+    wishlist.forEach(productId => {
+      removeFromWishlistMutation.mutate(productId);
+    });
+  };
+
   return (
     <WishlistContext.Provider
       value={{
@@ -119,6 +129,7 @@ export const WishlistProvider = ({ children }: { children: ReactNode }) => {
         toggleWishlist,
         getWishlistProducts,
         wishlistCount: wishlist.length,
+        clearWishlist,
       }}
     >
       {children}

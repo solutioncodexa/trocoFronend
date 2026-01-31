@@ -14,6 +14,7 @@ const Cart = () => {
     getTotal,
     clearCart
   } = useCart();
+  const { getGoldTypeName } = useGoldTypes();
 
   if (items.length === 0) {
     return (
@@ -74,7 +75,7 @@ const Cart = () => {
                         <div className="space-y-1 text-sm text-accent-beige">
                           <p><span className="uppercase tracking-widest text-[10px] font-bold">Style:</span> {item.product.category === 'beldi' ? 'Beldi' : 'Moderne'}</p>
                           <p><span className="uppercase tracking-widest text-[10px] font-bold">Poids:</span> {item.product.weight}g</p>
-                          <p><span className="uppercase tracking-widest text-[10px] font-bold">Métal:</span> {getGoldTypeName(item.selectedGoldType ?? '')}</p>
+                          <p><span className="uppercase tracking-widest text-[10px] font-bold">Métal:</span> {getGoldTypeName(item.selectedGoldType || '')}</p>
                           {item.selectedSize && <p><span className="uppercase tracking-widest text-[10px] font-bold">Taille:</span> {item.selectedSize}</p>}
                         </div>
                       </div>

@@ -21,6 +21,7 @@ const ProductDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { addToCart } = useCart();
+  const { goldTypesWithColors, goldTypeLabels } = useGoldTypes(); // Move to top
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [quantity, setQuantity] = useState(1);
   const [selectedSize, setSelectedSize] = useState<string>('');
@@ -81,7 +82,6 @@ const ProductDetail = () => {
   }
 
   const requiresSize = product.availableSizes && product.availableSizes.length > 0;
-  const goldTypes: GoldType[] = ['yellow', 'white', 'rose'];
 
   const handleAddToCart = () => {
     if (requiresSize && !selectedSize) {
@@ -246,10 +246,10 @@ const ProductDetail = () => {
                     <SelectTrigger className="w-full">
                       <SelectValue placeholder="Sélectionner le type d'or" />
                     </SelectTrigger>
-                    <SelectContent>
-                      {goldTypes.map((type) => (
-                        <SelectItem key={type} value={type}>
-                          {goldTypeLabels[type] ?? type}
+                    <SelectContent className="z-50 bg-white dark:bg-secondary-dark border border-accent-beige/30">
+                      {goldTypesWithColors.map((type) => (
+                        <SelectItem key={type.id} value={type.id}>
+                          {type.label}
                         </SelectItem>
                       ))}
                     </SelectContent>

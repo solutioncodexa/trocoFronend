@@ -1,56 +1,113 @@
-import { Heart, ShoppingBag } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { Heart, ShoppingBag, ArrowRight, ArrowLeft, Plus } from 'lucide-react';
 import Layout from '@/components/layout/Layout';
-import ProductCard from '@/components/ui/ProductCard';
 import { useWishlist } from '@/contexts/WishlistContext';
+import { useCart } from '@/contexts/CartContext';
 import { Button } from '@/components/ui/button';
+import { formatPrice } from '@/utils/formatPrice';
+import { useGoldTypes } from '@/hooks/useGoldTypes';
+
 const Wishlist = () => {
   const {
     getWishlistProducts,
-    wishlistCount
+    wishlistCount,
+    removeFromWishlist,
+    clearWishlist
   } = useWishlist();
+  const { addToCart } = useCart();
+  const { getGoldTypeName } = useGoldTypes();
   const wishlistProducts = getWishlistProducts();
-  return <Layout>
-      {/* Hero */}
-      <section className="py-20 bg-accent">
-        <div className="container mx-auto px-4 text-center">
-          <div className="flex items-center justify-center gap-3 mb-4">
-            <Heart className="w-8 h-8 fill-primary bg-primary text-primary" />
-            <h1 className="font-display text-4xl md:text-5xl text-cream">
-              Mes Favoris
-            </h1>
-          </div>
-          <p className="font-body text-cream/80 max-w-2xl mx-auto">
-            {wishlistCount > 0 ? `Vous avez ${wishlistCount} produit${wishlistCount > 1 ? 's' : ''} dans vos favoris` : 'Votre liste de favoris est vide'}
-          </p>
-        </div>
-      </section>
 
-      <section className="py-12 bg-background">
-        <div className="container mx-auto px-4">
-          {wishlistProducts.length > 0 ? <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {wishlistProducts.map((product, index) => <div key={product.id} className="animate-fade-in" style={{
-            animationDelay: `${index * 0.05}s`
-          }}>
-                  <ProductCard product={product} />
-                </div>)}
-            </div> : <div className="text-center py-20">
-              <Heart className="w-16 h-16 text-muted-foreground mx-auto mb-6" />
-              <p className="font-display text-2xl text-muted-foreground mb-4">
-                Aucun produit dans vos favoris
-              </p>
-              <p className="font-body text-muted-foreground mb-8 max-w-md mx-auto">
-                Parcourez notre collection et cliquez sur le cœur pour ajouter des produits à vos favoris
-              </p>
-              <Button asChild size="lg" className="font-body">
-                <Link to="/boutique">
-                  <ShoppingBag className="w-5 h-5 mr-2" />
-                  Découvrir la boutique
-                </Link>
-              </Button>
-            </div>}
+  return (
+    <Layout>
+      <main className="max-w-[1280px] mx-auto px-6 py-16 md:py-24">
+        <div className="flex flex-col items-center mb-16 text-center">
+          <h2 className="font-script text-6xl text-primary mb-2">Vos Favoris</h2>
+          <div className="flex items-center justify-center gap-4">
+            <div className="h-px w-12 bg-accent-beige/30"></div>
+            <p className="text-accent-beige uppercase tracking-[0.3em] text-xs">Articles favoris pour vous</p>
+            <div className="h-px w-12 bg-accent-beige/30"></div>
+          </div>
         </div>
-      </section>
-    </Layout>;
+
+        {wishlistProducts.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+            {wishlistProducts.map((product, index) => (
+              <div key={product.id} className="group bg-white p-4 border border-accent-beige/20 shadow-sm transition-all duration-500 hover:shadow-xl">
+                <div className="relative overflow-hidden aspect-[4/5] mb-4 bg-background-light">
+                  <div 
+                    className="absolute inset-0 bg-cover bg-center transition-transform duration-700 group-hover:scale-110" 
+                    style={{ backgroundImage: `url(${product.images[0]})` }}
+                  ></div>
+                  <button 
+                    onClick={() => removeFromWishlist(product.id)}
+                    className="absolute top-4 right-4 text-primary bg-white/80 p-1.5 rounded-full shadow-sm hover:scale-110 transition-transform"
+                  >
+                    <Heart className="w-4 h-4 fill-current" />
+                  </button>
+                  <div className="absolute bottom-4 left-0 right-0 flex justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                    <Link 
+                      to={`/product/${product.id}`}
+                      className="text-[10px] text-accent-beige uppercase tracking-[0.2em] hover:text-secondary-dark transition-colors font-bold underline underline-offset-4"
+                    >
+                      Aperçu rapide
+                    </Link>
+                  </div>
+                </div>
+                <div className="text-center">
+                  <h4 className="text-base font-bold text-secondary-dark mb-1 font-display tracking-tight">{product.name}</h4>
+                  <p className="text-[11px] text-accent-beige mb-3 uppercase tracking-widest">
+                    {getGoldTypeName(product.goldType || '')}
+                  </p>
+                  <div className="flex flex-col gap-1 mb-4">
+                    <p className="text-primary font-bold text-lg">{formatPrice(product.price)}</p>
+                    <p className="text-accent-beige/60 text-[10px]">~ {Math.round(product.price * 11)} MAD</p>
+                  </div>
+                  <button 
+                    onClick={() => {
+                      addToCart(product, 1, product.availableSizes?.[0], product.goldType);
+                    }}
+                    className="w-full bg-secondary-dark text-white py-3 text-[10px] uppercase tracking-widest font-bold hover:bg-primary transition-colors duration-300"
+                  >
+                    Ajouter au panier
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="hidden flex-col items-center py-20 text-center animate-fade-in">
+            <Heart className="w-16 h-16 text-accent-beige/40 mb-6" />
+            <p className="text-xl font-display text-secondary-dark mb-4 italic">Votre liste est vide pour le moment.</p>
+            <p className="text-accent-beige text-sm tracking-wide mb-10">Laissez-vous séduire par nos dernières créations.</p>
+            <Button 
+              asChild 
+              className="bg-primary text-white px-10 py-4 text-xs uppercase tracking-widest font-bold shadow-lg hover:bg-secondary-dark transition-all"
+            >
+              <Link to="/boutique">
+                Parcourir les collections
+              </Link>
+            </Button>
+          </div>
+        )}
+
+        {wishlistProducts.length > 0 && (
+          <div className="flex justify-center mt-12 gap-4">
+            <Link to="/boutique" className="text-xs uppercase tracking-widest text-accent-beige hover:text-primary transition-colors flex items-center gap-2">
+              <ArrowLeft className="text-sm" />
+              Continuer vos achats
+            </Link>
+            <button 
+              onClick={clearWishlist}
+              className="text-xs uppercase tracking-widest text-accent-beige hover:text-red-800 transition-colors border-b border-accent-beige/30 pb-0.5"
+            >
+              Vider les favoris
+            </button>
+          </div>
+        )}
+      </main>
+    </Layout>
+  );
 };
+
 export default Wishlist;
