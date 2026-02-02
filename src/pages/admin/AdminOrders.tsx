@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
-import { ordersApi } from '@/services/api/orders';
+import { ordersApi, getImageUrl } from '@/services/api';
 import { OrderDTO } from '@/types/api';
 import { formatPrice } from '@/utils/formatPrice';
 import { toast } from 'sonner';
@@ -163,6 +163,7 @@ const AdminOrders = () => {
                 <th className="px-4 py-3 text-left font-body text-sm font-medium text-muted-foreground">ID</th>
                 <th className="px-4 py-3 text-left font-body text-sm font-medium text-muted-foreground">Client</th>
                 <th className="px-4 py-3 text-left font-body text-sm font-medium text-muted-foreground">Ville</th>
+                <th className="px-4 py-3 text-left font-body text-sm font-medium text-muted-foreground">Produit</th>
                 <th className="px-4 py-3 text-left font-body text-sm font-medium text-muted-foreground">Total</th>
                 <th className="px-4 py-3 text-left font-body text-sm font-medium text-muted-foreground">Date</th>
                 <th className="px-4 py-3 text-left font-body text-sm font-medium text-muted-foreground">Statut</th>
@@ -178,6 +179,31 @@ const AdminOrders = () => {
                     <p className="font-body text-xs text-muted-foreground">{order.customer?.phone}</p>
                   </td>
                   <td className="px-4 py-3 font-body text-muted-foreground">{order.customer?.city ?? '—'}</td>
+                  <td className="px-4 py-3">
+                    {order.items && order.items.length > 0 ? (
+                      <div className="flex items-center gap-2">
+                        {order.items[0].product?.images?.[0] ? (
+                          <img
+                            src={getImageUrl(order.items[0].product.images[0])}
+                            alt={order.items[0].product?.name}
+                            className="w-10 h-10 rounded object-cover"
+                          />
+                        ) : (
+                          <div className="w-10 h-10 bg-muted rounded flex items-center justify-center">
+                            <span className="text-xs text-muted-foreground">—</span>
+                          </div>
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <p className="font-body text-sm truncate">{order.items[0].product?.name}</p>
+                          {order.items.length > 1 && (
+                            <p className="font-body text-xs text-muted-foreground">+{order.items.length - 1} article(s)</p>
+                          )}
+                        </div>
+                      </div>
+                    ) : (
+                      <span className="font-body text-sm text-muted-foreground">—</span>
+                    )}
+                  </td>
                   <td className="px-4 py-3 font-body font-medium">{formatPrice(order.total ?? 0)}</td>
                   <td className="px-4 py-3 font-body text-sm text-muted-foreground">
                     {order.createdAt ? formatDate(order.createdAt) : '—'}
@@ -269,7 +295,7 @@ const AdminOrders = () => {
                       className="flex items-center gap-4 p-3 bg-muted/30 rounded-lg"
                     >
                       <img
-                        src={item.product?.images?.[0]}
+                        src={getImageUrl(item.product?.images?.[0])}
                         alt={item.product?.name}
                         className="w-16 h-16 rounded-lg object-cover"
                       />

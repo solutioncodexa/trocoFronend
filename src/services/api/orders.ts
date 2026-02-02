@@ -32,7 +32,7 @@ export const ordersApi = {
     return apiRequest<OrderDTO>(url, {
       method: 'POST',
       body: JSON.stringify(order),
-    });
+    }, true); // skipAuth = true pour les commandes client
   },
 
   // Mettre à jour le statut d'une commande

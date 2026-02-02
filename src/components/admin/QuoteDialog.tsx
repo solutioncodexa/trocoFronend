@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Calculator, Send, FileText, Percent } from 'lucide-react';
+import { Calculator, Send, FileText, Percent, MessageCircle, Mail } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -49,12 +49,13 @@ const QuoteDialog = ({ request, isOpen, onClose, onQuoteSent }: QuoteDialogProps
   const [weight, setWeight] = useState<number>(0);
   const [goldPricePerGram, setGoldPricePerGram] = useState<number>(DEFAULT_GOLD_PRICES.yellow);
   const [laborCost, setLaborCost] = useState<number>(0);
-  const [stonesDescription, setStonesDescription] = useState('');
+  const [stonesDescription, setStonesDescription] = useState<string>('');
   const [stonesCost, setStonesCost] = useState<number>(0);
   const [discount, setDiscount] = useState<number>(0);
   const [validDays, setValidDays] = useState<number>(7);
-  const [notes, setNotes] = useState('');
+  const [notes, setNotes] = useState<string>('');
   const [isSending, setIsSending] = useState(false);
+  const [sendMode, setSendMode] = useState<'whatsapp' | 'email' | 'both'>('both');
 
   // Reset form when request changes
   useEffect(() => {
@@ -120,10 +121,49 @@ const QuoteDialog = ({ request, isOpen, onClose, onQuoteSent }: QuoteDialogProps
       status: 'sent',
     };
 
+    // Envoyer par WhatsApp et/ou Email
+    if (sendMode === 'whatsapp' || sendMode === 'both') {
+      const message = encodeURIComponent(
+        `🔹 *DEVIS ${quote.id}* 🔹\n\n` +
+        `👤 *Client*: ${request.customer.fullName}\n` +
+        `📞 *Téléphone*: ${request.customer.phone}\n` +
+        `📧 *Email*: ${request.customer.email}\n\n` +
+        `💰 *Total*: ${formatPrice(totalPrice)}\n` +
+        `⏰ *Validité*: ${validUntil.toLocaleDateString('fr-FR')}\n\n` +
+        `📝 *Notes*: ${notes || 'Aucune'}\n\n` +
+        `Pour confirmer, veuillez nous contacter.\n\n` +
+        `*Ce devis a été envoyé par email également.*`
+      );
+      
+      window.open(`https://wa.me/${request.customer.phone.replace(/[^0-9]/g, '')}?text=${message}`, '_blank');
+      toast.success('Message WhatsApp ouvert');
+    }
+    
+    if (sendMode === 'email' || sendMode === 'both') {
+      const subject = encodeURIComponent(`Devis ${quote.id} - ${request.customer.fullName}`);
+      const body = encodeURIComponent(
+        `Cher/Chère ${request.customer.fullName},\n\n` +
+        `Veuillez trouver ci-dessous votre devis:\n\n` +
+        `Devis: ${quote.id}\n` +
+        `Total: ${formatPrice(totalPrice)}\n` +
+        `Validité: ${validUntil.toLocaleDateString('fr-FR')}\n\n` +
+        `Notes: ${notes || 'Aucune'}\n\n` +
+        `Pour toute question, n'hésitez pas à nous contacter.\n\n` +
+        `Cordialement,\n` +
+        `L'équipe`
+      );
+      
+      window.open(`mailto:${request.customer.email}?subject=${subject}&body=${body}`, '_blank');
+      toast.success('Client email ouvert');
+    }
+    
+    if (sendMode === 'both') {
+      toast.success('Devis envoyé par WhatsApp et Email');
+    }
+
     onQuoteSent(request.id, quote);
     setIsSending(false);
     onClose();
-    toast.success(`Devis envoyé à ${request.customer.fullName}`);
   };
 
   const formatPrice = (price: number) => {
@@ -150,9 +190,45 @@ const QuoteDialog = ({ request, isOpen, onClose, onQuoteSent }: QuoteDialogProps
         <div className="space-y-6">
           {/* Customer Info */}
           <div className="bg-muted/50 rounded-lg p-4">
-            <p className="font-body font-medium">{request.customer.fullName}</p>
-            <p className="font-body text-sm text-muted-foreground">{request.customer.email}</p>
-            <p className="font-body text-sm text-muted-foreground">{request.customer.phone}</p>
+            <div className="flex justify-between items-start mb-3">
+              <div>
+                <p className="font-body font-medium text-lg">{request.customer.fullName}</p>
+                <p className="font-body text-sm text-muted-foreground">{request.customer.email}</p>
+                <p className="font-body text-sm text-muted-foreground">{request.customer.phone}</p>
+              </div>
+              <div className="flex gap-1">
+                <Button
+                  variant={sendMode === 'whatsapp' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setSendMode('whatsapp')}
+                  className="flex items-center gap-1"
+                >
+                  <MessageCircle className="w-3 h-3" />
+                  <span className="hidden sm:inline">WhatsApp</span>
+                </Button>
+                <Button
+                  variant={sendMode === 'email' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setSendMode('email')}
+                  className="flex items-center gap-1"
+                >
+                  <Mail className="w-3 h-3" />
+                  <span className="hidden sm:inline">Email</span>
+                </Button>
+                <Button
+                  variant={sendMode === 'both' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setSendMode('both')}
+                  className="flex items-center gap-1"
+                >
+                  <Send className="w-3 h-3" />
+                  <span className="hidden sm:inline">Les deux</span>
+                </Button>
+              </div>
+            </div>
+            <div className="text-xs text-muted-foreground">
+              <p>Mode d'envoi: <span className="font-medium">{sendMode === 'whatsapp' ? 'WhatsApp' : sendMode === 'email' ? 'Email' : 'Les deux'}</span></p>
+            </div>
           </div>
 
           {/* Gold Details */}
@@ -336,8 +412,22 @@ const QuoteDialog = ({ request, isOpen, onClose, onQuoteSent }: QuoteDialogProps
               'Envoi en cours...'
             ) : (
               <>
-                <Send className="w-4 h-4 mr-2" />
-                Envoyer le devis
+                {sendMode === 'both' ? (
+                  <>
+                    <Send className="w-4 h-4 mr-2" />
+                    Envoyer par WhatsApp et Email
+                  </>
+                ) : sendMode === 'whatsapp' ? (
+                  <>
+                    <MessageCircle className="w-4 h-4 mr-2" />
+                    Envoyer par WhatsApp
+                  </>
+                ) : (
+                  <>
+                    <Mail className="w-4 h-4 mr-2" />
+                    Envoyer par Email
+                  </>
+                )}
               </>
             )}
           </Button>

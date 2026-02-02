@@ -236,11 +236,17 @@ const AdminCustomRequests = () => {
             >
               {/* Image */}
               <div className="relative aspect-video">
-                <img
-                  src={request.imageUrl}
-                  alt="Modèle"
-                  className="w-full h-full object-cover"
-                />
+                {request.imageUrl ? (
+                  <img
+                    src={getImageUrl(request.imageUrl)}
+                    alt="Modèle"
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-full bg-muted flex items-center justify-center">
+                    <FileText className="w-8 h-8 text-muted-foreground" />
+                  </div>
+                )}
                 <Badge className={cn('absolute top-2 right-2', getStatusStyle(request.status))}>
                   {getStatusLabel(request.status)}
                 </Badge>
@@ -325,220 +331,223 @@ const AdminCustomRequests = () => {
         </div>
       )}
 
-      {/* Request Detail Modal */}
+      {/* Request Detail Modal - Responsive Design */}
       <Dialog open={isDetailOpen} onOpenChange={setIsDetailOpen}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="font-display text-xl">
+        <DialogContent className="max-w-3xl w-[90vw] sm:w-[85vw] md:w-[80vw] lg:w-[75vw] max-h-[85vh] overflow-hidden flex flex-col">
+          <DialogHeader className="flex-shrink-0 pb-2 border-b">
+            <DialogTitle className="font-display text-sm sm:text-base truncate">
               Demande {selectedRequest?.id}
             </DialogTitle>
           </DialogHeader>
 
           {selectedRequest && (
-            <div className="space-y-6">
-              {/* Image */}
-              <div className="relative aspect-video rounded-lg overflow-hidden bg-muted">
-                {selectedRequest.imageUrl ? (
-                  <img
-                    src={getImageUrl(selectedRequest.imageUrl)}
-                    alt="Modèle"
-                    className="w-full h-full object-contain"
-                  />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center text-muted-foreground text-sm">
-                    Aucune image
+            <div className="flex-1 overflow-y-auto">
+              {/* Vertical Layout - Image on top, content below for all devices */}
+              <div className="flex flex-col gap-3 p-3">
+                
+                {/* Image - Always on top */}
+                <div className="order-1">
+                  <div className="relative bg-muted rounded-lg overflow-hidden">
+                    <div className="aspect-[3/2] w-full max-w-full">
+                      {selectedRequest.imageUrl ? (
+                        <img
+                          src={getImageUrl(selectedRequest.imageUrl)}
+                          alt="Modèle"
+                          className="w-full h-full object-contain"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-muted-foreground">
+                          <FileText className="w-6 h-6 sm:w-8 sm:h-8" />
+                        </div>
+                      )}
+                    </div>
+                    {selectedRequest.imageUrl && (
+                      <a
+                        href={getImageUrl(selectedRequest.imageUrl)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="absolute top-1 right-1 p-1 sm:p-1.5 bg-black/70 text-white rounded hover:bg-black/80 transition-colors"
+                      >
+                        <ExternalLink className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
+                      </a>
+                    )}
                   </div>
-                )}
-                {selectedRequest.imageUrl && (
-                  <a
-                    href={getImageUrl(selectedRequest.imageUrl)}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="absolute top-2 right-2 p-2 bg-charcoal/80 text-cream rounded-lg hover:bg-charcoal"
-                  >
-                    <ExternalLink className="w-4 h-4" />
-                  </a>
-                )}
-              </div>
 
-              {/* Status and Type */}
-              <div className="flex items-center gap-3 flex-wrap">
-                <Badge className={cn('text-sm', getStatusStyle(selectedRequest.status))}>
-                  {getStatusLabel(selectedRequest.status)}
-                </Badge>
-                <Badge variant="outline">{getTypeLabel(selectedRequest.type)}</Badge>
-                <Badge variant="secondary" className="capitalize">{selectedRequest.style}</Badge>
-                <span className="font-body text-sm text-muted-foreground">
-                  ~{selectedRequest.weight}g
-                </span>
-              </div>
-
-              {/* Quote Info if exists */}
-              {quotes[selectedRequest.id] && (
-                <div className="bg-muted/50 rounded-lg p-4 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <h3 className="font-display text-lg flex items-center gap-2">
-                      <FileText className="w-5 h-5" />
-                      Devis {quotes[selectedRequest.id].id}
-                    </h3>
-                    <Badge className={getQuoteStatusStyle(quotes[selectedRequest.id].status)}>
-                      {getQuoteStatusLabel(quotes[selectedRequest.id].status)}
+                  {/* Status Badges */}
+                  <div className="flex flex-wrap gap-1 mt-2">
+                    <Badge className={cn('text-[10px] px-1 py-0.5', getStatusStyle(selectedRequest.status))}>
+                      {getStatusLabel(selectedRequest.status)}
                     </Badge>
+                    <Badge variant="outline" className="text-[10px] px-1 py-0.5">{getTypeLabel(selectedRequest.type)}</Badge>
+                    <Badge variant="secondary" className="capitalize text-[10px] px-1 py-0.5">{selectedRequest.style}</Badge>
                   </div>
+                </div>
+
+                {/* Content - Always below image */}
+                <div className="order-2 space-y-3">
                   
-                  <div className="grid sm:grid-cols-3 gap-4 text-sm">
-                    <div>
-                      <p className="text-muted-foreground">Type d'or</p>
-                      <p className="font-medium">{getGoldTypeName(quotes[selectedRequest.id].goldType)}</p>
+                  {/* Quote Info */}
+                  {quotes[selectedRequest.id] && (
+                    <div className="bg-blue-50 dark:bg-blue-950/20 rounded-lg p-2 border border-blue-200 dark:border-blue-800">
+                      <div className="flex items-center justify-between mb-1">
+                        <h3 className="font-display text-xs sm:text-sm flex items-center gap-1 truncate">
+                          <FileText className="w-3 h-3" />
+                          Devis {quotes[selectedRequest.id].id}
+                        </h3>
+                        <Badge className={cn('text-[10px] px-1 py-0.5', getQuoteStatusStyle(quotes[selectedRequest.id].status))}>
+                          {getQuoteStatusLabel(quotes[selectedRequest.id].status)}
+                        </Badge>
+                      </div>
+                      
+                      <div className="grid grid-cols-3 gap-1 text-[10px]">
+                        <div>
+                          <p className="text-muted-foreground truncate">Or</p>
+                          <p className="font-medium truncate">{getGoldTypeName(quotes[selectedRequest.id].goldType)}</p>
+                        </div>
+                        <div>
+                          <p className="text-muted-foreground">Poids</p>
+                          <p className="font-medium">{quotes[selectedRequest.id].weight}g</p>
+                        </div>
+                        <div>
+                          <p className="text-muted-foreground">Total</p>
+                          <p className="font-display text-xs sm:text-sm font-bold text-blue-600 dark:text-blue-400 truncate">
+                            {formatPrice(quotes[selectedRequest.id].totalPrice)}
+                          </p>
+                        </div>
+                      </div>
+
+                      {quotes[selectedRequest.id].status === 'sent' && (
+                        <div className="flex gap-1 mt-2">
+                          <Button
+                            size="sm"
+                            onClick={() => handleQuoteStatusChange(selectedRequest.id, 'accepted')}
+                            className="text-[10px] px-1 py-0.5 h-6 flex-1"
+                          >
+                            <Check className="w-2 h-2 mr-0.5" />
+                            Oui
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            onClick={() => handleQuoteStatusChange(selectedRequest.id, 'rejected')}
+                            className="text-[10px] px-1 py-0.5 h-6 flex-1"
+                          >
+                            <X className="w-2 h-2 mr-0.5" />
+                            Non
+                          </Button>
+                        </div>
+                      )}
                     </div>
-                    <div>
-                      <p className="text-muted-foreground">Poids</p>
-                      <p className="font-medium">{quotes[selectedRequest.id].weight}g</p>
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground">Total</p>
-                      <p className="font-display text-xl">{formatPrice(quotes[selectedRequest.id].totalPrice)}</p>
+                  )}
+
+                  {/* Customer Info */}
+                  <div className="bg-gray-50 dark:bg-gray-900/50 rounded-lg p-2 border">
+                    <h3 className="font-display text-xs sm:text-sm mb-1">Client</h3>
+                    <div className="space-y-1 text-[10px] sm:text-xs">
+                      <p className="font-medium truncate">{selectedRequest.customer?.fullName}</p>
+                      <div className="flex items-center gap-1">
+                        <Phone className="w-2.5 h-2.5 text-muted-foreground flex-shrink-0" />
+                        <a href={`tel:${selectedRequest.customer?.phone}`} className="text-primary hover:underline truncate">
+                          {selectedRequest.customer?.phone}
+                        </a>
+                      </div>
+                      {selectedRequest.customer?.email && (
+                        <div className="flex items-center gap-1">
+                          <Mail className="w-2.5 h-2.5 text-muted-foreground flex-shrink-0" />
+                          <a href={`mailto:${selectedRequest.customer.email}`} className="text-primary hover:underline truncate">
+                            {selectedRequest.customer.email}
+                          </a>
+                        </div>
+                      )}
                     </div>
                   </div>
 
-                  <Separator />
+                  {/* Description */}
+                  <div>
+                    <h3 className="font-display text-xs sm:text-sm mb-1">Description</h3>
+                    <p className="text-[10px] sm:text-xs text-muted-foreground leading-relaxed break-words">
+                      {selectedRequest.description}
+                    </p>
+                  </div>
 
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground">
-                      Valide jusqu'au {new Date(quotes[selectedRequest.id].validUntil).toLocaleDateString('fr-FR')}
-                    </span>
-                    {quotes[selectedRequest.id].status === 'sent' && (
-                      <div className="flex gap-2">
-                        <Button
-                          size="sm"
-                          variant="default"
-                          onClick={() => handleQuoteStatusChange(selectedRequest.id, 'accepted')}
-                        >
-                          <Check className="w-4 h-4 mr-1" />
-                          Accepté
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="destructive"
-                          onClick={() => handleQuoteStatusChange(selectedRequest.id, 'rejected')}
-                        >
-                          <X className="w-4 h-4 mr-1" />
-                          Refusé
-                        </Button>
-                      </div>
+                  {/* Admin Notes */}
+                  <div>
+                    <h3 className="font-display text-xs sm:text-sm mb-1 flex items-center gap-1">
+                      <MessageSquare className="w-3 h-3" />
+                      Notes
+                    </h3>
+                    <Textarea
+                      placeholder="Ajouter des notes sur cette demande..."
+                      value={adminNotes[selectedRequest.id] || ''}
+                      onChange={(e) => setAdminNotes(prev => ({
+                        ...prev,
+                        [selectedRequest.id]: e.target.value
+                      }))}
+                      rows={2}
+                      className="text-[10px] sm:text-xs p-2"
+                    />
+                    <Button
+                      size="sm"
+                      onClick={() => handleSaveNotes(selectedRequest.id)}
+                      className="mt-1 text-[10px] px-2 py-0.5 h-6 w-full"
+                    >
+                      Enregistrer
+                    </Button>
+                  </div>
+
+                  {/* Meta Info */}
+                  <div className="text-[10px] text-muted-foreground border-t pt-1">
+                    <p>Reçue le {formatDate(selectedRequest.createdAt)}</p>
+                    <p>~{selectedRequest.weight}g</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Footer Actions */}
+              <div className="flex-shrink-0 border-t p-3">
+                <div className="flex flex-col gap-2">
+                  {!quotes[selectedRequest.id] && (
+                    <Button
+                      onClick={() => handleCreateQuote(selectedRequest)}
+                      className="w-full text-xs px-2 py-1 h-7"
+                    >
+                      <Calculator className="w-3 h-3 mr-1" />
+                      Créer devis
+                    </Button>
+                  )}
+                  
+                  <Select
+                    value={selectedRequest.status}
+                    onValueChange={(value) => handleStatusChange(selectedRequest.id, value)}
+                  >
+                    <SelectTrigger className="w-full h-7 text-xs">
+                      <SelectValue placeholder="Statut" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="pending">En attente</SelectItem>
+                      <SelectItem value="contacted">Contacté</SelectItem>
+                      <SelectItem value="completed">Terminée</SelectItem>
+                    </SelectContent>
+                  </Select>
+
+                  <div className="flex gap-1">
+                    <Button variant="outline" asChild className="flex-1 text-[10px] px-1 py-0.5 h-7">
+                      <a href={`tel:${selectedRequest.customer?.phone}`}>
+                        <Phone className="w-2.5 h-2.5 mr-0.5" />
+                        Tel
+                      </a>
+                    </Button>
+                    {selectedRequest.customer?.email && (
+                      <Button variant="outline" asChild className="flex-1 text-[10px] px-1 py-0.5 h-7">
+                        <a href={`mailto:${selectedRequest.customer.email}`}>
+                          <Mail className="w-2.5 h-2.5 mr-0.5" />
+                          Mail
+                        </a>
+                      </Button>
                     )}
                   </div>
                 </div>
-              )}
-
-              {/* Customer Info */}
-              <div className="bg-muted/50 rounded-lg p-4 space-y-3">
-                <h3 className="font-display text-lg">Informations client</h3>
-                <div className="grid sm:grid-cols-2 gap-4">
-                  <div>
-                    <p className="font-body font-medium">{selectedRequest.customer?.fullName}</p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Phone className="w-4 h-4 text-muted-foreground" />
-                    <a
-                      href={`tel:${selectedRequest.customer?.phone}`}
-                      className="font-body text-primary hover:underline"
-                    >
-                      {selectedRequest.customer?.phone}
-                    </a>
-                  </div>
-                  {selectedRequest.customer?.email && (
-                  <div className="flex items-center gap-2 sm:col-span-2">
-                    <Mail className="w-4 h-4 text-muted-foreground" />
-                    <a
-                      href={`mailto:${selectedRequest.customer.email}`}
-                      className="font-body text-primary hover:underline"
-                    >
-                      {selectedRequest.customer.email}
-                    </a>
-                  </div>
-                  )}
-                </div>
               </div>
-
-              {/* Description */}
-              <div>
-                <h3 className="font-display text-lg mb-2">Description du projet</h3>
-                <p className="font-body text-muted-foreground leading-relaxed">
-                  {selectedRequest.description}
-                </p>
-              </div>
-
-              {/* Admin Notes */}
-              <div>
-                <h3 className="font-display text-lg mb-2 flex items-center gap-2">
-                  <MessageSquare className="w-5 h-5" />
-                  Notes internes
-                </h3>
-                <Textarea
-                  placeholder="Ajouter des notes sur cette demande..."
-                  value={adminNotes[selectedRequest.id] || ''}
-                  onChange={(e) => setAdminNotes(prev => ({
-                    ...prev,
-                    [selectedRequest.id]: e.target.value
-                  }))}
-                  rows={3}
-                />
-                <Button
-                  size="sm"
-                  className="mt-2"
-                  onClick={() => handleSaveNotes(selectedRequest.id)}
-                >
-                  Enregistrer les notes
-                </Button>
-              </div>
-
-              {/* Date */}
-              <p className="font-body text-sm text-muted-foreground">
-                Reçue le {formatDate(selectedRequest.createdAt)}
-              </p>
-
-              {/* Actions */}
-              <DialogFooter className="flex-col sm:flex-row gap-3">
-                {!quotes[selectedRequest.id] && (
-                  <Button
-                    className="bg-primary text-primary-foreground"
-                    onClick={() => handleCreateQuote(selectedRequest)}
-                  >
-                    <Calculator className="w-4 h-4 mr-2" />
-                    Créer un devis
-                  </Button>
-                )}
-                <Select
-                  value={selectedRequest.status}
-                  onValueChange={(value) => handleStatusChange(selectedRequest.id, value)}
-                >
-                  <SelectTrigger className="w-full sm:w-48">
-                    <SelectValue placeholder="Changer le statut" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="pending">En attente</SelectItem>
-                    <SelectItem value="contacted">Contacté</SelectItem>
-                    <SelectItem value="completed">Terminée</SelectItem>
-                  </SelectContent>
-                </Select>
-                <div className="flex gap-2">
-                  <Button variant="outline" asChild>
-                    <a href={`tel:${selectedRequest.customer?.phone}`}>
-                      <Phone className="w-4 h-4 mr-2" />
-                      Appeler
-                    </a>
-                  </Button>
-                  {selectedRequest.customer?.email && (
-                  <Button variant="outline" asChild>
-                    <a href={`mailto:${selectedRequest.customer.email}`}>
-                      <Mail className="w-4 h-4 mr-2" />
-                      Email
-                    </a>
-                  </Button>
-                  )}
-                </div>
-              </DialogFooter>
             </div>
           )}
         </DialogContent>

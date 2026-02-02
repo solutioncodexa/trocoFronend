@@ -14,7 +14,7 @@ export const wishlistApi = {
   getWishlist: async (customerId?: number): Promise<ProductDTO[]> => {
     const id = customerId || getCustomerId();
     const url = buildApiUrl(`/wishlist/${id}`);
-    return apiRequest<ProductDTO[]>(url);
+    return apiRequest<ProductDTO[]>(url, {}, true);
   },
 
   // Ajouter un produit à la wishlist
@@ -23,7 +23,7 @@ export const wishlistApi = {
     const url = buildApiUrl(`/wishlist/${id}/products/${productId}`);
     return apiRequest<void>(url, {
       method: 'POST',
-    });
+    }, true);
   },
 
   // Supprimer un produit de la wishlist
@@ -32,7 +32,7 @@ export const wishlistApi = {
     const url = buildApiUrl(`/wishlist/${id}/products/${productId}`);
     return apiRequest<void>(url, {
       method: 'DELETE',
-    });
+    }, true);
   },
 
   // Vider la wishlist
@@ -41,6 +41,6 @@ export const wishlistApi = {
     const url = buildApiUrl(`/wishlist/${id}`);
     return apiRequest<void>(url, {
       method: 'DELETE',
-    });
+    }, true);
   },
 };
