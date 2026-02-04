@@ -40,6 +40,7 @@ export const productsApi = {
   getAllProducts: async (params: ProductQueryParams = {}): Promise<PageResponse<ProductDTO>> => {
     const { page = 0, size = 20, sortBy = 'createdAt', sortDir = 'DESC' } = params;
     const url = buildApiUrl(`/products?page=${page}&size=${size}&sortBy=${sortBy}&sortDir=${sortDir}`);
+    console.log('Fetching products from:', url);
     return apiRequest<PageResponse<ProductDTO>>(url);
   },
 

@@ -35,6 +35,9 @@ import AdminCategories from "./pages/admin/AdminCategories";
 import AdminProductTypes from "./pages/admin/AdminProductTypes";
 import AdminCollections from "./pages/admin/AdminCollections";
 import AdminGoldTypes from "./pages/admin/AdminGoldTypes";
+import AdminFeaturedProducts from "./pages/admin/AdminFeaturedProducts";
+import AdminTopBarMessages from "./pages/admin/AdminTopBarMessages";
+import AdminPromoModals from "./pages/admin/AdminPromoModals";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -83,6 +86,9 @@ const App = () => (
                 <Route path="/admin/categories" element={<ProtectedAdminRoute><AdminCategories /></ProtectedAdminRoute>} />
                 <Route path="/admin/types" element={<ProtectedAdminRoute><AdminProductTypes /></ProtectedAdminRoute>} />
                 <Route path="/admin/types-or" element={<ProtectedAdminRoute><AdminGoldTypes /></ProtectedAdminRoute>} />
+                <Route path="/admin/produits-selectionnes" element={<ProtectedAdminRoute><AdminFeaturedProducts /></ProtectedAdminRoute>} />
+                <Route path="/admin/top-bar-messages" element={<ProtectedAdminRoute><AdminTopBarMessages /></ProtectedAdminRoute>} />
+                <Route path="/admin/promo-modals" element={<ProtectedAdminRoute><AdminPromoModals /></ProtectedAdminRoute>} />
                 <Route path="/admin/*" element={<Navigate to="/admin" replace />} />
                 
                 {/* Catch-all */}

@@ -1,18 +1,22 @@
 import { ReactNode } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import {
-  LayoutDashboard,
-  Package,
-  ShoppingCart,
-  Palette,
-  FolderOpen,
+import { 
+  LayoutDashboard, 
+  ShoppingCart, 
+  Package, 
+  Palette, 
+  Star, 
+  MessageSquare, 
+  Image as ImageIcon,
   Tag,
-  Layers,
   Gem,
+  FolderOpen,
+  Layers,
+  ChevronRight,
+  Settings,
   LogOut,
   Menu,
-  X,
-  ChevronRight,
+  X
 } from 'lucide-react';
 import AdminNotification from './AdminNotification';
 import { Button } from '@/components/ui/button';
@@ -33,6 +37,9 @@ const navSections = [
       { href: '/admin/dashboard', label: 'Tableau de bord', icon: LayoutDashboard },
       { href: '/admin/commandes', label: 'Commandes', icon: ShoppingCart },
       { href: '/admin/personnalisations', label: 'Personnalisations', icon: Palette },
+      { href: '/admin/produits-selectionnes', label: 'Produits Sélectionnés', icon: Star },
+      { href: '/admin/top-bar-messages', label: 'Messages Top Bar', icon: MessageSquare },
+      { href: '/admin/promo-modals', label: 'Promo Modals', icon: ImageIcon },
     ],
   },
   {
@@ -54,7 +61,7 @@ const AdminLayout = ({ children, title, breadcrumbs }: AdminLayoutProps) => {
   const location = useLocation();
   const navigate = useNavigate();
   const { logout, isAuthenticated } = useAdmin();
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true); // Commence ouvert sur desktop
 
   // Redirect if not authenticated
   if (!isAuthenticated) {
@@ -70,7 +77,7 @@ const AdminLayout = ({ children, title, breadcrumbs }: AdminLayoutProps) => {
   const isActive = (href: string) => location.pathname === href;
 
   return (
-    <div className="min-h-screen bg-background flex">
+    <div className="h-screen bg-background flex overflow-hidden">
       {/* Mobile sidebar overlay */}
       {isSidebarOpen && (
         <div
@@ -82,17 +89,17 @@ const AdminLayout = ({ children, title, breadcrumbs }: AdminLayoutProps) => {
       {/* Sidebar */}
       <aside
         className={cn(
-          'fixed lg:static inset-y-0 left-0 z-50 w-64 bg-charcoal text-cream transform transition-transform duration-300 lg:translate-x-0 flex flex-col',
-          isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
+          'fixed inset-y-0 left-0 z-50 w-64 bg-white text-charcoal transform transition-transform duration-300 flex flex-col',
+          isSidebarOpen ? 'translate-x-0' : '-translate-x-full' // Toggle pour tous les écrans
         )}
       >
-        {/* Logo */}
-        <div className="h-16 shrink-0 flex items-center justify-between px-6 border-b border-cream/10">
+        {/* Logo - Aligné avec le header principal */}
+        <div className="h-16 shrink-0 flex items-center justify-between px-6 border-b border-gray-200">
           <Link to="/admin/dashboard" className="font-script text-xl text-primary">
             YaraGold
           </Link>
           <button
-            className="lg:hidden text-cream/60 hover:text-cream"
+            className="lg:hidden text-gray-600 hover:text-gray-900"
             onClick={() => setIsSidebarOpen(false)}
           >
             <X className="w-5 h-5" />
@@ -103,7 +110,7 @@ const AdminLayout = ({ children, title, breadcrumbs }: AdminLayoutProps) => {
         <nav className="flex-1 min-h-0 overflow-y-auto p-4 space-y-6">
           {navSections.map((section) => (
             <div key={section.label}>
-              <p className="px-4 mb-2 text-xs font-semibold uppercase tracking-wider text-cream/50">
+              <p className="px-4 mb-2 text-xs font-semibold uppercase tracking-wider text-gray-500">
                 {section.label}
               </p>
               <div className="space-y-1">
@@ -115,8 +122,8 @@ const AdminLayout = ({ children, title, breadcrumbs }: AdminLayoutProps) => {
                     className={cn(
                       'flex items-center gap-3 px-4 py-3 rounded-lg font-body text-sm transition-all',
                       isActive(item.href)
-                        ? 'bg-gold text-charcoal font-medium'
-                        : 'text-cream/70 hover:bg-cream/10 hover:text-cream'
+                        ? 'bg-gold text-white font-medium'
+                        : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
                     )}
                   >
                     <item.icon className="w-5 h-5 shrink-0" />
@@ -128,18 +135,18 @@ const AdminLayout = ({ children, title, breadcrumbs }: AdminLayoutProps) => {
           ))}
         </nav>
 
-        {/* Footer */}
-        <div className="shrink-0 p-4 border-t border-cream/10">
+        {/* Footer - Absolument fixé en bas de la sidebar */}
+        <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-200 bg-white">
           <Link
             to="/"
-            className="block text-center font-body text-xs text-cream/50 hover:text-cream mb-4"
+            className="block text-center font-body text-xs text-gray-500 hover:text-gray-700 mb-3 transition-colors"
           >
             ← Voir le site
           </Link>
           <Button
             variant="outline"
             onClick={handleLogout}
-            className="w-full border-cream/20 text-cream hover:bg-cream/10 font-body"
+            className="w-full border-gray-300 text-gray-700 hover:bg-gray-50 font-body transition-colors"
           >
             <LogOut className="w-4 h-4 mr-2" />
             Déconnexion
@@ -148,31 +155,40 @@ const AdminLayout = ({ children, title, breadcrumbs }: AdminLayoutProps) => {
       </aside>
 
       {/* Main content */}
-      <div className="flex-1 flex flex-col min-h-screen">
-        {/* Top bar */}
-        <header className="h-16 bg-card border-b border-border flex items-center justify-between px-4 lg:px-8">
-          <div className="flex items-center gap-4">
+      <div 
+        className={cn(
+          'flex-1 h-full transition-all duration-300 overflow-hidden',
+          isSidebarOpen ? 'lg:ml-64' : 'lg:ml-0'
+        )}
+      >
+        {/* Header - Aligné avec le header du sidebar */}
+        <header className="h-16 bg-white border-b border-gray-200 px-4 lg:px-8 flex items-center">
+          <div className="flex items-center gap-4 flex-1">
+            {/* Bouton toggle sidebar */}
             <button
-              className="lg:hidden p-2 hover:bg-muted rounded-lg"
-              onClick={() => setIsSidebarOpen(true)}
+              className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              onClick={() => setIsSidebarOpen(!isSidebarOpen)}
             >
-              <Menu className="w-5 h-5" />
+              {isSidebarOpen ? (
+                <ChevronRight className="w-5 h-5" />
+              ) : (
+                <Menu className="w-5 h-5" />
+              )}
             </button>
-            
             {/* Breadcrumbs */}
             <div className="flex items-center gap-2 font-body text-sm">
-              <Link to="/admin/dashboard" className="text-muted-foreground hover:text-foreground">
+              <Link to="/admin/dashboard" className="text-gray-600 hover:text-gray-900">
                 Admin
               </Link>
               {breadcrumbs?.map((crumb, index) => (
                 <div key={index} className="flex items-center gap-2">
-                  <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                  <ChevronRight className="w-4 h-4 text-gray-400" />
                   {crumb.href ? (
-                    <Link to={crumb.href} className="text-muted-foreground hover:text-foreground">
+                    <Link to={crumb.href} className="text-gray-600 hover:text-gray-900">
                       {crumb.label}
                     </Link>
                   ) : (
-                    <span className="text-foreground">{crumb.label}</span>
+                    <span className="text-gray-900">{crumb.label}</span>
                   )}
                 </div>
               ))}
@@ -181,7 +197,7 @@ const AdminLayout = ({ children, title, breadcrumbs }: AdminLayoutProps) => {
 
           <div className="flex items-center gap-2">
             <AdminNotification />
-            <span className="font-body text-sm text-muted-foreground hidden md:block">
+            <span className="font-body text-sm text-gray-600 hidden md:block">
               Administrateur
             </span>
             <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-primary-foreground font-body font-semibold">
@@ -191,7 +207,7 @@ const AdminLayout = ({ children, title, breadcrumbs }: AdminLayoutProps) => {
         </header>
 
         {/* Page content */}
-        <main className="flex-1 p-4 lg:p-8">
+        <main className="flex-1 p-4 lg:p-8 overflow-y-auto">
           <h1 className="font-display text-2xl md:text-3xl text-foreground mb-6">{title}</h1>
           {children}
         </main>
