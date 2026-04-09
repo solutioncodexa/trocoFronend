@@ -7,12 +7,27 @@ export default {
   theme: {
     container: {
       center: true,
-      padding: "2rem",
+      padding: {
+        DEFAULT: "1rem",
+        sm: "1.25rem",
+        md: "1.5rem",
+        lg: "2rem",
+      },
       screens: {
+        sm: "640px",
+        md: "768px",
+        lg: "1025px",
+        xl: "1280px",
         "2xl": "1400px",
       },
     },
     extend: {
+      screens: {
+        /** Référence mobile étroite (iPhone 12/13/14 ~390px) */
+        xs: "390px",
+        /** lg par défaut Tailwind = 1024 ; 1025 = desktop réel → tablette inclut iPad Pro 1024×1366 (portrait) */
+        lg: "1025px",
+      },
       colors: {
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
@@ -117,6 +132,18 @@ export default {
           "0%, 100%": { backgroundPosition: "-200% 0" },
           "50%": { backgroundPosition: "200% 0" },
         },
+        "ken-burns": {
+          "0%": { transform: "scale(1)" },
+          "100%": { transform: "scale(1.07)" },
+        },
+        "slide-down-fade": {
+          "0%": { opacity: "0", transform: "translateY(-12px)" },
+          "100%": { opacity: "1", transform: "translateY(0)" },
+        },
+        "soft-pulse": {
+          "0%, 100%": { opacity: "1" },
+          "50%": { opacity: "0.75" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
@@ -126,6 +153,9 @@ export default {
         "slide-in-left": "slide-in-left 0.5s ease-out",
         "scale-in": "scale-in 0.3s ease-out",
         shimmer: "shimmer 3s ease-in-out infinite",
+        "ken-burns": "ken-burns 28s ease-in-out infinite alternate",
+        "slide-down-fade": "slide-down-fade 0.35s ease-out forwards",
+        "soft-pulse": "soft-pulse 2.5s ease-in-out infinite",
       },
       backgroundImage: {
         "gradient-gold": "linear-gradient(135deg, hsl(43, 70%, 47%) 0%, hsl(43, 60%, 55%) 50%, hsl(43, 75%, 40%) 100%)",

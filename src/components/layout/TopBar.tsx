@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { topBarMessagesApi } from '@/services/api/topBarMessages';
 import { TopBarMessageDTO } from '@/types/top-bar-messages';
+import { cn } from '@/lib/utils';
+import { ANIMATIONS } from '@/config/animations';
 
 const TopBar = () => {
   const [currentMessage, setCurrentMessage] = useState(0);
@@ -50,12 +52,14 @@ const TopBar = () => {
   }
 
   return (
-    <div className="bg-royal-bordeaux text-ivory-text py-2 text-center text-sm font-medium tracking-wide">
-      <div className="relative h-5 flex items-center justify-center">
-        <div 
-          className={`transition-all duration-300 ease-in-out ${
-            isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-2'
-          }`}
+    <div className="bg-royal-bordeaux text-ivory-text py-2 px-3 sm:px-4 text-center text-xs sm:text-sm font-medium tracking-wide w-full max-w-full min-w-0 overflow-x-hidden">
+      <div className="relative min-h-[1.25rem] flex items-center justify-center px-1">
+        <div
+          className={cn(
+            'transition-all duration-300 ease-in-out',
+            isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-2',
+            ANIMATIONS.topBarTextPulse && messages.length <= 1 && 'animate-soft-pulse'
+          )}
         >
           {messages[currentMessage]?.message}
         </div>

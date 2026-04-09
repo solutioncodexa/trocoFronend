@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, Pencil, Trash2, Search, Upload, X, Settings2 } from 'lucide-react';
+import { Plus, Pencil, Trash2, Search, Upload, X, Settings2, ArrowLeft, ArrowRight, Star } from 'lucide-react';
 import AdminLayout from '@/components/admin/AdminLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -265,6 +265,46 @@ const AdminProducts = () => {
 
   const removeExistingImage = (index: number) => {
     setExistingImageUrls((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const moveExistingImage = (from: number, to: number) => {
+    setExistingImageUrls((prev) => {
+      const arr = [...prev];
+      const [item] = arr.splice(from, 1);
+      arr.splice(to, 0, item);
+      return arr;
+    });
+  };
+
+  const moveNewImage = (from: number, to: number) => {
+    setImageFiles((prev) => {
+      const arr = [...prev];
+      const [item] = arr.splice(from, 1);
+      arr.splice(to, 0, item);
+      return arr;
+    });
+  };
+
+  const setAsPrimary = (type: 'existing' | 'new', index: number) => {
+    if (type === 'existing') {
+      setExistingImageUrls((prev) => {
+        const arr = [...prev];
+        const [item] = arr.splice(index, 1);
+        arr.unshift(item);
+        return arr;
+      });
+    } else {
+      if (existingImageUrls.length > 0) {
+        toast.info('Les images existantes sont affichées en premier. Supprimez-les ou réordonnez-les.');
+        return;
+      }
+      setImageFiles((prev) => {
+        const arr = [...prev];
+        const [item] = arr.splice(index, 1);
+        arr.unshift(item);
+        return arr;
+      });
+    }
   };
 
   if (isLoading) {
@@ -628,56 +668,119 @@ const AdminProducts = () => {
             {/* Images */}
             <div>
               <Label>Images du produit *</Label>
-              <div className="mt-2 space-y-2">
-                <div className="flex flex-wrap gap-2">
-                  {/* Images existantes (mode édition) */}
-                  {existingImageUrls.map((url, index) => (
-                    <div key={`existing-${index}`} className="relative group">
-                      <img
-                        src={getImageUrl(url)}
-                        alt={`Image existante ${index + 1}`}
-                        className="w-20 h-20 rounded-lg object-cover"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => removeExistingImage(index)}
-                        className="absolute -top-2 -right-2 w-5 h-5 bg-destructive text-destructive-foreground rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                      >
-                        <X className="w-3 h-3" />
-                      </button>
+              <p className="text-xs text-muted-foreground mt-1 mb-2">
+                La première image sera l'image principale. Cliquez sur l'étoile pour définir l'image principale, ou les flèches pour réordonner.
+              </p>
+              <div className="mt-2 space-y-3">
+                {/* Existing images */}
+                {existingImageUrls.length > 0 && (
+                  <div>
+                    <p className="text-xs font-medium text-muted-foreground mb-1.5">Images actuelles</p>
+                    <div className="flex flex-wrap gap-2">
+                      {existingImageUrls.map((url, index) => (
+                        <div
+                          key={`existing-${index}`}
+                          className={cn(
+                            'relative group rounded-lg overflow-hidden',
+                            index === 0 && imageFiles.length === 0 && 'ring-2 ring-primary'
+                          )}
+                        >
+                          <img
+                            src={getImageUrl(url)}
+                            alt={`Image ${index + 1}`}
+                            className="w-20 h-20 object-cover"
+                          />
+                          {index === 0 && imageFiles.length === 0 && (
+                            <div className="absolute top-0.5 left-0.5 bg-primary text-white text-[8px] font-bold px-1 py-0.5 rounded">
+                              1ère
+                            </div>
+                          )}
+                          <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1">
+                            {index > 0 && (
+                              <button type="button" onClick={() => moveExistingImage(index, index - 1)} className="w-5 h-5 bg-white/90 rounded flex items-center justify-center">
+                                <ArrowLeft className="w-3 h-3 text-black" />
+                              </button>
+                            )}
+                            {index > 0 && (
+                              <button type="button" onClick={() => setAsPrimary('existing', index)} className="w-5 h-5 bg-primary rounded flex items-center justify-center" title="Définir comme principale">
+                                <Star className="w-3 h-3 text-white" />
+                              </button>
+                            )}
+                            {index < existingImageUrls.length - 1 && (
+                              <button type="button" onClick={() => moveExistingImage(index, index + 1)} className="w-5 h-5 bg-white/90 rounded flex items-center justify-center">
+                                <ArrowRight className="w-3 h-3 text-black" />
+                              </button>
+                            )}
+                            <button type="button" onClick={() => removeExistingImage(index)} className="w-5 h-5 bg-destructive rounded flex items-center justify-center">
+                              <X className="w-3 h-3 text-white" />
+                            </button>
+                          </div>
+                        </div>
+                      ))}
                     </div>
-                  ))}
-                  {/* Nouvelles images (fichiers à uploader) */}
-                  {imageFiles.map((file, index) => (
-                    <div key={`new-${index}`} className="relative group">
-                      <img
-                        src={URL.createObjectURL(file)}
-                        alt={`Nouvelle image ${index + 1}`}
-                        className="w-20 h-20 rounded-lg object-cover border-2 border-primary"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => removeImageFile(index)}
-                        className="absolute -top-2 -right-2 w-5 h-5 bg-destructive text-destructive-foreground rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                      >
-                        <X className="w-3 h-3" />
-                      </button>
+                  </div>
+                )}
+
+                {/* New images to upload */}
+                {imageFiles.length > 0 && (
+                  <div>
+                    <p className="text-xs font-medium text-muted-foreground mb-1.5">Nouvelles images à envoyer</p>
+                    <div className="flex flex-wrap gap-2">
+                      {imageFiles.map((file, index) => (
+                        <div
+                          key={`new-${index}`}
+                          className={cn(
+                            'relative group rounded-lg overflow-hidden border-2 border-primary/40',
+                            index === 0 && existingImageUrls.length === 0 && 'ring-2 ring-primary'
+                          )}
+                        >
+                          <img
+                            src={URL.createObjectURL(file)}
+                            alt={`Nouvelle ${index + 1}`}
+                            className="w-20 h-20 object-cover"
+                          />
+                          {index === 0 && existingImageUrls.length === 0 && (
+                            <div className="absolute top-0.5 left-0.5 bg-primary text-white text-[8px] font-bold px-1 py-0.5 rounded">
+                              1ère
+                            </div>
+                          )}
+                          <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1">
+                            {index > 0 && (
+                              <button type="button" onClick={() => moveNewImage(index, index - 1)} className="w-5 h-5 bg-white/90 rounded flex items-center justify-center">
+                                <ArrowLeft className="w-3 h-3 text-black" />
+                              </button>
+                            )}
+                            {index > 0 && existingImageUrls.length === 0 && (
+                              <button type="button" onClick={() => setAsPrimary('new', index)} className="w-5 h-5 bg-primary rounded flex items-center justify-center" title="Définir comme principale">
+                                <Star className="w-3 h-3 text-white" />
+                              </button>
+                            )}
+                            {index < imageFiles.length - 1 && (
+                              <button type="button" onClick={() => moveNewImage(index, index + 1)} className="w-5 h-5 bg-white/90 rounded flex items-center justify-center">
+                                <ArrowRight className="w-3 h-3 text-black" />
+                              </button>
+                            )}
+                            <button type="button" onClick={() => removeImageFile(index)} className="w-5 h-5 bg-destructive rounded flex items-center justify-center">
+                              <X className="w-3 h-3 text-white" />
+                            </button>
+                          </div>
+                        </div>
+                      ))}
                     </div>
-                  ))}
-                  <label className="w-20 h-20 rounded-lg border-2 border-dashed border-border flex items-center justify-center hover:border-primary transition-colors cursor-pointer">
-                    <input
-                      type="file"
-                      accept="image/jpeg,image/png,image/gif,image/webp"
-                      multiple
-                      className="sr-only"
-                      onChange={handleImageSelect}
-                    />
-                    <Upload className="w-6 h-6 text-muted-foreground" />
-                  </label>
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  {imageFiles.length > 0 ? `${imageFiles.length} nouvelle(s) image(s) à envoyer` : 'Cliquez pour ajouter des images'}
-                </p>
+                  </div>
+                )}
+
+                {/* Upload button */}
+                <label className="w-20 h-20 rounded-lg border-2 border-dashed border-border flex items-center justify-center hover:border-primary transition-colors cursor-pointer inline-flex">
+                  <input
+                    type="file"
+                    accept="image/jpeg,image/png,image/gif,image/webp"
+                    multiple
+                    className="sr-only"
+                    onChange={handleImageSelect}
+                  />
+                  <Upload className="w-6 h-6 text-muted-foreground" />
+                </label>
               </div>
             </div>
 

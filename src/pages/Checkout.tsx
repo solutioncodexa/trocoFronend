@@ -251,6 +251,7 @@ const Checkout = () => {
                     </div>
                   </div>
 
+                  {/*
                   <div 
                     className={`flex items-center space-x-3 p-4 rounded-lg border-2 cursor-pointer transition-colors ${paymentMethod === 'online' ? 'border-primary bg-primary/5' : 'border-accent-beige/30 hover:border-primary/50'}`}
                     onClick={() => setPaymentMethod('online')}
@@ -266,6 +267,7 @@ const Checkout = () => {
                       <p className="text-xs text-accent-beige leading-relaxed">Payez par carte bancaire de manière sécurisée</p>
                     </div>
                   </div>
+                  */}
                 </div>
               </div>
 

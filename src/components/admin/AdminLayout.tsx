@@ -77,7 +77,7 @@ const AdminLayout = ({ children, title, breadcrumbs }: AdminLayoutProps) => {
   const isActive = (href: string) => location.pathname === href;
 
   return (
-    <div className="h-screen bg-background flex overflow-hidden">
+    <div className="flex h-screen min-h-0 overflow-hidden bg-background">
       {/* Mobile sidebar overlay */}
       {isSidebarOpen && (
         <div
@@ -154,15 +154,15 @@ const AdminLayout = ({ children, title, breadcrumbs }: AdminLayoutProps) => {
         </div>
       </aside>
 
-      {/* Main content */}
-      <div 
+      {/* Main content — flex column + min-h-0 so <main> can scroll (overflow-y-auto) */}
+      <div
         className={cn(
-          'flex-1 h-full transition-all duration-300 overflow-hidden',
+          'flex min-h-0 flex-1 flex-col transition-all duration-300',
           isSidebarOpen ? 'lg:ml-64' : 'lg:ml-0'
         )}
       >
         {/* Header - Aligné avec le header du sidebar */}
-        <header className="h-16 bg-white border-b border-gray-200 px-4 lg:px-8 flex items-center">
+        <header className="h-16 shrink-0 bg-white border-b border-gray-200 px-4 lg:px-8 flex items-center">
           <div className="flex items-center gap-4 flex-1">
             {/* Bouton toggle sidebar */}
             <button
@@ -206,8 +206,8 @@ const AdminLayout = ({ children, title, breadcrumbs }: AdminLayoutProps) => {
           </div>
         </header>
 
-        {/* Page content */}
-        <main className="flex-1 p-4 lg:p-8 overflow-y-auto">
+        {/* Page content — min-h-0 required for flex child to shrink and show vertical scroll */}
+        <main className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-4 lg:p-8">
           <h1 className="font-display text-2xl md:text-3xl text-foreground mb-6">{title}</h1>
           {children}
         </main>

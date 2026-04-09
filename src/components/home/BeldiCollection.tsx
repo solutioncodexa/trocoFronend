@@ -3,6 +3,8 @@ import { Link } from 'react-router-dom';
 import ProductCard from '@/components/ui/ProductCard';
 import { productsApi } from '@/services/api/products';
 import { mapProductDTOListToProducts } from '@/utils/productMapper';
+import { RevealOnScroll } from '@/components/animations';
+import { ANIMATIONS } from '@/config/animations';
 
 const BeldiCollection = () => {
   const { data: products } = useQuery({
@@ -12,9 +14,12 @@ const BeldiCollection = () => {
 
   const beldiProducts = products ? mapProductDTOListToProducts(products).slice(0, 4) : [];
 
+  const stagger = ANIMATIONS.homeCollectionStagger;
+
   return (
     <section className="py-16 md:py-24 bg-bg-paper-pattern">
       <div className="max-w-[1280px] mx-auto px-6">
+        <RevealOnScroll>
         <div className="flex flex-col items-center mb-16 text-center">
           <div className="w-24 h-px bg-accent-beige/40 mb-4 relative">
             <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 size-2 rotate-45 border border-accent-beige bg-background-light"></div>
@@ -27,8 +32,14 @@ const BeldiCollection = () => {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-          {beldiProducts.map((product) => (
-            <ProductCard key={product.id} product={product} />
+          {beldiProducts.map((product, index) => (
+            <RevealOnScroll
+              key={product.id}
+              enabled={stagger}
+              delayMs={stagger ? index * 70 : 0}
+            >
+              <ProductCard product={product} />
+            </RevealOnScroll>
           ))}
         </div>
 
@@ -40,6 +51,7 @@ const BeldiCollection = () => {
             Voir toute la collection Beldi
           </Link>
         </div>
+        </RevealOnScroll>
       </div>
     </section>
   );

@@ -41,8 +41,8 @@ const Cart = () => {
 
   return (
     <Layout>
-      <main className="flex-grow bg-paper-pattern py-12 px-6">
-        <div className="max-w-[1200px] mx-auto">
+      <main className="flex-grow bg-paper-pattern py-12 px-4 sm:px-6 w-full min-w-0 overflow-x-hidden">
+        <div className="max-w-[1200px] mx-auto w-full min-w-0">
           <div className="text-center mb-12">
             <h2 className="font-script text-6xl text-primary mb-2">Votre Panier</h2>
             <div className="flex items-center justify-center gap-4">
@@ -146,7 +146,7 @@ const Cart = () => {
                 </div>
 
                 <div className="text-center mt-6">
-                  <p className="text-[10px] uppercase tracking-widest text-accent-beige mb-4">Paiement en ligne ou à la livraison</p>
+                  <p className="text-[10px] uppercase tracking-widest text-accent-beige mb-4">Paiement à la livraison</p>
                   <div className="flex justify-center gap-3 opacity-60">
                     <div className="w-12 h-8 bg-white rounded flex items-center justify-center">
                       <svg viewBox="0 0 24 16" className="w-10 h-6">
