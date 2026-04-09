@@ -31,7 +31,7 @@ const Header = () => {
   };
 
   return (
-    <header className="w-full max-w-full min-w-0 overflow-x-hidden bg-background/95 backdrop-blur-md border-b border-border">
+    <header className="w-full max-w-full min-w-0 overflow-x-clip bg-background/95 backdrop-blur-md border-b border-border">
       <div className="container mx-auto w-full max-w-full min-w-0 px-3 sm:px-4 md:px-6">
         <div className="flex items-center justify-between h-16 lg:h-20 min-h-[4rem] lg:min-h-[5rem] gap-1 sm:gap-2 min-w-0 w-full">
           {/* Mobile menu button */}

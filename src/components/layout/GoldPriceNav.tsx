@@ -102,7 +102,12 @@ const GoldPriceNav = () => {
           )}
         </button>
       </HoverCardTrigger>
-      <HoverCardContent align="center" className="w-[340px] p-0 overflow-hidden">
+      <HoverCardContent
+        side="bottom"
+        align="center"
+        sideOffset={8}
+        className="w-[340px] p-0 overflow-hidden"
+      >
         <div className="p-4 pb-2 flex items-center justify-between gap-4">
           <div>
             <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Cours de l&apos;or XAU/MAD</p>
