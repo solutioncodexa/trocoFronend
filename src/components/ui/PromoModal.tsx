@@ -1,10 +1,14 @@
 import { useState, useEffect, useRef } from 'react';
 import { X } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { promoModalsApi } from '@/services/api/promoModals';
+import { PromoModalDTO } from '@/types/promo-modals';
+import { getImageUrl } from '@/services/api/upload';
 
 const PromoModal = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [countdown, setCountdown] = useState(5);
+  const [promoData, setPromoData] = useState<PromoModalDTO | null>(null);
   const countdownRef = useRef<NodeJS.Timeout | null>(null);
   const navigate = useNavigate();
   const location = useLocation();
@@ -13,31 +17,47 @@ const PromoModal = () => {
     // N'afficher que sur la page d'accueil
     if (location.pathname !== '/') return;
     
-    // Pour le développement : réinitialiser le sessionStorage
-    // sessionStorage.removeItem('hasSeenPromoModal');
-    
     // Vérifier si le modal a déjà été montré dans cette session
     const hasSeenModal = sessionStorage.getItem('hasSeenPromoModal');
     if (!hasSeenModal) {
-      // Attendre un peu avant d'afficher le modal
-      const timer = setTimeout(() => {
-        setIsOpen(true);
-        // Démarrer le compte à rebours
-        startCountdown();
-      }, 1500);
-      return () => clearTimeout(timer);
+      // Récupérer les données depuis l'API
+      const fetchPromoData = async () => {
+        try {
+          console.log('🔍 PromoModal: Récupération des données...');
+          const data = await promoModalsApi.getActivePromoModal();
+          console.log('✅ PromoModal: Données reçues:', data);
+          
+          if (data && data.isActive) {
+            setPromoData(data);
+            setCountdown(data.autoCloseSeconds || 5);
+            
+            // Attendre un peu avant d'afficher le modal
+            const timer = setTimeout(() => {
+              setIsOpen(true);
+              startCountdown(data.autoCloseSeconds || 5);
+            }, 1500);
+            return () => clearTimeout(timer);
+          } else {
+            console.log('ℹ️ PromoModal: Aucun modal actif trouvé');
+          }
+        } catch (error) {
+          console.error('❌ PromoModal: Erreur lors de la récupération des données:', error);
+        }
+      };
+
+      fetchPromoData();
     }
   }, [location.pathname]);
 
-  const startCountdown = () => {
-    let seconds = 5;
-    setCountdown(seconds);
+  const startCountdown = (seconds: number) => {
+    let remainingSeconds = seconds;
+    setCountdown(remainingSeconds);
     
     countdownRef.current = setInterval(() => {
-      seconds -= 1;
-      setCountdown(seconds);
+      remainingSeconds -= 1;
+      setCountdown(remainingSeconds);
       
-      if (seconds <= 0) {
+      if (remainingSeconds <= 0) {
         handleClose();
       }
     }, 1000);
@@ -59,11 +79,13 @@ const PromoModal = () => {
 
   const handleViewCollection = () => {
     handleClose();
-    // Rediriger vers la collection Beldi
-    navigate('/boutique?category=beldi');
+    // Rediriger vers l'URL du bouton
+    if (promoData?.buttonUrl) {
+      navigate(promoData.buttonUrl);
+    }
   };
 
-  if (!isOpen) return null;
+  if (!isOpen || !promoData) return null;
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-sm px-4">
@@ -82,7 +104,14 @@ const PromoModal = () => {
           <div 
             className="absolute inset-0 bg-cover bg-center" 
             style={{
-              backgroundImage: "url('https://lh3.googleusercontent.com/aida-public/AB6AXuAO6MVoQ0I4ouhe-c3svv1I8xCYK2aqFbno9qN5yMZJoQ_E_wjouMm1-wx8as7sbMgFURHkNECkzgoJUgyG8olPhDG4OfZByDYFDbaBts2eEaoOWvqnx7bzXFYOeiyaL7vs8VaeLAGe5LUaFZ_iMcvuNnFjCtJH5PVx0Fl9ZJXnyh6rPvVFUr_yRJ4-NHBLpo2JPlf-vQ86iYKycTLwUEEdbBV8oIfk1SDSaRLoeU5ThC-a_yy9VND5-cfLP_vdPJujZCR-29x7boPI')"
+              backgroundImage: promoData.imageUrl ? `url('${getImageUrl(promoData.imageUrl)}')` : undefined,
+              backgroundColor: promoData.imageUrl ? undefined : '#1a1a1a'
+            }}
+            onError={(e) => {
+              console.error('Error loading promo modal image:', promoData.imageUrl);
+              // Fallback to solid background color if image fails to load
+              e.currentTarget.style.backgroundImage = 'none';
+              e.currentTarget.style.backgroundColor = '#1a1a1a';
             }}
           />
           <div className="absolute inset-0 bg-gradient-to-r from-charcoal/20 via-transparent to-charcoal/40"></div>
@@ -107,7 +136,7 @@ const PromoModal = () => {
 
             {/* Titre */}
             <h2 className="text-primary font-script text-5xl mb-6 tracking-wide">
-              Offre Exclusive Beldi
+              {promoData.title}
             </h2>
             
             {/* Compte à rebours */}
@@ -120,7 +149,7 @@ const PromoModal = () => {
             
             {/* Description */}
             <p className="text-white/90 font-display text-lg mb-10 leading-relaxed max-w-xs mx-auto">
-              Profitez de la <span className="text-primary font-bold">livraison offerte</span> sur toute la collection Beldi ce week-end.
+              {promoData.description}
             </p>
 
             {/* Boutons */}
@@ -129,7 +158,7 @@ const PromoModal = () => {
                 onClick={handleViewCollection}
                 className="w-full bg-primary hover:bg-[#d9a50b] text-charcoal py-4 text-xs uppercase tracking-[0.3em] font-bold transition-all shadow-[0_4px_20px_rgba(242,185,13,0.3)] border border-primary/50"
               >
-                Voir la Collection
+                {promoData.buttonText}
               </button>
               
               <p className="text-[10px] text-accent-beige uppercase tracking-[0.2em] font-medium mt-4">

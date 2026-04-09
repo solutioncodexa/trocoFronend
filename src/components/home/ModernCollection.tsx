@@ -3,6 +3,8 @@ import { Link } from 'react-router-dom';
 import ProductCard from '@/components/ui/ProductCard';
 import { productsApi } from '@/services/api/products';
 import { mapProductDTOListToProducts } from '@/utils/productMapper';
+import { RevealOnScroll } from '@/components/animations';
+import { ANIMATIONS } from '@/config/animations';
 
 const ModernCollection = () => {
   const { data: products } = useQuery({
@@ -11,10 +13,12 @@ const ModernCollection = () => {
   });
 
   const modernProducts = products ? mapProductDTOListToProducts(products).slice(0, 4) : [];
+  const stagger = ANIMATIONS.homeCollectionStagger;
 
   return (
     <section className="py-16 md:py-24 bg-white dark:bg-background-dark">
       <div className="max-w-[1280px] mx-auto px-6">
+        <RevealOnScroll>
         <div className="flex flex-col items-center mb-16 text-center">
           <div className="w-16 h-px bg-primary/60 mb-4"></div>
           <h2 className="font-script text-6xl text-secondary-dark dark:text-white mb-2">Collection Moderne</h2>
@@ -23,8 +27,14 @@ const ModernCollection = () => {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-          {modernProducts.map((product) => (
-            <ProductCard key={product.id} product={product} />
+          {modernProducts.map((product, index) => (
+            <RevealOnScroll
+              key={product.id}
+              enabled={stagger}
+              delayMs={stagger ? index * 70 : 0}
+            >
+              <ProductCard product={product} />
+            </RevealOnScroll>
           ))}
         </div>
 
@@ -36,6 +46,7 @@ const ModernCollection = () => {
             Voir toute la collection Moderne
           </Link>
         </div>
+        </RevealOnScroll>
       </div>
     </section>
   );

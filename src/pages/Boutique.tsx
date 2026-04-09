@@ -13,6 +13,8 @@ import { GoldType, Product } from '@/types/product';
 import { productsApi, ProductFilters, categoriesApi, productTypesApi, collectionsApi } from '@/services/api';
 import { useGoldTypes } from '@/hooks/useGoldTypes';
 import { mapProductDTOListToProducts } from '@/utils/productMapper';
+import { RevealOnScroll } from '@/components/animations';
+import { ANIMATIONS } from '@/config/animations';
 import { toast } from 'sonner';
 
 const PRODUCTS_PER_PAGE = 12;
@@ -230,8 +232,8 @@ const Boutique = () => {
       </section>
 
       {/* Main Content */}
-      <main className="max-w-[1400px] mx-auto px-6 py-12">
-        <div className="flex flex-col lg:flex-row gap-12">
+      <main className="max-w-[1400px] mx-auto w-full min-w-0 px-4 sm:px-6 py-12 overflow-x-hidden">
+        <div className="flex flex-col lg:flex-row gap-12 min-w-0">
           {/* Sidebar Filters */}
           <aside className="w-full lg:w-72 shrink-0 space-y-10">
             {/* Category Filter - dynamique depuis l'API */}
@@ -398,9 +400,13 @@ const Boutique = () => {
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-x-8 gap-y-12">
                 {paginatedProducts.map((product, index) => (
-                  <div key={product.id} className="animate-fade-in" style={{ animationDelay: `${index * 0.05}s` }}>
+                  <RevealOnScroll
+                    key={product.id}
+                    enabled={ANIMATIONS.productGridStagger}
+                    delayMs={ANIMATIONS.productGridStagger ? index * 55 : 0}
+                  >
                     <ProductCard product={product} />
-                  </div>
+                  </RevealOnScroll>
                 ))}
               </div>
             )}

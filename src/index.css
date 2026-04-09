@@ -16,6 +16,30 @@
 
 @layer base {
   :root {
+    /*
+     * Breakpoints (alignés tailwind.config — tablette = iPad Pro 12.9" portrait 1024×1366 inclus)
+     * Mobile   : < 768px   (max-md)
+     * Tablette : 768px – 1024px (md:max-lg)
+     * Desktop  : ≥ 1025px (lg:)
+     */
+    --bp-mobile-max: 767px;
+    --bp-tablet-min: 768px;
+    --bp-tablet-max: 1024px;
+    --bp-desktop-min: 1025px;
+    --bp-ipad-pro-width: 1024px;
+    --bp-ipad-pro-height: 1366px;
+    --bp-mobile-ref: 390px;
+
+    /* Hauteur header sticky (approx.) — hero / layouts */
+    --layout-header-height: 5rem;
+    --layout-header-height-mobile: 4rem;
+
+    /* Encoches iOS / Android */
+    --safe-top: env(safe-area-inset-top, 0px);
+    --safe-right: env(safe-area-inset-right, 0px);
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+    --safe-left: env(safe-area-inset-left, 0px);
+
     /* Luxury Gold Jewelry Theme */
     --background: 40 20% 98%;
     --foreground: 30 10% 10%;
@@ -134,9 +158,36 @@
     @apply border-border;
   }
 
+  html {
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+    overflow-x: hidden;
+    width: 100%;
+    max-width: 100%;
+  }
+
   body {
     @apply bg-background text-foreground antialiased;
     font-family: 'Montserrat', sans-serif;
+    padding-left: var(--safe-left);
+    padding-right: var(--safe-right);
+    padding-bottom: var(--safe-bottom);
+    overflow-x: hidden;
+    width: 100%;
+    max-width: 100%;
+  }
+
+  #root {
+    overflow-x: hidden;
+    width: 100%;
+    max-width: 100%;
+    min-height: 100%;
+  }
+
+  img,
+  video {
+    max-width: 100%;
+    height: auto;
   }
 
   h1, h2, h3, h4, h5, h6 {
@@ -145,6 +196,15 @@
 }
 
 @layer components {
+  /* Padding horizontal cohérent sur toute l’app (mobile → desktop) */
+  .page-padding {
+    @apply px-3.5 sm:px-4 md:px-6 lg:px-8 max-w-full min-w-0 box-border;
+  }
+
+  .page-section-y {
+    @apply py-6 sm:py-8 md:py-10 lg:py-12;
+  }
+
   /* Gold shimmer animation */
   .gold-shimmer {
     background: linear-gradient(
@@ -216,6 +276,54 @@
 
   .link-underline:hover::after {
     @apply origin-bottom-left;
+    transform: scaleX(1);
+  }
+
+  /* Reflet au survol — activé via ANIMATIONS.ctaShineOnHover + classe sur le bouton */
+  .cta-shine-hover {
+    @apply relative overflow-hidden;
+  }
+
+  .cta-shine-hover::after {
+    content: '';
+    @apply pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-300;
+    background: linear-gradient(
+      105deg,
+      transparent 35%,
+      rgba(255, 255, 255, 0.18) 50%,
+      transparent 65%
+    );
+    transform: translateX(-120%);
+    transition: transform 0.65s ease, opacity 0.3s ease;
+  }
+
+  .cta-shine-hover:hover::after {
+    opacity: 1;
+    transform: translateX(120%);
+  }
+
+  .dark .cta-shine-hover::after {
+    background: linear-gradient(
+      105deg,
+      transparent 35%,
+      rgba(255, 255, 255, 0.08) 50%,
+      transparent 65%
+    );
+  }
+
+  /* Liens footer — activé via ANIMATIONS.footerLinkUnderline */
+  .footer-link-gold {
+    @apply relative inline-block;
+  }
+
+  .footer-link-gold::after {
+    content: '';
+    @apply absolute left-0 bottom-0 h-px w-full origin-left transition-transform duration-300 ease-out;
+    background: hsl(var(--gold));
+    transform: scaleX(0);
+  }
+
+  .footer-link-gold:hover::after {
     transform: scaleX(1);
   }
 

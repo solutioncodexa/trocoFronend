@@ -6,6 +6,7 @@ import { formatPrice } from '@/utils/formatPrice';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { useWishlist } from '@/contexts/WishlistContext';
+import { ANIMATIONS } from '@/config/animations';
 import { toast } from 'sonner';
 
 interface ProductCardProps {
@@ -51,8 +52,17 @@ const ProductCard = ({ product, className }: ProductCardProps) => {
     ? Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)
     : 0;
 
+  const hover = ANIMATIONS.productCardHover;
+
   return (
-    <div className={cn('group bg-paper dark:bg-[#2a2515] p-4 border border-accent-beige/20 shadow-sm hover:shadow-lg transition-all duration-500 hover:-translate-y-1', className)}>
+    <div
+      className={cn(
+        'group bg-paper dark:bg-[#2a2515] p-4 border border-accent-beige/20 shadow-sm transition-all duration-500',
+        hover && 'hover:shadow-lg hover:-translate-y-1',
+        !hover && 'hover:shadow-md',
+        className
+      )}
+    >
       <Link to={`/produit/${product.id}`} className="block">
         {/* Image container */}
         <div className="relative overflow-hidden aspect-[4/5] mb-4 border border-accent-beige/10">
@@ -76,7 +86,10 @@ const ProductCard = ({ product, className }: ProductCardProps) => {
           <img
             src={product.images[0]}
             alt={product.name}
-            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+            className={cn(
+              'w-full h-full object-cover transition-transform duration-700',
+              hover && 'group-hover:scale-105'
+            )}
             onError={(e) => {
               // Fallback to generic placeholder if specific placeholder fails
               const currentSrc = e.currentTarget.src;

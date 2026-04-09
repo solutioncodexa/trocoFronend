@@ -4,18 +4,18 @@ import Layout from '@/components/layout/Layout';
 const GuideTailles = () => {
   return (
     <Layout>
-      <main className="flex flex-1 justify-center py-12 px-4">
-        <div className="flex flex-col max-w-[1000px] flex-1">
+      <main className="flex flex-1 justify-center py-12 px-4 min-w-0 max-w-full overflow-x-hidden w-full">
+        <div className="flex flex-col max-w-[1000px] flex-1 min-w-0 w-full">
           {/* PageHeading */}
-          <div className="flex flex-wrap justify-between items-end gap-6 p-4 mb-8">
-            <div className="flex min-w-72 flex-col gap-3">
-              <h1 className="text-secondary-dark text-5xl font-black leading-tight tracking-[-0.033em] italic">Guide des Tailles</h1>
+          <div className="flex flex-col sm:flex-row flex-wrap justify-between items-stretch sm:items-end gap-6 p-4 mb-8">
+            <div className="flex min-w-0 w-full sm:min-w-72 flex-col gap-3">
+              <h1 className="text-secondary-dark text-3xl sm:text-5xl font-black leading-tight tracking-[-0.033em] italic break-words">Guide des Tailles</h1>
               <p className="text-primary text-lg font-normal leading-normal italic">L'art de la mesure par YaraGold Heritage</p>
             </div>
             <a 
               href="/guide-tailles-yaragold.pdf" 
               download="guide-tailles-yaragold.pdf"
-              className="flex min-w-[280px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-12 px-6 bg-primary text-white text-sm font-bold leading-normal tracking-[0.05em] uppercase transition-transform hover:scale-105"
+              className="flex w-full sm:w-auto min-w-0 sm:min-w-[280px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-12 px-4 sm:px-6 bg-primary text-white text-sm font-bold leading-normal tracking-[0.05em] uppercase transition-transform hover:scale-105"
             >
               <span className="material-symbols-outlined mr-2">picture_as_pdf</span>
               <span className="truncate">Télécharger le Guide Imprimable (PDF)</span>

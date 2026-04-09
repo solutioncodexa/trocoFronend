@@ -43,10 +43,18 @@ const GoldPriceNav = () => {
 
   if (isLoading || !data) {
     return (
-      <div className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-md bg-primary/5 text-muted-foreground text-xs animate-pulse">
-        <TrendingUp className="w-3.5 h-3.5" />
-        <span>OR...</span>
-      </div>
+      <>
+        <div className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-md bg-primary/5 text-muted-foreground text-xs animate-pulse">
+          <TrendingUp className="w-3.5 h-3.5" />
+          <span>OR...</span>
+        </div>
+        <div
+          className="md:hidden flex size-10 shrink-0 items-center justify-center rounded-md bg-primary/5 text-muted-foreground animate-pulse"
+          aria-hidden
+        >
+          <TrendingUp className="w-4 h-4" />
+        </div>
+      </>
     );
   }
 
@@ -59,9 +67,11 @@ const GoldPriceNav = () => {
   }));
 
   return (
+    <>
     <HoverCard openDelay={150} closeDelay={100}>
       <HoverCardTrigger asChild>
         <button
+          type="button"
           className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-md hover:bg-primary/10 transition-colors group"
           aria-label="Cours de l'or - voir le graphique"
         >
@@ -92,7 +102,12 @@ const GoldPriceNav = () => {
           )}
         </button>
       </HoverCardTrigger>
-      <HoverCardContent align="center" className="w-[340px] p-0 overflow-hidden">
+      <HoverCardContent
+        side="bottom"
+        align="center"
+        sideOffset={8}
+        className="w-[340px] p-0 overflow-hidden"
+      >
         <div className="p-4 pb-2 flex items-center justify-between gap-4">
           <div>
             <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Cours de l&apos;or XAU/MAD</p>
@@ -176,6 +191,14 @@ const GoldPriceNav = () => {
         </div>
       </HoverCardContent>
     </HoverCard>
+    <Link
+      to="/prix-or-maroc"
+      className="md:hidden flex size-10 shrink-0 items-center justify-center rounded-md bg-primary/5 text-primary hover:bg-primary/10 transition-colors touch-manipulation"
+      aria-label={`Cours de l'or OR ${formatPrice(displayPrice, priceDecimals)} ${unitLabel}`}
+    >
+      <TrendingUp className="w-4 h-4" />
+    </Link>
+    </>
   );
 };
 
