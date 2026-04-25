@@ -6,36 +6,31 @@ import { FeaturedProductDTO } from '@/types/featured-products';
 import { RevealOnScroll } from '@/components/animations';
 import { ANIMATIONS } from '@/config/animations';
 import { cn } from '@/lib/utils';
+import { staticCatalogQueryOptions } from '@/config/queryOptions';
 
 const HeritageSection = () => {
   const { data: featuredProducts = [], isLoading, error } = useQuery({
     queryKey: ['featured-products', 'heritage'],
     queryFn: () => featuredProductsApi.getAllFeaturedProducts(),
-    // refetchInterval: 30000, // Désactivé pour éviter la boucle d'erreurs
+    ...staticCatalogQueryOptions,
   });
 
   // Filtrer les produits actifs de la section "heritage" et trier par ordre d'affichage
   const activeProducts = Array.isArray(featuredProducts)
     ? featuredProducts
-        .filter(p => {
-          console.log('🔍 HeritageSection - Product:', { id: p.id, section: p.section, isActive: p.isActive });
-          return p.isActive && p.section === 'heritage';
-        })
+        .filter((p) => p.isActive && p.section === 'heritage')
         .sort((a, b) => a.displayOrder - b.displayOrder)
     : [];
-    
+
   // Fallback : si aucun produit heritage, prendre le premier produit actif disponible
-  const fallbackProducts = activeProducts.length === 0 && Array.isArray(featuredProducts)
-    ? featuredProducts
-        .filter(p => p.isActive)
-        .sort((a, b) => a.displayOrder - b.displayOrder)
-        .slice(0, 1)
-    : [];
-    
-  console.log('📊 HeritageSection - All featured products:', featuredProducts);
-  console.log('📊 HeritageSection - Active heritage products:', activeProducts);
-  console.log('📊 HeritageSection - Fallback products:', fallbackProducts);
-  
+  const fallbackProducts =
+    activeProducts.length === 0 && Array.isArray(featuredProducts)
+      ? featuredProducts
+          .filter((p) => p.isActive)
+          .sort((a, b) => a.displayOrder - b.displayOrder)
+          .slice(0, 1)
+      : [];
+
   const displayProducts = activeProducts.length > 0 ? activeProducts : fallbackProducts;
   return (
     <section className="w-full min-w-0 min-h-0 sm:min-h-[100dvh] flex flex-col justify-center max-sm:justify-start py-6 sm:py-8 md:py-10 lg:py-12 bg-paper dark:bg-[#2a2515] overflow-x-clip">
@@ -48,27 +43,19 @@ const HeritageSection = () => {
               {/* w-full + aspect + max-h : l’image remplit la largeur du cadre (plus de bande vide latérale) */}
               <div className="relative z-10 w-full min-h-0 aspect-[3/4] max-h-[min(48vh,400px)] sm:max-h-[min(58vh,540px)] md:max-h-[min(54vh,520px)] lg:max-h-[min(50vh,500px)] xl:max-h-[min(54vh,560px)] 2xl:max-h-[min(58vh,600px)] rounded-t-full overflow-hidden">
                 {displayProducts.length > 0 ? (
-                  <>
-                    {console.log('🖼️ HeritageSection - Image sources:', {
-                      customImageUrl: displayProducts[0].imageUrl,
-                      productImageUrl: displayProducts[0].product?.imageUrl,
-                      productId: displayProducts[0].productId
-                    })}
-                    <Link to={`/produit/${displayProducts[0].productId}`} className="block h-full w-full min-h-0">
-                      <img
-                        src={`http://localhost:8080/api${displayProducts[0].imageUrl || displayProducts[0].product?.imageUrl || '/uploads/placeholder.jpg'}`}
-                        alt={displayProducts[0].title || displayProducts[0].product?.name || 'Produit sélectionné'}
-                        className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
-                        onError={(e) => {
-                          console.log('❌ Image load error - stopping fallback loop');
-                          e.currentTarget.onerror = null; // Arrêter la boucle immédiatement
-                        }}
-                        onLoad={(e) => {
-                          console.log('✅ Image loaded successfully:', e.currentTarget.src);
-                        }}
-                      />
-                    </Link>
-                  </>
+                  <Link to={`/produit/${displayProducts[0].productId}`} className="block h-full w-full min-h-0">
+                    <img
+                      src={`http://localhost:8080/api${displayProducts[0].imageUrl || displayProducts[0].product?.imageUrl || '/uploads/placeholder.jpg'}`}
+                      alt={displayProducts[0].title || displayProducts[0].product?.name || 'Produit sélectionné'}
+                      className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
+                      loading="lazy"
+                      decoding="async"
+                      fetchPriority="low"
+                      onError={(e) => {
+                        e.currentTarget.onerror = null;
+                      }}
+                    />
+                  </Link>
                 ) : (
                   <div className="w-full h-full bg-cover bg-center" 
                        style={{backgroundImage: "url('https://lh3.googleusercontent.com/aida-public/AB6AXuC7-aLgGSZQV64bxRSynXXolsArrjJbCAD7cNZa_PYgdnEkyPf_GF7OZy8zi2QM5ZuAkBKk6_etuUn2-11cWQPoAYtrfAtQQH6h6h_U2Cu-5t-taRP4_t6oJDxMSzzwtsXmKF7MahexLyXUxfP1b30GPzfueBMTvGNspRQ3LZBBey41OlvJ5W1BbEkCpgVbmxPWvq9h0au-AzB5UyjDaYFbFSu2FTi9NmkWOYQiunBce_wp4hi9McoVaqooVCIAphYmIxlegE-SQXB6')"}}>
@@ -88,7 +75,6 @@ const HeritageSection = () => {
               <h4 className="text-accent-beige uppercase tracking-[0.2em] sm:tracking-[0.3em] text-xs sm:text-sm mb-3 sm:mb-4">Savoir-faire</h4>
               {displayProducts.length > 0 ? (
                 <>
-                  {console.log('🎯 HeritageSection - Displaying product:', displayProducts[0])}
                   {displayProducts[0].title && displayProducts[0].title.trim().split(' ').length === 1 ? (
                     // Titre à un mot : afficher seulement le mot avec le style spécial
                     <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-display text-secondary-dark dark:text-white mb-4 sm:mb-6 break-words px-1 sm:px-0">

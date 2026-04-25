@@ -1,34 +1,32 @@
-import { ProductDTO } from '@/types/api';
+import type { ProductDetailDTO, ProductListItemDTO } from '@/types/product-dtos';
 import { Product, ProductCategory, ProductType, GoldType } from '@/types/product';
 
-// Get the backend API base URL
 const getBackendUrl = () => {
   return import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api';
 };
 
-/**
- * Convertit un ProductDTO (backend) en Product (frontend)
- */
-export const mapProductDTOToProduct = (dto: ProductDTO): Product => {
-  // Convert image paths to full URLs
-  const images = (dto.images || []).map(img => {
+function resolveDtoImages(dto: Pick<ProductListItemDTO, 'images' | 'category'>): string[] {
+  const images = (dto.images || []).map((img) => {
     if (img.startsWith('http')) {
-      return img; // Already full URL
+      return img;
     }
-    // Convert relative path to full URL with /api context
-    const baseUrl = getBackendUrl(); // Keep /api suffix since uploads are served on /api/uploads
+    const baseUrl = getBackendUrl();
     return img.startsWith('/') ? `${baseUrl}${img}` : `${baseUrl}/${img}`;
   });
-
-  // If no images, add default placeholder based on product category
-  const finalImages = images.length > 0 ? images : [
-    dto.category === 'beldi' ? '/placeholder-beldi-fixed.svg' : '/placeholder-modern-fixed.svg'
+  if (images.length > 0) return images;
+  return [
+    dto.category === 'beldi' ? '/placeholder-beldi-fixed.svg' : '/placeholder-modern-fixed.svg',
   ];
+}
+
+/** Fiche complète (GET /products/{id}, panier, commande) */
+export const mapProductDetailToProduct = (dto: ProductDetailDTO): Product => {
+  const finalImages = resolveDtoImages(dto);
 
   return {
     id: String(dto.id),
     name: dto.name,
-    description: dto.description,
+    description: dto.description ?? '',
     price: dto.price,
     originalPrice: dto.originalPrice,
     weight: dto.weight,
@@ -45,9 +43,24 @@ export const mapProductDTOToProduct = (dto: ProductDTO): Product => {
   };
 };
 
-/**
- * Convertit une liste de ProductDTO en Product
- */
-export const mapProductDTOListToProducts = (dtos: ProductDTO[]): Product[] => {
-  return dtos.map(mapProductDTOToProduct);
+/** Grille / filtres (GET /products, ProductListItemDTO) */
+export const mapProductListItemToProduct = (dto: ProductListItemDTO): Product => {
+  const asDetail: ProductDetailDTO = {
+    ...dto,
+    description: '',
+    availableSizes: [],
+  };
+  return mapProductDetailToProduct(asDetail);
 };
+
+/** @deprecated Utiliser mapProductDetailToProduct */
+export const mapProductDTOToProduct = mapProductDetailToProduct;
+
+export const mapProductListItemListToProducts = (dtos: ProductListItemDTO[]): Product[] =>
+  dtos.map(mapProductListItemToProduct);
+
+export const mapProductDetailListToProducts = (dtos: ProductDetailDTO[]): Product[] =>
+  dtos.map(mapProductDetailToProduct);
+
+/** Alias historique : listes API légères */
+export const mapProductDTOListToProducts = mapProductListItemListToProducts;

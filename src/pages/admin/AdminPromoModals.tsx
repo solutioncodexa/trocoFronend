@@ -65,8 +65,6 @@ const AdminPromoModals = () => {
   const createMutation = useMutation({
     mutationFn: promoModalsApi.createPromoModal,
     onSuccess: (newModal) => {
-      console.log('✅ Promo modal créé:', newModal);
-      
       // Mettre à jour le cache immédiatement
       queryClient.setQueryData(['promo-modals'], (old: any) => {
         const currentModals = old || [];
@@ -79,8 +77,6 @@ const AdminPromoModals = () => {
       toast.success('Promo modal créé avec succès');
       setIsCreateDialogOpen(false);
       
-      // Nettoyer le cache du PromoModal pour que les changements soient immédiatement visibles
-      console.log('🗑️ Clearing promo modal cache after creation');
       sessionStorage.removeItem('hasSeenPromoModal');
     },
     onError: (error: any) => {
@@ -97,9 +93,7 @@ const AdminPromoModals = () => {
       toast.success('Promo modal mis à jour avec succès');
       setIsEditDialogOpen(false);
       setSelectedModal(null);
-      
-      // Nettoyer le cache du PromoModal pour que les changements soient immédiatement visibles
-      console.log('🗑️ Clearing promo modal cache after update');
+
       sessionStorage.removeItem('hasSeenPromoModal');
     },
     onError: (error: any) => {
@@ -110,8 +104,6 @@ const AdminPromoModals = () => {
   const deleteMutation = useMutation({
     mutationFn: promoModalsApi.deletePromoModal,
     onSuccess: (_, deletedId) => {
-      console.log('✅ Promo modal supprimé:', deletedId);
-      
       // Mettre à jour le cache immédiatement
       queryClient.setQueryData(['promo-modals'], (old: any) => {
         const currentModals = old || [];
@@ -121,8 +113,6 @@ const AdminPromoModals = () => {
       // Invalider pour s'assurer que le serveur est synchronisé
       queryClient.invalidateQueries({ queryKey: ['promo-modals'] });
       
-      // Nettoyer le cache du PromoModal pour que les changements soient immédiatement visibles
-      console.log('🗑️ Clearing promo modal cache after deletion');
       sessionStorage.removeItem('hasSeenPromoModal');
       
       toast.success('Promo modal supprimé avec succès');
@@ -140,8 +130,6 @@ const AdminPromoModals = () => {
       queryClient.invalidateQueries({ queryKey: ['promo-modals'] });
       toast.success('Statut du promo modal mis à jour avec succès');
       
-      // Nettoyer le cache du PromoModal si le modal est activé/désactivé
-      console.log('🗑️ Clearing promo modal cache after toggle');
       sessionStorage.removeItem('hasSeenPromoModal');
     },
     onError: (error: any) => {

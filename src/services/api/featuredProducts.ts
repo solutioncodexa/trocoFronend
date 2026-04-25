@@ -19,13 +19,9 @@ class FeaturedProductsApi {
   // Récupérer tous les produits sélectionnés
   async getAllFeaturedProducts(): Promise<FeaturedProductDTO[]> {
     try {
-      console.log('Fetching featured products from:', `${API_BASE_URL}/products/featured-products-mock`);
       const response = await fetch(`${API_BASE_URL}/products/featured-products-mock`, {
         headers: this.getAuthHeaders(),
       });
-
-      console.log('Response status:', response.status);
-      console.log('Response headers:', response.headers);
 
       if (!response.ok) {
         const errorText = await response.text();
@@ -34,7 +30,6 @@ class FeaturedProductsApi {
       }
 
       const data = await response.json();
-      console.log('Featured products data:', data);
       return data;
     } catch (error) {
       console.error('Error fetching featured products:', error);
@@ -81,15 +76,12 @@ class FeaturedProductsApi {
   // Créer un nouveau produit sélectionné
   async createFeaturedProduct(data: CreateFeaturedProductRequest): Promise<FeaturedProductDTO> {
     try {
-      console.log('Creating featured product at:', `${API_BASE_URL}/products/featured-products`);
       const response = await fetch(`${API_BASE_URL}/products/featured-products`, {
         method: 'POST',
         headers: this.getAuthHeaders(),
         body: JSON.stringify(data),
       });
 
-      console.log('Create response status:', response.status);
-      
       if (!response.ok) {
         const errorText = await response.text();
         console.error('Create error response:', errorText);
@@ -106,7 +98,6 @@ class FeaturedProductsApi {
   // Mettre à jour un produit sélectionné
   async updateFeaturedProduct(id: string, data: UpdateFeaturedProductRequest): Promise<FeaturedProductDTO> {
     try {
-      console.log('🔧 Updating featured product:', { id, data });
       const response = await fetch(`${API_BASE_URL}/featured-products/${id}`, {
         method: 'PUT',
         headers: this.getAuthHeaders(),

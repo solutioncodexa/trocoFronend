@@ -1,30 +1,33 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useMemo, useEffect } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import Layout from '@/components/layout/Layout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { useGoldTypes } from '@/hooks/useGoldTypes';
 import { customOrdersApi, productTypesApi, categoriesApi } from '@/services/api';
+import { sortProductTypesForEnsemble } from '@/utils/productTypeSort';
+import { getSurMesureSizeOptionsForCategory } from '@/config/surMesureSizes';
 import { CustomOrderDTO } from '@/types/api';
 import { toast } from 'sonner';
+import { staticCatalogQueryOptions } from '@/config/queryOptions';
 import { CloudUpload, X, Loader2, Check } from 'lucide-react';
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
 const ACCEPTED_TYPES = 'image/jpeg,image/png,image/webp,.pdf';
 
 const SurMesure = () => {
-  const { goldTypesWithColors: goldTypes } = useGoldTypes();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const { data: productTypes = [] } = useQuery({
     queryKey: ['productTypes'],
     queryFn: () => productTypesApi.getAllProductTypes(),
+    ...staticCatalogQueryOptions,
   });
   const { data: categories = [] } = useQuery({
     queryKey: ['categories'],
     queryFn: () => categoriesApi.getAllCategories(),
+    ...staticCatalogQueryOptions,
   });
 
   const [imageFiles, setImageFiles] = useState<File[]>([]);
@@ -34,15 +37,32 @@ const SurMesure = () => {
   const [formData, setFormData] = useState({
     type: '',
     style: '',
+    taille: '',
     poids: '',
     description: '',
-    goldType: '',
     fullName: '',
     phone: '',
     email: '',
     address: '',
     city: '',
   });
+
+  const sortedProductTypes = useMemo(() => {
+    const list = [...productTypes];
+    if (formData.style === 'ensemble') {
+      return sortProductTypesForEnsemble(list);
+    }
+    return list.sort((a, b) => a.name.localeCompare(b.name, 'fr'));
+  }, [productTypes, formData.style]);
+
+  const sizeOptions = useMemo(
+    () => getSurMesureSizeOptionsForCategory(formData.style),
+    [formData.style]
+  );
+
+  useEffect(() => {
+    setFormData((prev) => ({ ...prev, taille: '' }));
+  }, [formData.style]);
 
   const handleInputChange = (field: string, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -136,17 +156,17 @@ const SurMesure = () => {
       return;
     }
 
-    const desc =
-      formData.goldType
-        ? `Type d'or: ${goldTypes.find((g) => g.id === formData.goldType)?.label || formData.goldType}. `
-        : '';
-    const fullDesc = desc + (formData.description || '');
+    const sizeLine = formData.taille
+      ? `Taille / tour souhaité : ${sizeOptions.find((o) => o.value === formData.taille)?.label || formData.taille}. `
+      : '';
+    const fullDesc = (sizeLine + (formData.description || '')).trim() || 'Commande personnalisée';
 
     const customOrder: Partial<CustomOrderDTO> = {
       type: formData.type,
       style: formData.style,
+      size: formData.taille || undefined,
       weight: formData.poids ? parseFloat(formData.poids) : undefined,
-      description: fullDesc || 'Commande personnalisée',
+      description: fullDesc,
       customer: {
         fullName: formData.fullName.trim(),
         phone: formData.phone.trim(),
@@ -164,11 +184,11 @@ const SurMesure = () => {
     setFormData({
       type: '',
       style: '',
+      taille: '',
       address: '',
       city: '',
       poids: '',
       description: '',
-      goldType: '',
       fullName: '',
       phone: '',
       email: '',
@@ -239,7 +259,7 @@ const SurMesure = () => {
                     required
                   >
                     <option value="">Sélectionnez un type</option>
-                    {productTypes.map((pt) => (
+                    {sortedProductTypes.map((pt) => (
                       <option key={pt.id} value={pt.code.toLowerCase()}>
                         {pt.name}
                       </option>
@@ -268,6 +288,27 @@ const SurMesure = () => {
 
               <div>
                 <Label className="block text-xs uppercase tracking-widest text-accent-beige mb-3 font-bold">
+                  Taille / tour (selon la catégorie)
+                </Label>
+                <select
+                  value={formData.taille}
+                  onChange={(e) => handleInputChange('taille', e.target.value)}
+                  disabled={!formData.style}
+                  className="w-full bg-paper dark:bg-secondary-dark border-accent-beige/30 py-3 px-4 focus:ring-primary focus:border-primary rounded-none text-sm disabled:opacity-50"
+                >
+                  <option value="">
+                    {formData.style ? 'Sélectionnez une taille (optionnel)' : 'Choisissez d’abord une catégorie'}
+                  </option>
+                  {sizeOptions.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <Label className="block text-xs uppercase tracking-widest text-accent-beige mb-3 font-bold">
                   Poids estimé (grammes d'or)
                 </Label>
                 <Input
@@ -278,24 +319,6 @@ const SurMesure = () => {
                   className="w-full bg-paper dark:bg-secondary-dark border-accent-beige/30 py-3 px-4 focus:ring-primary focus:border-primary rounded-none text-sm"
                 />
                 <p className="text-[10px] text-accent-beige/60 mt-2 italic">Estimation indicative pour le devis initial</p>
-              </div>
-
-              <div>
-                <Label className="block text-xs uppercase tracking-widest text-accent-beige mb-3 font-bold">
-                  Type d'Or
-                </Label>
-                <div className="flex gap-4">
-                  {goldTypes.map((goldType) => (
-                    <button
-                      key={goldType.id}
-                      type="button"
-                      onClick={() => handleInputChange('goldType', goldType.id)}
-                      className={`size-8 rounded-full border-2 border-white shadow-sm ring-1 ring-accent-beige/20 hover:scale-110 transition-transform ${formData.goldType === goldType.id ? 'ring-2 ring-primary' : ''}`}
-                      style={{ backgroundColor: goldType.color }}
-                      title={goldType.label}
-                    />
-                  ))}
-                </div>
               </div>
 
               <div>

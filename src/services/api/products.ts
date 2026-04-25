@@ -1,5 +1,6 @@
 import { buildApiUrl, apiRequest } from '@/config/api';
-import { ProductDTO, PageResponse } from '@/types/api';
+import type { ProductDetailDTO, ProductListItemDTO } from '@/types/product-dtos';
+import type { PageResponse } from '@/types/api';
 
 export interface ProductFilters {
   category?: string;
@@ -16,6 +17,14 @@ export interface ProductQueryParams {
   size?: number;
   sortBy?: string;
   sortDir?: 'ASC' | 'DESC';
+  category?: string;
+  type?: string;
+  goldType?: string;
+  collection?: string;
+  minPrice?: number;
+  maxPrice?: number;
+  inStock?: boolean;
+  keyword?: string;
 }
 
 /** Données produit pour création/modification (sans images, envoyées séparément) */
@@ -35,23 +44,58 @@ export interface ProductFormData {
   badges?: string[];
 }
 
+function buildProductsQueryString(params: ProductQueryParams): string {
+  const {
+    page = 0,
+    size = 20,
+    sortBy = 'createdAt',
+    sortDir = 'DESC',
+    category,
+    type,
+    goldType,
+    collection,
+    minPrice,
+    maxPrice,
+    inStock,
+    keyword,
+  } = params;
+
+  const qs = new URLSearchParams();
+  qs.set('page', String(page));
+  qs.set('size', String(size));
+  qs.set('sortBy', sortBy);
+  qs.set('sortDir', sortDir);
+  if (category) qs.set('category', category);
+  if (type) qs.set('type', type);
+  if (goldType) qs.set('goldType', goldType);
+  if (collection) qs.set('collection', collection);
+  if (minPrice !== undefined) qs.set('minPrice', String(minPrice));
+  if (maxPrice !== undefined) qs.set('maxPrice', String(maxPrice));
+  if (inStock === true) qs.set('inStock', 'true');
+  if (keyword !== undefined && keyword.trim() !== '') qs.set('keyword', keyword.trim());
+
+  return qs.toString();
+}
+
 export const productsApi = {
-  // Récupérer tous les produits avec pagination
-  getAllProducts: async (params: ProductQueryParams = {}): Promise<PageResponse<ProductDTO>> => {
-    const { page = 0, size = 20, sortBy = 'createdAt', sortDir = 'DESC' } = params;
-    const url = buildApiUrl(`/products?page=${page}&size=${size}&sortBy=${sortBy}&sortDir=${sortDir}`);
-    console.log('Fetching products from:', url);
-    return apiRequest<PageResponse<ProductDTO>>(url);
+  /** Pagination publique — ProductListItemDTO */
+  getAllProducts: async (params: ProductQueryParams = {}): Promise<PageResponse<ProductListItemDTO>> => {
+    const qs = buildProductsQueryString(params);
+    return apiRequest<PageResponse<ProductListItemDTO>>(buildApiUrl(`/products?${qs}`));
   },
 
-  // Récupérer un produit par ID
-  getProductById: async (id: string): Promise<ProductDTO> => {
+  /** Mêmes filtres — ProductDetailDTO (admin, export) */
+  getAllProductsFullPage: async (params: ProductQueryParams = {}): Promise<PageResponse<ProductDetailDTO>> => {
+    const qs = buildProductsQueryString(params);
+    return apiRequest<PageResponse<ProductDetailDTO>>(buildApiUrl(`/products/full-page?${qs}`));
+  },
+
+  getProductById: async (id: string): Promise<ProductDetailDTO> => {
     const url = buildApiUrl(`/products/${id}`);
-    return apiRequest<ProductDTO>(url);
+    return apiRequest<ProductDetailDTO>(url);
   },
 
-  // Filtrer les produits
-  filterProducts: async (filters: ProductFilters): Promise<ProductDTO[]> => {
+  filterProducts: async (filters: ProductFilters): Promise<ProductListItemDTO[]> => {
     const params = new URLSearchParams();
     if (filters.category) params.append('category', filters.category);
     if (filters.type) params.append('type', filters.type);
@@ -60,13 +104,12 @@ export const productsApi = {
     if (filters.minPrice !== undefined) params.append('minPrice', filters.minPrice.toString());
     if (filters.maxPrice !== undefined) params.append('maxPrice', filters.maxPrice.toString());
     if (filters.inStock !== undefined) params.append('inStock', filters.inStock.toString());
-    
+
     const url = buildApiUrl(`/products/filter?${params.toString()}`);
-    return apiRequest<ProductDTO[]>(url);
+    return apiRequest<ProductListItemDTO[]>(url);
   },
 
-  // Créer un produit avec images (admin)
-  createProduct: async (product: ProductFormData, images: File[]): Promise<ProductDTO> => {
+  createProduct: async (product: ProductFormData, images: File[]): Promise<ProductDetailDTO> => {
     const url = buildApiUrl('/products');
     const formData = new FormData();
     formData.append('product', new Blob([JSON.stringify(product)], { type: 'application/json' }));
@@ -83,8 +126,7 @@ export const productsApi = {
     return data.data ?? data;
   },
 
-  // Mettre à jour un produit avec images (admin)
-  updateProduct: async (id: string, product: ProductFormData, images?: File[]): Promise<ProductDTO> => {
+  updateProduct: async (id: string, product: ProductFormData, images?: File[]): Promise<ProductDetailDTO> => {
     const url = buildApiUrl(`/products/${id}`);
     const formData = new FormData();
     formData.append('product', new Blob([JSON.stringify(product)], { type: 'application/json' }));
@@ -103,7 +145,6 @@ export const productsApi = {
     return data.data ?? data;
   },
 
-  // Supprimer un produit (admin)
   deleteProduct: async (id: string): Promise<void> => {
     const url = buildApiUrl(`/products/${id}`);
     return apiRequest<void>(url, {

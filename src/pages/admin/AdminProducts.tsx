@@ -14,34 +14,39 @@ import { categoriesApi, productTypesApi, collectionsApi, goldPriceSettingsApi, c
 import { ProductFormData } from '@/services/api/products';
 import { useGoldTypes } from '@/hooks/useGoldTypes';
 import { productsApi } from '@/services/api/products';
-import { mapProductDTOToProduct, mapProductDTOListToProducts } from '@/utils/productMapper';
+import { mapProductDetailListToProducts } from '@/utils/productMapper';
 import { formatPrice } from '@/utils/formatPrice';
 import { toast } from 'sonner';
+import { staticCatalogQueryOptions } from '@/config/queryOptions';
 import { cn } from '@/lib/utils';
 
 const AdminProducts = () => {
   const queryClient = useQueryClient();
   const { data: productsPage, isLoading } = useQuery({
     queryKey: ['products', 'admin'],
-    queryFn: () => productsApi.getAllProducts({ page: 0, size: 500 }),
+    queryFn: () => productsApi.getAllProductsFullPage({ page: 0, size: 500 }),
   });
-  const products = productsPage ? mapProductDTOListToProducts(productsPage.content) : [];
+  const products = productsPage ? mapProductDetailListToProducts(productsPage.content) : [];
 
   const { data: categories = [] } = useQuery({
     queryKey: ['categories'],
     queryFn: () => categoriesApi.getAllCategories(),
+    ...staticCatalogQueryOptions,
   });
   const { data: productTypes = [] } = useQuery({
     queryKey: ['productTypes'],
     queryFn: () => productTypesApi.getAllProductTypes(),
+    ...staticCatalogQueryOptions,
   });
   const { data: collections = [] } = useQuery({
     queryKey: ['collections'],
     queryFn: () => collectionsApi.getAllCollections(),
+    ...staticCatalogQueryOptions,
   });
   const { data: goldPriceSettings } = useQuery({
     queryKey: ['goldPriceSettings'],
     queryFn: () => goldPriceSettingsApi.getSettings(),
+    ...staticCatalogQueryOptions,
   });
   const { goldTypes, getGoldTypeName } = useGoldTypes();
   const [searchTerm, setSearchTerm] = useState('');

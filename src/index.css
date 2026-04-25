@@ -2,7 +2,7 @@
 @tailwind components;
 @tailwind utilities;
 
-@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=Montserrat:wght@300;400;500;600;700&display=swap');
+/* Polices : chargées via <link> dans index.html (évite @import après Tailwind) */
 
 /* Material Symbols */
 .material-symbols-outlined {
@@ -164,6 +164,39 @@
     overflow-x: hidden;
     width: 100%;
     max-width: 100%;
+    /* Firefox — piste / curseur (couleurs du thème) */
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--primary) / 0.5) hsl(var(--muted));
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    html {
+      scroll-behavior: smooth;
+    }
+  }
+
+  html::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+
+  html::-webkit-scrollbar-track {
+    background: hsl(var(--muted));
+    border-radius: 9999px;
+  }
+
+  html::-webkit-scrollbar-thumb {
+    background: hsl(var(--primary) / 0.45);
+    border-radius: 9999px;
+    border: 2px solid hsl(var(--muted));
+  }
+
+  html::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--primary) / 0.72);
+  }
+
+  html::-webkit-scrollbar-corner {
+    background: hsl(var(--muted));
   }
 
   body {
@@ -403,6 +436,35 @@
   
   .classic-seal span {
     @apply font-script text-lg leading-none transform -rotate-12;
+  }
+
+  /**
+   * Scrollbars des zones internes (menus, admin, carrousels…)
+   * Même palette que la scrollbar document : primary + muted.
+   */
+  .scrollbar-app {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--primary) / 0.5) hsl(var(--muted));
+  }
+
+  .scrollbar-app::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  .scrollbar-app::-webkit-scrollbar-track {
+    background: hsl(var(--muted));
+    border-radius: 9999px;
+  }
+
+  .scrollbar-app::-webkit-scrollbar-thumb {
+    background: hsl(var(--primary) / 0.4);
+    border-radius: 9999px;
+    border: 2px solid hsl(var(--muted));
+  }
+
+  .scrollbar-app::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--primary) / 0.7);
   }
 
   /* Ornate border for cart */

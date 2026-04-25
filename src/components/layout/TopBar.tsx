@@ -13,9 +13,7 @@ const TopBar = () => {
   useEffect(() => {
     const fetchMessages = async () => {
       try {
-        console.log('🔍 TopBar: Récupération des messages...');
         const fetchedMessages = await topBarMessagesApi.getActiveMessages();
-        console.log('✅ TopBar: Messages reçus:', fetchedMessages);
         setMessages(fetchedMessages);
         setLoading(false);
       } catch (error) {

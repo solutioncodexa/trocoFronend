@@ -1,5 +1,5 @@
 // Debug script to test image mapping
-import { mapProductDTOToProduct } from '@/utils/productMapper';
+import { mapProductListItemToProduct } from '@/utils/productMapper';
 
 // Test data from backend
 const testProducts = [
@@ -19,7 +19,13 @@ const testProducts = [
 
 console.log('=== IMAGE MAPPING DEBUG ===');
 testProducts.forEach(product => {
-  const mapped = mapProductDTOToProduct(product);
+  const mapped = mapProductListItemToProduct({
+    ...product,
+    price: 0,
+    weight: 0,
+    type: 'ring',
+    goldType: 'yellow',
+  });
   console.log(`Product: ${product.name}`);
   console.log(`Category: ${product.category}`);
   console.log(`Original images:`, product.images);

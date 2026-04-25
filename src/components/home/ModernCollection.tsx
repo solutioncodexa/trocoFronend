@@ -2,17 +2,19 @@ import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import ProductCard from '@/components/ui/ProductCard';
 import { productsApi } from '@/services/api/products';
-import { mapProductDTOListToProducts } from '@/utils/productMapper';
+import { mapProductListItemListToProducts } from '@/utils/productMapper';
 import { RevealOnScroll } from '@/components/animations';
 import { ANIMATIONS } from '@/config/animations';
+import { staticCatalogQueryOptions } from '@/config/queryOptions';
 
 const ModernCollection = () => {
   const { data: products } = useQuery({
     queryKey: ['products', 'modern'],
     queryFn: () => productsApi.filterProducts({ category: 'modern' }),
+    ...staticCatalogQueryOptions,
   });
 
-  const modernProducts = products ? mapProductDTOListToProducts(products).slice(0, 4) : [];
+  const modernProducts = products ? mapProductListItemListToProducts(products).slice(0, 4) : [];
   const stagger = ANIMATIONS.homeCollectionStagger;
 
   return (

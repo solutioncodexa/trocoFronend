@@ -1,17 +1,15 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useMutation } from '@tanstack/react-query';
-import { Check, ArrowLeft, CreditCard, Banknote, Trash2, Plus, Minus, Lock, CheckCircle, Verified } from 'lucide-react';
+import { Check, Banknote, CheckCircle, Verified } from 'lucide-react';
 import Layout from '@/components/layout/Layout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useCart } from '@/contexts/CartContext';
 import { formatPrice } from '@/utils/formatPrice';
 import { toast } from 'sonner';
 import { PaymentMethod } from '@/types/product';
-import { cn } from '@/lib/utils';
 import { ordersApi } from '@/services/api';
 import { OrderDTO, CartItemDTO } from '@/types/api';
 
@@ -129,7 +127,7 @@ const Checkout = () => {
           <h1 className="font-display text-3xl mb-4">Commande Confirmée!</h1>
           <p className="font-body text-muted-foreground mb-8">
             Merci pour votre commande, {formData.fullName}! 
-            {paymentMethod === 'cash_on_delivery' ? ` Nous vous contacterons au ${formData.phone} pour confirmer la livraison.` : ' Vous recevrez un email de confirmation avec les instructions de paiement.'}
+            {` Nous vous contacterons au ${formData.phone} pour confirmer la livraison.`}
           </p>
           <div className="bg-card rounded-lg p-6 mb-8 text-left">
             <h3 className="font-display text-lg mb-4">Détails de livraison</h3>
@@ -138,7 +136,7 @@ const Checkout = () => {
               <p><span className="text-muted-foreground">Téléphone:</span> {formData.phone}</p>
               <p><span className="text-muted-foreground">Adresse:</span> {formData.address}</p>
               <p><span className="text-muted-foreground">Ville:</span> {formData.city}</p>
-              <p><span className="text-muted-foreground">Paiement:</span> {paymentMethod === 'cash_on_delivery' ? 'À la livraison' : 'En ligne'}</p>
+              <p><span className="text-muted-foreground">Paiement:</span> À la livraison</p>
             </div>
           </div>
           <Button asChild size="lg" className="font-body uppercase tracking-wider">
@@ -162,7 +160,7 @@ const Checkout = () => {
             <div className="mb-10 text-center lg:text-left">
               <h2 className="text-3xl font-display text-secondary-dark dark:text-white mb-2">Validation de votre Commande</h2>
               <p className="text-accent-beige font-script text-3xl">
-                {paymentMethod === 'online' ? 'Paiement en ligne' : 'Paiement à la livraison'}
+                Paiement à la livraison
               </p>
             </div>
 
@@ -251,23 +249,6 @@ const Checkout = () => {
                     </div>
                   </div>
 
-                  {/*
-                  <div 
-                    className={`flex items-center space-x-3 p-4 rounded-lg border-2 cursor-pointer transition-colors ${paymentMethod === 'online' ? 'border-primary bg-primary/5' : 'border-accent-beige/30 hover:border-primary/50'}`}
-                    onClick={() => setPaymentMethod('online')}
-                  >
-                    <div className={`w-4 h-4 rounded-full border-2 ${paymentMethod === 'online' ? 'border-primary bg-primary' : 'border-accent-beige/30'} flex items-center justify-center`}>
-                      {paymentMethod === 'online' && <div className="w-2 h-2 rounded-full bg-white"></div>}
-                    </div>
-                    <CreditCard className="w-5 h-5 text-primary" />
-                    <div className="flex-1">
-                      <span className="font-medium cursor-pointer">
-                        Paiement en ligne
-                      </span>
-                      <p className="text-xs text-accent-beige leading-relaxed">Payez par carte bancaire de manière sécurisée</p>
-                    </div>
-                  </div>
-                  */}
                 </div>
               </div>
 

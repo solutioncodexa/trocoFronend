@@ -4,15 +4,16 @@ import { ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import ProductCard from '@/components/ui/ProductCard';
 import { productsApi } from '@/services/api/products';
-import { mapProductDTOListToProducts } from '@/utils/productMapper';
+import { mapProductListItemListToProducts } from '@/utils/productMapper';
 
 const FeaturedProducts = () => {
   const { data: productsPage } = useQuery({
     queryKey: ['products', 'featured'],
     queryFn: () => productsApi.getAllProducts({ page: 0, size: 20, sortBy: 'createdAt', sortDir: 'DESC' }),
+    ...staticCatalogQueryOptions,
   });
 
-  const allProducts = productsPage ? mapProductDTOListToProducts(productsPage.content) : [];
+  const allProducts = productsPage ? mapProductListItemListToProducts(productsPage.content) : [];
   const featuredProducts = allProducts.filter((p) => p.badges && p.badges.length > 0).slice(0, 4);
   const fallback = featuredProducts.length < 4 ? allProducts.slice(0, 4) : featuredProducts;
   const displayProducts = fallback.length > 0 ? fallback : featuredProducts;

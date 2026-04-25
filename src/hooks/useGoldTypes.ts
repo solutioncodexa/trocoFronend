@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { goldTypesApi } from '@/services/api';
+import { staticCatalogQueryOptions } from '@/config/queryOptions';
 
 // Couleurs pour les pastilles (Boutique, SurMesure)
 const GOLD_TYPE_COLORS: Record<string, string> = {
@@ -19,6 +20,7 @@ export function useGoldTypes() {
     queryKey: ['goldTypes'],
     queryFn: () => goldTypesApi.getAllGoldTypes(),
     retry: 1,
+    ...staticCatalogQueryOptions,
   });
 
   const goldTypeLabels: Record<string, string> = goldTypes.reduce(

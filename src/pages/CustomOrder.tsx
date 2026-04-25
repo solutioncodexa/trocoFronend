@@ -10,15 +10,18 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { toast } from 'sonner';
 import { customOrdersApi, productTypesApi, categoriesApi } from '@/services/api';
 import { CustomOrderDTO } from '@/types/api';
+import { staticCatalogQueryOptions } from '@/config/queryOptions';
 
 const CustomOrder = () => {
   const { data: productTypes = [] } = useQuery({
     queryKey: ['productTypes'],
     queryFn: () => productTypesApi.getAllProductTypes(),
+    ...staticCatalogQueryOptions,
   });
   const { data: categories = [] } = useQuery({
     queryKey: ['categories'],
     queryFn: () => categoriesApi.getAllCategories(),
+    ...staticCatalogQueryOptions,
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);

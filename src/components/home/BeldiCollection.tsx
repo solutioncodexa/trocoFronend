@@ -2,17 +2,19 @@ import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import ProductCard from '@/components/ui/ProductCard';
 import { productsApi } from '@/services/api/products';
-import { mapProductDTOListToProducts } from '@/utils/productMapper';
+import { mapProductListItemListToProducts } from '@/utils/productMapper';
 import { RevealOnScroll } from '@/components/animations';
 import { ANIMATIONS } from '@/config/animations';
+import { staticCatalogQueryOptions } from '@/config/queryOptions';
 
 const BeldiCollection = () => {
   const { data: products } = useQuery({
     queryKey: ['products', 'beldi'],
     queryFn: () => productsApi.filterProducts({ category: 'beldi' }),
+    ...staticCatalogQueryOptions,
   });
 
-  const beldiProducts = products ? mapProductDTOListToProducts(products).slice(0, 4) : [];
+  const beldiProducts = products ? mapProductListItemListToProducts(products).slice(0, 4) : [];
 
   const stagger = ANIMATIONS.homeCollectionStagger;
 

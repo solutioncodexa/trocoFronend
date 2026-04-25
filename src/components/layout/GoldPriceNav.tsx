@@ -44,16 +44,21 @@ const GoldPriceNav = () => {
   if (isLoading || !data) {
     return (
       <>
-        <div className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-md bg-primary/5 text-muted-foreground text-xs animate-pulse">
+        <Link
+          to="/prix-or-maroc"
+          className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-md bg-primary/5 text-muted-foreground text-xs animate-pulse hover:bg-primary/10 transition-colors"
+          aria-label="Cours de l'or — voir la page détaillée"
+        >
           <TrendingUp className="w-3.5 h-3.5" />
           <span>OR...</span>
-        </div>
-        <div
-          className="md:hidden flex size-10 shrink-0 items-center justify-center rounded-md bg-primary/5 text-muted-foreground animate-pulse"
-          aria-hidden
+        </Link>
+        <Link
+          to="/prix-or-maroc"
+          className="md:hidden flex size-10 shrink-0 items-center justify-center rounded-md bg-primary/5 text-muted-foreground animate-pulse hover:bg-primary/10 transition-colors touch-manipulation"
+          aria-label="Cours de l'or — voir la page détaillée"
         >
           <TrendingUp className="w-4 h-4" />
-        </div>
+        </Link>
       </>
     );
   }
@@ -70,17 +75,17 @@ const GoldPriceNav = () => {
     <>
     <HoverCard openDelay={150} closeDelay={100}>
       <HoverCardTrigger asChild>
-        <button
-          type="button"
+        <Link
+          to="/prix-or-maroc"
           className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-md hover:bg-primary/10 transition-colors group"
-          aria-label="Cours de l'or - voir le graphique"
+          aria-label="Cours de l'or — voir la page détaillée et le graphique"
         >
           <TrendingUp className="w-3.5 h-3.5 text-primary" />
           <span className="text-xs font-medium text-foreground group-hover:text-primary">
             OR {formatPrice(displayPrice, priceDecimals)} {unitLabel}
           </span>
           {sparklineData.length > 1 && (
-            <div className="w-16 h-6 -mr-1">
+            <div className="w-16 h-6 -mr-1 pointer-events-none" aria-hidden>
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={sparklineData} margin={{ top: 2, right: 0, left: 0, bottom: 2 }}>
                   <defs>
@@ -100,7 +105,7 @@ const GoldPriceNav = () => {
               </ResponsiveContainer>
             </div>
           )}
-        </button>
+        </Link>
       </HoverCardTrigger>
       <HoverCardContent
         side="bottom"

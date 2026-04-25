@@ -26,7 +26,6 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
 
   // Synchroniser le previewUrl avec la prop value
   React.useEffect(() => {
-    console.log('🔄 Syncing previewUrl with value:', value);
     setPreviewUrl(value);
   }, [value]);
 
@@ -45,7 +44,6 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
       return;
     }
 
-    console.log('📁 File selected:', file.name, file.type, file.size);
     setUploading(true);
     
     try {
@@ -54,17 +52,13 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
       if (onUpload) {
         // Utiliser l'handler d'upload personnalisé
         try {
-          console.log('🔧 Attempting API upload...');
           url = await onUpload(file);
-          console.log('✅ API upload successful:', url);
         } catch (error) {
-          console.warn('⚠️ Upload API failed, using base64 fallback:', error);
           // Fallback vers base64 si l'API échoue
           url = await new Promise((resolve, reject) => {
             const reader = new FileReader();
             reader.onload = (e) => {
               const base64Url = e.target?.result as string;
-              console.log('📸 Base64 fallback successful');
               resolve(base64Url);
             };
             reader.onerror = reject;
@@ -73,12 +67,10 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
         }
       } else {
         // Upload par défaut (base64 pour le développement)
-        console.log('🔧 Using default base64 upload...');
         url = await new Promise((resolve, reject) => {
           const reader = new FileReader();
           reader.onload = (e) => {
             const base64Url = e.target?.result as string;
-            console.log('📸 Base64 upload successful');
             resolve(base64Url);
           };
           reader.onerror = reject;
@@ -86,7 +78,6 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
         });
       }
       
-      console.log('🖼️ Setting preview URL:', url);
       setPreviewUrl(url);
       onChange(url);
     } catch (error) {
@@ -98,13 +89,11 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
   };
 
   const handleUrlChange = (url: string) => {
-    console.log('🖼️ URL changed:', url);
     setPreviewUrl(url);
     onChange(url);
   };
 
   const clearImage = () => {
-    console.log('🗑️ Clearing image');
     setPreviewUrl('');
     onChange('');
     if (fileInputRef.current) {
@@ -127,9 +116,6 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
               console.error('Error loading image:', previewUrl);
               e.currentTarget.src = '';
               setPreviewUrl('');
-            }}
-            onLoad={() => {
-              console.log('Image loaded successfully:', previewUrl);
             }}
           />
           <Button

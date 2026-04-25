@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { goldTypesApi } from '@/services/api';
 import type { GoldTypeDTO } from '@/types/api';
 import { toast } from 'sonner';
+import { staticCatalogQueryOptions } from '@/config/queryOptions';
 
 const GOLD_COLORS: Record<string, string> = {
   YELLOW: '#FFD700',
@@ -29,6 +30,7 @@ const AdminGoldTypes = () => {
   const { data: goldTypes = [], isLoading } = useQuery({
     queryKey: ['goldTypes'],
     queryFn: () => goldTypesApi.getAllGoldTypes(),
+    ...staticCatalogQueryOptions,
   });
 
   const createMutation = useMutation({

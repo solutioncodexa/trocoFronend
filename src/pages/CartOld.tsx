@@ -133,7 +133,7 @@ const Cart = () => {
                 </Button>
 
                 <p className="font-body text-xs text-muted-foreground text-center mt-4">
-                  Paiement en ligne ou à la livraison
+                  Paiement à la livraison uniquement
                 </p>
               </div>
             </div>

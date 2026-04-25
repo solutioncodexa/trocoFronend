@@ -23,22 +23,17 @@ const PromoModal = () => {
       // Récupérer les données depuis l'API
       const fetchPromoData = async () => {
         try {
-          console.log('🔍 PromoModal: Récupération des données...');
           const data = await promoModalsApi.getActivePromoModal();
-          console.log('✅ PromoModal: Données reçues:', data);
-          
+
           if (data && data.isActive) {
             setPromoData(data);
             setCountdown(data.autoCloseSeconds || 5);
-            
-            // Attendre un peu avant d'afficher le modal
+
             const timer = setTimeout(() => {
               setIsOpen(true);
               startCountdown(data.autoCloseSeconds || 5);
             }, 1500);
             return () => clearTimeout(timer);
-          } else {
-            console.log('ℹ️ PromoModal: Aucun modal actif trouvé');
           }
         } catch (error) {
           console.error('❌ PromoModal: Erreur lors de la récupération des données:', error);

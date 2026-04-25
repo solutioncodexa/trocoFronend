@@ -18,28 +18,12 @@ export interface PageResponse<T> {
   last: boolean;
 }
 
-// Types pour les DTOs du backend
-export interface ProductDTO {
-  id: string;
-  name: string;
-  description: string;
-  price: number;
-  originalPrice?: number;
-  weight: number;
-  images: string[];
-  category: string; // 'beldi' or 'modern'
-  type: string; // 'bracelet', 'ring', 'necklace', 'earrings', 'set'
-  goldType: string; // 'yellow', 'white', 'rose'
-  collection?: string;
-  availableSizes?: string[];
-  inStock?: boolean;
-  stockQuantity?: number;
-  badges?: string[]; // 'new', 'bestseller', 'promo'
-  createdAt?: string;
-}
+export type { ProductListItemDTO, ProductDetailDTO, ProductDTO } from './product-dtos';
+
+import type { ProductDetailDTO } from './product-dtos';
 
 export interface CartItemDTO {
-  product: ProductDTO;
+  product: ProductDetailDTO;
   quantity: number;
   selectedSize?: string;
   selectedGoldType?: string;
@@ -69,6 +53,7 @@ export interface CustomOrderDTO {
   referenceImageUrls?: string[];
   description: string;
   type: string; // ProductType
+  size?: string;
   weight?: number;
   style: string; // ProductCategory
   customer: CustomerDTO;

@@ -21,8 +21,7 @@ const Header = () => {
     { href: '/boutique', label: 'Boutique' },
     { href: '/boutique?category=beldi', label: 'Beldi' },
     { href: '/boutique?category=modern', label: 'Moderne' },
-    { href: '/prix-or-maroc', label: 'Cours de l\'Or' },
-    { href: '/sur-mesure', label: 'Sur Mesure' },
+    { href: '/sur-mesure', label: 'Sur-Mesure' },
   ];
 
   const isActive = (href: string) => {
@@ -52,25 +51,27 @@ const Header = () => {
           <Link
             to="/"
             className={cn(
-              'flex items-center min-w-0 shrink max-lg:max-w-[42%]',
+              'flex items-center min-w-0 shrink max-lg:max-w-[42%] py-1 overflow-visible',
               ANIMATIONS.headerLogoHover && 'transition-transform duration-300 ease-out hover:scale-[1.03] active:scale-100'
             )}
           >
-            <span className="font-script text-xl sm:text-2xl md:text-3xl text-primary truncate">
+            <span className="font-script text-xl sm:text-2xl md:text-3xl leading-[1.35] text-primary whitespace-nowrap inline-block py-0.5">
               YaraGold
             </span>
           </Link>
 
           {/* Desktop Navigation */}
-          <nav className="hidden lg:flex items-center space-x-8 shrink-0">
+          <nav className="hidden lg:flex items-center space-x-8 ml-10 xl:ml-14 shrink-0">
             {navLinks.map((link) => (
               <Link
                 key={link.href}
                 to={link.href}
                 className={cn(
-                  'font-body text-sm uppercase tracking-wider transition-colors',
+                  'font-display text-[13px] uppercase tracking-[0.2em] transition-colors',
                   ANIMATIONS.navLinkUnderline && 'link-underline',
-                  isActive(link.href) ? 'text-primary font-semibold' : 'text-foreground hover:text-primary'
+                  isActive(link.href)
+                    ? 'text-primary font-semibold'
+                    : 'text-secondary-dark hover:text-primary dark:text-ivory-text dark:hover:text-primary'
                 )}
               >
                 {link.label}
@@ -155,7 +156,7 @@ const Header = () => {
       {isMenuOpen && (
         <nav
           className={cn(
-            'lg:hidden bg-background border-t border-border max-h-[min(70dvh,28rem)] overflow-y-auto overscroll-contain',
+            'lg:hidden bg-background border-t border-border max-h-[min(70dvh,28rem)] overflow-y-auto overscroll-contain scrollbar-app',
             ANIMATIONS.mobileNavSlideDown ? 'animate-slide-down-fade' : 'animate-fade-in'
           )}
         >
@@ -165,8 +166,10 @@ const Header = () => {
                 key={link.href}
                 to={link.href}
                 className={cn(
-                  'flex items-center py-3 min-h-[44px] font-body text-sm uppercase tracking-wider touch-manipulation',
-                  isActive(link.href) ? 'text-primary font-semibold' : 'text-foreground'
+                  'flex items-center py-3 min-h-[44px] font-display text-sm uppercase tracking-[0.16em] touch-manipulation',
+                  isActive(link.href)
+                    ? 'text-primary font-semibold'
+                    : 'text-secondary-dark dark:text-ivory-text'
                 )}
                 onClick={() => setIsMenuOpen(false)}
               >
