@@ -1,6 +1,6 @@
-import { useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
-import { Search, ShoppingBag, Menu, X, Heart } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Search, ShoppingBag, Menu, X, Heart, ArrowRight } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { useCart } from '@/contexts/CartContext';
 import { useWishlist } from '@/contexts/WishlistContext';
@@ -11,10 +11,59 @@ import { ANIMATIONS } from '@/config/animations';
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [searchDraft, setSearchDraft] = useState('');
+  const searchRootRef = useRef<HTMLDivElement>(null);
+  const navigate = useNavigate();
   const { getItemCount } = useCart();
   const { wishlistCount } = useWishlist();
   const location = useLocation();
   const itemCount = getItemCount();
+
+  useEffect(() => {
+    if (!isSearchOpen) return;
+    const params = new URLSearchParams(location.search);
+    setSearchDraft(params.get('keyword') ?? '');
+  }, [isSearchOpen, location.pathname, location.search]);
+
+  useEffect(() => {
+    if (!isSearchOpen) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setIsSearchOpen(false);
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [isSearchOpen]);
+
+  useEffect(() => {
+    if (!isSearchOpen) return;
+    const onPointerDown = (e: MouseEvent | PointerEvent) => {
+      const el = searchRootRef.current;
+      if (!el || el.contains(e.target as Node)) return;
+      setIsSearchOpen(false);
+    };
+    document.addEventListener('mousedown', onPointerDown);
+    document.addEventListener('touchstart', onPointerDown, { passive: true });
+    return () => {
+      document.removeEventListener('mousedown', onPointerDown);
+      document.removeEventListener('touchstart', onPointerDown);
+    };
+  }, [isSearchOpen]);
+
+  const submitHeaderSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    const q = searchDraft.trim();
+    if (!q) {
+      setIsSearchOpen(false);
+      return;
+    }
+    const params =
+      location.pathname === '/boutique'
+        ? new URLSearchParams(location.search)
+        : new URLSearchParams();
+    params.set('keyword', q);
+    navigate({ pathname: '/boutique', search: params.toString() });
+    setIsSearchOpen(false);
+  };
 
   const navLinks = [
     { href: '/', label: 'Accueil' },
@@ -87,26 +136,44 @@ const Header = () => {
           {/* Right side icons */}
           <div className="flex items-center gap-0.5 sm:gap-1 md:gap-3 shrink-0">
             {/* Search */}
-            <div className="relative">
+            <div className="relative" ref={searchRootRef}>
               {isSearchOpen ? (
-                <div className="fixed left-3 right-3 top-[4.5rem] z-[60] sm:absolute sm:left-auto sm:right-0 sm:inset-x-auto sm:top-1/2 sm:-translate-y-1/2 sm:w-48 md:w-64">
-                  <div className="relative w-full max-w-full">
+                <div className="fixed left-3 right-3 top-[4.5rem] z-[60] sm:absolute sm:left-auto sm:right-0 sm:top-1/2 sm:-translate-y-1/2 sm:w-[min(100vw-2rem,22rem)] md:w-80">
+                  <form
+                    onSubmit={submitHeaderSearch}
+                    className="relative w-full rounded-lg border border-border bg-card p-1.5 shadow-lg sm:shadow-md"
+                  >
+                    <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                     <Input
-                      type="search"
-                      placeholder="Rechercher..."
-                      className="w-full pr-10 shadow-lg sm:shadow-none"
+                      type="text"
+                      inputMode="search"
+                      name="q"
+                      value={searchDraft}
+                      onChange={(e) => setSearchDraft(e.target.value)}
+                      placeholder="Rechercher un bijou…"
+                      className="h-10 w-full border-0 bg-transparent pl-9 pr-[4.25rem] text-sm shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
                       autoFocus
-                      onBlur={() => setIsSearchOpen(false)}
+                      autoComplete="off"
+                      enterKeyHint="search"
                     />
-                    <button
-                      type="button"
-                      className="absolute right-3 top-1/2 -translate-y-1/2 p-0 bg-transparent border-0 cursor-pointer"
-                      onClick={() => setIsSearchOpen(false)}
-                      aria-label="Fermer la recherche"
-                    >
-                      <X className="w-4 h-4 text-muted-foreground" />
-                    </button>
-                  </div>
+                    <div className="absolute right-1 top-1/2 flex -translate-y-1/2 items-center gap-0.5">
+                      <button
+                        type="submit"
+                        className="flex h-8 w-8 items-center justify-center rounded-md bg-primary text-primary-foreground hover:opacity-90"
+                        aria-label="Lancer la recherche"
+                      >
+                        <ArrowRight className="h-4 w-4" />
+                      </button>
+                      <button
+                        type="button"
+                        className="flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
+                        onClick={() => setIsSearchOpen(false)}
+                        aria-label="Fermer la recherche"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    </div>
+                  </form>
                 </div>
               ) : (
                 <button

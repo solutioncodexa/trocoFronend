@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
@@ -61,6 +61,38 @@ const Boutique = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState<SortOption>('newest');
   const [currentPage, setCurrentPage] = useState(1);
+
+  /** 'user-typing' => changement de mot-clé depuis le champ : repasser à la page 1. Autres sources : ne pas forcer la page. */
+  const searchQuerySourceRef = useRef<'user-typing' | 'other'>('other');
+
+  const clearKeywordSearch = useCallback(() => {
+    searchQuerySourceRef.current = 'other';
+    setSearchQuery('');
+    setSearchParams((prev) => {
+      if (!prev.has('keyword')) return prev;
+      const next = new URLSearchParams(prev);
+      next.delete('keyword');
+      return next;
+    });
+  }, [setSearchParams]);
+
+  useEffect(() => {
+    setSelectedCategory(categoryParam);
+  }, [categoryParam]);
+
+  useEffect(() => {
+    if (searchParams.has('keyword')) {
+      searchQuerySourceRef.current = 'other';
+      setSearchQuery(searchParams.get('keyword') ?? '');
+      setCurrentPage(1);
+    }
+  }, [searchParams]);
+
+  useEffect(() => {
+    if (searchQuerySourceRef.current !== 'user-typing') return;
+    searchQuerySourceRef.current = 'other';
+    setCurrentPage(1);
+  }, [searchQuery]);
 
   const { data: categories = [] } = useQuery({
     queryKey: ['categories'],
@@ -180,35 +212,36 @@ const Boutique = () => {
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [
-    selectedCategory,
-    selectedTypes,
-    selectedCollections,
-    priceRange,
-    inStockOnly,
-    searchQuery,
-    sortBy,
-  ]);
+  }, [selectedCategory, selectedTypes, selectedCollections, priceRange, inStockOnly, sortBy]);
 
   const handlePageChange = (page: number) => {
+    if (page !== currentPage) {
+      clearKeywordSearch();
+    }
     setCurrentPage(page);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleCategoryChange = (category: string | null) => {
+    searchQuerySourceRef.current = 'other';
+    setSearchQuery('');
     setSelectedCategory(category);
-    if (category) {
-      setSearchParams({ category });
-    } else {
-      setSearchParams({});
-    }
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      next.delete('keyword');
+      if (category) next.set('category', category);
+      else next.delete('category');
+      return next;
+    });
   };
 
   const handleTypeToggle = (typeId: string) => {
+    clearKeywordSearch();
     setSelectedTypes((prev) => (prev.includes(typeId) ? prev.filter((t) => t !== typeId) : [...prev, typeId]));
   };
 
   const handleCollectionToggle = (collectionId: string) => {
+    clearKeywordSearch();
     setSelectedCollections((prev) =>
       prev.includes(collectionId) ? prev.filter((t) => t !== collectionId) : [...prev, collectionId]
     );
@@ -327,6 +360,7 @@ const Boutique = () => {
               <Slider
                 value={priceRange}
                 onValueChange={(value) => setPriceRange(value as [number, number])}
+                onValueCommit={() => clearKeywordSearch()}
                 min={0}
                 max={50000}
                 step={1000}
@@ -342,7 +376,10 @@ const Boutique = () => {
               <label className="flex items-center gap-3 text-sm font-bold uppercase tracking-widest text-secondary-dark cursor-pointer">
                 <Checkbox
                   checked={inStockOnly}
-                  onCheckedChange={(checked) => setInStockOnly(checked as boolean)}
+                  onCheckedChange={(checked) => {
+                    clearKeywordSearch();
+                    setInStockOnly(checked as boolean);
+                  }}
                   className="rounded border-accent-beige/30 text-primary focus:ring-primary size-4"
                 />
                 En stock uniquement
@@ -357,7 +394,19 @@ const Boutique = () => {
               <input
                 type="search"
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={(e) => {
+                  searchQuerySourceRef.current = 'user-typing';
+                  setSearchQuery(e.target.value);
+                }}
+                onBlur={() => {
+                  setSearchParams((prev) => {
+                    const next = new URLSearchParams(prev);
+                    const t = searchQuery.trim();
+                    if (t) next.set('keyword', t);
+                    else next.delete('keyword');
+                    return next;
+                  });
+                }}
                 placeholder="Nom ou description…"
                 className="w-full rounded-md border border-accent-beige/30 bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
               />
@@ -373,7 +422,13 @@ const Boutique = () => {
               </p>
               <div className="flex items-center gap-4">
                 <span className="text-xs text-accent-beige uppercase tracking-widest">Trier par :</span>
-                <Select value={sortBy} onValueChange={(value) => setSortBy(value as SortOption)}>
+                <Select
+                  value={sortBy}
+                  onValueChange={(value) => {
+                    clearKeywordSearch();
+                    setSortBy(value as SortOption);
+                  }}
+                >
                   <SelectTrigger className="bg-transparent border-none text-xs font-bold uppercase tracking-widest text-secondary-dark focus:ring-0 cursor-pointer w-[min(100vw-2rem,220px)]">
                     <SelectValue />
                   </SelectTrigger>
