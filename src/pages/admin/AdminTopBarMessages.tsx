@@ -31,18 +31,7 @@ const AdminTopBarMessages = () => {
   // Récupérer tous les messages (admin)
   const { data: messages = [], isLoading, error } = useQuery({
     queryKey: ['top-bar-messages'],
-    queryFn: async () => {
-      // Temporairement, utiliser l'endpoint public pour tester
-      console.log('🔧 TEST: Utilisation endpoint public pour diagnostic');
-      try {
-        const publicMessages = await topBarMessagesApi.getActiveMessages();
-        console.log('✅ Messages publics récupérés:', publicMessages);
-        return publicMessages;
-      } catch (error) {
-        console.error('❌ Erreur endpoint public:', error);
-        return [];
-      }
-    },
+    queryFn: () => topBarMessagesApi.getAllMessages(),
     retry: 3,
     retryDelay: 1000,
   });
@@ -51,8 +40,6 @@ const AdminTopBarMessages = () => {
   const createMutation = useMutation({
     mutationFn: topBarMessagesApi.createMessage,
     onSuccess: (newMessage) => {
-      console.log('✅ Message créé:', newMessage);
-      
       // Mettre à jour le cache immédiatement
       queryClient.setQueryData(['top-bar-messages'], (old: any) => {
         const currentMessages = old || [];
@@ -88,8 +75,6 @@ const AdminTopBarMessages = () => {
   const deleteMutation = useMutation({
     mutationFn: topBarMessagesApi.deleteMessage,
     onSuccess: (_, deletedId) => {
-      console.log('✅ Message supprimé:', deletedId);
-      
       // Mettre à jour le cache immédiatement
       queryClient.setQueryData(['top-bar-messages'], (old: any) => {
         const currentMessages = old || [];

@@ -30,7 +30,7 @@ const FAQ = () => {
                     <span className="material-symbols-outlined text-primary transition-transform duration-300 expand-icon">expand_more</span>
                   </summary>
                   <div className="px-6 pb-6 text-secondary-dark/70 leading-relaxed font-light">
-                    <p>Nous acceptons les paiements par carte bancaire (Visa, Mastercard, American Express), ainsi que les virements bancaires pour les pièces de haute joaillerie. Tous nos paiements sont sécurisés par cryptage SSL.</p>
+                    <p>Nous acceptons uniquement le paiement à la livraison (en espèces), partout au Maroc. Notre équipe vous contacte par téléphone pour confirmer votre commande avant expédition.</p>
                   </div>
                 </details>
                 <details className="group border-b border-accent-beige/20 bg-white/50">

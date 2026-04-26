@@ -82,16 +82,18 @@ const Cart = () => {
                       <div className="mt-6 flex items-center justify-between">
                         <div className="flex items-center border border-accent-beige/30">
                           <button 
+                            type="button"
                             onClick={() => updateQuantity(item.product.id, Math.max(1, item.quantity - 1), item.selectedSize, item.selectedGoldType)}
+                            disabled={item.quantity <= 1}
                             className="px-3 py-1 text-accent-beige hover:bg-accent-beige/10 transition-colors border-r border-accent-beige/30"
                           >
                             -
                           </button>
                           <span className="px-4 py-1 text-sm font-bold text-secondary-dark dark:text-white">{item.quantity}</span>
                           <button 
+                            type="button"
                             onClick={() => updateQuantity(item.product.id, item.quantity + 1, item.selectedSize, item.selectedGoldType)}
                             className="px-3 py-1 text-accent-beige hover:bg-accent-beige/10 transition-colors border-l border-accent-beige/30"
-                            disabled={item.quantity >= item.product.stockQuantity}
                           >
                             +
                           </button>
@@ -145,21 +147,7 @@ const Cart = () => {
                   <span className="text-xl font-bold text-primary">{formatPrice(total)}</span>
                 </div>
 
-                <div className="text-center mt-6">
-                  <p className="text-[10px] uppercase tracking-widest text-accent-beige mb-4">Paiement à la livraison</p>
-                  <div className="flex justify-center gap-3 opacity-60">
-                    <div className="w-12 h-8 bg-white rounded flex items-center justify-center">
-                      <svg viewBox="0 0 24 16" className="w-10 h-6">
-                        <path d="M23.4 0H.6C.3 0 0 .3 0 .6v14.8c0 .3.3.6.6.6h22.8c.3 0 .6-.3.6-.6V.6c0-.3-.3-.6-.6-.6zM7.2 9.6c-.6 0-1.2-.6-1.2-1.2s.6-1.2 1.2-1.2 1.2.6 1.2 1.2-.6 1.2-1.2-.6-1.2-1.2zm0-3.6c-.6 0-1.2-.6-1.2-1.2s.6-1.2 1.2-1.2 1.2.6 1.2 1.2-.6 1.2-1.2-.6-1.2-1.2zm0-3.6c-.6 0-1.2-.6-1.2-1.2S6.6 0 7.2 0s1.2.6 1.2 1.2-.6 1.2-1.2-.6-1.2-1.2zm3.6 7.2c-.6 0-1.2-.6-1.2-1.2s.6-1.2 1.2-1.2 1.2.6 1.2 1.2-.6 1.2-1.2-.6-1.2-1.2zm0-3.6c-.6 0-1.2-.6-1.2-1.2s.6-1.2 1.2-1.2 1.2.6 1.2 1.2-.6 1.2-1.2-.6-1.2-1.2zm0-3.6c-.6 0-1.2-.6-1.2-1.2s.6-1.2 1.2-1.2 1.2.6 1.2 1.2-.6 1.2-1.2-.6-1.2-1.2zm3.6 7.2c-.6 0-1.2-.6-1.2-1.2s.6-1.2 1.2-1.2 1.2.6 1.2 1.2-.6 1.2-1.2-.6-1.2-1.2zm0-3.6c-.6 0-1.2-.6-1.2-1.2s.6-1.2 1.2-1.2 1.2.6 1.2 1.2-.6 1.2-1.2-.6-1.2-1.2zm0-3.6c-.6 0-1.2-.6-1.2-1.2s.6-1.2 1.2-1.2 1.2.6 1.2 1.2-.6 1.2-1.2-.6-1.2-1.2zm3.6 7.2c-.6 0-1.2-.6-1.2-1.2s.6-1.2 1.2-1.2 1.2.6 1.2 1.2-.6 1.2-1.2-.6-1.2-1.2zm0-3.6c-.6 0-1.2-.6-1.2-1.2s.6-1.2 1.2-1.2 1.2.6 1.2 1.2-.6 1.2-1.2-.6-1.2-1.2zm0-3.6c-.6 0-1.2-.6-1.2-1.2s.6-1.2 1.2-1.2 1.2.6 1.2 1.2-.6 1.2-1.2-.6-1.2-1.2z" fill="#1A1F71"/>
-                      </svg>
-                    </div>
-                    <div className="w-12 h-8 bg-white rounded flex items-center justify-center">
-                      <svg viewBox="0 0 24 16" className="w-10 h-6">
-                        <path d="M23.4 0H.6C.3 0 0 .3 0 .6v14.8c0 .3.3.6.6.6h22.8c.3 0 .6-.3.6-.6V.6c0-.3-.3-.6-.6-.6zM4.2 12c-.6 0-1.2-.6-1.2-1.2s.6-1.2 1.2-1.2 1.2.6 1.2 1.2-.6 1.2-1.2-.6-1.2-1.2zm0-3.6c-.6 0-1.2-.6-1.2-1.2s.6-1.2 1.2-1.2 1.2.6 1.2 1.2-.6 1.2-1.2-.6-1.2-1.2zm0-3.6c-.6 0-1.2-.6-1.2-1.2S3.6 0 4.2 0s1.2.6 1.2 1.2-.6 1.2-1.2-.6-1.2-1.2zm3.6 7.2c-.6 0-1.2-.6-1.2-1.2s.6-1.2 1.2-1.2 1.2.6 1.2 1.2-.6 1.2-1.2-.6-1.2-1.2zm0-3.6c-.6 0-1.2-.6-1.2-1.2s.6-1.2 1.2-1.2 1.2.6 1.2 1.2-.6 1.2-1.2-.6-1.2-1.2zm0-3.6c-.6 0-1.2-.6-1.2-1.2s.6-1.2 1.2-1.2 1.2.6 1.2 1.2-.6 1.2-1.2-.6-1.2-1.2zm3.6 7.2c-.6 0-1.2-.6-1.2-1.2s.6-1.2 1.2-1.2 1.2.6 1.2 1.2-.6 1.2-1.2-.6-1.2-1.2zm0-3.6c-.6 0-1.2-.6-1.2-1.2s.6-1.2 1.2-1.2 1.2.6 1.2 1.2-.6 1.2-1.2-.6-1.2-1.2zm0-3.6c-.6 0-1.2-.6-1.2-1.2s.6-1.2 1.2-1.2 1.2.6 1.2 1.2-.6 1.2-1.2-.6-1.2-1.2zm3.6 7.2c-.6 0-1.2-.6-1.2-1.2s.6-1.2 1.2-1.2 1.2.6 1.2 1.2-.6 1.2-1.2-.6-1.2-1.2zm0-3.6c-.6 0-1.2-.6-1.2-1.2s.6-1.2 1.2-1.2 1.2.6 1.2 1.2-.6 1.2-1.2-.6-1.2-1.2zm0-3.6c-.6 0-1.2-.6-1.2-1.2s.6-1.2 1.2-1.2 1.2.6 1.2 1.2-.6 1.2-1.2-.6-1.2-1.2z" fill="#EB001B"/>
-                      </svg>
-                    </div>
-                  </div>
-                </div>
+               
 
                 <Button asChild className="w-full bg-primary hover:bg-[#d9a50b] text-white py-4 text-sm font-bold uppercase tracking-[0.2em] transition-all shadow-lg border border-white/10 mt-6">
                   <Link to="/checkout">

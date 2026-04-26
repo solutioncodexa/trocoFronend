@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { productTypesApi } from '@/services/api';
 import { ProductTypeDTO } from '@/types/api';
 import { toast } from 'sonner';
+import { staticCatalogQueryOptions } from '@/config/queryOptions';
 
 const AdminProductTypes = () => {
   const queryClient = useQueryClient();
@@ -25,6 +26,7 @@ const AdminProductTypes = () => {
   const { data: productTypes = [], isLoading } = useQuery({
     queryKey: ['productTypes'],
     queryFn: () => productTypesApi.getAllProductTypes(),
+    ...staticCatalogQueryOptions,
   });
 
   const createMutation = useMutation({

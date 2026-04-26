@@ -1,5 +1,5 @@
 import { buildApiUrl, apiRequest } from '@/config/api';
-import { ProductDTO } from '@/types/api';
+import type { ProductListItemDTO } from '@/types/product-dtos';
 
 // Helper pour obtenir un customerId (pour l'instant, utiliser un ID par défaut ou depuis localStorage)
 const getCustomerId = (): number => {
@@ -11,10 +11,10 @@ const getCustomerId = (): number => {
 
 export const wishlistApi = {
   // Récupérer la wishlist
-  getWishlist: async (customerId?: number): Promise<ProductDTO[]> => {
+  getWishlist: async (customerId?: number): Promise<ProductListItemDTO[]> => {
     const id = customerId || getCustomerId();
     const url = buildApiUrl(`/wishlist/${id}`);
-    return apiRequest<ProductDTO[]>(url, {}, true);
+    return apiRequest<ProductListItemDTO[]>(url, {}, true);
   },
 
   // Ajouter un produit à la wishlist

@@ -11,10 +11,12 @@ import { formatPrice } from '@/utils/formatPrice';
 import { useCart } from '@/contexts/CartContext';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import type { ProductDetailDTO } from '@/types/product-dtos';
 import { GoldType } from '@/types/product';
 import { productsApi } from '@/services/api';
 import { useGoldTypes } from '@/hooks/useGoldTypes';
-import { mapProductDTOToProduct, mapProductDTOListToProducts } from '@/utils/productMapper';
+import { mapProductDetailToProduct, mapProductListItemListToProducts } from '@/utils/productMapper';
+import { staticCatalogQueryOptions } from '@/config/queryOptions';
 
 /* ------------------------------------------------------------------ */
 /*  Image lightbox                                                     */
@@ -55,6 +57,7 @@ function ImageLightbox({
           alt=""
           className="w-full max-h-[80vh] object-contain rounded-lg select-none"
           draggable={false}
+          decoding="async"
         />
 
         {images.length > 1 && (
@@ -111,8 +114,8 @@ const ProductDetail = () => {
     queryKey: ['product', id],
     queryFn: async () => {
       if (!id) return null;
-      const productDTO = await productsApi.getProductById(id);
-      return mapProductDTOToProduct(productDTO);
+      const dto: ProductDetailDTO = await productsApi.getProductById(id);
+      return mapProductDetailToProduct(dto);
     },
     enabled: !!id,
     retry: 1,
@@ -125,9 +128,10 @@ const ProductDetail = () => {
     queryKey: ['products', 'featured'],
     queryFn: async () => {
       const response = await productsApi.getAllProducts({ page: 0, size: 4 });
-      return mapProductDTOListToProducts(response.content);
+      return mapProductListItemListToProducts(response.content);
     },
     enabled: !!product,
+    ...staticCatalogQueryOptions,
   });
 
   const relatedProducts = (relatedProductsData || []).filter(p => p.id !== id).slice(0, 4);
@@ -218,7 +222,14 @@ const ProductDetail = () => {
                       : 'border-border/50 opacity-60 hover:opacity-100'
                   )}
                 >
-                  <img src={img} alt="" className="w-full h-full object-cover" />
+                  <img
+                    src={img}
+                    alt=""
+                    className="w-full h-full object-cover"
+                    loading="lazy"
+                    decoding="async"
+                    fetchPriority="low"
+                  />
                 </button>
               ))}
             </div>
@@ -234,6 +245,8 @@ const ProductDetail = () => {
                 src={images[selectedImageIndex]}
                 alt={product.name}
                 className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
+                decoding="async"
+                fetchPriority="high"
               />
               <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/10">
                 <ZoomIn className="w-8 h-8 text-white drop-shadow-lg" />
@@ -275,7 +288,7 @@ const ProductDetail = () => {
 
             {/* Mobile thumbnail strip */}
             {hasMultipleImages && (
-              <div className="lg:hidden flex gap-1.5 mt-2 overflow-x-auto pb-1 scrollbar-thin">
+              <div className="lg:hidden flex gap-1.5 mt-2 overflow-x-auto pb-1 overscroll-x-contain scrollbar-app">
                 {images.map((img, i) => (
                   <button
                     key={i}
@@ -287,7 +300,14 @@ const ProductDetail = () => {
                         : 'border-border/50 opacity-60'
                     )}
                   >
-                    <img src={img} alt="" className="w-full h-full object-cover" />
+                    <img
+                      src={img}
+                      alt=""
+                      className="w-full h-full object-cover"
+                      loading="lazy"
+                      decoding="async"
+                      fetchPriority="low"
+                    />
                   </button>
                 ))}
               </div>
@@ -440,9 +460,13 @@ const ProductDetail = () => {
               {relatedProducts.map((rp) => (
                 <Link key={rp.id} to={`/produit/${rp.id}`} className="group bg-paper dark:bg-[#2a2515] p-2 sm:p-3 border border-accent-beige/20 shadow-sm hover:shadow-lg transition-all duration-500 block">
                   <div className="relative overflow-hidden aspect-square mb-2 border border-accent-beige/10">
-                    <div
-                      className="absolute inset-0 bg-cover bg-center transition-transform duration-700 group-hover:scale-110"
-                      style={{ backgroundImage: `url(${rp.images[0]})` }}
+                    <img
+                      src={rp.images[0]}
+                      alt=""
+                      className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                      loading="lazy"
+                      decoding="async"
+                      fetchPriority="low"
                     />
                   </div>
                   <div className="text-center">

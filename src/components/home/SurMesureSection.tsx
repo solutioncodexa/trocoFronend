@@ -5,30 +5,23 @@ import { FeaturedProductDTO } from '@/types/featured-products';
 import { RevealOnScroll } from '@/components/animations';
 import { ANIMATIONS } from '@/config/animations';
 import { cn } from '@/lib/utils';
+import { staticCatalogQueryOptions } from '@/config/queryOptions';
 
 const SurMesureSection = () => {
   const { data: featuredProducts = [], isLoading, error } = useQuery({
     queryKey: ['featured-products', 'sur-mesure'],
     queryFn: () => featuredProductsApi.getAllFeaturedProducts(),
-    // refetchInterval: 30000, // Désactivé pour éviter la boucle d'erreurs
-    select: (data) => data.filter(product => product.section === 'sur-mesure')
+    select: (data) => data.filter((product) => product.section === 'sur-mesure'),
+    ...staticCatalogQueryOptions,
   });
 
   // Filtrer les produits actifs de la section "sur-mesure" et trier par ordre d'affichage
   const activeProducts = Array.isArray(featuredProducts)
     ? featuredProducts
-        .filter(p => p.isActive)
+        .filter((p) => p.isActive)
         .sort((a, b) => a.displayOrder - b.displayOrder)
     : [];
 
-  // Debug: afficher les données dans la console
-  console.log('🔍 SurMesureSection - featuredProducts:', featuredProducts);
-  console.log('🔍 SurMesureSection - activeProducts:', activeProducts);
-  if (activeProducts.length > 0) {
-    console.log('🔍 Premier produit:', activeProducts[0]);
-    console.log('🔍 Image URL:', activeProducts[0].imageUrl);
-    console.log('🔍 Product image URL:', activeProducts[0].product?.imageUrl);
-  }
   return (
     <section className="w-full min-w-0 min-h-0 sm:min-h-[100dvh] flex flex-col justify-center max-sm:justify-start py-6 sm:py-8 md:py-10 lg:py-12 bg-background-light dark:bg-background-dark overflow-x-clip border-y border-accent-beige/10">
       <RevealOnScroll className="w-full">
@@ -59,14 +52,12 @@ const SurMesureSection = () => {
                       }
                       alt={activeProducts[0].title || activeProducts[0].product?.name || 'Produit sélectionné'}
                       className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
+                      loading="lazy"
+                      decoding="async"
+                      fetchPriority="low"
                       onError={(e) => {
-                        console.log('❌ Image load error, using external placeholder');
-                        // Utiliser une image externe pour éviter la boucle
                         e.currentTarget.src = 'https://picsum.photos/400/600?random=1';
-                        e.currentTarget.onerror = null; // Empêcher la boucle
-                      }}
-                      onLoad={() => {
-                        console.log('✅ Image loaded successfully');
+                        e.currentTarget.onerror = null;
                       }}
                     />
                   </Link>

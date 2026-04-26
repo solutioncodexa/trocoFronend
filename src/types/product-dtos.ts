@@ -1,0 +1,32 @@
+/**
+ * DTOs produit alignés sur le backend (list vs détail).
+ * @see ProductListItemDTO / ProductDetailDTO (Java)
+ */
+
+/** Grille boutique, filtres, pagination publique — sans description longue */
+export interface ProductListItemDTO {
+  id: string;
+  name: string;
+  price: number;
+  originalPrice?: number;
+  weight: number;
+  images: string[];
+  category: string;
+  type: string;
+  goldType: string;
+  collection?: string;
+  inStock?: boolean;
+  stockQuantity?: number;
+  badges?: string[];
+  createdAt?: string;
+}
+
+/** Fiche produit, panier, commandes, admin — champs complets */
+export interface ProductDetailDTO extends ProductListItemDTO {
+  description: string;
+  availableSizes?: string[];
+  marginGain?: number;
+}
+
+/** @deprecated Utiliser ProductDetailDTO */
+export type ProductDTO = ProductDetailDTO;

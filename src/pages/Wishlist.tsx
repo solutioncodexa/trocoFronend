@@ -35,10 +35,14 @@ const Wishlist = () => {
             {wishlistProducts.map((product, index) => (
               <div key={product.id} className="group bg-white p-4 border border-accent-beige/20 shadow-sm transition-all duration-500 hover:shadow-xl">
                 <div className="relative overflow-hidden aspect-[4/5] mb-4 bg-background-light">
-                  <div 
-                    className="absolute inset-0 bg-cover bg-center transition-transform duration-700 group-hover:scale-110" 
-                    style={{ backgroundImage: `url(${product.images[0]})` }}
-                  ></div>
+                  <img
+                    src={product.images[0]}
+                    alt=""
+                    className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                    loading="lazy"
+                    decoding="async"
+                    fetchPriority="low"
+                  />
                   <button 
                     onClick={() => removeFromWishlist(product.id)}
                     className="absolute top-4 right-4 text-primary bg-white/80 p-1.5 rounded-full shadow-sm hover:scale-110 transition-transform"
@@ -47,7 +51,7 @@ const Wishlist = () => {
                   </button>
                   <div className="absolute bottom-4 left-0 right-0 flex justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                     <Link 
-                      to={`/product/${product.id}`}
+                      to={`/produit/${product.id}`}
                       className="text-[10px] text-accent-beige uppercase tracking-[0.2em] hover:text-secondary-dark transition-colors font-bold underline underline-offset-4"
                     >
                       Aperçu rapide

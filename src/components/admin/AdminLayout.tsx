@@ -107,7 +107,7 @@ const AdminLayout = ({ children, title, breadcrumbs }: AdminLayoutProps) => {
         </div>
 
         {/* Navigation - scrollable pour afficher toutes les interfaces */}
-        <nav className="flex-1 min-h-0 overflow-y-auto p-4 space-y-6">
+        <nav className="flex-1 min-h-0 overflow-y-auto overscroll-contain scrollbar-app p-4 space-y-6">
           {navSections.map((section) => (
             <div key={section.label}>
               <p className="px-4 mb-2 text-xs font-semibold uppercase tracking-wider text-gray-500">
@@ -207,7 +207,7 @@ const AdminLayout = ({ children, title, breadcrumbs }: AdminLayoutProps) => {
         </header>
 
         {/* Page content — min-h-0 required for flex child to shrink and show vertical scroll */}
-        <main className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-4 lg:p-8">
+        <main className="min-h-0 flex-1 overflow-y-auto overscroll-contain scrollbar-app p-4 lg:p-8">
           <h1 className="font-display text-2xl md:text-3xl text-foreground mb-6">{title}</h1>
           {children}
         </main>

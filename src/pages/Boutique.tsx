@@ -1,21 +1,21 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
-import { X, Loader2 } from 'lucide-react';
+import { keepPreviousData, useQuery } from '@tanstack/react-query';
+import { ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
 import Layout from '@/components/layout/Layout';
 import ProductCard from '@/components/ui/ProductCard';
-import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Slider } from '@/components/ui/slider';
-import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { GoldType, Product } from '@/types/product';
-import { productsApi, ProductFilters, categoriesApi, productTypesApi, collectionsApi } from '@/services/api';
-import { useGoldTypes } from '@/hooks/useGoldTypes';
-import { mapProductDTOListToProducts } from '@/utils/productMapper';
+import { Product } from '@/types/product';
+import type { ProductListItemDTO } from '@/types/product-dtos';
+import { productsApi, categoriesApi, productTypesApi, collectionsApi } from '@/services/api';
+import { mapProductListItemListToProducts } from '@/utils/productMapper';
+import { sortProductTypesForDisplay } from '@/utils/productTypeSort';
 import { RevealOnScroll } from '@/components/animations';
 import { ANIMATIONS } from '@/config/animations';
 import { toast } from 'sonner';
+import { staticCatalogQueryOptions } from '@/config/queryOptions';
 
 const PRODUCTS_PER_PAGE = 12;
 
@@ -25,16 +25,36 @@ const sortOptions = [
   { value: 'newest', label: 'Les plus récents' },
   { value: 'price-asc', label: 'Prix croissant' },
   { value: 'price-desc', label: 'Prix décroissant' },
-  { value: 'popularity', label: 'Meilleures ventes' }
+  { value: 'popularity', label: 'Meilleures ventes' },
 ];
 
+function buildVisiblePageNumbers(current: number, total: number): (number | 'gap')[] {
+  if (total <= 1) return [1];
+  if (total <= 9) {
+    return Array.from({ length: total }, (_, i) => i + 1);
+  }
+  const pages = new Set<number>();
+  pages.add(1);
+  pages.add(total);
+  for (let p = current - 2; p <= current + 2; p++) {
+    if (p >= 1 && p <= total) pages.add(p);
+  }
+  const sorted = [...pages].sort((a, b) => a - b);
+  const out: (number | 'gap')[] = [];
+  for (let i = 0; i < sorted.length; i++) {
+    const p = sorted[i];
+    const prev = sorted[i - 1];
+    if (prev !== undefined && p - prev > 1) out.push('gap');
+    out.push(p);
+  }
+  return out;
+}
+
 const Boutique = () => {
-  const { goldTypesWithColors: goldTypes } = useGoldTypes();
   const [searchParams, setSearchParams] = useSearchParams();
   const categoryParam = searchParams.get('category');
   const [selectedCategory, setSelectedCategory] = useState<string | null>(categoryParam);
   const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
-  const [selectedGoldTypes, setSelectedGoldTypes] = useState<GoldType[]>([]);
   const [selectedCollections, setSelectedCollections] = useState<string[]>([]);
   const [priceRange, setPriceRange] = useState<[number, number]>([0, 50000]);
   const [inStockOnly, setInStockOnly] = useState(false);
@@ -42,179 +62,193 @@ const Boutique = () => {
   const [sortBy, setSortBy] = useState<SortOption>('newest');
   const [currentPage, setCurrentPage] = useState(1);
 
-  // Données dynamiques: catégories, types de produits, collections
+  /** 'user-typing' => changement de mot-clé depuis le champ : repasser à la page 1. Autres sources : ne pas forcer la page. */
+  const searchQuerySourceRef = useRef<'user-typing' | 'other'>('other');
+
+  const clearKeywordSearch = useCallback(() => {
+    searchQuerySourceRef.current = 'other';
+    setSearchQuery('');
+    setSearchParams((prev) => {
+      if (!prev.has('keyword')) return prev;
+      const next = new URLSearchParams(prev);
+      next.delete('keyword');
+      return next;
+    });
+  }, [setSearchParams]);
+
+  useEffect(() => {
+    setSelectedCategory(categoryParam);
+  }, [categoryParam]);
+
+  useEffect(() => {
+    if (searchParams.has('keyword')) {
+      searchQuerySourceRef.current = 'other';
+      setSearchQuery(searchParams.get('keyword') ?? '');
+      setCurrentPage(1);
+    }
+  }, [searchParams]);
+
+  useEffect(() => {
+    if (searchQuerySourceRef.current !== 'user-typing') return;
+    searchQuerySourceRef.current = 'other';
+    setCurrentPage(1);
+  }, [searchQuery]);
+
   const { data: categories = [] } = useQuery({
     queryKey: ['categories'],
     queryFn: () => categoriesApi.getAllCategories(),
     retry: 1,
+    ...staticCatalogQueryOptions,
   });
   const { data: productTypes = [] } = useQuery({
     queryKey: ['productTypes'],
     queryFn: () => productTypesApi.getAllProductTypes(),
     retry: 1,
+    ...staticCatalogQueryOptions,
   });
   const { data: collections = [] } = useQuery({
     queryKey: ['collections'],
     queryFn: () => collectionsApi.getActiveCollections(),
     retry: 1,
+    ...staticCatalogQueryOptions,
   });
 
-  // Déterminer si on doit utiliser l'API de filtrage ou l'API paginée
-  const hasActiveFilters = useMemo(() => {
-    return selectedCategory !== null || 
-           selectedTypes.length > 0 || 
-           selectedGoldTypes.length > 0 || 
-           selectedCollections.length > 0 || 
-           priceRange[0] > 0 || 
-           priceRange[1] < 50000 || 
-           inStockOnly ||
-           searchQuery.trim() !== '';
-  }, [selectedCategory, selectedTypes, selectedGoldTypes, selectedCollections, priceRange, inStockOnly, searchQuery]);
+  const sortedProductTypes = useMemo(
+    () => sortProductTypesForDisplay(productTypes, selectedCategory),
+    [productTypes, selectedCategory]
+  );
 
-  // Requête pour les produits filtrés
-  const { data: filteredProductsData, isLoading: isLoadingFiltered } = useQuery({
-    queryKey: ['products', 'filtered', selectedCategory, selectedTypes, selectedGoldTypes, selectedCollections, priceRange, inStockOnly],
-    queryFn: async () => {
-      const filters: ProductFilters = {};
-      if (selectedCategory) filters.category = selectedCategory; // slug
-      if (selectedTypes.length > 0) filters.type = selectedTypes[0]; // code lowercase (bracelet, ring...)
-      if (selectedGoldTypes.length > 0) filters.goldType = selectedGoldTypes[0]; // API prend un seul goldType
-      if (selectedCollections.length > 0) filters.collection = selectedCollections[0];
-      if (priceRange[0] > 0) filters.minPrice = priceRange[0];
-      if (priceRange[1] < 50000) filters.maxPrice = priceRange[1];
-      if (inStockOnly) filters.inStock = true;
-      
-      const products = await productsApi.filterProducts(filters);
-      return mapProductDTOListToProducts(products);
-    },
-    enabled: hasActiveFilters && !searchQuery.trim(),
-    retry: 1,
-    onError: () => {
-      toast.error('Erreur lors du chargement des produits');
-    },
-  });
+  const sortApi = useMemo(() => {
+    switch (sortBy) {
+      case 'price-asc':
+        return { sortBy: 'price', sortDir: 'ASC' as const };
+      case 'price-desc':
+        return { sortBy: 'price', sortDir: 'DESC' as const };
+      case 'popularity':
+        return { sortBy: 'createdAt', sortDir: 'DESC' as const };
+      default:
+        return { sortBy: 'createdAt', sortDir: 'DESC' as const };
+    }
+  }, [sortBy]);
 
-  // Requête pour les produits paginés (sans filtres complexes)
-  const { data: paginatedProductsData, isLoading: isLoadingPaginated } = useQuery({
-    queryKey: ['products', 'paginated', currentPage, sortBy],
+  const browseQueryKey = useMemo(
+    () => [
+      'products',
+      'boutique',
+      currentPage,
+      sortApi.sortBy,
+      sortApi.sortDir,
+      selectedCategory,
+      [...selectedTypes].sort().join(','),
+      [...selectedCollections].sort().join(','),
+      priceRange[0],
+      priceRange[1],
+      inStockOnly,
+      searchQuery.trim(),
+      PRODUCTS_PER_PAGE,
+    ],
+    [
+      currentPage,
+      sortApi.sortBy,
+      sortApi.sortDir,
+      selectedCategory,
+      selectedTypes,
+      selectedCollections,
+      priceRange,
+      inStockOnly,
+      searchQuery,
+    ]
+  );
+
+  const { data: pageResponse, isLoading, isError, error } = useQuery({
+    queryKey: browseQueryKey,
     queryFn: async () => {
-      const sortByMap: Record<SortOption, { sortBy: string; sortDir: 'ASC' | 'DESC' }> = {
-        'newest': { sortBy: 'createdAt', sortDir: 'DESC' },
-        'price-asc': { sortBy: 'price', sortDir: 'ASC' },
-        'price-desc': { sortBy: 'price', sortDir: 'DESC' },
-        'popularity': { sortBy: 'createdAt', sortDir: 'DESC' }, // Fallback
-      };
-      
-      const { sortBy: apiSortBy, sortDir } = sortByMap[sortBy];
-      const response = await productsApi.getAllProducts({
+      const typeParam = selectedTypes.length > 0 ? selectedTypes[0] : undefined;
+      const collectionParam = selectedCollections.length > 0 ? selectedCollections[0] : undefined;
+
+      return productsApi.getAllProducts({
         page: currentPage - 1,
         size: PRODUCTS_PER_PAGE,
-        sortBy: apiSortBy,
-        sortDir,
+        sortBy: sortApi.sortBy,
+        sortDir: sortApi.sortDir,
+        category: selectedCategory ?? undefined,
+        type: typeParam,
+        collection: collectionParam,
+        minPrice: priceRange[0] > 0 ? priceRange[0] : undefined,
+        maxPrice: priceRange[1] < 50000 ? priceRange[1] : undefined,
+        inStock: inStockOnly ? true : undefined,
+        keyword: searchQuery.trim() || undefined,
       });
-      return {
-        products: mapProductDTOListToProducts(response.content),
-        totalPages: response.totalPages,
-        totalElements: response.totalElements,
-      };
     },
-    enabled: !hasActiveFilters && !searchQuery.trim(),
     retry: 1,
-    onError: () => {
-      toast.error('Erreur lors du chargement des produits');
-    },
+    placeholderData: keepPreviousData,
   });
 
-  const isLoading = isLoadingFiltered || isLoadingPaginated;
+  useEffect(() => {
+    if (!isError) return;
+    const msg = error instanceof Error ? error.message : 'Erreur lors du chargement des produits';
+    toast.error(msg, { id: 'boutique-products-error' });
+  }, [isError, error]);
 
-  // Produits à afficher
-  const filteredProducts = useMemo(() => {
-    let products: Product[] = [];
-    
-    if (hasActiveFilters && filteredProductsData) {
-      products = filteredProductsData;
-    } else if (paginatedProductsData) {
-      products = paginatedProductsData.products;
+  const dtoList: ProductListItemDTO[] = pageResponse?.content ?? [];
+  const products: Product[] = useMemo(() => mapProductListItemListToProducts(dtoList), [dtoList]);
+
+  const totalPages = Math.max(1, pageResponse?.totalPages ?? 1);
+  const totalElements = pageResponse?.totalElements ?? 0;
+  const rangeStart = totalElements === 0 ? 0 : (currentPage - 1) * PRODUCTS_PER_PAGE + 1;
+  const rangeEnd = Math.min(currentPage * PRODUCTS_PER_PAGE, totalElements);
+
+  const visiblePages = useMemo(
+    () => buildVisiblePageNumbers(currentPage, totalPages),
+    [currentPage, totalPages]
+  );
+
+  useEffect(() => {
+    if (isLoading) return;
+    if (currentPage > totalPages && totalPages >= 1) {
+      setCurrentPage(totalPages);
     }
-
-    // Appliquer le filtre de recherche côté client si nécessaire
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase();
-      products = products.filter(product => 
-        product.name.toLowerCase().includes(query) || 
-        product.description.toLowerCase().includes(query)
-      );
-    }
-
-    // Appliquer le tri côté client pour les filtres complexes
-    if (hasActiveFilters) {
-      switch (sortBy) {
-        case 'price-asc':
-          products = [...products].sort((a, b) => a.price - b.price);
-          break;
-        case 'price-desc':
-          products = [...products].sort((a, b) => b.price - a.price);
-          break;
-        case 'newest':
-          products = [...products].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-          break;
-        case 'popularity':
-          products = [...products].sort((a, b) => {
-            const aScore = (a.badges.includes('bestseller') ? 2 : 0) + (a.badges.includes('new') ? 1 : 0);
-            const bScore = (b.badges.includes('bestseller') ? 2 : 0) + (b.badges.includes('new') ? 1 : 0);
-            return bScore - aScore;
-          });
-          break;
-      }
-    }
-
-    return products;
-  }, [filteredProductsData, paginatedProductsData, hasActiveFilters, searchQuery, sortBy]);
-
-  const totalPages = paginatedProductsData?.totalPages || Math.ceil(filteredProducts.length / PRODUCTS_PER_PAGE);
-  const paginatedProducts = useMemo(() => {
-    // Si on utilise la pagination API, les produits sont déjà paginés
-    if (!hasActiveFilters && paginatedProductsData) {
-      return filteredProducts;
-    }
-    // Sinon, paginer côté client
-    const startIndex = (currentPage - 1) * PRODUCTS_PER_PAGE;
-    return filteredProducts.slice(startIndex, startIndex + PRODUCTS_PER_PAGE);
-  }, [filteredProducts, currentPage, hasActiveFilters, paginatedProductsData]);
+  }, [isLoading, currentPage, totalPages]);
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [selectedCategory, selectedTypes, selectedGoldTypes, selectedCollections, priceRange, inStockOnly, searchQuery, sortBy]);
+  }, [selectedCategory, selectedTypes, selectedCollections, priceRange, inStockOnly, sortBy]);
 
   const handlePageChange = (page: number) => {
+    if (page !== currentPage) {
+      clearKeywordSearch();
+    }
     setCurrentPage(page);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleCategoryChange = (category: string | null) => {
+    searchQuerySourceRef.current = 'other';
+    setSearchQuery('');
     setSelectedCategory(category);
-    if (category) {
-      setSearchParams({ category });
-    } else {
-      setSearchParams({});
-    }
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      next.delete('keyword');
+      if (category) next.set('category', category);
+      else next.delete('category');
+      return next;
+    });
   };
 
   const handleTypeToggle = (typeId: string) => {
-    setSelectedTypes(prev => prev.includes(typeId) ? prev.filter(t => t !== typeId) : [...prev, typeId]);
-  };
-
-  const handleGoldTypeToggle = (goldTypeId: string) => {
-    setSelectedGoldTypes(prev => prev.includes(goldTypeId as GoldType) ? prev.filter(t => t !== goldTypeId) : [...prev, goldTypeId] as GoldType[]);
+    clearKeywordSearch();
+    setSelectedTypes((prev) => (prev.includes(typeId) ? prev.filter((t) => t !== typeId) : [...prev, typeId]));
   };
 
   const handleCollectionToggle = (collectionId: string) => {
-    setSelectedCollections(prev => prev.includes(collectionId) ? prev.filter(t => t !== collectionId) : [...prev, collectionId]);
+    clearKeywordSearch();
+    setSelectedCollections((prev) =>
+      prev.includes(collectionId) ? prev.filter((t) => t !== collectionId) : [...prev, collectionId]
+    );
   };
 
   return (
     <Layout>
-      {/* Hero Section */}
       <section className="relative bg-paper py-16 md:py-24 border-b border-accent-beige/10 bg-paper-pattern overflow-hidden">
         <div className="max-w-[1400px] mx-auto px-6 relative z-10">
           <div className="flex flex-col items-center text-center">
@@ -227,16 +261,19 @@ const Boutique = () => {
           </div>
         </div>
         <div className="absolute inset-0 opacity-10 pointer-events-none">
-          <div className="w-full h-full bg-cover bg-center" style={{backgroundImage: "url('https://lh3.googleusercontent.com/aida-public/AB6AXuAPwS7jO8A1t0pR7RdBRWLxuk5M-uQ2Pr5sW8bsJJcNxvG1WjyJVuf3Pw62lMnrvRlnI0OSSnOOmqkHjofPmZwy84ILuzFh3Bf9LPjbHlxKpPFJ44lZUsEi3Z5RqcFfOdBR0weUDXezHrCdJj5e0v_2LgVafALx3D7vMyIqOlMTAsp2URper5YYhweiF-d3AaD4a4RiPWcQEE1wIiivezdK0m1vlJ4uekuDFJ4ueIfuJdbF8j_roqacvNCt57ff2oW2UHxk6dcx6Hla')"}}></div>
+          <div
+            className="w-full h-full bg-cover bg-center"
+            style={{
+              backgroundImage:
+                "url('https://lh3.googleusercontent.com/aida-public/AB6AXuAPwS7jO8A1t0pR7RdBRWLxuk5M-uQ2Pr5sW8bsJJcNxvG1WjyJVuf3Pw62lMnrvRlnI0OSSnOOmqkHjofPmZwy84ILuzFh3Bf9LPjbHlxKpPFJ44lZUsEi3Z5RqcFfOdBR0weUDXezHrCdJj5e0v_2LgVafALx3D7vMyIqOlMTAsp2URper5YYhweiF-d3AaD4a4RiPWcQEE1wIiivezdK0m1vlJ4uekuDFJ4ueIfuJdbF8j_roqacvNCt57ff2oW2UHxk6dcx6Hla')",
+            }}
+          ></div>
         </div>
       </section>
 
-      {/* Main Content */}
-      <main className="max-w-[1400px] mx-auto w-full min-w-0 px-4 sm:px-6 py-12 overflow-x-hidden">
-        <div className="flex flex-col lg:flex-row gap-12 min-w-0">
-          {/* Sidebar Filters */}
-          <aside className="w-full lg:w-72 shrink-0 space-y-10">
-            {/* Category Filter - dynamique depuis l'API */}
+      <main className="max-w-[1400px] mx-auto w-full min-w-0 px-0 sm:px-6 py-12 overflow-x-hidden">
+        <div className="flex flex-col lg:flex-row gap-8 lg:gap-12 min-w-0">
+          <aside className="w-full lg:w-72 shrink-0 space-y-10 max-lg:w-screen max-lg:ml-[calc(50%-50vw)] max-lg:mr-[calc(50%-50vw)] max-lg:px-4 max-lg:sm:px-6 max-lg:py-6 max-lg:border-b max-lg:border-accent-beige/15 max-lg:bg-paper dark:max-lg:bg-[#2a2515]">
             <div>
               <h3 className="text-xs uppercase tracking-[0.3em] font-bold text-secondary-dark dark:text-white mb-6 flex items-center gap-2">
                 Catégorie
@@ -245,10 +282,10 @@ const Boutique = () => {
               <ul className="space-y-3">
                 <li>
                   <label className="flex items-center gap-3 text-sm text-accent-beige hover:text-primary cursor-pointer transition-colors">
-                    <Checkbox 
-                      checked={selectedCategory === null} 
+                    <Checkbox
+                      checked={selectedCategory === null}
                       onCheckedChange={() => handleCategoryChange(null)}
-                      className="rounded border-accent-beige/30 text-primary focus:ring-primary size-4" 
+                      className="rounded border-accent-beige/30 text-primary focus:ring-primary size-4"
                     />
                     Toutes
                   </label>
@@ -256,10 +293,10 @@ const Boutique = () => {
                 {categories.map((cat) => (
                   <li key={cat.id}>
                     <label className="flex items-center gap-3 text-sm text-accent-beige hover:text-primary cursor-pointer transition-colors">
-                      <Checkbox 
-                        checked={selectedCategory === cat.slug} 
+                      <Checkbox
+                        checked={selectedCategory === cat.slug}
                         onCheckedChange={() => handleCategoryChange(cat.slug)}
-                        className="rounded border-accent-beige/30 text-primary focus:ring-primary size-4" 
+                        className="rounded border-accent-beige/30 text-primary focus:ring-primary size-4"
                       />
                       {cat.name}
                     </label>
@@ -268,7 +305,6 @@ const Boutique = () => {
               </ul>
             </div>
 
-            {/* Collection Filter - dynamique depuis l'API */}
             <div>
               <h3 className="text-xs uppercase tracking-[0.3em] font-bold text-secondary-dark dark:text-white mb-6 flex items-center gap-2">
                 Collection
@@ -278,10 +314,10 @@ const Boutique = () => {
                 {collections.map((col) => (
                   <li key={col.id}>
                     <label className="flex items-center gap-3 text-sm text-accent-beige hover:text-primary cursor-pointer transition-colors">
-                      <Checkbox 
-                        checked={selectedCollections.includes(col.slug)} 
+                      <Checkbox
+                        checked={selectedCollections.includes(col.slug)}
                         onCheckedChange={() => handleCollectionToggle(col.slug)}
-                        className="rounded border-accent-beige/30 text-primary focus:ring-primary size-4" 
+                        className="rounded border-accent-beige/30 text-primary focus:ring-primary size-4"
                       />
                       {col.name}
                     </label>
@@ -290,20 +326,24 @@ const Boutique = () => {
               </ul>
             </div>
 
-            {/* Type de Bijou Filter - dynamique depuis l'API */}
             <div>
               <h3 className="text-xs uppercase tracking-[0.3em] font-bold text-secondary-dark dark:text-white mb-6 flex items-center gap-2">
                 Type de bijou
                 <div className="h-px flex-grow bg-accent-beige/20"></div>
               </h3>
+              {selectedCategory === 'ensemble' && (
+                <p className="text-[10px] text-muted-foreground mb-3 leading-snug">
+                  Ordre d’affichage : bracelets & gourmettes, bagues, serties, puis colliers et autres.
+                </p>
+              )}
               <ul className="space-y-3">
-                {productTypes.map((pt) => (
+                {sortedProductTypes.map((pt) => (
                   <li key={pt.id}>
                     <label className="flex items-center gap-3 text-sm text-accent-beige hover:text-primary cursor-pointer transition-colors">
-                      <Checkbox 
-                        checked={selectedTypes.includes(pt.code.toLowerCase())} 
+                      <Checkbox
+                        checked={selectedTypes.includes(pt.code.toLowerCase())}
                         onCheckedChange={() => handleTypeToggle(pt.code.toLowerCase())}
-                        className="rounded border-accent-beige/30 text-primary focus:ring-primary size-4" 
+                        className="rounded border-accent-beige/30 text-primary focus:ring-primary size-4"
                       />
                       {pt.name}
                     </label>
@@ -312,38 +352,19 @@ const Boutique = () => {
               </ul>
             </div>
 
-            {/* Gold Type Filter */}
-            <div>
-              <h3 className="text-xs uppercase tracking-[0.3em] font-bold text-secondary-dark dark:text-white mb-6 flex items-center gap-2">
-                Type d'Or
-                <div className="h-px flex-grow bg-accent-beige/20"></div>
-              </h3>
-              <div className="flex gap-4">
-                {goldTypes.map(goldType => (
-                  <button
-                    key={goldType.id}
-                    onClick={() => handleGoldTypeToggle(goldType.id)}
-                    className={`size-8 rounded-full border-2 border-white shadow-sm ring-1 ring-accent-beige/20 hover:scale-110 transition-transform ${selectedGoldTypes.includes(goldType.id) ? 'ring-2 ring-primary' : ''}`}
-                    style={{ backgroundColor: goldType.color }}
-                    title={goldType.label}
-                  />
-                ))}
-              </div>
-            </div>
-
-            {/* Price Filter */}
             <div>
               <h3 className="text-xs uppercase tracking-[0.3em] font-bold text-secondary-dark dark:text-white mb-6 flex items-center gap-2">
                 Prix (MAD)
                 <div className="h-px flex-grow bg-accent-beige/20"></div>
               </h3>
-              <Slider 
-                value={priceRange} 
-                onValueChange={value => setPriceRange(value as [number, number])} 
-                min={0} 
-                max={50000} 
+              <Slider
+                value={priceRange}
+                onValueChange={(value) => setPriceRange(value as [number, number])}
+                onValueCommit={() => clearKeywordSearch()}
+                min={0}
+                max={50000}
                 step={1000}
-                className="w-full accent-primary" 
+                className="w-full accent-primary"
               />
               <div className="flex justify-between text-[10px] text-accent-beige uppercase mt-2">
                 <span>0 MAD</span>
@@ -351,34 +372,68 @@ const Boutique = () => {
               </div>
             </div>
 
-            {/* Stock Filter */}
             <div>
               <label className="flex items-center gap-3 text-sm font-bold uppercase tracking-widest text-secondary-dark cursor-pointer">
-                <Checkbox 
-                  checked={inStockOnly} 
-                  onCheckedChange={(checked) => setInStockOnly(checked as boolean)}
-                  className="rounded border-accent-beige/30 text-primary focus:ring-primary size-4" 
+                <Checkbox
+                  checked={inStockOnly}
+                  onCheckedChange={(checked) => {
+                    clearKeywordSearch();
+                    setInStockOnly(checked as boolean);
+                  }}
+                  className="rounded border-accent-beige/30 text-primary focus:ring-primary size-4"
                 />
                 En stock uniquement
               </label>
             </div>
+
+            <div>
+              <h3 className="text-xs uppercase tracking-[0.3em] font-bold text-secondary-dark dark:text-white mb-4 flex items-center gap-2">
+                Recherche
+                <div className="h-px flex-grow bg-accent-beige/20"></div>
+              </h3>
+              <input
+                type="search"
+                value={searchQuery}
+                onChange={(e) => {
+                  searchQuerySourceRef.current = 'user-typing';
+                  setSearchQuery(e.target.value);
+                }}
+                onBlur={() => {
+                  setSearchParams((prev) => {
+                    const next = new URLSearchParams(prev);
+                    const t = searchQuery.trim();
+                    if (t) next.set('keyword', t);
+                    else next.delete('keyword');
+                    return next;
+                  });
+                }}
+                placeholder="Nom ou description…"
+                className="w-full rounded-md border border-accent-beige/30 bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
+              />
+            </div>
           </aside>
 
-          {/* Products Area */}
-          <div className="flex-grow">
-            {/* Top Bar */}
+          <div className="flex-grow min-w-0 px-4 sm:px-0">
             <div className="flex flex-col md:flex-row justify-between items-center mb-10 gap-4 border-b border-accent-beige/10 pb-6">
-              <p className="text-xs text-accent-beige uppercase tracking-widest">
-                Affichage de {filteredProducts.length} produits
+              <p className="text-xs text-accent-beige uppercase tracking-widest text-center md:text-left">
+                {totalElements === 0
+                  ? 'Aucun produit'
+                  : `Affichage ${rangeStart}–${rangeEnd} sur ${totalElements} produit${totalElements > 1 ? 's' : ''}`}
               </p>
               <div className="flex items-center gap-4">
                 <span className="text-xs text-accent-beige uppercase tracking-widest">Trier par :</span>
-                <Select value={sortBy} onValueChange={value => setSortBy(value as SortOption)}>
-                  <SelectTrigger className="bg-transparent border-none text-xs font-bold uppercase tracking-widest text-secondary-dark focus:ring-0 cursor-pointer">
+                <Select
+                  value={sortBy}
+                  onValueChange={(value) => {
+                    clearKeywordSearch();
+                    setSortBy(value as SortOption);
+                  }}
+                >
+                  <SelectTrigger className="bg-transparent border-none text-xs font-bold uppercase tracking-widest text-secondary-dark focus:ring-0 cursor-pointer w-[min(100vw-2rem,220px)]">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {sortOptions.map(option => (
+                    {sortOptions.map((option) => (
                       <SelectItem key={option.value} value={option.value}>
                         {option.label}
                       </SelectItem>
@@ -388,18 +443,17 @@ const Boutique = () => {
               </div>
             </div>
 
-            {/* Products Grid */}
-            {isLoading ? (
+            {isLoading && !pageResponse ? (
               <div className="flex items-center justify-center py-20">
                 <Loader2 className="w-8 h-8 animate-spin text-primary" />
               </div>
-            ) : paginatedProducts.length === 0 ? (
+            ) : products.length === 0 ? (
               <div className="text-center py-20">
                 <p className="text-accent-beige uppercase tracking-widest text-sm">Aucun produit trouvé</p>
               </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-x-8 gap-y-12">
-                {paginatedProducts.map((product, index) => (
+                {products.map((product, index) => (
                   <RevealOnScroll
                     key={product.id}
                     enabled={ANIMATIONS.productGridStagger}
@@ -411,35 +465,51 @@ const Boutique = () => {
               </div>
             )}
 
-            {/* Pagination */}
             {totalPages > 1 && (
-              <div className="mt-20 flex justify-center items-center gap-4">
-                <button 
+              <nav
+                className="mt-20 flex flex-wrap justify-center items-center gap-2"
+                aria-label="Pagination des produits"
+              >
+                <button
+                  type="button"
                   onClick={() => handlePageChange(currentPage - 1)}
-                  disabled={currentPage === 1}
-                  className="size-10 border border-accent-beige/20 flex items-center justify-center text-accent-beige hover:border-primary hover:text-primary transition-colors disabled:opacity-50"
+                  disabled={currentPage <= 1 || isLoading}
+                  className="size-10 border border-accent-beige/20 flex items-center justify-center text-accent-beige hover:border-primary hover:text-primary transition-colors disabled:opacity-40 disabled:pointer-events-none rounded-sm"
+                  aria-label="Page précédente"
                 >
-                  <X className="w-4 h-4 rotate-180" />
+                  <ChevronLeft className="w-5 h-5" />
                 </button>
-                <button className={`size-10 ${currentPage === 1 ? 'bg-primary text-white' : 'border border-accent-beige/20 text-accent-beige hover:border-primary hover:text-primary'} flex items-center justify-center text-xs font-bold transition-colors`}>
-                  1
-                </button>
-                {totalPages > 1 && (
-                  <button 
-                    onClick={() => handlePageChange(2)}
-                    className={`size-10 ${currentPage === 2 ? 'bg-primary text-white' : 'border border-accent-beige/20 text-accent-beige hover:border-primary hover:text-primary'} flex items-center justify-center text-xs font-bold transition-colors`}
-                  >
-                    2
-                  </button>
+                {visiblePages.map((item, idx) =>
+                  item === 'gap' ? (
+                    <span key={`gap-${idx}`} className="px-1 text-accent-beige text-sm">
+                      …
+                    </span>
+                  ) : (
+                    <button
+                      key={item}
+                      type="button"
+                      onClick={() => handlePageChange(item)}
+                      disabled={isLoading}
+                      className={`min-w-10 h-10 px-2 rounded-sm flex items-center justify-center text-xs font-bold transition-colors disabled:opacity-50 ${
+                        currentPage === item
+                          ? 'bg-primary text-primary-foreground'
+                          : 'border border-accent-beige/20 text-accent-beige hover:border-primary hover:text-primary'
+                      }`}
+                    >
+                      {item}
+                    </button>
+                  )
                 )}
-                <button 
+                <button
+                  type="button"
                   onClick={() => handlePageChange(currentPage + 1)}
-                  disabled={currentPage === totalPages}
-                  className="size-10 border border-accent-beige/20 flex items-center justify-center text-accent-beige hover:border-primary hover:text-primary transition-colors disabled:opacity-50"
+                  disabled={currentPage >= totalPages || isLoading}
+                  className="size-10 border border-accent-beige/20 flex items-center justify-center text-accent-beige hover:border-primary hover:text-primary transition-colors disabled:opacity-40 disabled:pointer-events-none rounded-sm"
+                  aria-label="Page suivante"
                 >
-                  <X className="w-4 h-4" />
+                  <ChevronRight className="w-5 h-5" />
                 </button>
-              </div>
+              </nav>
             )}
           </div>
         </div>

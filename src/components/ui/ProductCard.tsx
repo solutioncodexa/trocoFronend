@@ -1,5 +1,10 @@
+import { useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { Heart, Eye } from 'lucide-react';
+import { useQueryClient } from '@tanstack/react-query';
+import { Heart } from 'lucide-react';
+import type { ProductDetailDTO } from '@/types/product-dtos';
+import { productsApi } from '@/services/api';
+import { mapProductDetailToProduct } from '@/utils/productMapper';
 import { Product } from '@/types/product';
 import { useGoldTypes } from '@/hooks/useGoldTypes';
 import { formatPrice } from '@/utils/formatPrice';
@@ -15,9 +20,20 @@ interface ProductCardProps {
 }
 
 const ProductCard = ({ product, className }: ProductCardProps) => {
+  const queryClient = useQueryClient();
   const { isInWishlist, toggleWishlist } = useWishlist();
   const { getGoldTypeName } = useGoldTypes();
   const isFavorite = isInWishlist(product.id);
+
+  const prefetchProductDetail = useCallback(() => {
+    queryClient.prefetchQuery({
+      queryKey: ['product', product.id],
+      queryFn: async () => {
+        const dto: ProductDetailDTO = await productsApi.getProductById(product.id);
+        return mapProductDetailToProduct(dto);
+      },
+    });
+  }, [queryClient, product.id]);
 
   const handleWishlistToggle = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -63,7 +79,12 @@ const ProductCard = ({ product, className }: ProductCardProps) => {
         className
       )}
     >
-      <Link to={`/produit/${product.id}`} className="block">
+      <Link
+        to={`/produit/${product.id}`}
+        className="block"
+        onMouseEnter={prefetchProductDetail}
+        onFocus={prefetchProductDetail}
+      >
         {/* Image container */}
         <div className="relative overflow-hidden aspect-[4/5] mb-4 border border-accent-beige/10">
           {/* Badges */}
@@ -86,6 +107,9 @@ const ProductCard = ({ product, className }: ProductCardProps) => {
           <img
             src={product.images[0]}
             alt={product.name}
+            loading="lazy"
+            decoding="async"
+            fetchPriority="low"
             className={cn(
               'w-full h-full object-cover transition-transform duration-700',
               hover && 'group-hover:scale-105'

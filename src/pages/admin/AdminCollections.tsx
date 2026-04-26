@@ -11,6 +11,7 @@ import { Plus, Pencil, Trash2, Search, ToggleLeft, ToggleRight, Loader2 } from '
 import { collectionsApi } from '@/services/api';
 import { CollectionDTO } from '@/types/api';
 import { toast } from 'sonner';
+import { staticCatalogQueryOptions } from '@/config/queryOptions';
 import { cn } from '@/lib/utils';
 
 const AdminCollections = () => {
@@ -28,6 +29,7 @@ const AdminCollections = () => {
   const { data: collections = [], isLoading } = useQuery({
     queryKey: ['collections'],
     queryFn: () => collectionsApi.getAllCollections(),
+    ...staticCatalogQueryOptions,
   });
 
   const createMutation = useMutation({
