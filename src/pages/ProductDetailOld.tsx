@@ -11,8 +11,6 @@ import { useCart } from '@/contexts/CartContext';
 import ProductCard from '@/components/ui/ProductCard';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
-import { GoldType, goldTypeLabels } from '@/types/product';
-
 const ProductDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -20,8 +18,6 @@ const ProductDetail = () => {
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [quantity, setQuantity] = useState(1);
   const [selectedSize, setSelectedSize] = useState<string>('');
-  const [selectedGoldType, setSelectedGoldType] = useState<GoldType | ''>('');
-
   const product = id ? getProductById(id) : undefined;
   const relatedProducts = getFeaturedProducts().filter(p => p.id !== id).slice(0, 4);
 
@@ -42,31 +38,36 @@ const ProductDetail = () => {
   }
 
   const requiresSize = product.availableSizes && product.availableSizes.length > 0;
-  const goldTypes: GoldType[] = ['yellow', 'white', 'rose'];
-
   const handleAddToCart = () => {
-    if (requiresSize && !selectedSize) {
+    if (requiresSize && !String(selectedSize || '').trim()) {
       toast.error('Veuillez sélectionner une taille');
       return;
     }
-    if (!selectedGoldType) {
-      toast.error('Veuillez sélectionner un type d\'or');
+    if (quantity < 1) {
+      toast.error('La quantité doit être au moins 1');
       return;
     }
-    addToCart(product, quantity, selectedSize || undefined, selectedGoldType);
-    toast.success(`${product.name} ajouté au panier`);
+    if (quantity > product.stockQuantity) {
+      toast.error(`Quantité maximale : ${product.stockQuantity}`);
+      return;
+    }
+    addToCart(product, quantity, selectedSize || undefined);
   };
 
   const handleBuyNow = () => {
-    if (requiresSize && !selectedSize) {
+    if (requiresSize && !String(selectedSize || '').trim()) {
       toast.error('Veuillez sélectionner une taille');
       return;
     }
-    if (!selectedGoldType) {
-      toast.error('Veuillez sélectionner un type d\'or');
+    if (quantity < 1) {
+      toast.error('La quantité doit être au moins 1');
       return;
     }
-    addToCart(product, quantity, selectedSize || undefined, selectedGoldType);
+    if (quantity > product.stockQuantity) {
+      toast.error(`Quantité maximale : ${product.stockQuantity}`);
+      return;
+    }
+    addToCart(product, quantity, selectedSize || undefined);
     navigate('/panier');
   };
 
@@ -176,9 +177,6 @@ const ProductDetail = () => {
                 >
                   {product.category === 'beldi' ? 'Beldi' : 'Moderne'}
                 </Badge>
-                <Badge className="font-body text-xs uppercase tracking-wider bg-primary/20 text-primary">
-                  {goldTypeLabels[product.goldType]}
-                </Badge>
               </div>
 
               <h1 className="font-display text-3xl md:text-4xl text-foreground">
@@ -220,23 +218,6 @@ const ProductDetail = () => {
               {/* Options */}
               {product.inStock && (
                 <div className="space-y-4">
-                  {/* Gold Type Selection */}
-                  <div>
-                    <Label className="font-body mb-2 block">Type d'or *</Label>
-                    <Select value={selectedGoldType} onValueChange={(value) => setSelectedGoldType(value as GoldType)}>
-                      <SelectTrigger className="w-full">
-                        <SelectValue placeholder="Sélectionner le type d'or" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {goldTypes.map((type) => (
-                          <SelectItem key={type} value={type}>
-                            {goldTypeLabels[type]}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
                   {/* Size Selection */}
                   {requiresSize && (
                     <div>
@@ -334,7 +315,7 @@ const ProductDetail = () => {
             <h2 className="font-display text-2xl md:text-3xl text-foreground mb-8 text-center">
               Vous aimerez aussi
             </h2>
-            <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6 items-stretch">
               {relatedProducts.map((product) => (
                 <ProductCard key={product.id} product={product} />
               ))}

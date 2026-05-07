@@ -1,6 +1,5 @@
 export type ProductCategory = 'beldi' | 'modern';
 export type ProductType = 'bracelet' | 'ring' | 'necklace' | 'earrings' | 'set';
-export type GoldType = 'yellow' | 'white' | 'rose';
 export type PaymentMethod = 'cash_on_delivery' | 'online';
 
 // Size options for rings and necklaces
@@ -28,7 +27,8 @@ export interface Product {
   images: string[];
   category: ProductCategory;
   type: ProductType;
-  goldType: GoldType;
+  /** Conservé pour compatibilité API / données existantes ; non utilisé côté UI */
+  goldType?: string;
   collection?: string; // ID de la collection
   availableSizes?: string[];
   inStock: boolean;
@@ -71,7 +71,6 @@ export interface CartItem {
   product: Product;
   quantity: number;
   selectedSize?: string;
-  selectedGoldType?: GoldType;
 }
 
 export interface Order {
@@ -121,8 +120,3 @@ export const defaultProductTypes: ProductTypeDefinition[] = [
   { id: 'set', name: 'Parure', requiresSize: false },
 ];
 
-export const goldTypeLabels: Record<GoldType, string> = {
-  yellow: 'Or Jaune',
-  white: 'Or Blanc',
-  rose: 'Or Rose',
-};

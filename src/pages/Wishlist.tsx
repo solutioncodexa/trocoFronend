@@ -1,13 +1,14 @@
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Heart, ShoppingBag, ArrowRight, ArrowLeft, Plus } from 'lucide-react';
 import Layout from '@/components/layout/Layout';
 import { useWishlist } from '@/contexts/WishlistContext';
 import { useCart } from '@/contexts/CartContext';
 import { Button } from '@/components/ui/button';
 import { formatPrice } from '@/utils/formatPrice';
-import { useGoldTypes } from '@/hooks/useGoldTypes';
+import { toast } from 'sonner';
 
 const Wishlist = () => {
+  const navigate = useNavigate();
   const {
     getWishlistProducts,
     wishlistCount,
@@ -15,7 +16,6 @@ const Wishlist = () => {
     clearWishlist
   } = useWishlist();
   const { addToCart } = useCart();
-  const { getGoldTypeName } = useGoldTypes();
   const wishlistProducts = getWishlistProducts();
 
   return (
@@ -60,16 +60,25 @@ const Wishlist = () => {
                 </div>
                 <div className="text-center">
                   <h4 className="text-base font-bold text-secondary-dark mb-1 font-display tracking-tight">{product.name}</h4>
-                  <p className="text-[11px] text-accent-beige mb-3 uppercase tracking-widest">
-                    {getGoldTypeName(product.goldType || '')}
-                  </p>
                   <div className="flex flex-col gap-1 mb-4">
                     <p className="text-primary font-bold text-lg">{formatPrice(product.price)}</p>
                     <p className="text-accent-beige/60 text-[10px]">~ {Math.round(product.price * 11)} MAD</p>
                   </div>
-                  <button 
+                  <button
+                    type="button"
                     onClick={() => {
-                      addToCart(product, 1, product.availableSizes?.[0], product.goldType);
+                      if (!product.inStock) {
+                        toast.error('Ce produit n’est pas disponible');
+                        return;
+                      }
+                      const needsSize =
+                        Array.isArray(product.availableSizes) && product.availableSizes.length > 0;
+                      if (needsSize) {
+                        toast.info('Choisissez une taille sur la fiche produit');
+                        navigate(`/produit/${product.id}`);
+                        return;
+                      }
+                      addToCart(product, 1);
                     }}
                     className="w-full bg-secondary-dark text-white py-3 text-[10px] uppercase tracking-widest font-bold hover:bg-primary transition-colors duration-300"
                   >

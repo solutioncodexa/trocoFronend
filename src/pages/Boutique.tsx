@@ -53,8 +53,9 @@ function buildVisiblePageNumbers(current: number, total: number): (number | 'gap
 const Boutique = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const categoryParam = searchParams.get('category');
+  const typeFromUrl = searchParams.get('type')?.toLowerCase() ?? null;
   const [selectedCategory, setSelectedCategory] = useState<string | null>(categoryParam);
-  const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
+  const [selectedTypes, setSelectedTypes] = useState<string[]>(() => (typeFromUrl ? [typeFromUrl] : []));
   const [selectedCollections, setSelectedCollections] = useState<string[]>([]);
   const [priceRange, setPriceRange] = useState<[number, number]>([0, 50000]);
   const [inStockOnly, setInStockOnly] = useState(false);
@@ -79,6 +80,14 @@ const Boutique = () => {
   useEffect(() => {
     setSelectedCategory(categoryParam);
   }, [categoryParam]);
+
+  useEffect(() => {
+    if (typeFromUrl) {
+      setSelectedTypes((prev) => (prev.length === 1 && prev[0] === typeFromUrl ? prev : [typeFromUrl]));
+    } else {
+      setSelectedTypes((prev) => (prev.length === 1 ? [] : prev));
+    }
+  }, [typeFromUrl]);
 
   useEffect(() => {
     if (searchParams.has('keyword')) {
@@ -237,7 +246,17 @@ const Boutique = () => {
 
   const handleTypeToggle = (typeId: string) => {
     clearKeywordSearch();
-    setSelectedTypes((prev) => (prev.includes(typeId) ? prev.filter((t) => t !== typeId) : [...prev, typeId]));
+    setSelectedTypes((prev) => {
+      const next = prev.includes(typeId) ? prev.filter((t) => t !== typeId) : [...prev, typeId];
+      setSearchParams((p) => {
+        const q = new URLSearchParams(p);
+        q.delete('keyword');
+        if (next.length === 1) q.set('type', next[0]);
+        else q.delete('type');
+        return q;
+      });
+      return next;
+    });
   };
 
   const handleCollectionToggle = (collectionId: string) => {
@@ -452,10 +471,11 @@ const Boutique = () => {
                 <p className="text-accent-beige uppercase tracking-widest text-sm">Aucun produit trouvé</p>
               </div>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-x-8 gap-y-12">
+              <div className="grid grid-cols-2 xl:grid-cols-3 gap-x-8 gap-y-12 items-stretch">
                 {products.map((product, index) => (
                   <RevealOnScroll
                     key={product.id}
+                    className="h-full min-h-0"
                     enabled={ANIMATIONS.productGridStagger}
                     delayMs={ANIMATIONS.productGridStagger ? index * 55 : 0}
                   >

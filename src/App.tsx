@@ -34,9 +34,9 @@ const AdminProducts = lazy(() => import("./pages/admin/AdminProducts"));
 const AdminOrders = lazy(() => import("./pages/admin/AdminOrders"));
 const AdminCustomRequests = lazy(() => import("./pages/admin/AdminCustomRequests"));
 const AdminCategories = lazy(() => import("./pages/admin/AdminCategories"));
+const AdminHeroCategories = lazy(() => import("./pages/admin/AdminHeroCategories"));
 const AdminProductTypes = lazy(() => import("./pages/admin/AdminProductTypes"));
 const AdminCollections = lazy(() => import("./pages/admin/AdminCollections"));
-const AdminGoldTypes = lazy(() => import("./pages/admin/AdminGoldTypes"));
 const AdminFeaturedProducts = lazy(() => import("./pages/admin/AdminFeaturedProducts"));
 const AdminTopBarMessages = lazy(() => import("./pages/admin/AdminTopBarMessages"));
 const AdminPromoModals = lazy(() => import("./pages/admin/AdminPromoModals"));
@@ -91,8 +91,8 @@ const App = () => (
                   <Route path="/admin/personnalisations" element={<ProtectedAdminRoute><AdminCustomRequests /></ProtectedAdminRoute>} />
                   <Route path="/admin/collections" element={<ProtectedAdminRoute><AdminCollections /></ProtectedAdminRoute>} />
                   <Route path="/admin/categories" element={<ProtectedAdminRoute><AdminCategories /></ProtectedAdminRoute>} />
+                  <Route path="/admin/accueil-categories" element={<ProtectedAdminRoute><AdminHeroCategories /></ProtectedAdminRoute>} />
                   <Route path="/admin/types" element={<ProtectedAdminRoute><AdminProductTypes /></ProtectedAdminRoute>} />
-                  <Route path="/admin/types-or" element={<ProtectedAdminRoute><AdminGoldTypes /></ProtectedAdminRoute>} />
                   <Route path="/admin/produits-selectionnes" element={<ProtectedAdminRoute><AdminFeaturedProducts /></ProtectedAdminRoute>} />
                   <Route path="/admin/top-bar-messages" element={<ProtectedAdminRoute><AdminTopBarMessages /></ProtectedAdminRoute>} />
                   <Route path="/admin/promo-modals" element={<ProtectedAdminRoute><AdminPromoModals /></ProtectedAdminRoute>} />

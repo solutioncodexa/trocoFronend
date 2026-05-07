@@ -10,6 +10,5 @@ export * from './productTypes';
 export * from './wishlist';
 export * from './goldPriceSettings';
 export * from './goldPrices';
-export * from './goldTypes';
 export * from './notifications';
 export * from './upload';

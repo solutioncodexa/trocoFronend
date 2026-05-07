@@ -42,11 +42,11 @@ const FeaturedProducts = () => {
           </Button>
         </div>
 
-        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6 items-stretch">
           {displayProducts.map((product, index) => (
             <div
               key={product.id}
-              className="animate-fade-in"
+              className="animate-fade-in h-full min-h-0"
               style={{ animationDelay: `${index * 0.1}s` }}
             >
               <ProductCard product={product} />

@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { useCart } from '@/contexts/CartContext';
 import { formatPrice } from '@/data/products';
 import { toast } from 'sonner';
-import { PaymentMethod, goldTypeLabels } from '@/types/product';
+import { PaymentMethod } from '@/types/product';
 
 const Checkout = () => {
   const navigate = useNavigate();
@@ -110,7 +110,7 @@ const Checkout = () => {
 
             <div className="space-y-6">
               {items.map((item, index) => (
-                <div key={`${item.product.id}-${item.selectedSize}-${item.selectedGoldType}-${index}`} className="bg-paper dark:bg-[#2a2515] p-6 border border-accent-beige/20">
+                <div key={`${item.product.id}-${item.selectedSize ?? ''}-${index}`} className="bg-paper dark:bg-[#2a2515] p-6 border border-accent-beige/20">
                   <div className="flex gap-6">
                     <div className="w-24 h-24 rounded-lg overflow-hidden bg-paper flex-shrink-0">
                       <img src={item.product.images[0]} alt={item.product.name} className="w-full h-full object-cover" />
@@ -121,21 +121,20 @@ const Checkout = () => {
                         <span>{item.product.category === 'beldi' ? 'Beldi' : 'Moderne'}</span>
                         <span>• {item.product.weight}g</span>
                       </div>
-                      <div className="flex flex-wrap gap-4 text-sm mb-4">
-                        <span className="text-primary font-medium">{goldTypeLabels[item.selectedGoldType]}</span>
-                        {item.selectedSize && <span>Taille: {item.selectedSize}</span>}
-                      </div>
+                      {item.selectedSize ? (
+                        <div className="mb-4 text-sm text-accent-beige">Taille: {item.selectedSize}</div>
+                      ) : null}
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
                           <button
-                            onClick={() => updateQuantity(item.product.id, item.selectedSize, item.selectedGoldType, Math.max(1, item.quantity - 1))}
+                            onClick={() => updateQuantity(item.product.id, Math.max(1, item.quantity - 1), item.selectedSize)}
                             className="w-8 h-8 rounded-full border border-accent-beige/40 flex items-center justify-center hover:bg-accent-beige hover:text-white"
                           >
                             <Minus className="w-4 h-4" />
                           </button>
                           <span className="w-8 text-center font-display">{item.quantity}</span>
                           <button
-                            onClick={() => updateQuantity(item.product.id, item.selectedSize, item.selectedGoldType, item.quantity + 1)}
+                            onClick={() => updateQuantity(item.product.id, item.quantity + 1, item.selectedSize)}
                             className="w-8 h-8 rounded-full border border-accent-beige/40 flex items-center justify-center hover:bg-accent-beige hover:text-white"
                           >
                             <Plus className="w-4 h-4" />

@@ -67,6 +67,19 @@ export interface CategoryDTO {
   name: string;
   slug: string;
   description?: string;
+  /** Bandeau accueil — géré en admin */
+  heroImageUrl?: string | null;
+  showOnHero?: boolean;
+  heroSortOrder?: number | null;
+}
+
+export interface HeroCategoryPatchDTO {
+  showOnHero?: boolean;
+  heroSortOrder?: number;
+  /** true : ordre automatique (affichage aléatoire avec les autres sans ordre manuel) */
+  automaticHeroSortOrder?: boolean;
+  /** Chaîne vide pour retirer l’image */
+  heroImageUrl?: string | null;
 }
 
 export interface CollectionDTO {
@@ -91,13 +104,6 @@ export interface ProductTypeDTO {
   code: string;
   requiresSize: boolean;
   sizeOptions?: string[];
-}
-
-export interface GoldTypeDTO {
-  id: number;
-  name: string;
-  code: string;
-  sortOrder?: number;
 }
 
 // Auth DTOs

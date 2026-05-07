@@ -1,18 +1,24 @@
 import type { ProductDetailDTO, ProductListItemDTO } from '@/types/product-dtos';
-import { Product, ProductCategory, ProductType, GoldType } from '@/types/product';
+import { Product, ProductCategory, ProductType } from '@/types/product';
+import { resolvePublicImageUrl } from '@/utils/resolvePublicImageUrl';
 
-const getBackendUrl = () => {
-  return import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api';
-};
+/** API / JSON peuvent renvoyer une chaîne "52,54" ou un tableau */
+export function normalizeAvailableSizes(raw: unknown): string[] {
+  if (raw == null) return [];
+  if (Array.isArray(raw)) {
+    return raw.map((x) => String(x).trim()).filter(Boolean);
+  }
+  if (typeof raw === 'string') {
+    return raw
+      .split(/[,;|]/)
+      .map((s) => s.trim())
+      .filter(Boolean);
+  }
+  return [];
+}
 
 function resolveDtoImages(dto: Pick<ProductListItemDTO, 'images' | 'category'>): string[] {
-  const images = (dto.images || []).map((img) => {
-    if (img.startsWith('http')) {
-      return img;
-    }
-    const baseUrl = getBackendUrl();
-    return img.startsWith('/') ? `${baseUrl}${img}` : `${baseUrl}/${img}`;
-  });
+  const images = (dto.images || []).map((img) => resolvePublicImageUrl(img)).filter(Boolean);
   if (images.length > 0) return images;
   return [
     dto.category === 'beldi' ? '/placeholder-beldi-fixed.svg' : '/placeholder-modern-fixed.svg',
@@ -33,9 +39,9 @@ export const mapProductDetailToProduct = (dto: ProductDetailDTO): Product => {
     images: finalImages,
     category: (dto.category === 'beldi' ? 'beldi' : 'modern') as ProductCategory,
     type: dto.type as ProductType,
-    goldType: dto.goldType as GoldType,
+    goldType: dto.goldType ? String(dto.goldType) : undefined,
     collection: dto.collection,
-    availableSizes: dto.availableSizes || [],
+    availableSizes: normalizeAvailableSizes(dto.availableSizes),
     inStock: dto.inStock ?? true,
     stockQuantity: dto.stockQuantity ?? 0,
     badges: (dto.badges || []) as ('new' | 'bestseller' | 'promo')[],

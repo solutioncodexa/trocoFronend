@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { useCart } from '@/contexts/CartContext';
 import { formatPrice } from '@/data/products';
 import { toast } from 'sonner';
-import { PaymentMethod, goldTypeLabels } from '@/types/product';
+import { PaymentMethod } from '@/types/product';
 const Checkout = () => {
   const navigate = useNavigate();
   const {
@@ -163,7 +163,7 @@ const Checkout = () => {
                 <h2 className="font-display text-xl mb-6">Votre commande</h2>
                 
                 <div className="space-y-4 mb-6">
-                  {items.map((item, index) => <div key={`${item.product.id}-${item.selectedSize}-${item.selectedGoldType}-${index}`} className="flex gap-4">
+                  {items.map((item, index) => <div key={`${item.product.id}-${item.selectedSize ?? ''}-${index}`} className="flex gap-4">
                       <div className="w-16 h-16 rounded-lg overflow-hidden bg-cream flex-shrink-0">
                         <img src={item.product.images[0]} alt={item.product.name} className="w-full h-full object-cover" />
                       </div>
@@ -171,7 +171,6 @@ const Checkout = () => {
                         <p className="font-body text-sm line-clamp-1">{item.product.name}</p>
                         <p className="font-body text-xs text-muted-foreground">
                           Qté: {item.quantity}
-                          {item.selectedGoldType && ` • ${goldTypeLabels[item.selectedGoldType]}`}
                           {item.selectedSize && ` • Taille: ${item.selectedSize}`}
                         </p>
                       </div>

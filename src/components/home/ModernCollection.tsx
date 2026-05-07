@@ -28,10 +28,11 @@ const ModernCollection = () => {
           <div className="w-16 h-px bg-primary/60 mt-4"></div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-8 items-stretch">
           {modernProducts.map((product, index) => (
             <RevealOnScroll
               key={product.id}
+              className="h-full min-h-0"
               enabled={stagger}
               delayMs={stagger ? index * 70 : 0}
             >

@@ -13,7 +13,7 @@ export interface ProductListItemDTO {
   images: string[];
   category: string;
   type: string;
-  goldType: string;
+  goldType?: string;
   collection?: string;
   inStock?: boolean;
   stockQuantity?: number;

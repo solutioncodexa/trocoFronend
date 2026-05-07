@@ -1,4 +1,5 @@
-import { API_BASE_URL, buildApiUrl } from '@/config/api';
+import { buildApiUrl } from '@/config/api';
+import { resolvePublicImageUrl } from '@/utils/resolvePublicImageUrl';
 
 /**
  * Envoie un fichier image au serveur et retourne l'URL publique.
@@ -50,12 +51,8 @@ export async function uploadImages(files: File[]): Promise<string[]> {
   return Array.isArray(urls) ? urls : [];
 }
 
-/**
- * Retourne l'URL complète pour afficher une image (relative /uploads/... ou absolue).
- */
+export { resolvePublicImageUrl };
+
 export function getImageUrl(url: string | undefined | null): string {
-  if (!url) return '';
-  if (url.startsWith('http://') || url.startsWith('https://')) return url;
-  if (url.startsWith('/uploads/')) return `${API_BASE_URL}${url}`;
-  return url;
+  return resolvePublicImageUrl(url);
 }

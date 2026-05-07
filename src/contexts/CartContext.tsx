@@ -1,12 +1,12 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { Product, CartItem, GoldType } from '@/types/product';
+import { Product, CartItem } from '@/types/product';
 import { toast } from 'sonner';
 
 interface CartContextType {
   items: CartItem[];
-  addToCart: (product: Product, quantity?: number, selectedSize?: string, selectedGoldType?: GoldType) => void;
-  removeFromCart: (productId: string, selectedSize?: string, selectedGoldType?: GoldType) => void;
-  updateQuantity: (productId: string, quantity: number, selectedSize?: string, selectedGoldType?: GoldType) => void;
+  addToCart: (product: Product, quantity?: number, selectedSize?: string) => void;
+  removeFromCart: (productId: string, selectedSize?: string) => void;
+  updateQuantity: (productId: string, quantity: number, selectedSize?: string) => void;
   clearCart: () => void;
   getTotal: () => number;
   getItemCount: () => number;
@@ -14,18 +14,30 @@ interface CartContextType {
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
+function stripLegacyGoldFromItems(raw: unknown): CartItem[] {
+  if (!Array.isArray(raw)) return [];
+  return raw.map((item: unknown) => {
+    if (!item || typeof item !== 'object') return item as CartItem;
+    const o = item as Record<string, unknown>;
+    const { selectedGoldType: _g, ...rest } = o;
+    return rest as CartItem;
+  });
+}
+
 export const CartProvider = ({ children }: { children: ReactNode }) => {
   const [items, setItems] = useState<CartItem[]>([]);
 
   const normalizeId = (value: unknown) => String(value ?? '');
   const normalizeVariant = (value: unknown) => String(value ?? '');
 
-  // Charger le panier depuis localStorage au démarrage
   useEffect(() => {
     const savedCart = localStorage.getItem('cart');
     if (savedCart) {
       try {
-        setItems(JSON.parse(savedCart));
+        const parsed = JSON.parse(savedCart) as unknown;
+        const normalized = stripLegacyGoldFromItems(parsed);
+        setItems(normalized);
+        localStorage.setItem('cart', JSON.stringify(normalized));
       } catch (error) {
         console.error('Error parsing cart from localStorage:', error);
         localStorage.removeItem('cart');
@@ -33,18 +45,17 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     }
   }, []);
 
-  const addToCart = (product: Product, quantity = 1, selectedSize?: string, selectedGoldType?: GoldType) => {
-    setItems(prev => {
-      const existing = prev.find(item => 
-        normalizeId(item.product.id) === normalizeId(product.id) && 
-        normalizeVariant(item.selectedSize) === normalizeVariant(selectedSize) &&
-        normalizeVariant(item.selectedGoldType) === normalizeVariant(selectedGoldType)
+  const addToCart = (product: Product, quantity = 1, selectedSize?: string) => {
+    setItems((prev) => {
+      const existing = prev.find(
+        (item) =>
+          normalizeId(item.product.id) === normalizeId(product.id) &&
+          normalizeVariant(item.selectedSize) === normalizeVariant(selectedSize)
       );
       if (existing) {
-        const newItems = prev.map(item =>
-          normalizeId(item.product.id) === normalizeId(product.id) && 
-          normalizeVariant(item.selectedSize) === normalizeVariant(selectedSize) &&
-          normalizeVariant(item.selectedGoldType) === normalizeVariant(selectedGoldType)
+        const newItems = prev.map((item) =>
+          normalizeId(item.product.id) === normalizeId(product.id) &&
+          normalizeVariant(item.selectedSize) === normalizeVariant(selectedSize)
             ? { ...item, quantity: item.quantity + quantity }
             : item
         );
@@ -52,19 +63,21 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
         toast.success('Quantité mise à jour dans le panier');
         return newItems;
       }
-      const newItems = [...prev, { product, quantity, selectedSize, selectedGoldType }];
+      const newItems = [...prev, { product, quantity, selectedSize }];
       localStorage.setItem('cart', JSON.stringify(newItems));
       toast.success('Produit ajouté au panier');
       return newItems;
     });
   };
 
-  const removeFromCart = (productId: string, selectedSize?: string, selectedGoldType?: GoldType) => {
-    setItems(prev => {
-      const newItems = prev.filter(item => 
-        !(normalizeId(item.product.id) === normalizeId(productId) && 
-          normalizeVariant(item.selectedSize) === normalizeVariant(selectedSize) &&
-          normalizeVariant(item.selectedGoldType) === normalizeVariant(selectedGoldType))
+  const removeFromCart = (productId: string, selectedSize?: string) => {
+    setItems((prev) => {
+      const newItems = prev.filter(
+        (item) =>
+          !(
+            normalizeId(item.product.id) === normalizeId(productId) &&
+            normalizeVariant(item.selectedSize) === normalizeVariant(selectedSize)
+          )
       );
       localStorage.setItem('cart', JSON.stringify(newItems));
       toast.success('Produit supprimé du panier');
@@ -72,18 +85,17 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     });
   };
 
-  const updateQuantity = (productId: string, quantity: number, selectedSize?: string, selectedGoldType?: GoldType) => {
+  const updateQuantity = (productId: string, quantity: number, selectedSize?: string) => {
     if (quantity <= 0) {
-      removeFromCart(productId, selectedSize, selectedGoldType);
+      removeFromCart(productId, selectedSize);
       return;
     }
-    
-    setItems(prev => {
-      const newItems = prev.map(item =>
-        normalizeId(item.product.id) === normalizeId(productId) && 
-        normalizeVariant(item.selectedSize) === normalizeVariant(selectedSize) &&
-        normalizeVariant(item.selectedGoldType) === normalizeVariant(selectedGoldType)
-          ? { ...item, quantity } 
+
+    setItems((prev) => {
+      const newItems = prev.map((item) =>
+        normalizeId(item.product.id) === normalizeId(productId) &&
+        normalizeVariant(item.selectedSize) === normalizeVariant(selectedSize)
+          ? { ...item, quantity }
           : item
       );
       localStorage.setItem('cart', JSON.stringify(newItems));
@@ -99,7 +111,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const getTotal = () => {
-    return items.reduce((total, item) => total + (item.product.price * item.quantity), 0);
+    return items.reduce((total, item) => total + item.product.price * item.quantity, 0);
   };
 
   const getItemCount = () => {
@@ -107,15 +119,17 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
   };
 
   return (
-    <CartContext.Provider value={{
-      items,
-      addToCart,
-      removeFromCart,
-      updateQuantity,
-      clearCart,
-      getTotal,
-      getItemCount
-    }}>
+    <CartContext.Provider
+      value={{
+        items,
+        addToCart,
+        removeFromCart,
+        updateQuantity,
+        clearCart,
+        getTotal,
+        getItemCount,
+      }}
+    >
       {children}
     </CartContext.Provider>
   );

@@ -9,10 +9,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Product, ProductCategory, ProductType, GoldType } from '@/types/product';
+import { Product, ProductCategory, ProductType } from '@/types/product';
 import { categoriesApi, productTypesApi, collectionsApi, goldPriceSettingsApi, calculatePrice, getImageUrl } from '@/services/api';
 import { ProductFormData } from '@/services/api/products';
-import { useGoldTypes } from '@/hooks/useGoldTypes';
 import { productsApi } from '@/services/api/products';
 import { mapProductDetailListToProducts } from '@/utils/productMapper';
 import { formatPrice } from '@/utils/formatPrice';
@@ -48,7 +47,6 @@ const AdminProducts = () => {
     queryFn: () => goldPriceSettingsApi.getSettings(),
     ...staticCatalogQueryOptions,
   });
-  const { goldTypes, getGoldTypeName } = useGoldTypes();
   const [searchTerm, setSearchTerm] = useState('');
   const [isPriceSettingsOpen, setIsPriceSettingsOpen] = useState(false);
   const [priceSettingsForm, setPriceSettingsForm] = useState({ pricePerGram: '' });
@@ -64,7 +62,6 @@ const AdminProducts = () => {
     marginGain: '500',
     category: 'beldi' as ProductCategory,
     type: 'bracelet' as ProductType,
-    goldType: 'yellow',
     collection: '',
     badges: [] as string[],
   });
@@ -113,7 +110,6 @@ const AdminProducts = () => {
         marginGain: (product.marginGain ?? 500).toString(),
         category: product.category,
         type: product.type,
-        goldType: product.goldType,
         collection: product.collection || '',
         badges: product.badges,
       });
@@ -129,7 +125,6 @@ const AdminProducts = () => {
         marginGain: '500',
         category: 'beldi',
         type: 'bracelet',
-        goldType: 'yellow',
         collection: '',
         badges: [],
       });
@@ -216,7 +211,8 @@ const AdminProducts = () => {
       marginGain: margin,
       category: formData.category,
       type: typeCode,
-      goldType: formData.goldType,
+      /** Valeur fixe : le backend conserve le champ ; plus géré côté UI */
+      goldType: 'yellow',
       collection: formData.collection || undefined,
       availableSizes: (() => {
         const sizes = getAvailableSizes(formData.type);
@@ -370,7 +366,6 @@ const AdminProducts = () => {
                 <th className="px-4 py-3 text-left font-body text-sm font-medium text-muted-foreground">Produit</th>
                 <th className="px-4 py-3 text-left font-body text-sm font-medium text-muted-foreground">Catégorie</th>
                 <th className="px-4 py-3 text-left font-body text-sm font-medium text-muted-foreground">Collection</th>
-                <th className="px-4 py-3 text-left font-body text-sm font-medium text-muted-foreground">Type d'or</th>
                 <th className="px-4 py-3 text-left font-body text-sm font-medium text-muted-foreground">Prix</th>
                 <th className="px-4 py-3 text-left font-body text-sm font-medium text-muted-foreground">Badges</th>
                 <th className="px-4 py-3 text-right font-body text-sm font-medium text-muted-foreground">Actions</th>
@@ -405,11 +400,6 @@ const AdminProducts = () => {
                     ) : (
                       <span className="text-muted-foreground text-sm">Aucune</span>
                     )}
-                  </td>
-                  <td className="px-4 py-3">
-                    <Badge variant="outline">
-                      {getGoldTypeName(product.goldType)}
-                    </Badge>
                   </td>
                   <td className="px-4 py-3 font-body">
                     <div>
@@ -580,25 +570,7 @@ const AdminProducts = () => {
               </div>
             </div>
 
-            <div className="grid md:grid-cols-3 gap-4">
-              <div>
-                <Label>Type d'or *</Label>
-                <Select
-                  value={formData.goldType}
-                  onValueChange={(value: GoldType) => setFormData(prev => ({ ...prev, goldType: value }))}
-                >
-                  <SelectTrigger className="mt-1">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {goldTypes.map((gt) => (
-                      <SelectItem key={gt.id} value={gt.code.toLowerCase()}>
-                        {gt.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+            <div className="grid md:grid-cols-2 gap-4">
               <div>
                 <Label>Catégorie *</Label>
                 <Select
