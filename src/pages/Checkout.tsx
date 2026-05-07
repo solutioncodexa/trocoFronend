@@ -78,7 +78,6 @@ const Checkout = () => {
         images: item.product.images,
         category: item.product.category,
         type: item.product.type,
-        goldType: item.product.goldType,
         collection: item.product.collection,
         availableSizes: item.product.availableSizes,
         inStock: item.product.inStock,
@@ -88,7 +87,6 @@ const Checkout = () => {
       },
       quantity: item.quantity,
       selectedSize: item.selectedSize,
-      selectedGoldType: item.selectedGoldType,
     }));
 
     const shipping = getTotal() >= 2000 ? 0 : 50;
@@ -268,13 +266,15 @@ const Checkout = () => {
                 </div>
               </div>
 
-              <Button 
-                type="submit" 
-                className="w-full bg-primary hover:bg-[#d9a50b] text-white py-5 text-sm uppercase tracking-[0.3em] font-bold transition-all shadow-xl flex items-center justify-center gap-3" 
+              <Button
+                type="submit"
+                className="w-full !h-auto min-h-[3.25rem] bg-primary px-4 py-3.5 hover:bg-[#d9a50b] text-primary-foreground text-xs sm:text-sm uppercase font-bold tracking-[0.12em] sm:tracking-[0.2em] transition-all shadow-xl grid grid-cols-[auto_1fr] items-center gap-2.5 sm:gap-3 sm:px-6 whitespace-normal leading-snug sm:min-h-[3.5rem] sm:py-4"
                 disabled={isSubmitting}
               >
-                <CheckCircle className="text-lg" />
-                {isSubmitting ? 'Traitement en cours...' : 'Confirmer la commande'}
+                <CheckCircle className="size-5 shrink-0 justify-self-start sm:size-[1.35rem]" aria-hidden />
+                <span className="min-w-0 text-center text-balance">
+                  {isSubmitting ? 'Traitement en cours…' : 'Confirmer la commande'}
+                </span>
               </Button>
             </form>
           </div>
@@ -286,7 +286,7 @@ const Checkout = () => {
               
               <div className="space-y-6 mb-8">
                 {items.map((item, index) => (
-                  <div key={`${item.product.id}-${item.selectedSize}-${item.selectedGoldType}-${index}`} className="flex gap-4">
+                  <div key={`${item.product.id}-${item.selectedSize ?? ''}-${index}`} className="flex gap-4">
                     <div className="size-20 bg-background-light border border-accent-beige/10 overflow-hidden rounded-sm flex-shrink-0">
                       <img src={item.product.images[0]} alt={item.product.name} className="w-full h-full object-cover" />
                     </div>

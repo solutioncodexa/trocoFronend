@@ -1,10 +1,16 @@
 import { buildApiUrl, apiRequest } from '@/config/api';
-import { CategoryDTO } from '@/types/api';
+import type { CategoryDTO, HeroCategoryPatchDTO } from '@/types/api';
 
 export const categoriesApi = {
   // Récupérer toutes les catégories
   getAllCategories: async (): Promise<CategoryDTO[]> => {
     const url = buildApiUrl('/categories');
+    return apiRequest<CategoryDTO[]>(url);
+  },
+
+  /** Catégories affichées sur le hero (ordre + image définis en admin). */
+  getHeroCategories: async (): Promise<CategoryDTO[]> => {
+    const url = buildApiUrl('/categories/hero');
     return apiRequest<CategoryDTO[]>(url);
   },
 
@@ -35,6 +41,15 @@ export const categoriesApi = {
     return apiRequest<CategoryDTO>(url, {
       method: 'PUT',
       body: JSON.stringify(category),
+    });
+  },
+
+  /** Mise à jour partielle bandeau accueil (admin). */
+  patchCategoryHero: async (id: number, patch: HeroCategoryPatchDTO): Promise<CategoryDTO> => {
+    const url = buildApiUrl(`/categories/${id}/hero`);
+    return apiRequest<CategoryDTO>(url, {
+      method: 'PATCH',
+      body: JSON.stringify(patch),
     });
   },
 

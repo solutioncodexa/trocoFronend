@@ -7,9 +7,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Separator } from '@/components/ui/separator';
-import { GoldType } from '@/types/product';
 import { CustomOrderDTO } from '@/types/api';
-import { useGoldTypes } from '@/hooks/useGoldTypes';
 import { toast } from 'sonner';
 
 interface QuoteDialogProps {
@@ -22,7 +20,6 @@ interface QuoteDialogProps {
 export interface QuoteData {
   id: string;
   requestId: string;
-  goldType: GoldType;
   weight: number;
   goldPricePerGram: number;
   laborCost: number;
@@ -36,18 +33,11 @@ export interface QuoteData {
   status: 'draft' | 'sent' | 'accepted' | 'rejected';
 }
 
-// Prix de l'or par gramme (en MAD) - valeurs indicatives
-const DEFAULT_GOLD_PRICES: Record<GoldType, number> = {
-  yellow: 650,
-  white: 680,
-  rose: 660,
-};
+const DEFAULT_GOLD_PRICE_PER_GRAM = 660;
 
 const QuoteDialog = ({ request, isOpen, onClose, onQuoteSent }: QuoteDialogProps) => {
-  const { goldTypeLabels } = useGoldTypes();
-  const [goldType, setGoldType] = useState<GoldType>('yellow');
   const [weight, setWeight] = useState<number>(0);
-  const [goldPricePerGram, setGoldPricePerGram] = useState<number>(DEFAULT_GOLD_PRICES.yellow);
+  const [goldPricePerGram, setGoldPricePerGram] = useState<number>(DEFAULT_GOLD_PRICE_PER_GRAM);
   const [laborCost, setLaborCost] = useState<number>(0);
   const [stonesDescription, setStonesDescription] = useState<string>('');
   const [stonesCost, setStonesCost] = useState<number>(0);
@@ -61,8 +51,7 @@ const QuoteDialog = ({ request, isOpen, onClose, onQuoteSent }: QuoteDialogProps
   useEffect(() => {
     if (request) {
       setWeight(request.weight || 0);
-      setGoldType('yellow');
-      setGoldPricePerGram(DEFAULT_GOLD_PRICES.yellow);
+      setGoldPricePerGram(DEFAULT_GOLD_PRICE_PER_GRAM);
       setLaborCost(0);
       setStonesDescription('');
       setStonesCost(0);
@@ -71,11 +60,6 @@ const QuoteDialog = ({ request, isOpen, onClose, onQuoteSent }: QuoteDialogProps
       setNotes('');
     }
   }, [request]);
-
-  // Update gold price when type changes
-  useEffect(() => {
-    setGoldPricePerGram(DEFAULT_GOLD_PRICES[goldType]);
-  }, [goldType]);
 
   // Calculate totals
   const goldCost = weight * goldPricePerGram;
@@ -107,7 +91,6 @@ const QuoteDialog = ({ request, isOpen, onClose, onQuoteSent }: QuoteDialogProps
     const quote: QuoteData = {
       id: `DEV-${Date.now()}`,
       requestId: request.id,
-      goldType,
       weight,
       goldPricePerGram,
       laborCost,
@@ -231,22 +214,8 @@ const QuoteDialog = ({ request, isOpen, onClose, onQuoteSent }: QuoteDialogProps
             </div>
           </div>
 
-          {/* Gold Details */}
+          {/* Détails or / poids */}
           <div className="grid sm:grid-cols-2 gap-4">
-            <div>
-              <Label className="font-body">Type d'or</Label>
-              <Select value={goldType} onValueChange={(v) => setGoldType(v as GoldType)}>
-                <SelectTrigger className="mt-1">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {Object.entries(goldTypeLabels).map(([key, label]) => (
-                    <SelectItem key={key} value={key}>{label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
             <div>
               <Label className="font-body">Poids estimé (g)</Label>
               <Input

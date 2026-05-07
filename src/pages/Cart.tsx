@@ -4,7 +4,6 @@ import Layout from '@/components/layout/Layout';
 import { Button } from '@/components/ui/button';
 import { useCart } from '@/contexts/CartContext';
 import { formatPrice } from '@/utils/formatPrice';
-import { useGoldTypes } from '@/hooks/useGoldTypes';
 
 const Cart = () => {
   const {
@@ -14,7 +13,6 @@ const Cart = () => {
     getTotal,
     clearCart
   } = useCart();
-  const { getGoldTypeName } = useGoldTypes();
 
   if (items.length === 0) {
     return (
@@ -56,7 +54,7 @@ const Cart = () => {
             {/* Cart Items */}
             <div className="lg:col-span-2 space-y-8">
               {items.map((item, index) => (
-                <div key={`${item.product.id}-${item.selectedSize}-${item.selectedGoldType}-${index}`} className="bg-white/60 dark:bg-[#2a2515]/40 backdrop-blur-sm p-6 ornate-border rounded-sm">
+                <div key={`${item.product.id}-${item.selectedSize ?? ''}-${index}`} className="bg-white/60 dark:bg-[#2a2515]/40 backdrop-blur-sm p-6 ornate-border rounded-sm">
                   <div className="flex flex-col md:flex-row gap-6">
                     <div className="w-full md:w-40 aspect-square border border-accent-beige/20 p-2 bg-white dark:bg-background-dark shrink-0">
                       <div className="w-full h-full bg-cover bg-center" style={{ backgroundImage: `url(${item.product.images[0]})` }}></div>
@@ -66,7 +64,7 @@ const Cart = () => {
                         <div className="flex justify-between items-start mb-2">
                           <h3 className="text-xl font-display font-bold text-secondary-dark dark:text-white">{item.product.name}</h3>
                           <button 
-                            onClick={() => removeFromCart(item.product.id, item.selectedSize, item.selectedGoldType)}
+                            onClick={() => removeFromCart(item.product.id, item.selectedSize)}
                             className="text-accent-beige hover:text-red-800 transition-colors"
                           >
                             <X className="text-xl" />
@@ -75,7 +73,6 @@ const Cart = () => {
                         <div className="space-y-1 text-sm text-accent-beige">
                           <p><span className="uppercase tracking-widest text-[10px] font-bold">Style:</span> {item.product.category === 'beldi' ? 'Beldi' : 'Moderne'}</p>
                           <p><span className="uppercase tracking-widest text-[10px] font-bold">Poids:</span> {item.product.weight}g</p>
-                          <p><span className="uppercase tracking-widest text-[10px] font-bold">Métal:</span> {getGoldTypeName(item.selectedGoldType || '')}</p>
                           {item.selectedSize && <p><span className="uppercase tracking-widest text-[10px] font-bold">Taille:</span> {item.selectedSize}</p>}
                         </div>
                       </div>
@@ -83,7 +80,7 @@ const Cart = () => {
                         <div className="flex items-center border border-accent-beige/30">
                           <button 
                             type="button"
-                            onClick={() => updateQuantity(item.product.id, Math.max(1, item.quantity - 1), item.selectedSize, item.selectedGoldType)}
+                            onClick={() => updateQuantity(item.product.id, Math.max(1, item.quantity - 1), item.selectedSize)}
                             disabled={item.quantity <= 1}
                             className="px-3 py-1 text-accent-beige hover:bg-accent-beige/10 transition-colors border-r border-accent-beige/30"
                           >
@@ -92,7 +89,7 @@ const Cart = () => {
                           <span className="px-4 py-1 text-sm font-bold text-secondary-dark dark:text-white">{item.quantity}</span>
                           <button 
                             type="button"
-                            onClick={() => updateQuantity(item.product.id, item.quantity + 1, item.selectedSize, item.selectedGoldType)}
+                            onClick={() => updateQuantity(item.product.id, item.quantity + 1, item.selectedSize)}
                             className="px-3 py-1 text-accent-beige hover:bg-accent-beige/10 transition-colors border-l border-accent-beige/30"
                           >
                             +

@@ -37,7 +37,8 @@ export interface ProductFormData {
   marginGain?: number;
   category: string;
   type: string;
-  goldType: string;
+  /** Optionnel côté UI ; défaut côté API si absent */
+  goldType?: string;
   collection?: string;
   availableSizes?: string[];
   stockQuantity?: number;

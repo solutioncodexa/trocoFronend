@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { ChevronLeft, ChevronRight, ShoppingBag, Heart, Truck, Verified, Loader2, X, ZoomIn } from 'lucide-react';
@@ -9,13 +9,12 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { formatPrice } from '@/utils/formatPrice';
 import { useCart } from '@/contexts/CartContext';
+import { useWishlist } from '@/contexts/WishlistContext';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import type { ProductDetailDTO } from '@/types/product-dtos';
-import { GoldType } from '@/types/product';
 import { productsApi } from '@/services/api';
-import { useGoldTypes } from '@/hooks/useGoldTypes';
-import { mapProductDetailToProduct, mapProductListItemListToProducts } from '@/utils/productMapper';
+import { mapProductDetailToProduct, mapProductListItemListToProducts, normalizeAvailableSizes } from '@/utils/productMapper';
 import { staticCatalogQueryOptions } from '@/config/queryOptions';
 
 /* ------------------------------------------------------------------ */
@@ -103,12 +102,15 @@ const ProductDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { addToCart } = useCart();
-  const { goldTypesWithColors } = useGoldTypes();
+  const { toggleWishlist, isInWishlist } = useWishlist();
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [quantity, setQuantity] = useState(1);
-  const [selectedSize, setSelectedSize] = useState<string>('');
-  const [selectedGoldType, setSelectedGoldType] = useState<GoldType | ''>('');
+  /** `undefined` = aucune taille (requis pour Radix Select + validation explicite) */
+  const [selectedSize, setSelectedSize] = useState<string | undefined>(undefined);
   const [lightboxOpen, setLightboxOpen] = useState(false);
+  /** Message inline (mobile) si taille obligatoire non choisie */
+  const [sizeError, setSizeError] = useState(false);
+  const sizeFieldRef = useRef<HTMLDivElement>(null);
 
   const { data: product, isLoading: isLoadingProduct } = useQuery({
     queryKey: ['product', id],
@@ -136,6 +138,15 @@ const ProductDetail = () => {
 
   const relatedProducts = (relatedProductsData || []).filter(p => p.id !== id).slice(0, 4);
 
+  /** Réinitialise les choix quand on change de produit */
+  useEffect(() => {
+    if (!product) return;
+    setSelectedSize(undefined);
+    setSizeError(false);
+    setQuantity(1);
+    setSelectedImageIndex(0);
+  }, [product?.id]);
+
   if (isLoadingProduct) {
     return (
       <Layout>
@@ -159,21 +170,58 @@ const ProductDetail = () => {
     );
   }
 
-  const requiresSize = product.availableSizes && product.availableSizes.length > 0;
+  const availableSizesList = normalizeAvailableSizes(product.availableSizes);
+  const requiresSize = availableSizesList.length > 0;
+
+  const showSizeRequired = () => {
+    setSizeError(true);
+    requestAnimationFrame(() => {
+      sizeFieldRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    });
+  };
   const images = product.images;
   const hasMultipleImages = images.length > 1;
+  const isWishlisted = isInWishlist(product.id);
 
   const handleAddToCart = () => {
-    if (requiresSize && !selectedSize) { toast.error('Veuillez sélectionner une taille'); return; }
-    if (!selectedGoldType) { toast.error("Veuillez sélectionner un type d'or"); return; }
-    addToCart(product, quantity, selectedSize || undefined, selectedGoldType);
-    toast.success(`${product.name} ajouté au panier`);
+    if (requiresSize && !String(selectedSize ?? '').trim()) {
+      showSizeRequired();
+      return;
+    }
+    setSizeError(false);
+    if (quantity < 1) {
+      toast.error('La quantité doit être au moins 1');
+      return;
+    }
+    if (quantity > product.stockQuantity) {
+      toast.error(`Quantité maximale : ${product.stockQuantity}`);
+      return;
+    }
+    addToCart(product, quantity, selectedSize || undefined);
+  };
+
+  const handleWishlistToggle = () => {
+    const wasInList = isWishlisted;
+    toggleWishlist(product.id);
+    if (wasInList) toast.info('Retiré des favoris');
+    else toast.success('Ajouté aux favoris');
   };
 
   const handleBuyNow = () => {
-    if (requiresSize && !selectedSize) { toast.error('Veuillez sélectionner une taille'); return; }
-    if (!selectedGoldType) { toast.error("Veuillez sélectionner un type d'or"); return; }
-    addToCart(product, quantity, selectedSize || undefined, selectedGoldType);
+    if (requiresSize && !String(selectedSize ?? '').trim()) {
+      showSizeRequired();
+      return;
+    }
+    setSizeError(false);
+    if (quantity < 1) {
+      toast.error('La quantité doit être au moins 1');
+      return;
+    }
+    if (quantity > product.stockQuantity) {
+      toast.error(`Quantité maximale : ${product.stockQuantity}`);
+      return;
+    }
+    addToCart(product, quantity, selectedSize || undefined);
     navigate('/panier');
   };
 
@@ -206,7 +254,7 @@ const ProductDetail = () => {
 
       {/* ============ PRODUCT SECTION ============ */}
       <section className="max-w-[1280px] mx-auto px-3 sm:px-6 py-3 sm:py-5 lg:py-6 w-full">
-        <div className="flex flex-col lg:flex-row gap-4 lg:gap-6 items-start">
+        <div className="flex flex-col lg:flex-row gap-4 lg:gap-6 items-stretch lg:items-start">
 
           {/* ---- LEFT: Thumbnails (desktop only) ---- */}
           {hasMultipleImages && (
@@ -248,28 +296,31 @@ const ProductDetail = () => {
                 decoding="async"
                 fetchPriority="high"
               />
-              <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/10">
+              <div className="pointer-events-none absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/10">
                 <ZoomIn className="w-8 h-8 text-white drop-shadow-lg" />
               </div>
+              {/* Flèches dans la zone image uniquement (évite chevauchement / taps bloqués sur mobile sous les miniatures) */}
+              {hasMultipleImages && (
+                <>
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); prevImage(); }}
+                    className="absolute left-2 top-1/2 z-10 -translate-y-1/2 flex h-10 w-10 touch-manipulation items-center justify-center rounded-full bg-background/80 backdrop-blur-sm hover:bg-background sm:h-8 sm:w-8"
+                    aria-label="Image précédente"
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); nextImage(); }}
+                    className="absolute right-2 top-1/2 z-10 -translate-y-1/2 flex h-10 w-10 touch-manipulation items-center justify-center rounded-full bg-background/80 backdrop-blur-sm hover:bg-background sm:h-8 sm:w-8"
+                    aria-label="Image suivante"
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </button>
+                </>
+              )}
             </div>
-
-            {/* Nav arrows on main image */}
-            {hasMultipleImages && (
-              <>
-                <button
-                  onClick={(e) => { e.stopPropagation(); prevImage(); }}
-                  className="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-background/80 backdrop-blur-sm flex items-center justify-center hover:bg-background transition-colors"
-                >
-                  <ChevronLeft className="w-4 h-4" />
-                </button>
-                <button
-                  onClick={(e) => { e.stopPropagation(); nextImage(); }}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-background/80 backdrop-blur-sm flex items-center justify-center hover:bg-background transition-colors"
-                >
-                  <ChevronRight className="w-4 h-4" />
-                </button>
-              </>
-            )}
 
             {/* Badges */}
             <div className="absolute top-2 left-2 flex flex-col gap-1.5">
@@ -349,66 +400,66 @@ const ProductDetail = () => {
 
             {/* Options + actions */}
             {product.inStock && (
-              <div className="flex flex-col gap-2.5 mt-1">
-                {/* Selectors row */}
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <Label className="text-[11px] sm:text-xs mb-1 block">Type d'or *</Label>
-                    <Select value={selectedGoldType} onValueChange={(v) => setSelectedGoldType(v as GoldType)}>
-                      <SelectTrigger className="h-9 text-xs">
-                        <SelectValue placeholder="Type d'or" />
-                      </SelectTrigger>
-                      <SelectContent className="z-50 bg-white dark:bg-secondary-dark border border-accent-beige/30">
-                        {goldTypesWithColors.map((type) => (
-                          <SelectItem key={type.id} value={type.id}>{type.label}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
+              <div className="flex w-full min-w-0 flex-col gap-2.5 mt-1">
+                {/* Taille ou quantité */}
+                <div className={cn('grid gap-2', requiresSize ? 'grid-cols-1 sm:grid-cols-2' : 'grid-cols-1')}>
                   {requiresSize ? (
-                    <div>
-                      <Label className="text-[11px] sm:text-xs mb-1 block">Taille *</Label>
-                      <Select value={selectedSize} onValueChange={setSelectedSize}>
-                        <SelectTrigger className="h-9 text-xs">
-                          <SelectValue placeholder="Taille" />
+                    <div ref={sizeFieldRef} className="min-w-0">
+                      <div className="mb-1 flex items-center justify-between gap-2">
+                        <Label className="text-[11px] sm:text-xs block">Taille *</Label>
+                        <Link to="/guide-tailles" className="text-primary text-[10px] hover:underline shrink-0">
+                          Guide des tailles
+                        </Link>
+                      </div>
+                      <Select
+                        key={`${product.id}-taille`}
+                        value={selectedSize}
+                        onValueChange={(v) => {
+                          setSelectedSize(v);
+                          setSizeError(false);
+                        }}
+                      >
+                        <SelectTrigger
+                          className={cn(
+                            'h-9 text-xs',
+                            sizeError && 'border-destructive ring-1 ring-destructive focus:ring-destructive'
+                          )}
+                          aria-invalid={sizeError}
+                          aria-required
+                        >
+                          <SelectValue placeholder="Choisir une taille" />
                         </SelectTrigger>
-                        <SelectContent>
-                          {product.availableSizes?.map((size) => (
+                        <SelectContent className="z-[10001] max-h-[min(70dvh,22rem)]">
+                          {availableSizesList.map((size) => (
                             <SelectItem key={size} value={size}>{size}</SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
+                      {sizeError ? (
+                        <p
+                          role="alert"
+                          className="mt-2 text-sm font-medium text-destructive leading-snug"
+                        >
+                          Veuillez sélectionner une taille avant de commander ou d’ajouter au panier.
+                        </p>
+                      ) : null}
                     </div>
-                  ) : (
-                    <div>
-                      <Label className="text-[11px] sm:text-xs mb-1 block">Quantité</Label>
-                      <div className="flex items-center border border-border rounded h-9">
-                        <button onClick={() => setQuantity(Math.max(1, quantity - 1))} className="px-2.5 h-full hover:bg-muted transition-colors text-sm">-</button>
-                        <span className="px-2.5 text-xs text-center min-w-[2rem]">{quantity}</span>
-                        <button onClick={() => setQuantity(Math.min(product.stockQuantity, quantity + 1))} className="px-2.5 h-full hover:bg-muted transition-colors text-sm">+</button>
-                      </div>
+                  ) : null}
+                  <div>
+                    <Label className="text-[11px] sm:text-xs mb-1 block">Quantité</Label>
+                    <div className="flex h-9 max-w-[12rem] items-center rounded border border-border">
+                      <button type="button" onClick={() => setQuantity(Math.max(1, quantity - 1))} className="h-full touch-manipulation px-2.5 text-sm hover:bg-muted transition-colors">-</button>
+                      <span className="min-w-[2rem] flex-1 px-2.5 text-center text-xs">{quantity}</span>
+                      <button type="button" onClick={() => setQuantity(Math.min(product.stockQuantity, quantity + 1))} className="h-full touch-manipulation px-2.5 text-sm hover:bg-muted transition-colors">+</button>
                     </div>
-                  )}
-                </div>
-
-                {/* Quantity if size selector is shown */}
-                {requiresSize && (
-                  <div className="flex items-center gap-3">
-                    <span className="text-[11px] sm:text-xs">Quantité:</span>
-                    <div className="flex items-center border border-border rounded h-8">
-                      <button onClick={() => setQuantity(Math.max(1, quantity - 1))} className="px-2.5 h-full hover:bg-muted transition-colors text-sm">-</button>
-                      <span className="px-2.5 text-xs text-center min-w-[2rem]">{quantity}</span>
-                      <button onClick={() => setQuantity(Math.min(product.stockQuantity, quantity + 1))} className="px-2.5 h-full hover:bg-muted transition-colors text-sm">+</button>
-                    </div>
-                    <Link to="/guide-tailles" className="text-primary text-[11px] hover:underline ml-auto">Guide des tailles</Link>
                   </div>
-                )}
+                </div>
 
                 {/* BUY NOW — primary CTA */}
                 <Button
+                  type="button"
                   onClick={handleBuyNow}
-                  className="w-full bg-primary hover:bg-[#d9a50b] text-white h-11 text-xs sm:text-sm uppercase tracking-[0.2em] font-bold shadow-lg flex items-center justify-center gap-2"
+                  className="w-full bg-primary hover:bg-[#d9a50b] text-white h-11 text-xs sm:text-sm uppercase tracking-[0.2em] font-bold shadow-lg flex items-center justify-center gap-2 touch-manipulation"
                 >
                   <ShoppingBag className="w-4 h-4" />
                   Commander
@@ -417,19 +468,24 @@ const ProductDetail = () => {
                 {/* Secondary CTAs */}
                 <div className="grid grid-cols-2 gap-2">
                   <Button
+                    type="button"
                     onClick={handleAddToCart}
                     variant="outline"
-                    className="h-10 text-[10px] sm:text-xs uppercase tracking-wider font-bold border-accent-beige/40 text-accent-beige hover:bg-accent-beige hover:text-white flex items-center justify-center gap-1.5"
+                    className="h-11 min-h-[44px] touch-manipulation text-[10px] sm:h-10 sm:min-h-0 sm:text-xs uppercase tracking-wider font-bold border-accent-beige/40 text-accent-beige hover:bg-accent-beige hover:text-white flex items-center justify-center gap-1.5"
                   >
                     <ShoppingBag className="w-3.5 h-3.5 shrink-0" />
                     Panier
                   </Button>
                   <Button
-                    onClick={handleAddToCart}
+                    type="button"
+                    onClick={handleWishlistToggle}
                     variant="outline"
-                    className="h-10 text-[10px] sm:text-xs uppercase tracking-wider font-bold border-accent-beige/40 text-accent-beige hover:bg-accent-beige hover:text-white flex items-center justify-center gap-1.5"
+                    className={cn(
+                      'h-11 min-h-[44px] touch-manipulation text-[10px] sm:h-10 sm:min-h-0 sm:text-xs uppercase tracking-wider font-bold border-accent-beige/40 text-accent-beige hover:bg-accent-beige hover:text-white flex items-center justify-center gap-1.5',
+                      isWishlisted && 'border-primary text-primary hover:bg-primary/10 hover:text-primary'
+                    )}
                   >
-                    <Heart className="w-3.5 h-3.5 shrink-0" />
+                    <Heart className={cn('w-3.5 h-3.5 shrink-0', isWishlisted && 'fill-current')} />
                     Favoris
                   </Button>
                 </div>

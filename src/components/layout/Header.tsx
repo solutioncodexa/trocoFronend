@@ -67,7 +67,7 @@ const Header = () => {
 
   const navLinks = [
     { href: '/', label: 'Accueil' },
-    { href: '/boutique', label: 'Boutique' },
+    { href: '/boutique', label: 'Catégories' },
     { href: '/boutique?category=beldi', label: 'Beldi' },
     { href: '/boutique?category=modern', label: 'Moderne' },
     { href: '/sur-mesure', label: 'Sur-Mesure' },

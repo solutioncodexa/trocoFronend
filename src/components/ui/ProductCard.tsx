@@ -6,9 +6,7 @@ import type { ProductDetailDTO } from '@/types/product-dtos';
 import { productsApi } from '@/services/api';
 import { mapProductDetailToProduct } from '@/utils/productMapper';
 import { Product } from '@/types/product';
-import { useGoldTypes } from '@/hooks/useGoldTypes';
 import { formatPrice } from '@/utils/formatPrice';
-import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { useWishlist } from '@/contexts/WishlistContext';
 import { ANIMATIONS } from '@/config/animations';
@@ -22,7 +20,6 @@ interface ProductCardProps {
 const ProductCard = ({ product, className }: ProductCardProps) => {
   const queryClient = useQueryClient();
   const { isInWishlist, toggleWishlist } = useWishlist();
-  const { getGoldTypeName } = useGoldTypes();
   const isFavorite = isInWishlist(product.id);
 
   const prefetchProductDetail = useCallback(() => {
@@ -73,7 +70,7 @@ const ProductCard = ({ product, className }: ProductCardProps) => {
   return (
     <div
       className={cn(
-        'group bg-paper dark:bg-[#2a2515] p-4 border border-accent-beige/20 shadow-sm transition-all duration-500',
+        'group bg-paper dark:bg-[#2a2515] p-4 border border-accent-beige/20 shadow-sm transition-all duration-500 h-full min-h-0 flex flex-col',
         hover && 'hover:shadow-lg hover:-translate-y-1',
         !hover && 'hover:shadow-md',
         className
@@ -81,12 +78,12 @@ const ProductCard = ({ product, className }: ProductCardProps) => {
     >
       <Link
         to={`/produit/${product.id}`}
-        className="block"
+        className="flex flex-col flex-1 min-h-0 outline-none focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:ring-offset-2"
         onMouseEnter={prefetchProductDetail}
         onFocus={prefetchProductDetail}
       >
         {/* Image container */}
-        <div className="relative overflow-hidden aspect-[4/5] mb-4 border border-accent-beige/10">
+        <div className="relative w-full shrink-0 overflow-hidden aspect-[4/5] mb-4 border border-accent-beige/10">
           {/* Badges */}
           <div className="absolute top-2 left-2 z-10 flex flex-col gap-2">
             {product.badges.map((badge) => (
@@ -156,32 +153,29 @@ const ProductCard = ({ product, className }: ProductCardProps) => {
           </div>
         </div>
 
-        {/* Product info */}
-        <div className="text-center">
-          <h4 className="text-lg font-bold text-secondary-dark dark:text-white mb-1 font-display group-hover:text-primary transition-colors">
+        {/* Product info — hauteur de titre fixe (2 lignes) + prix alignés en bas pour cartes homogènes */}
+        <div className="flex flex-1 flex-col min-h-0 text-center">
+          <h4 className="text-lg font-bold text-secondary-dark dark:text-white mb-1 font-display group-hover:text-primary transition-colors line-clamp-2 min-h-[3.25rem] leading-snug">
             {product.name}
           </h4>
-          <p className="text-xs text-accent-beige mb-3 uppercase tracking-wide">
-            {getGoldTypeName(product.goldType)}
-          </p>
-          <div className="flex items-center justify-center gap-2">
-            <span className="text-primary font-medium text-lg">
-              {formatPrice(product.price)}
-            </span>
-            {product.originalPrice && (
-              <span className="text-xs text-muted-foreground line-through">
-                {formatPrice(product.originalPrice)}
+          <div className="mt-auto flex flex-col items-center gap-1 pt-2">
+            <div className="flex min-h-[1.5rem] flex-wrap items-center justify-center gap-x-2 gap-y-0.5">
+              <span className="text-primary font-medium text-lg tabular-nums">
+                {formatPrice(product.price)}
               </span>
-            )}
-            {discountPercentage > 0 && (
-              <span className="text-xs bg-destructive text-destructive-foreground px-1.5 py-0.5 rounded">
-                -{discountPercentage}%
-              </span>
-            )}
+              {product.originalPrice && (
+                <span className="text-xs text-muted-foreground line-through">
+                  {formatPrice(product.originalPrice)}
+                </span>
+              )}
+              {discountPercentage > 0 && (
+                <span className="text-xs bg-destructive text-destructive-foreground px-1.5 py-0.5 rounded">
+                  -{discountPercentage}%
+                </span>
+              )}
+            </div>
+            <span className="text-xs text-muted-foreground tabular-nums">{product.weight}g</span>
           </div>
-          <span className="text-xs text-muted-foreground mt-1 block">
-            {product.weight}g
-          </span>
         </div>
       </Link>
     </div>

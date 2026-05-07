@@ -31,7 +31,7 @@ export interface FeaturedProductDTO {
     imageUrl: string;
     category: string;
     productType: string;
-    goldType: string;
+    goldType?: string;
     weight: number;
     isActive: boolean;
   };

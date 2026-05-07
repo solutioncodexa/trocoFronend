@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { ANIMATIONS } from '@/config/animations';
 import { cn } from '@/lib/utils';
+import HeroCategoriesRail from '@/components/home/HeroCategoriesRail';
 
 const HeroSection = () => {
   const fade = ANIMATIONS.heroContentFadeIn;
@@ -26,8 +27,13 @@ const HeroSection = () => {
         <div className="absolute inset-0 bg-black/20" />
       </div>
 
+      {/* Catégories (API) + visuel issu d’un produit de la catégorie — scroll horizontal sur mobile */}
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 z-[12] pb-5 pt-2 max-md:pb-6 md:pb-8">
+        <HeroCategoriesRail className="pointer-events-auto" />
+      </div>
+
       {/* Contenu */}
-      <div className="relative z-10 container mx-auto flex flex-col items-center text-center">
+      <div className="relative z-10 container mx-auto flex flex-col items-center text-center px-4 pb-32 max-md:pb-36 md:pb-28">
         <span
           className={cn(
             'text-primary text-xs sm:text-sm md:text-base font-medium tracking-[0.2em] mb-3 sm:mb-4 uppercase',

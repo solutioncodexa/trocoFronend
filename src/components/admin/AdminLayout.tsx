@@ -9,14 +9,14 @@ import {
   MessageSquare, 
   Image as ImageIcon,
   Tag,
-  Gem,
   FolderOpen,
   Layers,
   ChevronRight,
   Settings,
   LogOut,
   Menu,
-  X
+  X,
+  Sparkles,
 } from 'lucide-react';
 import AdminNotification from './AdminNotification';
 import { Button } from '@/components/ui/button';
@@ -47,8 +47,8 @@ const navSections = [
     items: [
       { href: '/admin/produits', label: 'Produits', icon: Package },
       { href: '/admin/types', label: 'Types de Produits', icon: Tag },
-      { href: '/admin/types-or', label: "Types d'or", icon: Gem },
       { href: '/admin/categories', label: 'Catégories', icon: FolderOpen },
+      { href: '/admin/accueil-categories', label: 'Accueil (hero)', icon: Sparkles },
       { href: '/admin/collections', label: 'Collections', icon: Layers },
     ],
   },

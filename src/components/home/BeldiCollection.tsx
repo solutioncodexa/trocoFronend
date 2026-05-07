@@ -33,10 +33,11 @@ const BeldiCollection = () => {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-8 items-stretch">
           {beldiProducts.map((product, index) => (
             <RevealOnScroll
               key={product.id}
+              className="h-full min-h-0"
               enabled={stagger}
               delayMs={stagger ? index * 70 : 0}
             >

@@ -4,7 +4,6 @@ import Layout from '@/components/layout/Layout';
 import { Button } from '@/components/ui/button';
 import { useCart } from '@/contexts/CartContext';
 import { formatPrice } from '@/data/products';
-import { goldTypeLabels } from '@/types/product';
 const Cart = () => {
   const {
     items,
@@ -45,7 +44,7 @@ const Cart = () => {
           <div className="grid lg:grid-cols-3 gap-8">
             {/* Cart Items */}
             <div className="lg:col-span-2 space-y-4">
-              {items.map((item, index) => <div key={`${item.product.id}-${item.selectedSize}-${item.selectedGoldType}-${index}`} className="flex gap-4 p-4 bg-card rounded-lg shadow-card">
+              {items.map((item, index) => <div key={`${item.product.id}-${item.selectedSize ?? ''}-${index}`} className="flex gap-4 p-4 bg-card rounded-lg shadow-card">
                   {/* Image */}
                   <Link to={`/produit/${item.product.id}`} className="flex-shrink-0 w-24 h-24 md:w-32 md:h-32 rounded-lg overflow-hidden bg-cream">
                     <img src={item.product.images[0]} alt={item.product.name} className="w-full h-full object-cover" />
@@ -59,9 +58,6 @@ const Cart = () => {
                     <p className="font-body text-sm text-muted-foreground mt-1">
                       {item.product.category === 'beldi' ? 'Beldi' : 'Moderne'} • {item.product.weight}g
                     </p>
-                    {item.selectedGoldType && <p className="font-body text-sm text-muted-foreground">
-                        {goldTypeLabels[item.selectedGoldType]}
-                      </p>}
                     {item.selectedSize && <p className="font-body text-sm text-muted-foreground">
                         Taille: {item.selectedSize}
                       </p>}
@@ -72,16 +68,16 @@ const Cart = () => {
 
                   {/* Quantity & Remove */}
                   <div className="flex flex-col items-end justify-between">
-                    <button onClick={() => removeFromCart(item.product.id, item.selectedSize, item.selectedGoldType)} className="p-2 text-muted-foreground hover:text-destructive transition-colors" aria-label="Supprimer">
+                    <button onClick={() => removeFromCart(item.product.id, item.selectedSize)} className="p-2 text-muted-foreground hover:text-destructive transition-colors" aria-label="Supprimer">
                       <Trash2 className="w-5 h-5" />
                     </button>
                     
                     <div className="flex items-center border border-border rounded-lg">
-                      <button onClick={() => updateQuantity(item.product.id, item.quantity - 1, item.selectedSize, item.selectedGoldType)} className="p-2 hover:bg-muted transition-colors">
+                      <button onClick={() => updateQuantity(item.product.id, item.quantity - 1, item.selectedSize)} className="p-2 hover:bg-muted transition-colors">
                         <Minus className="w-4 h-4" />
                       </button>
                       <span className="px-3 font-body">{item.quantity}</span>
-                      <button onClick={() => updateQuantity(item.product.id, item.quantity + 1, item.selectedSize, item.selectedGoldType)} className="p-2 hover:bg-muted transition-colors" disabled={item.quantity >= item.product.stockQuantity}>
+                      <button onClick={() => updateQuantity(item.product.id, item.quantity + 1, item.selectedSize)} className="p-2 hover:bg-muted transition-colors" disabled={item.quantity >= item.product.stockQuantity}>
                         <Plus className="w-4 h-4" />
                       </button>
                     </div>

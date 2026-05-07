@@ -12,7 +12,6 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { customOrdersApi, getImageUrl } from '@/services/api';
 import { CustomOrderDTO } from '@/types/api';
-import { useGoldTypes } from '@/hooks/useGoldTypes';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import QuoteDialog, { QuoteData } from '@/components/admin/QuoteDialog';
@@ -21,7 +20,6 @@ const AdminCustomRequests = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const idParam = searchParams.get('id');
   const queryClient = useQueryClient();
-  const { getGoldTypeName } = useGoldTypes();
   const { data: requests = [], isLoading } = useQuery({
     queryKey: ['customOrders'],
     queryFn: () => customOrdersApi.getAllCustomOrders(),
@@ -399,11 +397,7 @@ const AdminCustomRequests = () => {
                         </Badge>
                       </div>
                       
-                      <div className="grid grid-cols-3 gap-1 text-[10px]">
-                        <div>
-                          <p className="text-muted-foreground truncate">Or</p>
-                          <p className="font-medium truncate">{getGoldTypeName(quotes[selectedRequest.id].goldType)}</p>
-                        </div>
+                      <div className="grid grid-cols-2 gap-1 text-[10px]">
                         <div>
                           <p className="text-muted-foreground">Poids</p>
                           <p className="font-medium">{quotes[selectedRequest.id].weight}g</p>
