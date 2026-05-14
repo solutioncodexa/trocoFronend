@@ -16,10 +16,23 @@ export default defineConfig(({ mode }) => ({
       "/api": {
         target: "http://127.0.0.1:8080",
         changeOrigin: true,
+        secure: false,
+        xfwd: false,
+        configure(proxy) {
+          proxy.on("proxyReq", (proxyReq) => {
+            proxyReq.removeHeader("forwarded");
+            proxyReq.removeHeader("x-forwarded-proto");
+            proxyReq.removeHeader("x-forwarded-host");
+            proxyReq.removeHeader("x-forwarded-port");
+          });
+        },
       },
     },
   },
   plugins: [react(), mode === "development" && componentTagger()].filter(Boolean),
+  optimizeDeps: {
+    include: ["recharts"],
+  },
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
@@ -30,10 +43,12 @@ export default defineConfig(({ mode }) => ({
       output: {
         manualChunks(id) {
           if (id.includes("node_modules")) {
-            if (id.includes("react-dom") || id.includes("/react/")) return "react-vendor";
+            // Recharts avec React (pas de chunk "charts" dédié : évite erreurs runtime Vite/Rollup)
+            if (id.includes("react-dom") || id.includes("/react/") || id.includes("recharts")) {
+              return "react-vendor";
+            }
             if (id.includes("react-router")) return "router";
             if (id.includes("@tanstack/react-query")) return "query";
-            if (id.includes("recharts")) return "charts";
             if (id.includes("@radix-ui")) return "radix";
             if (id.includes("lucide-react")) return "icons";
           }

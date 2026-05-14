@@ -1,5 +1,7 @@
-// Configuration de l'API
-export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api';
+// En dev sans variable : URL relative via proxy Vite. Sinon fallback build / hors-Vite.
+export const API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL ||
+  (import.meta.env.DEV ? '/api' : 'http://localhost:8080/api');
 
 // Récupération du token pour les requêtes authentifiées (évite import circulaire)
 const getAuthToken = (): string | null => {

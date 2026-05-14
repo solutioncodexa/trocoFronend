@@ -207,6 +207,30 @@ const Boutique = () => {
   const rangeStart = totalElements === 0 ? 0 : (currentPage - 1) * PRODUCTS_PER_PAGE + 1;
   const rangeEnd = Math.min(currentPage * PRODUCTS_PER_PAGE, totalElements);
 
+  const hasActiveFilters = useMemo(
+    () =>
+      selectedCategory != null ||
+      selectedTypes.length > 0 ||
+      selectedCollections.length > 0 ||
+      priceRange[0] > 0 ||
+      priceRange[1] < 50000 ||
+      inStockOnly ||
+      searchQuery.trim().length > 0,
+    [selectedCategory, selectedTypes, selectedCollections, priceRange, inStockOnly, searchQuery]
+  );
+
+  const resetBrowseFilters = useCallback(() => {
+    searchQuerySourceRef.current = 'other';
+    setSearchQuery('');
+    setSelectedCategory(null);
+    setSelectedTypes([]);
+    setSelectedCollections([]);
+    setPriceRange([0, 50000]);
+    setInStockOnly(false);
+    setCurrentPage(1);
+    setSearchParams({});
+  }, [setSearchParams]);
+
   const visiblePages = useMemo(
     () => buildVisiblePageNumbers(currentPage, totalPages),
     [currentPage, totalPages]
@@ -467,8 +491,27 @@ const Boutique = () => {
                 <Loader2 className="w-8 h-8 animate-spin text-primary" />
               </div>
             ) : products.length === 0 ? (
-              <div className="text-center py-20">
-                <p className="text-accent-beige uppercase tracking-widest text-sm">Aucun produit trouvé</p>
+              <div className="text-center py-20 px-4 space-y-4">
+                <p className="text-accent-beige uppercase tracking-widest text-sm">
+                  {hasActiveFilters
+                    ? 'Aucun produit ne correspond à ces critères.'
+                    : 'Aucun produit pour le moment.'}
+                </p>
+                {hasActiveFilters && (
+                  <p className="text-muted-foreground text-sm max-w-md mx-auto normal-case tracking-normal">
+                    Retirez une collection ou une catégorie, élargissez la fourchette de prix ou videz la
+                    recherche.
+                  </p>
+                )}
+                {hasActiveFilters && (
+                  <button
+                    type="button"
+                    onClick={resetBrowseFilters}
+                    className="inline-flex items-center justify-center rounded-sm border border-primary px-6 py-2 text-xs font-bold uppercase tracking-widest text-primary hover:bg-primary hover:text-primary-foreground transition-colors"
+                  >
+                    Réinitialiser les filtres
+                  </button>
+                )}
               </div>
             ) : (
               <div className="grid grid-cols-2 xl:grid-cols-3 gap-x-8 gap-y-12 items-stretch">

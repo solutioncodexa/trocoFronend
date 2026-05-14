@@ -25,7 +25,7 @@ const AdminProducts = () => {
     queryKey: ['products', 'admin'],
     queryFn: () => productsApi.getAllProductsFullPage({ page: 0, size: 500 }),
   });
-  const products = productsPage ? mapProductDetailListToProducts(productsPage.content) : [];
+  const products = mapProductDetailListToProducts(productsPage?.content);
 
   const { data: categories = [] } = useQuery({
     queryKey: ['categories'],

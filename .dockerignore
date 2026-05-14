@@ -1,0 +1,31 @@
+# Build artifacts
+dist/
+build/
+
+# Dependencies
+node_modules/
+bun.lockb
+
+# IDE
+.idea/
+*.iws
+*.iml
+.vscode/
+
+# OS
+Thumbs.db
+.DS_Store
+
+# Git
+.git/
+.gitignore
+
+# Logs
+*.log
+npm-debug.log*
+
+# Docs
+README.md
+
+# Env files (les valeurs sont injectees au build via ARG)
+.env.local

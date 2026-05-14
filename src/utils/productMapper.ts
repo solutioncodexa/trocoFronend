@@ -62,11 +62,11 @@ export const mapProductListItemToProduct = (dto: ProductListItemDTO): Product =>
 /** @deprecated Utiliser mapProductDetailToProduct */
 export const mapProductDTOToProduct = mapProductDetailToProduct;
 
-export const mapProductListItemListToProducts = (dtos: ProductListItemDTO[]): Product[] =>
-  dtos.map(mapProductListItemToProduct);
+export const mapProductListItemListToProducts = (dtos?: ProductListItemDTO[] | null): Product[] =>
+  (dtos ?? []).map(mapProductListItemToProduct);
 
-export const mapProductDetailListToProducts = (dtos: ProductDetailDTO[]): Product[] =>
-  dtos.map(mapProductDetailToProduct);
+export const mapProductDetailListToProducts = (dtos?: ProductDetailDTO[] | null): Product[] =>
+  (dtos ?? []).map(mapProductDetailToProduct);
 
 /** Alias historique : listes API légères */
 export const mapProductDTOListToProducts = mapProductListItemListToProducts;
