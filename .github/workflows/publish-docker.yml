@@ -113,30 +113,31 @@ jobs:
       (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') &&
       vars.VPS_DEPLOY_DISABLED != 'true'
     steps:
-      - name: Verifier connexion VPS (evite "missing server host")
+      - id: vps_deploy_ready
+        name: Deploiement SSH possible ?
         env:
-          H: ${{ secrets.VPS_HOST || vars.VPS_HOST }}
-          U: ${{ secrets.VPS_USER || vars.VPS_USER }}
+          H: ${{ secrets.VPS_HOST || vars.VPS_HOST || vars.VPS_IP }}
+          U: ${{ secrets.VPS_USER || vars.VPS_USER || vars.VPS_SSH_USER }}
           K: ${{ secrets.VPS_SSH_PRIVATE_KEY }}
         run: |
-          if [ -z "$H" ]; then
-            echo "::error::Definir le secret VPS_HOST ou la variable Actions VPS_HOST (IP / hostname du VPS)."
-            exit 1
-          fi
-          if [ -z "$U" ]; then
-            echo "::error::Definir VPS_USER (secret ou variable Actions), ex. debian"
-            exit 1
-          fi
-          if [ -z "$K" ]; then
-            echo "::error::Definir le secret VPS_SSH_PRIVATE_KEY (cle privee PEM complete)."
-            exit 1
+          if [ -n "$H" ] && [ -n "$U" ] && [ -n "$K" ]; then
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=false" >> "$GITHUB_OUTPUT"
           fi
 
+      - name: Deploiement SSH saute — config manquante
+        if: steps.vps_deploy_ready.outputs.ready != 'true'
+        run: |
+          echo "::warning::Variables/secrets VPS absents pour ${{ github.repository }} — image GHCR pousee mais pas de deploy SSH."
+          echo "Ajoute : Actions → Variables VPS_HOST + VPS_USER ; Secret VPS_SSH_PRIVATE_KEY."
+
       - name: SSH — pull GHCR + up frontend
+        if: steps.vps_deploy_ready.outputs.ready == 'true'
         uses: appleboy/ssh-action@v1.2.0
         with:
-          host: ${{ secrets.VPS_HOST || vars.VPS_HOST }}
-          username: ${{ secrets.VPS_USER || vars.VPS_USER }}
+          host: ${{ secrets.VPS_HOST || vars.VPS_HOST || vars.VPS_IP }}
+          username: ${{ secrets.VPS_USER || vars.VPS_USER || vars.VPS_SSH_USER }}
           key: ${{ secrets.VPS_SSH_PRIVATE_KEY }}
           port: ${{ vars.VPS_SSH_PORT || '22' }}
           envs: DEPLOY_PATH,GHCR_PULL_TOKEN,GITHUB_REPO_OWNER_LC,GITHUB_SHA_FULL
