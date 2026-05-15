@@ -1,7 +1,6 @@
-// En dev sans variable : URL relative via proxy Vite. Sinon fallback build / hors-Vite.
-export const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL ||
-  (import.meta.env.DEV ? '/api' : 'http://localhost:8080/api');
+// Relatif `/api` par défaut : même origine que la page (évite DNS cassé www vs apex ou .ma/.com).
+// Override build : VITE_API_BASE_URL (ex. URL absolue seulement si besoin exceptionnel).
+export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api';
 
 // Récupération du token pour les requêtes authentifiées (évite import circulaire)
 const getAuthToken = (): string | null => {

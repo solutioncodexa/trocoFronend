@@ -8,8 +8,9 @@
 # ---------- 1. BUILD ----------
 FROM node:20-alpine AS build
 
-# Permet de surcharger l'URL de l'API au build (Vite l'inline dans le bundle)
-ARG VITE_API_BASE_URL=https://goldyara.ma/api
+# Relatif recommandé : le navigateur appelle le même hôte que le site (Nginx -> backend).
+# Surcharge seulement si besoin d'un domaine API différent du front.
+ARG VITE_API_BASE_URL=/api
 ENV VITE_API_BASE_URL=${VITE_API_BASE_URL}
 
 WORKDIR /app

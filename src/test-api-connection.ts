@@ -2,7 +2,7 @@
 import { buildApiUrl } from '@/config/api';
 
 console.log('=== API CONNECTION TEST ===');
-console.log('Base URL:', import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api');
+console.log('Base URL:', import.meta.env.VITE_API_BASE_URL || '/api');
 console.log('Filter URL:', buildApiUrl('/products/filter?category=beldi'));
 console.log('Products URL:', buildApiUrl('/products'));
 
