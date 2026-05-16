@@ -43,10 +43,18 @@ class TopBarMessagesApi {
   }
 
   async createMessage(message: CreateTopBarMessageRequest): Promise<TopBarMessageDTO> {
+    const body = {
+      message: message.message?.trim() ?? '',
+      displayOrder: Number.isFinite(Number(message.displayOrder)) ? Number(message.displayOrder) : 1,
+      isActive: message.isActive !== false,
+      displayDurationSeconds: Number.isFinite(Number(message.displayDurationSeconds))
+        ? Number(message.displayDurationSeconds)
+        : 7,
+    };
     const response = await fetch(`${API_BASE_URL}/top-bar-messages`, {
       method: 'POST',
       headers: getAuthHeaders(),
-      body: JSON.stringify(message),
+      body: JSON.stringify(body),
     });
 
     if (!response.ok) {
@@ -60,10 +68,18 @@ class TopBarMessagesApi {
   }
 
   async updateMessage(id: string, message: UpdateTopBarMessageRequest): Promise<TopBarMessageDTO> {
+    const body = {
+      message: message.message?.trim() ?? '',
+      displayOrder: Number.isFinite(Number(message.displayOrder)) ? Number(message.displayOrder) : 1,
+      isActive: message.isActive,
+      displayDurationSeconds: Number.isFinite(Number(message.displayDurationSeconds))
+        ? Number(message.displayDurationSeconds)
+        : 7,
+    };
     const response = await fetch(`${API_BASE_URL}/top-bar-messages/${id}`, {
       method: 'PUT',
       headers: getAuthHeaders(),
-      body: JSON.stringify(message),
+      body: JSON.stringify(body),
     });
 
     if (!response.ok) {

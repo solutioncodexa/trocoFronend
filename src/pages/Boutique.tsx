@@ -6,6 +6,12 @@ import Layout from '@/components/layout/Layout';
 import ProductCard from '@/components/ui/ProductCard';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Slider } from '@/components/ui/slider';
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '@/components/ui/accordion';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Product } from '@/types/product';
 import type { ProductListItemDTO } from '@/types/product-dtos';
@@ -16,6 +22,7 @@ import { RevealOnScroll } from '@/components/animations';
 import { ANIMATIONS } from '@/config/animations';
 import { toast } from 'sonner';
 import { staticCatalogQueryOptions } from '@/config/queryOptions';
+import { cn } from '@/lib/utils';
 
 const PRODUCTS_PER_PAGE = 12;
 
@@ -290,6 +297,135 @@ const Boutique = () => {
     );
   };
 
+  const filterSectionTitleClass =
+    'text-xs uppercase tracking-[0.3em] font-bold text-secondary-dark dark:text-white';
+  const accordionTriggerClass = cn(
+    filterSectionTitleClass,
+    'py-4 hover:no-underline [&[data-state=open]]:text-primary'
+  );
+
+  const categoryFilterList = (
+    <ul className="space-y-3">
+      <li>
+        <label className="flex items-center gap-3 text-sm text-accent-beige hover:text-primary cursor-pointer transition-colors">
+          <Checkbox
+            checked={selectedCategory === null}
+            onCheckedChange={() => handleCategoryChange(null)}
+            className="rounded border-accent-beige/30 text-primary focus:ring-primary size-4"
+          />
+          Toutes
+        </label>
+      </li>
+      {categories.map((cat) => (
+        <li key={cat.id}>
+          <label className="flex items-center gap-3 text-sm text-accent-beige hover:text-primary cursor-pointer transition-colors">
+            <Checkbox
+              checked={selectedCategory === cat.slug}
+              onCheckedChange={() => handleCategoryChange(cat.slug)}
+              className="rounded border-accent-beige/30 text-primary focus:ring-primary size-4"
+            />
+            {cat.name}
+          </label>
+        </li>
+      ))}
+    </ul>
+  );
+
+  const collectionFilterList = (
+    <ul className="space-y-3">
+      {collections.map((col) => (
+        <li key={col.id}>
+          <label className="flex items-center gap-3 text-sm text-accent-beige hover:text-primary cursor-pointer transition-colors">
+            <Checkbox
+              checked={selectedCollections.includes(col.slug)}
+              onCheckedChange={() => handleCollectionToggle(col.slug)}
+              className="rounded border-accent-beige/30 text-primary focus:ring-primary size-4"
+            />
+            {col.name}
+          </label>
+        </li>
+      ))}
+    </ul>
+  );
+
+  const typeFilterList = (
+    <>
+      {selectedCategory === 'ensemble' && (
+        <p className="text-[10px] text-muted-foreground mb-3 leading-snug">
+          Ordre d’affichage : bracelets & gourmettes, bagues, serties, puis colliers et autres.
+        </p>
+      )}
+      <ul className="space-y-3">
+        {sortedProductTypes.map((pt) => (
+          <li key={pt.id}>
+            <label className="flex items-center gap-3 text-sm text-accent-beige hover:text-primary cursor-pointer transition-colors">
+              <Checkbox
+                checked={selectedTypes.includes(pt.code.toLowerCase())}
+                onCheckedChange={() => handleTypeToggle(pt.code.toLowerCase())}
+                className="rounded border-accent-beige/30 text-primary focus:ring-primary size-4"
+              />
+              {pt.name}
+            </label>
+          </li>
+        ))}
+      </ul>
+    </>
+  );
+
+  const priceFilterBlock = (
+    <>
+      <Slider
+        value={priceRange}
+        onValueChange={(value) => setPriceRange(value as [number, number])}
+        onValueCommit={() => clearKeywordSearch()}
+        min={0}
+        max={50000}
+        step={1000}
+        className="w-full accent-primary"
+      />
+      <div className="flex justify-between text-[10px] text-accent-beige uppercase mt-2">
+        <span>0 MAD</span>
+        <span>50 000+ MAD</span>
+      </div>
+    </>
+  );
+
+  const searchFilterBlock = (
+    <input
+      type="search"
+      value={searchQuery}
+      onChange={(e) => {
+        searchQuerySourceRef.current = 'user-typing';
+        setSearchQuery(e.target.value);
+      }}
+      onBlur={() => {
+        setSearchParams((prev) => {
+          const next = new URLSearchParams(prev);
+          const t = searchQuery.trim();
+          if (t) next.set('keyword', t);
+          else next.delete('keyword');
+          return next;
+        });
+      }}
+      placeholder="Nom ou description…"
+      className="w-full rounded-md border border-accent-beige/30 bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
+    />
+  );
+
+  const inStockFilterRow = (
+    <label className="flex items-center gap-3 text-sm font-bold uppercase tracking-widest text-secondary-dark cursor-pointer">
+      <Checkbox
+        checked={inStockOnly}
+        onCheckedChange={(checked) => {
+          clearKeywordSearch();
+          setInStockOnly(checked as boolean);
+        }}
+        className="rounded border-accent-beige/30 text-primary focus:ring-primary size-4"
+      />
+      En stock uniquement
+    </label>
+  );
+
   return (
     <Layout>
       <section className="relative bg-paper py-16 md:py-24 border-b border-accent-beige/10 bg-paper-pattern overflow-hidden">
@@ -316,143 +452,80 @@ const Boutique = () => {
 
       <main className="max-w-[1400px] mx-auto w-full min-w-0 px-0 sm:px-6 py-12 overflow-x-hidden">
         <div className="flex flex-col lg:flex-row gap-8 lg:gap-12 min-w-0">
-          <aside className="w-full lg:w-72 shrink-0 space-y-10 max-lg:w-screen max-lg:ml-[calc(50%-50vw)] max-lg:mr-[calc(50%-50vw)] max-lg:px-4 max-lg:sm:px-6 max-lg:py-6 max-lg:border-b max-lg:border-accent-beige/15 max-lg:bg-paper dark:max-lg:bg-[#2a2515]">
-            <div>
-              <h3 className="text-xs uppercase tracking-[0.3em] font-bold text-secondary-dark dark:text-white mb-6 flex items-center gap-2">
-                Catégorie
-                <div className="h-px flex-grow bg-accent-beige/20"></div>
-              </h3>
-              <ul className="space-y-3">
-                <li>
-                  <label className="flex items-center gap-3 text-sm text-accent-beige hover:text-primary cursor-pointer transition-colors">
-                    <Checkbox
-                      checked={selectedCategory === null}
-                      onCheckedChange={() => handleCategoryChange(null)}
-                      className="rounded border-accent-beige/30 text-primary focus:ring-primary size-4"
-                    />
-                    Toutes
-                  </label>
-                </li>
-                {categories.map((cat) => (
-                  <li key={cat.id}>
-                    <label className="flex items-center gap-3 text-sm text-accent-beige hover:text-primary cursor-pointer transition-colors">
-                      <Checkbox
-                        checked={selectedCategory === cat.slug}
-                        onCheckedChange={() => handleCategoryChange(cat.slug)}
-                        className="rounded border-accent-beige/30 text-primary focus:ring-primary size-4"
-                      />
-                      {cat.name}
-                    </label>
-                  </li>
-                ))}
-              </ul>
-            </div>
+          <aside className="w-full lg:w-72 shrink-0 max-lg:w-screen max-lg:ml-[calc(50%-50vw)] max-lg:mr-[calc(50%-50vw)] max-lg:px-4 max-lg:sm:px-6 max-lg:py-6 max-lg:border-b max-lg:border-accent-beige/15 max-lg:bg-paper dark:max-lg:bg-[#2a2515]">
+            <Accordion
+              type="multiple"
+              className="w-full lg:hidden border-y border-accent-beige/20 -mt-2"
+              defaultValue={[]}
+            >
+              <AccordionItem value="category" className="border-accent-beige/15">
+                <AccordionTrigger className={accordionTriggerClass}>Catégorie</AccordionTrigger>
+                <AccordionContent>{categoryFilterList}</AccordionContent>
+              </AccordionItem>
+              <AccordionItem value="collection" className="border-accent-beige/15">
+                <AccordionTrigger className={accordionTriggerClass}>Collection</AccordionTrigger>
+                <AccordionContent>{collectionFilterList}</AccordionContent>
+              </AccordionItem>
+              <AccordionItem value="type" className="border-accent-beige/15">
+                <AccordionTrigger className={accordionTriggerClass}>Type de bijou</AccordionTrigger>
+                <AccordionContent>{typeFilterList}</AccordionContent>
+              </AccordionItem>
+              <AccordionItem value="price" className="border-accent-beige/15">
+                <AccordionTrigger className={accordionTriggerClass}>Prix (MAD)</AccordionTrigger>
+                <AccordionContent>{priceFilterBlock}</AccordionContent>
+              </AccordionItem>
+              <AccordionItem value="search" className="border-accent-beige/15 border-b-0">
+                <AccordionTrigger className={accordionTriggerClass}>Recherche</AccordionTrigger>
+                <AccordionContent>
+                  <div className="pb-1">{searchFilterBlock}</div>
+                </AccordionContent>
+              </AccordionItem>
+            </Accordion>
 
-            <div>
-              <h3 className="text-xs uppercase tracking-[0.3em] font-bold text-secondary-dark dark:text-white mb-6 flex items-center gap-2">
-                Collection
-                <div className="h-px flex-grow bg-accent-beige/20"></div>
-              </h3>
-              <ul className="space-y-3">
-                {collections.map((col) => (
-                  <li key={col.id}>
-                    <label className="flex items-center gap-3 text-sm text-accent-beige hover:text-primary cursor-pointer transition-colors">
-                      <Checkbox
-                        checked={selectedCollections.includes(col.slug)}
-                        onCheckedChange={() => handleCollectionToggle(col.slug)}
-                        className="rounded border-accent-beige/30 text-primary focus:ring-primary size-4"
-                      />
-                      {col.name}
-                    </label>
-                  </li>
-                ))}
-              </ul>
-            </div>
+            <div className="mt-6 space-y-6 lg:hidden">{inStockFilterRow}</div>
 
-            <div>
-              <h3 className="text-xs uppercase tracking-[0.3em] font-bold text-secondary-dark dark:text-white mb-6 flex items-center gap-2">
-                Type de bijou
-                <div className="h-px flex-grow bg-accent-beige/20"></div>
-              </h3>
-              {selectedCategory === 'ensemble' && (
-                <p className="text-[10px] text-muted-foreground mb-3 leading-snug">
-                  Ordre d’affichage : bracelets & gourmettes, bagues, serties, puis colliers et autres.
-                </p>
-              )}
-              <ul className="space-y-3">
-                {sortedProductTypes.map((pt) => (
-                  <li key={pt.id}>
-                    <label className="flex items-center gap-3 text-sm text-accent-beige hover:text-primary cursor-pointer transition-colors">
-                      <Checkbox
-                        checked={selectedTypes.includes(pt.code.toLowerCase())}
-                        onCheckedChange={() => handleTypeToggle(pt.code.toLowerCase())}
-                        className="rounded border-accent-beige/30 text-primary focus:ring-primary size-4"
-                      />
-                      {pt.name}
-                    </label>
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            <div>
-              <h3 className="text-xs uppercase tracking-[0.3em] font-bold text-secondary-dark dark:text-white mb-6 flex items-center gap-2">
-                Prix (MAD)
-                <div className="h-px flex-grow bg-accent-beige/20"></div>
-              </h3>
-              <Slider
-                value={priceRange}
-                onValueChange={(value) => setPriceRange(value as [number, number])}
-                onValueCommit={() => clearKeywordSearch()}
-                min={0}
-                max={50000}
-                step={1000}
-                className="w-full accent-primary"
-              />
-              <div className="flex justify-between text-[10px] text-accent-beige uppercase mt-2">
-                <span>0 MAD</span>
-                <span>50 000+ MAD</span>
+            <div className="hidden lg:block space-y-10">
+              <div>
+                <h3 className={`${filterSectionTitleClass} mb-6 flex items-center gap-2`}>
+                  Catégorie
+                  <div className="h-px flex-grow bg-accent-beige/20"></div>
+                </h3>
+                {categoryFilterList}
               </div>
-            </div>
 
-            <div>
-              <label className="flex items-center gap-3 text-sm font-bold uppercase tracking-widest text-secondary-dark cursor-pointer">
-                <Checkbox
-                  checked={inStockOnly}
-                  onCheckedChange={(checked) => {
-                    clearKeywordSearch();
-                    setInStockOnly(checked as boolean);
-                  }}
-                  className="rounded border-accent-beige/30 text-primary focus:ring-primary size-4"
-                />
-                En stock uniquement
-              </label>
-            </div>
+              <div>
+                <h3 className={`${filterSectionTitleClass} mb-6 flex items-center gap-2`}>
+                  Collection
+                  <div className="h-px flex-grow bg-accent-beige/20"></div>
+                </h3>
+                {collectionFilterList}
+              </div>
 
-            <div>
-              <h3 className="text-xs uppercase tracking-[0.3em] font-bold text-secondary-dark dark:text-white mb-4 flex items-center gap-2">
-                Recherche
-                <div className="h-px flex-grow bg-accent-beige/20"></div>
-              </h3>
-              <input
-                type="search"
-                value={searchQuery}
-                onChange={(e) => {
-                  searchQuerySourceRef.current = 'user-typing';
-                  setSearchQuery(e.target.value);
-                }}
-                onBlur={() => {
-                  setSearchParams((prev) => {
-                    const next = new URLSearchParams(prev);
-                    const t = searchQuery.trim();
-                    if (t) next.set('keyword', t);
-                    else next.delete('keyword');
-                    return next;
-                  });
-                }}
-                placeholder="Nom ou description…"
-                className="w-full rounded-md border border-accent-beige/30 bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
-              />
+              <div>
+                <h3 className={`${filterSectionTitleClass} mb-6 flex items-center gap-2`}>
+                  Type de bijou
+                  <div className="h-px flex-grow bg-accent-beige/20"></div>
+                </h3>
+                {typeFilterList}
+              </div>
+
+              <div>
+                <h3 className={`${filterSectionTitleClass} mb-6 flex items-center gap-2`}>
+                  Prix (MAD)
+                  <div className="h-px flex-grow bg-accent-beige/20"></div>
+                </h3>
+                {priceFilterBlock}
+              </div>
+
+              <div>{inStockFilterRow}</div>
+
+              <div>
+                <h3 className={`${filterSectionTitleClass} mb-4 flex items-center gap-2`}>
+                  Recherche
+                  <div className="h-px flex-grow bg-accent-beige/20"></div>
+                </h3>
+                {searchFilterBlock}
+              </div>
             </div>
           </aside>
 

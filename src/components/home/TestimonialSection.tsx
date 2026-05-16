@@ -10,15 +10,9 @@ const TestimonialSection = () => {
           <Quote className="text-6xl text-primary/30 absolute top-8 left-8" />
           <Quote className="text-6xl text-primary/30 absolute bottom-8 right-8 rotate-180" />
           
-          <h3 className="text-2xl md:text-3xl font-display text-secondary-dark dark:text-white mb-6 italic leading-relaxed">
-            &quot;Un bijou d&apos;une beauté rare, reçu dans un écrin magnifique. Le service client est d&apos;une grande attention, digne des plus grandes maisons parisiennes.&quot;
+          <h3 className="text-2xl md:text-3xl font-display text-secondary-dark dark:text-white italic leading-relaxed">
+            &quot;L&apos;or, chez nous, ce n&apos;est pas une tendance : c&apos;est ce qu&apos;on garde pour les fiançailles, les alliances, les gourmettes qu&apos;on fait graver au nom des enfants. Ici on retrouve ce qu&apos;on attend d&apos;un maâlem : le poids qui se sent au poignet, le beldi bien assumé, et un or propre — sans le côté &apos;vitrine&apos; qui sonne faux. Un travail de pays, avec une exigence d&apos;aujourd&apos;hui.&quot;
           </h3>
-          
-          <div className="flex flex-col items-center">
-            <div className="text-primary text-xl mb-2">★★★★★</div>
-            <p className="text-sm font-bold uppercase tracking-widest text-accent-beige">Sophie Dubois</p>
-            <p className="text-xs text-gray-400">Cliente Vérifiée</p>
-          </div>
         </div>
         </RevealOnScroll>
       </div>

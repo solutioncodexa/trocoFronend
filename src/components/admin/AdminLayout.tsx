@@ -22,6 +22,7 @@ import AdminNotification from './AdminNotification';
 import { Button } from '@/components/ui/button';
 import { useAdmin } from '@/contexts/AdminContext';
 import { cn } from '@/lib/utils';
+import { BrandLogoImg } from '@/components/layout/BrandLogoImg';
 import { useState } from 'react';
 
 interface AdminLayoutProps {
@@ -95,8 +96,8 @@ const AdminLayout = ({ children, title, breadcrumbs }: AdminLayoutProps) => {
       >
         {/* Logo - Aligné avec le header principal */}
         <div className="h-16 shrink-0 flex items-center justify-between px-6 border-b border-gray-200">
-          <Link to="/admin/dashboard" className="font-script text-xl text-primary">
-            YaraGold
+          <Link to="/admin/dashboard" className="flex items-center min-w-0" aria-label="YaraGold — tableau de bord">
+            <BrandLogoImg className="h-10 w-auto max-w-[12rem]" draggable={false} />
           </Link>
           <button
             className="lg:hidden text-gray-600 hover:text-gray-900"

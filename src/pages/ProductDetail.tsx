@@ -405,12 +405,7 @@ const ProductDetail = () => {
                 <div className={cn('grid gap-2', requiresSize ? 'grid-cols-1 sm:grid-cols-2' : 'grid-cols-1')}>
                   {requiresSize ? (
                     <div ref={sizeFieldRef} className="min-w-0">
-                      <div className="mb-1 flex items-center justify-between gap-2">
-                        <Label className="text-[11px] sm:text-xs block">Taille *</Label>
-                        <Link to="/guide-tailles" className="text-primary text-[10px] hover:underline shrink-0">
-                          Guide des tailles
-                        </Link>
-                      </div>
+                      <Label className="text-[11px] sm:text-xs mb-1 block">Taille *</Label>
                       <Select
                         key={`${product.id}-taille`}
                         value={selectedSize}
@@ -435,6 +430,12 @@ const ProductDetail = () => {
                           ))}
                         </SelectContent>
                       </Select>
+                      <Link
+                        to="/guide-tailles"
+                        className="mt-2 inline-flex min-h-9 items-center text-primary text-xs sm:text-sm font-medium hover:underline underline-offset-4"
+                      >
+                        Guide des tailles
+                      </Link>
                       {sizeError ? (
                         <p
                           role="alert"

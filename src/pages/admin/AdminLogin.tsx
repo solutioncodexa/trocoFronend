@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useAdmin } from '@/contexts/AdminContext';
+import { BrandLogoImg } from '@/components/layout/BrandLogoImg';
 
 const AdminLogin = () => {
   const navigate = useNavigate();
@@ -48,7 +49,7 @@ const AdminLogin = () => {
       <div className="w-full max-w-md relative z-10">
         {/* Logo */}
         <div className="text-center mb-8">
-          <h1 className="font-script text-3xl text-primary mb-2">YaraGold</h1>
+          <BrandLogoImg className="h-[4.5rem] sm:h-24 md:h-28 w-auto mx-auto mb-3 max-w-[min(100%,320px)]" draggable={false} />
           <p className="text-accent-beige text-sm uppercase tracking-widest">
             Administration
           </p>
@@ -83,7 +84,6 @@ const AdminLogin = () => {
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="admin@goldyara.ma"
                   className="pl-10"
                   required
                 />
@@ -99,7 +99,6 @@ const AdminLogin = () => {
                   type={showPassword ? 'text' : 'password'}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••"
                   className="pl-10 pr-10"
                   required
                 />
@@ -122,13 +121,6 @@ const AdminLogin = () => {
               {isLoading ? 'Connexion...' : 'Se connecter'}
             </Button>
           </form>
-
-          {/* Demo credentials */}
-          <div className="mt-6 p-4 bg-muted rounded-lg">
-            <p className="font-body text-xs text-muted-foreground text-center">
-              <strong>Démo:</strong> admin@goldyara.ma / Admin1234
-            </p>
-          </div>
         </div>
 
         {/* Back to site */}

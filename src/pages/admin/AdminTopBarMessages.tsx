@@ -141,7 +141,8 @@ const AdminTopBarMessages = () => {
           data: { 
             message: newMessages[index].message,
             displayOrder: newMessages[index].displayOrder,
-            isActive: newMessages[index].isActive 
+            isActive: newMessages[index].isActive,
+            displayDurationSeconds: newMessages[index].displayDurationSeconds ?? 7,
           } 
         }),
         updateMutation.mutateAsync({ 
@@ -149,7 +150,8 @@ const AdminTopBarMessages = () => {
           data: { 
             message: newMessages[targetIndex].message,
             displayOrder: newMessages[targetIndex].displayOrder,
-            isActive: newMessages[targetIndex].isActive 
+            isActive: newMessages[targetIndex].isActive,
+            displayDurationSeconds: newMessages[targetIndex].displayDurationSeconds ?? 7,
           } 
         })
       ]).then(() => {
@@ -194,7 +196,8 @@ const AdminTopBarMessages = () => {
           <div>
             <h1 className="text-3xl font-bold text-foreground">Messages de la Top Bar</h1>
             <p className="text-muted-foreground mt-2">
-              Gérez les messages affichés dans la barre supérieure du site
+              Gérez les messages et la durée d&apos;affichage avant passage au suivant (si plusieurs messages
+              actifs), sur le même principe que la fermeture auto des promo modals.
             </p>
           </div>
           <Button onClick={() => setIsCreateDialogOpen(true)}>
@@ -234,6 +237,9 @@ const AdminTopBarMessages = () => {
                         </Badge>
                         <span className="text-sm text-muted-foreground">
                           Ordre: {message.displayOrder}
+                        </span>
+                        <span className="text-sm text-muted-foreground">
+                          Durée: {message.displayDurationSeconds ?? 7}s
                         </span>
                         <span className="text-sm text-muted-foreground">
                           Position: {index + 1}/{messages.length}
@@ -327,9 +333,22 @@ const CreateMessageDialog = ({
 }) => {
   const [formData, setFormData] = useState<CreateTopBarMessageRequest>({
     message: '',
-    displayOrder: Math.max(...messages.map(m => m.displayOrder), 0) + 1, // Prochain ordre disponible
+    displayOrder: 1,
     isActive: true,
+    displayDurationSeconds: 7,
   });
+
+  useEffect(() => {
+    if (!open) return;
+    const orders = messages
+      .map((m) => Number(m.displayOrder))
+      .filter((n) => Number.isFinite(n));
+    const maxOrder = orders.length > 0 ? Math.max(...orders) : 0;
+    setFormData((prev) => ({
+      ...prev,
+      displayOrder: maxOrder + 1,
+    }));
+  }, [open, messages]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -365,7 +384,35 @@ const CreateMessageDialog = ({
               required
             />
             <p className="text-xs text-muted-foreground mt-1">
-              Ordre actuel le plus élevé: {Math.max(...messages.map(m => m.displayOrder), 0)}
+              Ordre actuel le plus élevé:{' '}
+              {(() => {
+                const orders = messages
+                  .map((m) => Number(m.displayOrder))
+                  .filter((n) => Number.isFinite(n));
+                return orders.length > 0 ? Math.max(...orders) : 0;
+              })()}
+            </p>
+          </div>
+
+          <div>
+            <Label htmlFor="displayDurationSeconds">Durée d&apos;affichage (secondes)</Label>
+            <Input
+              id="displayDurationSeconds"
+              type="number"
+              value={formData.displayDurationSeconds ?? 7}
+              onChange={(e) =>
+                setFormData({
+                  ...formData,
+                  displayDurationSeconds: Math.min(600, Math.max(2, parseInt(e.target.value, 10) || 7)),
+                })
+              }
+              min={2}
+              max={600}
+              required
+            />
+            <p className="text-xs text-muted-foreground mt-1">
+              Temps pendant lequel ce message reste visible avant le suivant (si plusieurs messages actifs).
+              Défaut: 7 s.
             </p>
           </div>
 
@@ -406,6 +453,7 @@ const EditMessageDialog = ({
     message: message?.message || '',
     displayOrder: message?.displayOrder || 1,
     isActive: message?.isActive,
+    displayDurationSeconds: message?.displayDurationSeconds ?? 7,
   });
 
   useEffect(() => {
@@ -414,6 +462,7 @@ const EditMessageDialog = ({
         message: message.message,
         displayOrder: message.displayOrder,
         isActive: message.isActive,
+        displayDurationSeconds: message.displayDurationSeconds ?? 7,
       });
     }
   }, [message]);
@@ -451,6 +500,27 @@ const EditMessageDialog = ({
               min="1"
               required
             />
+          </div>
+
+          <div>
+            <Label htmlFor="edit-displayDurationSeconds">Durée d&apos;affichage (secondes)</Label>
+            <Input
+              id="edit-displayDurationSeconds"
+              type="number"
+              value={formData.displayDurationSeconds ?? 7}
+              onChange={(e) =>
+                setFormData({
+                  ...formData,
+                  displayDurationSeconds: Math.min(600, Math.max(2, parseInt(e.target.value, 10) || 7)),
+                })
+              }
+              min={2}
+              max={600}
+              required
+            />
+            <p className="text-xs text-muted-foreground mt-1">
+              Avant passage au message suivant lorsque plusieurs messages sont actifs.
+            </p>
           </div>
 
           <div className="flex items-center space-x-2">

@@ -142,7 +142,7 @@ const HeritageSection = () => {
                     <Facebook className="w-5 h-5 text-white" />
                   </a>
                   <a 
-                    href="https://www.instagram.com/votreinstagram" 
+                    href="https://www.instagram.com/gold_yara_/" 
                     target="_blank" 
                     rel="noopener noreferrer"
                     className="inline-flex items-center justify-center h-11 w-11 sm:h-10 sm:w-10 rounded-full ring-2 ring-white bg-gradient-to-br from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 transition-colors"

@@ -4,9 +4,9 @@ import { Search, ShoppingBag, Menu, X, Heart, ArrowRight } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { useCart } from '@/contexts/CartContext';
 import { useWishlist } from '@/contexts/WishlistContext';
-import GoldPriceNav from './GoldPriceNav';
 import { cn } from '@/lib/utils';
 import { ANIMATIONS } from '@/config/animations';
+import { BrandLogoImg } from '@/components/layout/BrandLogoImg';
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -99,14 +99,16 @@ const Header = () => {
           {/* Logo */}
           <Link
             to="/"
+            aria-label="YaraGold — accueil"
             className={cn(
-              'flex items-center min-w-0 shrink max-lg:max-w-[42%] py-1 overflow-visible',
+              'flex items-center min-w-0 shrink max-lg:max-w-[56%] py-0.5 overflow-visible',
               ANIMATIONS.headerLogoHover && 'transition-transform duration-300 ease-out hover:scale-[1.03] active:scale-100'
             )}
           >
-            <span className="font-script text-xl sm:text-2xl md:text-3xl leading-[1.35] text-primary whitespace-nowrap inline-block py-0.5">
-              YaraGold
-            </span>
+            <BrandLogoImg
+              className="h-11 w-auto sm:h-12 md:h-14 lg:h-16"
+              draggable={false}
+            />
           </Link>
 
           {/* Desktop Navigation */}
@@ -127,11 +129,6 @@ const Header = () => {
               </Link>
             ))}
           </nav>
-
-          {/* Gold price graph */}
-          <div className="flex min-w-0 shrink justify-center lg:flex-1 lg:justify-center">
-            <GoldPriceNav />
-          </div>
 
           {/* Right side icons */}
           <div className="flex items-center gap-0.5 sm:gap-1 md:gap-3 shrink-0">

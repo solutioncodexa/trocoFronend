@@ -30,16 +30,24 @@ const TopBar = () => {
   useEffect(() => {
     if (messages.length <= 1) return;
 
-    const interval = setInterval(() => {
+    let innerTimer: ReturnType<typeof setTimeout> | undefined;
+    const rawSec = Number(messages[currentMessage]?.displayDurationSeconds);
+    const seconds = Number.isFinite(rawSec) && rawSec > 0 ? rawSec : 7;
+    const durationMs = Math.min(Math.max(seconds * 1000, 2000), 600_000);
+
+    const outerTimer = setTimeout(() => {
       setIsVisible(false);
-      setTimeout(() => {
+      innerTimer = setTimeout(() => {
         setCurrentMessage((prev) => (prev + 1) % messages.length);
         setIsVisible(true);
       }, 400);
-    }, 7000); 
+    }, durationMs);
 
-    return () => clearInterval(interval);
-  }, [messages.length]);
+    return () => {
+      clearTimeout(outerTimer);
+      if (innerTimer) clearTimeout(innerTimer);
+    };
+  }, [currentMessage, messages]);
 
   if (loading) {
     return null; // Ne rien afficher pendant le chargement

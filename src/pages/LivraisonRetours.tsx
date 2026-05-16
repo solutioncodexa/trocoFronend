@@ -1,4 +1,3 @@
-import { Link } from 'react-router-dom';
 import Layout from '@/components/layout/Layout';
 
 const LivraisonRetours = () => {
@@ -27,7 +26,9 @@ const LivraisonRetours = () => {
             <div className="flex flex-col items-center text-center p-6 border border-primary/10 bg-white/50 backdrop-blur-sm rounded-sm">
               <span className="material-symbols-outlined text-primary mb-3 text-4xl">payments</span>
               <h4 className="font-bold uppercase tracking-widest text-sm mb-2">Paiement</h4>
-              <p className="text-sm text-secondary-dark/70">Paiement uniquement à la livraison, en espèces.</p>
+              <p className="text-sm text-secondary-dark/70">
+                Virement bancaire ou paiement en espèces à la livraison.
+              </p>
             </div>
           </div>
 

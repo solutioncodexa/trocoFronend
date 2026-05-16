@@ -68,7 +68,10 @@ const HeroSection = () => {
         </p>
 
         <div
-          className={cn(fade && 'motion-safe:animate-fade-in-up motion-reduce:opacity-100 [animation-fill-mode:forwards]')}
+          className={cn(
+            'mb-8 max-md:mb-10 md:mb-10',
+            fade && 'motion-safe:animate-fade-in-up motion-reduce:opacity-100 [animation-fill-mode:forwards]'
+          )}
           style={fade ? { animationDelay: '260ms' } : undefined}
         >
           <Button

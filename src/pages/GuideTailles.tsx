@@ -1,5 +1,16 @@
-import { Link } from 'react-router-dom';
 import Layout from '@/components/layout/Layout';
+
+const RING_SIZE_CARDS: { label: string; circleClass: string }[] = [
+  { label: '41 (13mm)', circleClass: 'w-10 h-10' },
+  { label: '47 (15mm)', circleClass: 'w-12 h-12' },
+  { label: '52 (16.5mm)', circleClass: 'w-14 h-14' },
+  { label: '57 (18mm)', circleClass: 'w-16 h-16' },
+  { label: '64 (20.4mm)', circleClass: 'w-20 h-20' },
+  { label: '72 (23mm)', circleClass: 'w-24 h-24' },
+];
+
+const ringCardClass =
+  'bg-white border border-primary/20 flex min-h-0 min-w-0 h-52 flex-col rounded-lg p-4 hover:border-primary transition-colors';
 
 const GuideTailles = () => {
   return (
@@ -63,30 +74,16 @@ const GuideTailles = () => {
             
             {/* ImageGrid: Ring Size Chart Circles */}
             <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-4 p-4">
-              <div className="bg-white border border-primary/20 flex flex-col items-center justify-center p-6 rounded-lg aspect-square hover:border-primary transition-colors">
-                <div className="w-10 h-10 rounded-full border-2 border-primary mb-3"></div>
-                <p className="text-secondary-dark text-sm font-bold">41 (13mm)</p>
-              </div>
-              <div className="bg-white border border-primary/20 flex flex-col items-center justify-center p-6 rounded-lg aspect-square hover:border-primary transition-colors">
-                <div className="w-12 h-12 rounded-full border-2 border-primary mb-3"></div>
-                <p className="text-secondary-dark text-sm font-bold">47 (15mm)</p>
-              </div>
-              <div className="bg-white border border-primary/20 flex flex-col items-center justify-center p-6 rounded-lg aspect-square hover:border-primary transition-colors">
-                <div className="w-14 h-14 rounded-full border-2 border-primary mb-3"></div>
-                <p className="text-secondary-dark text-sm font-bold">52 (16.5mm)</p>
-              </div>
-              <div className="bg-white border border-primary/20 flex flex-col items-center justify-center p-6 rounded-lg aspect-square hover:border-primary transition-colors">
-                <div className="w-16 h-16 rounded-full border-2 border-primary mb-3"></div>
-                <p className="text-secondary-dark text-sm font-bold">57 (18mm)</p>
-              </div>
-              <div className="bg-white border border-primary/20 flex flex-col items-center justify-center p-6 rounded-lg aspect-square hover:border-primary transition-colors">
-                <div className="w-20 h-20 rounded-full border-2 border-primary mb-3"></div>
-                <p className="text-secondary-dark text-sm font-bold">64 (20.4mm)</p>
-              </div>
-              <div className="bg-white border border-primary/20 flex flex-col items-center justify-center p-6 rounded-lg aspect-square hover:border-primary transition-colors">
-                <div className="w-24 h-24 rounded-full border-2 border-primary mb-3"></div>
-                <p className="text-secondary-dark text-sm font-bold">72 (23mm)</p>
-              </div>
+              {RING_SIZE_CARDS.map(({ label, circleClass }) => (
+                <div key={label} className={ringCardClass}>
+                  <div className="flex min-h-0 flex-1 w-full items-center justify-center">
+                    <div className={`shrink-0 rounded-full border-2 border-primary ${circleClass}`} />
+                  </div>
+                  <p className="text-secondary-dark shrink-0 pt-2 text-center text-sm font-bold leading-tight">
+                    {label}
+                  </p>
+                </div>
+              ))}
             </div>
           </section>
 
