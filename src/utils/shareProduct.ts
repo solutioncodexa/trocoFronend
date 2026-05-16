@@ -1,10 +1,44 @@
+import { PUBLIC_SITE_NAME } from '@/config/site';
+import { defaultCollections } from '@/types/product';
+import type { ProductCategory, ProductType } from '@/types/product';
 import { formatPrice } from '@/utils/formatPrice';
 
 export interface ProductShareParams {
   name: string;
   url: string;
   price?: number;
+  originalPrice?: number;
+  description?: string;
+  weight?: number;
+  category?: ProductCategory;
+  type?: ProductType;
+  collection?: string;
+  availableSizes?: string[];
   imageUrl?: string;
+}
+
+const CATEGORY_LABELS: Record<ProductCategory, string> = {
+  beldi: 'Collection Beldi',
+  modern: 'Collection Moderne',
+};
+
+const TYPE_LABELS: Record<ProductType, string> = {
+  bracelet: 'Bracelet',
+  ring: 'Bague',
+  necklace: 'Collier',
+  earrings: "Boucles d'oreilles",
+  set: 'Parure',
+};
+
+function truncateText(text: string, maxLen = 200): string {
+  const trimmed = text.trim().replace(/\s+/g, ' ');
+  if (trimmed.length <= maxLen) return trimmed;
+  return `${trimmed.slice(0, maxLen - 1).trimEnd()}…`;
+}
+
+function resolveCollectionName(collectionId?: string): string | undefined {
+  if (!collectionId) return undefined;
+  return defaultCollections.find((c) => c.id === collectionId)?.name ?? collectionId;
 }
 
 export interface RichSharePayload {
@@ -14,9 +48,54 @@ export interface RichSharePayload {
   imageUrl?: string;
 }
 
-export function buildProductShareMessage({ name, url, price }: ProductShareParams): string {
-  const pricePart = price != null ? ` — ${formatPrice(price)}` : '';
-  return `Découvrez « ${name} »${pricePart} sur YaraGold\n\n${url}`;
+export function buildProductShareMessage(params: ProductShareParams): string {
+  const {
+    name,
+    url,
+    price,
+    originalPrice,
+    description,
+    weight,
+    category,
+    type,
+    collection,
+    availableSizes,
+  } = params;
+
+  const lines: string[] = [name];
+
+  if (price != null) {
+    let priceLine = `Prix : ${formatPrice(price)}`;
+    if (originalPrice != null && originalPrice > price) {
+      priceLine += ` (au lieu de ${formatPrice(originalPrice)})`;
+    }
+    lines.push(priceLine);
+  }
+
+  const details: string[] = [];
+  if (type) details.push(TYPE_LABELS[type] ?? type);
+  if (category) details.push(CATEGORY_LABELS[category]);
+  const collectionName = resolveCollectionName(collection);
+  if (collectionName) details.push(collectionName);
+  if (weight != null) details.push(`${weight} g, or 18 carats`);
+  if (details.length > 0) {
+    lines.push(details.join(' · '));
+  }
+
+  if (availableSizes && availableSizes.length > 0) {
+    const shown = availableSizes.slice(0, 10);
+    const extra = availableSizes.length > shown.length ? '…' : '';
+    lines.push(`Tailles : ${shown.join(', ')}${extra}`);
+  }
+
+  if (description?.trim()) {
+    lines.push(truncateText(description, 120));
+  }
+
+  lines.push('');
+  lines.push(`${PUBLIC_SITE_NAME} : ${url}`);
+
+  return lines.join('\n');
 }
 
 export function buildProductShareTitle(name: string): string {
@@ -26,6 +105,23 @@ export function buildProductShareTitle(name: string): string {
 /** Ouvre toujours dans un nouvel onglet. */
 function openShareInNewTab(url: string) {
   window.open(url, '_blank', 'noopener,noreferrer');
+}
+
+function isMobileDevice(): boolean {
+  if (typeof navigator === 'undefined') return false;
+  return /Android|iPhone|iPad|iPod|Mobile|webOS|BlackBerry|IEMobile|Opera Mini/i.test(
+    navigator.userAgent,
+  );
+}
+
+/** Lance un deep link (ex. fb-messenger://) sans quitter la page courante. */
+function openDeepLink(url: string) {
+  const anchor = document.createElement('a');
+  anchor.href = url;
+  anchor.style.display = 'none';
+  document.body.appendChild(anchor);
+  anchor.click();
+  document.body.removeChild(anchor);
 }
 
 async function copyText(text: string): Promise<boolean> {
@@ -118,31 +214,72 @@ export function shareViaWhatsApp(message: string) {
   openShareInNewTab(url);
 }
 
-/** Messenger : partage natif si possible, sinon dialogue Facebook + message copié. */
-export async function shareViaMessenger(payload: RichSharePayload): Promise<NativeShareResult | 'dialog'> {
+/** Limite longueur pour deep links (Instagram, Messenger). */
+function truncateForDeepLink(text: string, maxLen = 1200): string {
+  const trimmed = text.trim();
+  if (trimmed.length <= maxLen) return trimmed;
+  return `${trimmed.slice(0, maxLen - 1).trimEnd()}…`;
+}
+
+/**
+ * Identique à instagram://sharesheet?text= :
+ * ouvre Messenger avec la liste de contacts + texte pré-rempli.
+ */
+function buildMessengerSharesheetUrl(text: string): string {
+  return `fb-messenger://share?text=${encodeURIComponent(truncateForDeepLink(text))}`;
+}
+
+/**
+ * Messenger — même logique qu'Instagram (message complet + choix conversation) :
+ * - mobile : fb-messenger://share?text=… (sharesheet = sélection contact + texte)
+ * - desktop : message copié + Messenger web
+ */
+export async function shareViaMessenger(
+  payload: RichSharePayload,
+): Promise<NativeShareResult | 'sharesheet' | 'clipboard'> {
   const native = await shareViaNativeRich(payload);
   if (native === 'shared' || native === 'aborted') return native;
 
   await copyShareMessage(payload.text);
-  const link = encodeURIComponent(payload.url);
-  openShareInNewTab(
-    `https://www.facebook.com/dialog/send?link=${link}&redirect_uri=${link}&display=popup`,
-  );
-  return 'dialog';
+
+  if (isMobileDevice()) {
+    openDeepLink(buildMessengerSharesheetUrl(payload.text));
+    return 'sharesheet';
+  }
+
+  openShareInNewTab('https://www.messenger.com/');
+  return 'clipboard';
 }
 
-export type InstagramShareResult = 'native' | 'manual';
-
-/** Instagram : partage natif (photo + texte) ou préparation manuelle. */
-export async function shareViaInstagram(payload: RichSharePayload): Promise<InstagramShareResult> {
-  const native = await shareViaNativeRich(payload);
-  if (native === 'shared') return 'native';
-  if (native === 'aborted') throw new DOMException('Aborted', 'AbortError');
-  return 'manual';
-}
-
-export function openInstagramInbox() {
+function openInstagramDirect() {
   openShareInNewTab('https://www.instagram.com/direct/inbox/');
+}
+
+function buildInstagramSharesheetUrl(text: string): string {
+  return `instagram://sharesheet?text=${encodeURIComponent(truncateForDeepLink(text))}`;
+}
+
+/**
+ * Instagram (aligné Messenger / WhatsApp) :
+ * - partage natif (choix conversation + photo si supporté)
+ * - mobile : instagram://sharesheet?text=… (feuille de partage → DM)
+ * - desktop : message copié + Instagram DM web
+ */
+export async function shareViaInstagram(
+  payload: RichSharePayload,
+): Promise<NativeShareResult | 'sharesheet' | 'link'> {
+  const native = await shareViaNativeRich(payload);
+  if (native === 'shared' || native === 'aborted') return native;
+
+  await copyShareMessage(payload.text);
+
+  if (isMobileDevice()) {
+    openDeepLink(buildInstagramSharesheetUrl(payload.text));
+    return 'sharesheet';
+  }
+
+  openInstagramDirect();
+  return 'link';
 }
 
 export function shareViaEmail(title: string, message: string) {

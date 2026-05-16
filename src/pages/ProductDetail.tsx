@@ -8,14 +8,6 @@ import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
 import { formatPrice } from '@/utils/formatPrice';
 import { useCart } from '@/contexts/CartContext';
 import { useWishlist } from '@/contexts/WishlistContext';
@@ -28,12 +20,9 @@ import {
   buildProductShareMessage,
   buildProductShareTitle,
   copyProductLink,
-  copyShareMessage,
-  openInstagramInbox,
   shareViaEmail,
   shareViaMessenger,
   shareViaInstagram,
-  shareViaNativeRich,
   shareViaWhatsApp,
 } from '@/utils/shareProduct';
 import { applyProductMeta, resetProductMeta } from '@/utils/productMeta';
@@ -138,11 +127,8 @@ const ProductDetail = () => {
   /** Message inline (mobile) si taille obligatoire non choisie */
   const [sizeError, setSizeError] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
-  const [instagramDialogOpen, setInstagramDialogOpen] = useState(false);
-  const [instagramMessageCopied, setInstagramMessageCopied] = useState(false);
   const [linkCopied, setLinkCopied] = useState(false);
   const sizeFieldRef = useRef<HTMLDivElement>(null);
-  const instagramMessageRef = useRef<HTMLTextAreaElement>(null);
 
   const { data: product, isLoading: isLoadingProduct } = useQuery({
     queryKey: ['product', id],
@@ -259,6 +245,13 @@ const ProductDetail = () => {
     name: product.name,
     url: shareUrl,
     price: product.price,
+    originalPrice: product.originalPrice,
+    description: product.description,
+    weight: product.weight,
+    category: product.category,
+    type: product.type,
+    collection: product.collection,
+    availableSizes: availableSizesList.length > 0 ? availableSizesList : undefined,
   });
   const shareImageUrl = product.images[0] ? resolvePublicImageUrl(product.images[0]) : undefined;
   const shareRichPayload = {
@@ -288,56 +281,36 @@ const ProductDetail = () => {
     setShareOpen(false);
     const result = await shareViaMessenger(shareRichPayload);
     if (result === 'shared') {
-      toast.success('Choisissez Messenger pour envoyer le bijou avec sa photo');
+      toast.success('Choisissez Messenger pour envoyer le bijou');
       return;
     }
     if (result === 'aborted') return;
-    toast.info('Message copié — le lien montrera la photo du produit dans Messenger', {
-      duration: 5000,
+    if (result === 'sharesheet') {
+      toast.info('Choisissez la conversation Messenger — le message est déjà copié', {
+        duration: 6000,
+      });
+      return;
+    }
+    toast.info('Message copié — ouvrez Messenger et choisissez une conversation', {
+      duration: 6000,
     });
   };
 
   const handleShareInstagram = async () => {
     setShareOpen(false);
-    try {
-      const result = await shareViaInstagram(shareRichPayload);
-      if (result === 'native') {
-        toast.success('Choisissez Instagram pour partager la photo et le message');
-        return;
-      }
-    } catch {
+    const result = await shareViaInstagram(shareRichPayload);
+    if (result === 'shared') {
+      toast.success('Choisissez Instagram pour partager le bijou');
       return;
     }
-    setInstagramDialogOpen(true);
-    window.setTimeout(() => {
-      void copyShareMessage(shareMessage).then(setInstagramMessageCopied);
-      instagramMessageRef.current?.focus();
-      instagramMessageRef.current?.select();
-    }, 150);
-  };
-
-  const handleNativeShareWithPhoto = async () => {
-    const result = await shareViaNativeRich(shareRichPayload);
-    if (result === 'shared') {
-      setInstagramDialogOpen(false);
-      toast.success('Partage lancé');
-    } else if (result === 'unsupported') {
-      toast.error('Partage avec photo non disponible sur cet appareil — copiez le message ci-dessous');
+    if (result === 'aborted') return;
+    if (result === 'sharesheet') {
+      toast.info('Choisissez la conversation Instagram — le message est déjà copié', {
+        duration: 6000,
+      });
+      return;
     }
-  };
-
-  const handleCopyInstagramMessage = async () => {
-    const ok = await copyShareMessage(shareMessage);
-    setInstagramMessageCopied(ok);
-    if (ok) toast.success('Message copié');
-    else toast.error('Copie impossible — sélectionnez le texte ci-dessous');
-  };
-
-  const handleOpenInstagramInbox = async () => {
-    await copyShareMessage(shareMessage);
-    setInstagramMessageCopied(true);
-    openInstagramInbox();
-    toast.info('Collez le message dans votre conversation Instagram (appui long → Coller)', {
+    toast.info('Message copié — ouvrez Instagram et choisissez une conversation', {
       duration: 6000,
     });
   };
@@ -370,48 +343,6 @@ const ProductDetail = () => {
 
   return (
     <Layout>
-      <Dialog open={instagramDialogOpen} onOpenChange={setInstagramDialogOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Partager sur Instagram</DialogTitle>
-            <DialogDescription>
-              Sur mobile, utilisez « Partager avec photo ». Sinon copiez le message et collez-le dans Instagram.
-            </DialogDescription>
-          </DialogHeader>
-          {shareImageUrl ? (
-            <div className="flex gap-3 rounded-md border border-accent-beige/25 bg-muted/20 p-3">
-              <img
-                src={shareImageUrl}
-                alt={product.name}
-                className="h-20 w-20 shrink-0 rounded-md object-cover"
-              />
-              <div className="min-w-0 flex flex-col justify-center">
-                <p className="font-display text-sm font-semibold text-secondary-dark truncate">{product.name}</p>
-                <p className="text-primary font-bold text-sm mt-0.5">{formatPrice(product.price)}</p>
-              </div>
-            </div>
-          ) : null}
-          <textarea
-            ref={instagramMessageRef}
-            readOnly
-            value={shareMessage}
-            rows={4}
-            className="w-full resize-none rounded-md border border-accent-beige/30 bg-muted/30 px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
-            onFocus={(e) => e.target.select()}
-          />
-          <DialogFooter className="flex-col gap-2 sm:flex-col sm:space-x-0">
-            <Button type="button" onClick={handleNativeShareWithPhoto} className="w-full">
-              Partager avec photo
-            </Button>
-            <Button type="button" onClick={handleCopyInstagramMessage} variant="outline" className="w-full">
-              {instagramMessageCopied ? 'Message copié' : 'Copier le message'}
-            </Button>
-            <Button type="button" onClick={handleOpenInstagramInbox} variant="outline" className="w-full">
-              Ouvrir Instagram
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
       {/* Lightbox */}
       {lightboxOpen && (

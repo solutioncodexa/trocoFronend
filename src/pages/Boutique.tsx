@@ -519,22 +519,19 @@ const Boutique = () => {
 
               <div>
                 <h3 className={`${filterSectionTitleClass} mb-4 flex items-center gap-2`}>
-                  Résultats
+                  Recherche
                   <div className="h-px flex-grow bg-accent-beige/20"></div>
                 </h3>
-                <p className="text-xs text-accent-beige uppercase tracking-widest">{productCountLabel}</p>
+                {searchFilterBlock}
               </div>
             </div>
           </aside>
 
           <div className="flex-grow min-w-0 px-4 sm:px-0">
             <div className="flex flex-col md:flex-row justify-between items-stretch md:items-center mb-4 gap-4 border-b border-accent-beige/10 pb-6">
-              <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 w-full md:flex-1 md:max-w-lg">
-                <span className="text-xs font-bold text-accent-beige uppercase tracking-widest shrink-0">
-                  Recherche :
-                </span>
-                <div className="w-full min-w-0">{searchFilterBlock}</div>
-              </div>
+              <p className="text-xs text-accent-beige uppercase tracking-widest w-full md:flex-1">
+                {productCountLabel}
+              </p>
               <div className="flex items-center gap-4 justify-center md:justify-end shrink-0">
                 <span className="text-xs text-accent-beige uppercase tracking-widest">Trier par :</span>
                 <Select
@@ -558,9 +555,9 @@ const Boutique = () => {
               </div>
             </div>
 
-            <p className="lg:hidden text-xs text-accent-beige uppercase tracking-widest text-center md:text-left mb-8 -mt-2">
-              {productCountLabel}
-            </p>
+            <div className="lg:hidden mb-8 -mt-2">
+              {searchFilterBlock}
+            </div>
 
             {isLoading && !pageResponse ? (
               <div className="flex items-center justify-center py-20">
