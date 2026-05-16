@@ -2,8 +2,18 @@ import React, { useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Upload, X, Image as ImageIcon } from 'lucide-react';
+import { Upload, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { compressImageWithReport } from '@/utils/compressImage';
+import { notifyCompressionReports } from '@/utils/notifyCompression';
+
+const MAX_INPUT_SIZE_MB = 20;
+const COMPRESSION_OPTS = {
+  maxSizeMB: 2.5,
+  maxWidthOrHeight: 3000,
+  outputType: 'image/webp' as const,
+  initialQuality: 0.92,
+};
 
 interface ImageUploadProps {
   value: string;
@@ -22,67 +32,65 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
+  const [optimizing, setOptimizing] = useState(false);
   const [previewUrl, setPreviewUrl] = useState(value);
 
-  // Synchroniser le previewUrl avec la prop value
   React.useEffect(() => {
     setPreviewUrl(value);
   }, [value]);
 
   const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
+    const rawFile = event.target.files?.[0];
+    if (!rawFile) return;
 
-    // Vérifier le type de fichier
-    if (!file.type.startsWith('image/')) {
-      alert('Veuillez sélectionner une image valide (JPG, PNG, GIF)');
+    if (!rawFile.type.startsWith('image/')) {
+      alert('Veuillez sélectionner une image valide (JPG, PNG, WebP, GIF, SVG).');
       return;
     }
 
-    if (file.size > 5 * 1024 * 1024) {
-      alert('L\'image ne doit pas dépasser 5MB');
+    if (rawFile.size > MAX_INPUT_SIZE_MB * 1024 * 1024) {
+      alert(`L'image ne doit pas dépasser ${MAX_INPUT_SIZE_MB} MB.`);
       return;
+    }
+
+    let file = rawFile;
+
+    // Sans handler API : on compresse ici. Avec onUpload (ex. uploadImage), la compression est faite côté upload.
+    if (!onUpload) {
+      setOptimizing(true);
+      try {
+        const { file: compressed, report } = await compressImageWithReport(rawFile, COMPRESSION_OPTS);
+        file = compressed;
+        notifyCompressionReports([report]);
+      } catch (err) {
+        console.warn('Compression impossible, envoi du fichier original :', err);
+        file = rawFile;
+      } finally {
+        setOptimizing(false);
+      }
     }
 
     setUploading(true);
-    
     try {
       let url: string;
-      
+
       if (onUpload) {
-        // Utiliser l'handler d'upload personnalisé
         try {
-          url = await onUpload(file);
+          url = await onUpload(rawFile);
         } catch (error) {
-          // Fallback vers base64 si l'API échoue
-          url = await new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onload = (e) => {
-              const base64Url = e.target?.result as string;
-              resolve(base64Url);
-            };
-            reader.onerror = reject;
-            reader.readAsDataURL(file);
-          });
+          console.warn('Upload API échec → fallback base64 :', error);
+          const { file: compressed } = await compressImageWithReport(rawFile, COMPRESSION_OPTS);
+          url = await readAsDataUrl(compressed);
         }
       } else {
-        // Upload par défaut (base64 pour le développement)
-        url = await new Promise((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onload = (e) => {
-            const base64Url = e.target?.result as string;
-            resolve(base64Url);
-          };
-          reader.onerror = reject;
-          reader.readAsDataURL(file);
-        });
+        url = await readAsDataUrl(file);
       }
-      
+
       setPreviewUrl(url);
       onChange(url);
     } catch (error) {
-      console.error('❌ Upload error:', error);
-      alert('Erreur lors de l\'upload de l\'image');
+      console.error('Upload error:', error);
+      alert("Erreur lors de l'upload de l'image");
     } finally {
       setUploading(false);
     }
@@ -111,6 +119,8 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
           <img
             src={previewUrl.startsWith('data:') ? previewUrl : `http://localhost:8080${previewUrl.startsWith('/') ? previewUrl : '/' + previewUrl}`}
             alt="Preview"
+            loading="lazy"
+            decoding="async"
             className="w-full h-48 object-cover rounded-md border"
             onError={(e) => {
               console.error('Error loading image:', previewUrl);
@@ -143,9 +153,10 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
           type="button"
           variant="outline"
           onClick={() => fileInputRef.current?.click()}
-          disabled={uploading}
+          disabled={uploading || optimizing}
+          title={optimizing ? 'Optimisation…' : uploading ? 'Envoi…' : 'Importer une image'}
         >
-          {uploading ? (
+          {uploading || optimizing ? (
             <div className="w-4 h-4 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin" />
           ) : (
             <Upload className="w-4 h-4" />
@@ -164,10 +175,25 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
 
       {/* Instructions */}
       <p className="text-xs text-muted-foreground">
-        Formats acceptés: JPG, PNG, GIF (max 5MB)
+        Formats acceptés : JPG, PNG, WebP, GIF, SVG (max {MAX_INPUT_SIZE_MB} MB).
+        Optimisation automatique en WebP, jusqu'à {COMPRESSION_OPTS.maxWidthOrHeight}px,
+        ~{COMPRESSION_OPTS.maxSizeMB} MB, qualité{' '}
+        {Math.round(COMPRESSION_OPTS.initialQuality * 100)} % — détails fins préservés.
+        {optimizing && (
+          <span className="block mt-1 text-primary">Optimisation en cours…</span>
+        )}
       </p>
     </div>
   );
 };
+
+function readAsDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => resolve(e.target?.result as string);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
 
 export default ImageUpload;

@@ -1,12 +1,21 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { ChevronLeft, ChevronRight, ShoppingBag, Heart, Truck, Verified, Loader2, X, ZoomIn } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ShoppingBag, Heart, Truck, Verified, Loader2, X, ZoomIn, Share2, Link as LinkIcon, Mail, MessageCircle, Instagram, Check } from 'lucide-react';
 import Layout from '@/components/layout/Layout';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { formatPrice } from '@/utils/formatPrice';
 import { useCart } from '@/contexts/CartContext';
 import { useWishlist } from '@/contexts/WishlistContext';
@@ -15,6 +24,17 @@ import { cn } from '@/lib/utils';
 import type { ProductDetailDTO } from '@/types/product-dtos';
 import { productsApi } from '@/services/api';
 import { mapProductDetailToProduct, mapProductListItemListToProducts, normalizeAvailableSizes } from '@/utils/productMapper';
+import {
+  buildProductShareMessage,
+  buildProductShareTitle,
+  copyProductLink,
+  copyShareMessage,
+  openInstagramInbox,
+  shareViaEmail,
+  shareViaMessenger,
+  shareViaInstagram,
+  shareViaWhatsApp,
+} from '@/utils/shareProduct';
 import { staticCatalogQueryOptions } from '@/config/queryOptions';
 
 /* ------------------------------------------------------------------ */
@@ -57,6 +77,8 @@ function ImageLightbox({
           className="w-full max-h-[80vh] object-contain rounded-lg select-none"
           draggable={false}
           decoding="async"
+          loading="eager"
+          fetchPriority="high"
         />
 
         {images.length > 1 && (
@@ -110,7 +132,12 @@ const ProductDetail = () => {
   const [lightboxOpen, setLightboxOpen] = useState(false);
   /** Message inline (mobile) si taille obligatoire non choisie */
   const [sizeError, setSizeError] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
+  const [instagramDialogOpen, setInstagramDialogOpen] = useState(false);
+  const [instagramMessageCopied, setInstagramMessageCopied] = useState(false);
+  const [linkCopied, setLinkCopied] = useState(false);
   const sizeFieldRef = useRef<HTMLDivElement>(null);
+  const instagramMessageRef = useRef<HTMLTextAreaElement>(null);
 
   const { data: product, isLoading: isLoadingProduct } = useQuery({
     queryKey: ['product', id],
@@ -207,6 +234,78 @@ const ProductDetail = () => {
     else toast.success('Ajouté aux favoris');
   };
 
+  const shareUrl = typeof window !== 'undefined' ? window.location.href : '';
+  const shareTitle = buildProductShareTitle(product.name);
+  const shareMessage = buildProductShareMessage({
+    name: product.name,
+    url: shareUrl,
+    price: product.price,
+  });
+
+  const handleCopyLink = async () => {
+    const ok = await copyProductLink(shareUrl);
+    if (ok) {
+      setLinkCopied(true);
+      toast.success('Lien copié');
+      setTimeout(() => setLinkCopied(false), 2000);
+    } else {
+      toast.error('Impossible de copier le lien');
+    }
+  };
+
+  const handleShareWhatsApp = () => {
+    shareViaWhatsApp(shareMessage);
+    setShareOpen(false);
+  };
+
+  const handleShareMessenger = async () => {
+    await shareViaMessenger(shareUrl, shareMessage);
+    setShareOpen(false);
+    toast.info('Message copié — collez-le dans Messenger si le lien seul ne suffit pas', {
+      duration: 5000,
+    });
+  };
+
+  const handleShareInstagram = async () => {
+    setShareOpen(false);
+    try {
+      const result = await shareViaInstagram(shareMessage, shareUrl, shareTitle);
+      if (result === 'native') {
+        toast.success('Choisissez Instagram dans la liste pour partager le produit');
+        return;
+      }
+    } catch {
+      return;
+    }
+    setInstagramDialogOpen(true);
+    window.setTimeout(() => {
+      void copyShareMessage(shareMessage).then(setInstagramMessageCopied);
+      instagramMessageRef.current?.focus();
+      instagramMessageRef.current?.select();
+    }, 150);
+  };
+
+  const handleCopyInstagramMessage = async () => {
+    const ok = await copyShareMessage(shareMessage);
+    setInstagramMessageCopied(ok);
+    if (ok) toast.success('Message copié');
+    else toast.error('Copie impossible — sélectionnez le texte ci-dessous');
+  };
+
+  const handleOpenInstagramInbox = async () => {
+    await copyShareMessage(shareMessage);
+    setInstagramMessageCopied(true);
+    openInstagramInbox();
+    toast.info('Collez le message dans votre conversation Instagram (appui long → Coller)', {
+      duration: 6000,
+    });
+  };
+
+  const handleShareEmail = () => {
+    shareViaEmail(shareTitle, shareMessage);
+    setShareOpen(false);
+  };
+
   const handleBuyNow = () => {
     if (requiresSize && !String(selectedSize ?? '').trim()) {
       showSizeRequired();
@@ -230,6 +329,34 @@ const ProductDetail = () => {
 
   return (
     <Layout>
+      <Dialog open={instagramDialogOpen} onOpenChange={setInstagramDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Partager sur Instagram</DialogTitle>
+            <DialogDescription>
+              Instagram n’accepte pas le texte automatique depuis le site. Copiez le message, ouvrez
+              Instagram, puis collez-le dans votre conversation.
+            </DialogDescription>
+          </DialogHeader>
+          <textarea
+            ref={instagramMessageRef}
+            readOnly
+            value={shareMessage}
+            rows={5}
+            className="w-full resize-none rounded-md border border-accent-beige/30 bg-muted/30 px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
+            onFocus={(e) => e.target.select()}
+          />
+          <DialogFooter className="flex-col gap-2 sm:flex-col sm:space-x-0">
+            <Button type="button" onClick={handleCopyInstagramMessage} variant="outline" className="w-full">
+              {instagramMessageCopied ? 'Message copié' : 'Copier le message'}
+            </Button>
+            <Button type="button" onClick={handleOpenInstagramInbox} className="w-full">
+              Ouvrir Instagram
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Lightbox */}
       {lightboxOpen && (
         <ImageLightbox
@@ -294,6 +421,7 @@ const ProductDetail = () => {
                 alt={product.name}
                 className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
                 decoding="async"
+                loading="eager"
                 fetchPriority="high"
               />
               <div className="pointer-events-none absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/10">
@@ -467,7 +595,7 @@ const ProductDetail = () => {
                 </Button>
 
                 {/* Secondary CTAs */}
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-3 gap-2">
                   <Button
                     type="button"
                     onClick={handleAddToCart}
@@ -489,6 +617,88 @@ const ProductDetail = () => {
                     <Heart className={cn('w-3.5 h-3.5 shrink-0', isWishlisted && 'fill-current')} />
                     Favoris
                   </Button>
+                  <Popover open={shareOpen} onOpenChange={setShareOpen}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        aria-label="Partager ce produit"
+                        aria-expanded={shareOpen}
+                        className="h-11 min-h-[44px] touch-manipulation text-[10px] sm:h-10 sm:min-h-0 sm:text-xs uppercase tracking-wider font-bold border-accent-beige/40 text-accent-beige hover:bg-accent-beige hover:text-white flex items-center justify-center gap-1.5"
+                      >
+                        <Share2 className="w-3.5 h-3.5 shrink-0" />
+                        Partager
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent
+                      align="end"
+                      sideOffset={8}
+                      className="w-56 p-1.5"
+                    >
+                      <div className="px-2 py-1.5 text-[10px] uppercase tracking-widest text-muted-foreground">
+                        Partager via
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleShareWhatsApp}
+                        className="flex w-full items-center gap-3 rounded-md px-2 py-2 text-sm hover:bg-muted transition-colors"
+                      >
+                        <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#25D366]/10 text-[#25D366]">
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            viewBox="0 0 24 24"
+                            fill="currentColor"
+                            className="h-4 w-4"
+                            aria-hidden="true"
+                          >
+                            <path d="M19.05 4.91A10 10 0 0 0 4.27 18.3L3 22l3.79-1.24A10 10 0 1 0 19.05 4.91Zm-7.04 15.4h-.02a8.3 8.3 0 0 1-4.23-1.16l-.3-.18-2.25.74.75-2.19-.2-.31a8.3 8.3 0 1 1 6.25 3.1Zm4.55-6.22c-.25-.13-1.47-.73-1.7-.81-.23-.08-.4-.13-.56.13-.17.25-.65.81-.79.97-.15.17-.29.18-.54.06-.25-.13-1.05-.39-2-1.23a7.5 7.5 0 0 1-1.39-1.73c-.15-.25-.02-.39.11-.51.11-.11.25-.29.37-.43.13-.15.17-.25.25-.42.08-.17.04-.31-.02-.43-.06-.13-.56-1.34-.77-1.84-.2-.49-.41-.42-.56-.43h-.48a.93.93 0 0 0-.67.31c-.23.25-.88.86-.88 2.1s.9 2.43 1.03 2.6c.13.17 1.78 2.72 4.31 3.81.6.26 1.07.42 1.43.54.6.19 1.15.16 1.59.1.49-.07 1.47-.6 1.68-1.18.21-.58.21-1.07.15-1.18-.06-.11-.23-.17-.48-.3Z" />
+                          </svg>
+                        </span>
+                        <span>WhatsApp</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleShareInstagram}
+                        className="flex w-full items-center gap-3 rounded-md px-2 py-2 text-sm hover:bg-muted transition-colors"
+                      >
+                        <span className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-[#feda75] via-[#d62976] to-[#4f5bd5] text-white">
+                          <Instagram className="h-4 w-4" />
+                        </span>
+                        <span>Instagram</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleShareMessenger}
+                        className="flex w-full items-center gap-3 rounded-md px-2 py-2 text-sm hover:bg-muted transition-colors"
+                      >
+                        <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#0084FF]/10 text-[#0084FF]">
+                          <MessageCircle className="h-4 w-4" />
+                        </span>
+                        <span>Messenger</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleShareEmail}
+                        className="flex w-full items-center gap-3 rounded-md px-2 py-2 text-sm hover:bg-muted transition-colors"
+                      >
+                        <span className="flex h-8 w-8 items-center justify-center rounded-full bg-muted text-foreground">
+                          <Mail className="h-4 w-4" />
+                        </span>
+                        <span>Email</span>
+                      </button>
+                      <div className="my-1 h-px bg-border" />
+                      <button
+                        type="button"
+                        onClick={handleCopyLink}
+                        className="flex w-full items-center gap-3 rounded-md px-2 py-2 text-sm hover:bg-muted transition-colors"
+                      >
+                        <span className="flex h-8 w-8 items-center justify-center rounded-full bg-muted text-foreground">
+                          {linkCopied ? <Check className="h-4 w-4 text-green-600" /> : <LinkIcon className="h-4 w-4" />}
+                        </span>
+                        <span>{linkCopied ? 'Lien copié' : 'Copier le lien'}</span>
+                      </button>
+                    </PopoverContent>
+                  </Popover>
                 </div>
               </div>
             )}

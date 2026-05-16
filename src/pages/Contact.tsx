@@ -143,12 +143,12 @@ const Contact = () => {
                     <h4 className="text-xs uppercase tracking-[0.3em] text-primary font-bold">Email</h4>
                     <a
                       className="inline-flex w-fit max-w-full items-center gap-3 rounded-lg border border-accent-beige/25 bg-secondary-dark/[0.02] px-4 py-3 text-secondary-dark transition-colors hover:border-primary/40 hover:bg-primary/[0.04]"
-                      href="mailto:contact@yaragold.com"
+                      href="mailto:contact@goldyara.com"
                     >
                       <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-primary/10">
                         <span className="material-symbols-outlined text-primary text-xl">mail</span>
                       </span>
-                      <span className="break-all font-medium">contact@yaragold.com</span>
+                      <span className="break-all font-medium">contact@goldyara.com</span>
                     </a>
                   </div>
 

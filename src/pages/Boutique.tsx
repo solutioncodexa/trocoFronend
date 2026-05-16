@@ -213,6 +213,10 @@ const Boutique = () => {
   const totalElements = pageResponse?.totalElements ?? 0;
   const rangeStart = totalElements === 0 ? 0 : (currentPage - 1) * PRODUCTS_PER_PAGE + 1;
   const rangeEnd = Math.min(currentPage * PRODUCTS_PER_PAGE, totalElements);
+  const productCountLabel =
+    totalElements === 0
+      ? 'Aucun produit'
+      : `Affichage ${rangeStart}–${rangeEnd} sur ${totalElements} produit${totalElements > 1 ? 's' : ''}`;
 
   const hasActiveFilters = useMemo(
     () =>
@@ -470,15 +474,9 @@ const Boutique = () => {
                 <AccordionTrigger className={accordionTriggerClass}>Type de bijou</AccordionTrigger>
                 <AccordionContent>{typeFilterList}</AccordionContent>
               </AccordionItem>
-              <AccordionItem value="price" className="border-accent-beige/15">
+              <AccordionItem value="price" className="border-accent-beige/15 border-b-0">
                 <AccordionTrigger className={accordionTriggerClass}>Prix (MAD)</AccordionTrigger>
                 <AccordionContent>{priceFilterBlock}</AccordionContent>
-              </AccordionItem>
-              <AccordionItem value="search" className="border-accent-beige/15 border-b-0">
-                <AccordionTrigger className={accordionTriggerClass}>Recherche</AccordionTrigger>
-                <AccordionContent>
-                  <div className="pb-1">{searchFilterBlock}</div>
-                </AccordionContent>
               </AccordionItem>
             </Accordion>
 
@@ -521,22 +519,23 @@ const Boutique = () => {
 
               <div>
                 <h3 className={`${filterSectionTitleClass} mb-4 flex items-center gap-2`}>
-                  Recherche
+                  Résultats
                   <div className="h-px flex-grow bg-accent-beige/20"></div>
                 </h3>
-                {searchFilterBlock}
+                <p className="text-xs text-accent-beige uppercase tracking-widest">{productCountLabel}</p>
               </div>
             </div>
           </aside>
 
           <div className="flex-grow min-w-0 px-4 sm:px-0">
-            <div className="flex flex-col md:flex-row justify-between items-center mb-10 gap-4 border-b border-accent-beige/10 pb-6">
-              <p className="text-xs text-accent-beige uppercase tracking-widest text-center md:text-left">
-                {totalElements === 0
-                  ? 'Aucun produit'
-                  : `Affichage ${rangeStart}–${rangeEnd} sur ${totalElements} produit${totalElements > 1 ? 's' : ''}`}
-              </p>
-              <div className="flex items-center gap-4">
+            <div className="flex flex-col md:flex-row justify-between items-stretch md:items-center mb-4 gap-4 border-b border-accent-beige/10 pb-6">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 w-full md:flex-1 md:max-w-lg">
+                <span className="text-xs font-bold text-accent-beige uppercase tracking-widest shrink-0">
+                  Recherche :
+                </span>
+                <div className="w-full min-w-0">{searchFilterBlock}</div>
+              </div>
+              <div className="flex items-center gap-4 justify-center md:justify-end shrink-0">
                 <span className="text-xs text-accent-beige uppercase tracking-widest">Trier par :</span>
                 <Select
                   value={sortBy}
@@ -558,6 +557,10 @@ const Boutique = () => {
                 </Select>
               </div>
             </div>
+
+            <p className="lg:hidden text-xs text-accent-beige uppercase tracking-widest text-center md:text-left mb-8 -mt-2">
+              {productCountLabel}
+            </p>
 
             {isLoading && !pageResponse ? (
               <div className="flex items-center justify-center py-20">

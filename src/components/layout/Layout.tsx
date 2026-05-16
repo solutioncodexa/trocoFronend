@@ -5,6 +5,7 @@ import Footer from './Footer';
 import TopBar from './TopBar';
 import PromoModal from '../ui/PromoModal';
 import { ANIMATIONS } from '@/config/animations';
+import { useProtectSiteImages } from '@/hooks/useProtectSiteImages';
 
 interface LayoutProps {
   children: ReactNode;
@@ -14,6 +15,8 @@ const Layout = ({ children }: LayoutProps) => {
   const { pathname } = useLocation();
   const pageFade = ANIMATIONS.pageFadeOnRouteChange;
   const shellRef = useRef<HTMLDivElement>(null);
+  const siteContentRef = useRef<HTMLDivElement>(null);
+  useProtectSiteImages(siteContentRef);
 
   useEffect(() => {
     const el = shellRef.current;
@@ -33,7 +36,10 @@ const Layout = ({ children }: LayoutProps) => {
   }, []);
 
   return (
-    <div className="flex flex-col min-h-screen w-full min-w-0 max-w-full overflow-x-hidden">
+    <div
+      ref={siteContentRef}
+      className="site-protected-media flex flex-col min-h-screen w-full min-w-0 max-w-full overflow-x-hidden"
+    >
       <div
         ref={shellRef}
         className="fixed inset-x-0 top-0 z-50 flex flex-col supports-[padding:max(0px)]:pt-[env(safe-area-inset-top)]"

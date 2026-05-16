@@ -18,6 +18,8 @@ import { formatPrice } from '@/utils/formatPrice';
 import { toast } from 'sonner';
 import { staticCatalogQueryOptions } from '@/config/queryOptions';
 import { cn } from '@/lib/utils';
+import { compressImageWithReport } from '@/utils/compressImage';
+import { notifyCompressionReports } from '@/utils/notifyCompression';
 
 const AdminProducts = () => {
   const queryClient = useQueryClient();
@@ -251,13 +253,26 @@ const AdminProducts = () => {
     });
   };
 
-  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files?.length) return;
-    const newFiles = Array.from(files);
-    setImageFiles((prev) => [...prev, ...newFiles]);
-    toast.success(newFiles.length === 1 ? 'Image ajoutée' : `${newFiles.length} images ajoutées`);
+    const rawFiles = Array.from(files);
     e.target.value = '';
+
+    const toastId = toast.loading(
+      rawFiles.length === 1 ? 'Optimisation de l\'image…' : `Optimisation de ${rawFiles.length} images…`,
+    );
+
+    try {
+      const results = await Promise.all(rawFiles.map((f) => compressImageWithReport(f)));
+      const optimized = results.map((r) => r.file);
+      setImageFiles((prev) => [...prev, ...optimized]);
+      notifyCompressionReports(results.map((r) => r.report));
+    } catch {
+      toast.error('Erreur lors de l\'optimisation des images');
+    } finally {
+      toast.dismiss(toastId);
+    }
   };
 
   const removeImageFile = (index: number) => {

@@ -1,14 +1,40 @@
 import { buildApiUrl } from '@/config/api';
 import { resolvePublicImageUrl } from '@/utils/resolvePublicImageUrl';
+import { compressImageWithReport, type CompressImageOptions } from '@/utils/compressImage';
+import { notifyCompressionReports } from '@/utils/notifyCompression';
+
+/**
+ * Options communes aux fonctions d'upload :
+ *   - `compress`  : `true` (défaut) → l'image est compressée côté navigateur avant l'envoi.
+ *   - `compressOptions` : surcharger les paramètres de compression (taille, dimensions…).
+ */
+export interface UploadOptions {
+  compress?: boolean;
+  compressOptions?: CompressImageOptions;
+}
 
 /**
  * Envoie un fichier image au serveur et retourne l'URL publique.
  * L'URL retournée est relative (ex: /uploads/xxx.jpg). Pour l'affichage, utilise getImageUrl().
+ *
+ * Par défaut, l'image est compressée côté client (WebP, max 3000px, ~2.5MB) afin
+ * de réduire la bande passante tout en gardant une bonne qualité visuelle.
  */
-export async function uploadImage(file: File): Promise<string> {
+export async function uploadImage(
+  file: File,
+  options: UploadOptions = {},
+): Promise<string> {
+  const { compress = true, compressOptions } = options;
+  let finalFile = file;
+  if (compress) {
+    const { file: compressed, report } = await compressImageWithReport(file, compressOptions);
+    finalFile = compressed;
+    notifyCompressionReports([report]);
+  }
+
   const token = localStorage.getItem('goldyara_admin_token');
   const formData = new FormData();
-  formData.append('file', file);
+  formData.append('file', finalFile);
 
   const response = await fetch(buildApiUrl('/upload'), {
     method: 'POST',
@@ -29,11 +55,25 @@ export async function uploadImage(file: File): Promise<string> {
 
 /**
  * Envoie plusieurs fichiers et retourne la liste des URLs.
+ * Compresse chaque image en parallèle avant l'upload.
  */
-export async function uploadImages(files: File[]): Promise<string[]> {
+export async function uploadImages(
+  files: File[],
+  options: UploadOptions = {},
+): Promise<string[]> {
+  const { compress = true, compressOptions } = options;
+  let finalFiles = files;
+  if (compress) {
+    const results = await Promise.all(
+      files.map((f) => compressImageWithReport(f, compressOptions)),
+    );
+    finalFiles = results.map((r) => r.file);
+    notifyCompressionReports(results.map((r) => r.report));
+  }
+
   const token = localStorage.getItem('goldyara_admin_token');
   const formData = new FormData();
-  files.forEach((f) => formData.append('files', f));
+  finalFiles.forEach((f) => formData.append('files', f));
 
   const response = await fetch(buildApiUrl('/upload-multiple'), {
     method: 'POST',

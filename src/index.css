@@ -550,3 +550,20 @@
     color: hsl(30, 8%, 14%);
   }
 }
+
+/* Protection des visuels sur le site public (pas l'admin) */
+.site-protected-media img {
+  -webkit-user-drag: none;
+  user-drag: none;
+  -webkit-touch-callout: none;
+  user-select: none;
+  pointer-events: auto;
+}
+
+.site-protected-media [data-protected-image],
+.site-protected-media .protect-bg-image {
+  -webkit-user-drag: none;
+  user-drag: none;
+  -webkit-touch-callout: none;
+  user-select: none;
+}
