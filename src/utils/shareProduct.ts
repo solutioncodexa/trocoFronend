@@ -4,15 +4,23 @@ export interface ProductShareParams {
   name: string;
   url: string;
   price?: number;
+  imageUrl?: string;
+}
+
+export interface RichSharePayload {
+  title: string;
+  text: string;
+  url: string;
+  imageUrl?: string;
 }
 
 export function buildProductShareMessage({ name, url, price }: ProductShareParams): string {
   const pricePart = price != null ? ` — ${formatPrice(price)}` : '';
-  return `Découvrez « ${name} »${pricePart} sur Or & Co Paris\n\n${url}`;
+  return `Découvrez « ${name} »${pricePart} sur YaraGold\n\n${url}`;
 }
 
 export function buildProductShareTitle(name: string): string {
-  return `${name} — Or & Co Paris`;
+  return `${name} — YaraGold`;
 }
 
 /** Ouvre toujours dans un nouvel onglet. */
@@ -45,50 +53,91 @@ async function copyText(text: string): Promise<boolean> {
   }
 }
 
+async function fetchImageAsFile(imageUrl: string, fileName: string): Promise<File | null> {
+  try {
+    const res = await fetch(imageUrl, { mode: 'cors', credentials: 'omit' });
+    if (!res.ok) return null;
+    const blob = await res.blob();
+    if (!blob.size) return null;
+    const type = blob.type && blob.type.startsWith('image/') ? blob.type : 'image/jpeg';
+    const ext = type.includes('png') ? 'png' : type.includes('webp') ? 'webp' : 'jpg';
+    return new File([blob], `${fileName}.${ext}`, { type });
+  } catch {
+    return null;
+  }
+}
+
+export type NativeShareResult = 'shared' | 'unsupported' | 'aborted';
+
+/**
+ * Partage natif (mobile) : texte + URL + photo du produit si le navigateur le permet.
+ * Fonctionne bien avec Instagram, Messenger, WhatsApp via le menu système.
+ */
+export async function shareViaNativeRich(payload: RichSharePayload): Promise<NativeShareResult> {
+  if (typeof navigator === 'undefined' || typeof navigator.share !== 'function') {
+    return 'unsupported';
+  }
+
+  const shareData: ShareData = {
+    title: payload.title,
+    text: payload.text,
+    url: payload.url,
+  };
+
+  if (payload.imageUrl) {
+    const file = await fetchImageAsFile(payload.imageUrl, 'bijou-yaragold');
+    if (file && navigator.canShare?.({ files: [file] })) {
+      shareData.files = [file];
+    }
+  }
+
+  try {
+    if (navigator.canShare && !navigator.canShare(shareData)) {
+      await navigator.share({
+        title: payload.title,
+        text: payload.text,
+        url: payload.url,
+      });
+    } else {
+      await navigator.share(shareData);
+    }
+    return 'shared';
+  } catch (err) {
+    if (err instanceof Error && err.name === 'AbortError') return 'aborted';
+    return 'unsupported';
+  }
+}
+
 export async function copyShareMessage(message: string): Promise<boolean> {
   return copyText(message);
 }
 
-/** WhatsApp : ouvre une conversation avec le message pré-rempli. */
+/** WhatsApp : message + lien pré-remplis. */
 export function shareViaWhatsApp(message: string) {
   const url = `https://api.whatsapp.com/send?text=${encodeURIComponent(message)}`;
   openShareInNewTab(url);
 }
 
-/**
- * Messenger : dialogue d’envoi avec le lien du produit.
- * Le message complet est aussi copié pour collage manuel si besoin.
- */
-export async function shareViaMessenger(pageUrl: string, message: string) {
-  await copyShareMessage(message);
-  const link = encodeURIComponent(pageUrl);
-  const redirect = encodeURIComponent(pageUrl);
+/** Messenger : partage natif si possible, sinon dialogue Facebook + message copié. */
+export async function shareViaMessenger(payload: RichSharePayload): Promise<NativeShareResult | 'dialog'> {
+  const native = await shareViaNativeRich(payload);
+  if (native === 'shared' || native === 'aborted') return native;
+
+  await copyShareMessage(payload.text);
+  const link = encodeURIComponent(payload.url);
   openShareInNewTab(
-    `https://www.facebook.com/dialog/send?link=${link}&redirect_uri=${redirect}&display=popup`,
+    `https://www.facebook.com/dialog/send?link=${link}&redirect_uri=${link}&display=popup`,
   );
+  return 'dialog';
 }
 
 export type InstagramShareResult = 'native' | 'manual';
 
-/**
- * Instagram : tente le partage natif (mobile), sinon prépare une copie manuelle.
- * Instagram ne permet pas de préremplir un DM depuis le web via une URL.
- */
-export async function shareViaInstagram(
-  message: string,
-  pageUrl: string,
-  title: string,
-): Promise<InstagramShareResult> {
-  if (typeof navigator !== 'undefined' && typeof navigator.share === 'function') {
-    try {
-      await navigator.share({ title, text: message, url: pageUrl });
-      return 'native';
-    } catch (err) {
-      if (err instanceof Error && err.name === 'AbortError') {
-        throw err;
-      }
-    }
-  }
+/** Instagram : partage natif (photo + texte) ou préparation manuelle. */
+export async function shareViaInstagram(payload: RichSharePayload): Promise<InstagramShareResult> {
+  const native = await shareViaNativeRich(payload);
+  if (native === 'shared') return 'native';
+  if (native === 'aborted') throw new DOMException('Aborted', 'AbortError');
   return 'manual';
 }
 

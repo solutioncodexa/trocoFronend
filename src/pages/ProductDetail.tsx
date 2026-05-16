@@ -33,8 +33,11 @@ import {
   shareViaEmail,
   shareViaMessenger,
   shareViaInstagram,
+  shareViaNativeRich,
   shareViaWhatsApp,
 } from '@/utils/shareProduct';
+import { applyProductMeta, resetProductMeta } from '@/utils/productMeta';
+import { resolvePublicImageUrl } from '@/utils/resolvePublicImageUrl';
 import { staticCatalogQueryOptions } from '@/config/queryOptions';
 
 /* ------------------------------------------------------------------ */
@@ -117,6 +120,8 @@ function ImageLightbox({
   );
 }
 
+const MAX_ORDER_QUANTITY = 99;
+
 /* ------------------------------------------------------------------ */
 /*  Main component                                                     */
 /* ------------------------------------------------------------------ */
@@ -174,6 +179,20 @@ const ProductDetail = () => {
     setSelectedImageIndex(0);
   }, [product?.id]);
 
+  /** Open Graph / Twitter : aperçu riche quand le lien est partagé */
+  useEffect(() => {
+    if (!product || !id) return;
+    const imageUrl = product.images[0] ? resolvePublicImageUrl(product.images[0]) : undefined;
+    applyProductMeta({
+      id,
+      name: product.name,
+      description: product.description,
+      price: product.price,
+      imageUrl,
+    });
+    return () => resetProductMeta();
+  }, [product, id]);
+
   if (isLoadingProduct) {
     return (
       <Layout>
@@ -220,8 +239,8 @@ const ProductDetail = () => {
       toast.error('La quantité doit être au moins 1');
       return;
     }
-    if (quantity > product.stockQuantity) {
-      toast.error(`Quantité maximale : ${product.stockQuantity}`);
+    if (quantity > MAX_ORDER_QUANTITY) {
+      toast.error(`Quantité maximale : ${MAX_ORDER_QUANTITY}`);
       return;
     }
     addToCart(product, quantity, selectedSize || undefined);
@@ -241,6 +260,13 @@ const ProductDetail = () => {
     url: shareUrl,
     price: product.price,
   });
+  const shareImageUrl = product.images[0] ? resolvePublicImageUrl(product.images[0]) : undefined;
+  const shareRichPayload = {
+    title: shareTitle,
+    text: shareMessage,
+    url: shareUrl,
+    imageUrl: shareImageUrl,
+  };
 
   const handleCopyLink = async () => {
     const ok = await copyProductLink(shareUrl);
@@ -259,9 +285,14 @@ const ProductDetail = () => {
   };
 
   const handleShareMessenger = async () => {
-    await shareViaMessenger(shareUrl, shareMessage);
     setShareOpen(false);
-    toast.info('Message copié — collez-le dans Messenger si le lien seul ne suffit pas', {
+    const result = await shareViaMessenger(shareRichPayload);
+    if (result === 'shared') {
+      toast.success('Choisissez Messenger pour envoyer le bijou avec sa photo');
+      return;
+    }
+    if (result === 'aborted') return;
+    toast.info('Message copié — le lien montrera la photo du produit dans Messenger', {
       duration: 5000,
     });
   };
@@ -269,9 +300,9 @@ const ProductDetail = () => {
   const handleShareInstagram = async () => {
     setShareOpen(false);
     try {
-      const result = await shareViaInstagram(shareMessage, shareUrl, shareTitle);
+      const result = await shareViaInstagram(shareRichPayload);
       if (result === 'native') {
-        toast.success('Choisissez Instagram dans la liste pour partager le produit');
+        toast.success('Choisissez Instagram pour partager la photo et le message');
         return;
       }
     } catch {
@@ -283,6 +314,16 @@ const ProductDetail = () => {
       instagramMessageRef.current?.focus();
       instagramMessageRef.current?.select();
     }, 150);
+  };
+
+  const handleNativeShareWithPhoto = async () => {
+    const result = await shareViaNativeRich(shareRichPayload);
+    if (result === 'shared') {
+      setInstagramDialogOpen(false);
+      toast.success('Partage lancé');
+    } else if (result === 'unsupported') {
+      toast.error('Partage avec photo non disponible sur cet appareil — copiez le message ci-dessous');
+    }
   };
 
   const handleCopyInstagramMessage = async () => {
@@ -316,8 +357,8 @@ const ProductDetail = () => {
       toast.error('La quantité doit être au moins 1');
       return;
     }
-    if (quantity > product.stockQuantity) {
-      toast.error(`Quantité maximale : ${product.stockQuantity}`);
+    if (quantity > MAX_ORDER_QUANTITY) {
+      toast.error(`Quantité maximale : ${MAX_ORDER_QUANTITY}`);
       return;
     }
     addToCart(product, quantity, selectedSize || undefined);
@@ -334,23 +375,38 @@ const ProductDetail = () => {
           <DialogHeader>
             <DialogTitle>Partager sur Instagram</DialogTitle>
             <DialogDescription>
-              Instagram n’accepte pas le texte automatique depuis le site. Copiez le message, ouvrez
-              Instagram, puis collez-le dans votre conversation.
+              Sur mobile, utilisez « Partager avec photo ». Sinon copiez le message et collez-le dans Instagram.
             </DialogDescription>
           </DialogHeader>
+          {shareImageUrl ? (
+            <div className="flex gap-3 rounded-md border border-accent-beige/25 bg-muted/20 p-3">
+              <img
+                src={shareImageUrl}
+                alt={product.name}
+                className="h-20 w-20 shrink-0 rounded-md object-cover"
+              />
+              <div className="min-w-0 flex flex-col justify-center">
+                <p className="font-display text-sm font-semibold text-secondary-dark truncate">{product.name}</p>
+                <p className="text-primary font-bold text-sm mt-0.5">{formatPrice(product.price)}</p>
+              </div>
+            </div>
+          ) : null}
           <textarea
             ref={instagramMessageRef}
             readOnly
             value={shareMessage}
-            rows={5}
+            rows={4}
             className="w-full resize-none rounded-md border border-accent-beige/30 bg-muted/30 px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
             onFocus={(e) => e.target.select()}
           />
           <DialogFooter className="flex-col gap-2 sm:flex-col sm:space-x-0">
+            <Button type="button" onClick={handleNativeShareWithPhoto} className="w-full">
+              Partager avec photo
+            </Button>
             <Button type="button" onClick={handleCopyInstagramMessage} variant="outline" className="w-full">
               {instagramMessageCopied ? 'Message copié' : 'Copier le message'}
             </Button>
-            <Button type="button" onClick={handleOpenInstagramInbox} className="w-full">
+            <Button type="button" onClick={handleOpenInstagramInbox} variant="outline" className="w-full">
               Ouvrir Instagram
             </Button>
           </DialogFooter>
@@ -516,19 +572,8 @@ const ProductDetail = () => {
               {product.description}
             </p>
 
-            {/* Stock */}
-            <div className="flex items-center gap-1.5">
-              <span className={cn('w-2 h-2 rounded-full', product.inStock ? 'bg-green-500' : 'bg-red-500')} />
-              <span className="text-[11px] sm:text-xs text-muted-foreground">
-                {product.inStock
-                  ? `En stock (${product.stockQuantity} disponible${product.stockQuantity > 1 ? 's' : ''})`
-                  : 'Rupture de stock'}
-              </span>
-            </div>
-
             {/* Options + actions */}
-            {product.inStock && (
-              <div className="flex w-full min-w-0 flex-col gap-2.5 mt-1">
+            <div className="flex w-full min-w-0 flex-col gap-2.5 mt-1">
                 {/* Taille ou quantité */}
                 <div className={cn('grid gap-2', requiresSize ? 'grid-cols-1 sm:grid-cols-2' : 'grid-cols-1')}>
                   {requiresSize ? (
@@ -579,7 +624,7 @@ const ProductDetail = () => {
                     <div className="flex h-9 max-w-[12rem] items-center rounded border border-border">
                       <button type="button" onClick={() => setQuantity(Math.max(1, quantity - 1))} className="h-full touch-manipulation px-2.5 text-sm hover:bg-muted transition-colors">-</button>
                       <span className="min-w-[2rem] flex-1 px-2.5 text-center text-xs">{quantity}</span>
-                      <button type="button" onClick={() => setQuantity(Math.min(product.stockQuantity, quantity + 1))} className="h-full touch-manipulation px-2.5 text-sm hover:bg-muted transition-colors">+</button>
+                      <button type="button" onClick={() => setQuantity(Math.min(MAX_ORDER_QUANTITY, quantity + 1))} className="h-full touch-manipulation px-2.5 text-sm hover:bg-muted transition-colors">+</button>
                     </div>
                   </div>
                 </div>
@@ -701,7 +746,6 @@ const ProductDetail = () => {
                   </Popover>
                 </div>
               </div>
-            )}
 
             {/* Trust badges */}
             <div className="flex items-center gap-4 text-[9px] sm:text-[10px] uppercase tracking-widest text-accent-beige mt-1">
