@@ -1,4 +1,4 @@
-import goldYaraLogo from '@/assets/GOLD_YARA_LOGO (1).png';
+import goldYaraLogo from '@/assets/GOLD_YARA_LOGO (2).png';
 import { cn } from '@/lib/utils';
 
 type BrandLogoImgProps = Omit<React.ComponentPropsWithoutRef<'img'>, 'src'> & {

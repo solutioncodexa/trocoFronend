@@ -1,6 +1,8 @@
 /**
- * Favicons à partir du logo : zoom sur le centre (carré) puis redimensionnement,
- * pour que le marquage remplisse mieux les quelques pixels de l’onglet.
+ * Favicons à partir du logo :
+ *   1. trim() automatique des marges transparentes (le logo "(2).png" a beaucoup de blanc/transparence autour)
+ *   2. extension en carré centré (pour ne pas déformer le logo)
+ *   3. resize à la taille cible
  * Après changement de logo : npm run generate-favicon
  */
 import sharp from 'sharp';
@@ -9,24 +11,41 @@ import path from 'path';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.join(__dirname, '..');
-const src = path.join(root, 'src', 'assets', 'GOLD_YARA_LOGO (1).png');
+const src = path.join(root, 'src', 'assets', 'GOLD_YARA_LOGO (2).png');
 
-/** Part de min(largeur,hauteur) conservée au centre ; plus petit = plus zoomé (logo plus gros dans le favicon). */
-const CENTER_SQUARE_RATIO = 0.48;
+/** Padding (en % de la taille finale) autour du logo après trim. 0 = collé aux bords. */
+const PADDING_RATIO = 0;
 
 async function toSquarePng(size, dest) {
-  const meta = await sharp(src).metadata();
-  const w = meta.width ?? 512;
-  const h = meta.height ?? 512;
-  const side = Math.max(2, Math.round(Math.min(w, h) * CENTER_SQUARE_RATIO));
-  const left = Math.max(0, Math.round((w - side) / 2));
-  const top = Math.max(0, Math.round((h - side) / 2));
+  const trimmed = await sharp(src)
+    .trim()
+    .toBuffer();
 
-  await sharp(src)
-    .extract({ left, top, width: Math.min(side, w - left), height: Math.min(side, h - top) })
-    .resize(size, size, { fit: 'fill' })
+  const meta = await sharp(trimmed).metadata();
+  const w = meta.width ?? size;
+  const h = meta.height ?? size;
+  const side = Math.max(w, h);
+
+  const inner = Math.max(1, Math.round(size * (1 - PADDING_RATIO * 2)));
+  const offset = Math.round((size - inner) / 2);
+
+  const resized = await sharp(trimmed)
+    .resize(inner, inner, { fit: 'inside', background: { r: 0, g: 0, b: 0, alpha: 0 } })
+    .toBuffer();
+
+  await sharp({
+    create: {
+      width: size,
+      height: size,
+      channels: 4,
+      background: { r: 0, g: 0, b: 0, alpha: 0 },
+    },
+  })
+    .composite([{ input: resized, gravity: 'center' }])
     .png()
     .toFile(dest);
+
+  void side; void offset;
 }
 
 await toSquarePng(16, path.join(root, 'public', 'favicon-16x16.png'));
@@ -36,4 +55,4 @@ await toSquarePng(64, path.join(root, 'public', 'favicon-64x64.png'));
 await toSquarePng(180, path.join(root, 'public', 'apple-touch-icon.png'));
 await toSquarePng(48, path.join(root, 'public', 'favicon.png'));
 
-console.log('Favicons générés (zoom centre', CENTER_SQUARE_RATIO * 100, '% du carré minimal).');
+console.log('Favicons générés (trim auto + padding', PADDING_RATIO * 100, '%).');
