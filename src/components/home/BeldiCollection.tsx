@@ -6,6 +6,7 @@ import { mapProductListItemListToProducts } from '@/utils/productMapper';
 import { RevealOnScroll } from '@/components/animations';
 import { ANIMATIONS } from '@/config/animations';
 import { staticCatalogQueryOptions } from '@/config/queryOptions';
+import HeroCategoriesRail from '@/components/home/HeroCategoriesRail';
 
 const BeldiCollection = () => {
   const { data: products } = useQuery({
@@ -19,10 +20,11 @@ const BeldiCollection = () => {
   const stagger = ANIMATIONS.homeCollectionStagger;
 
   return (
-    <section className="py-16 md:py-24 bg-bg-paper-pattern">
+    <section className="bg-bg-paper-pattern pt-6 pb-12 md:pt-8 md:pb-16">
+      <HeroCategoriesRail className="mb-6 md:mb-8" />
       <div className="max-w-[1280px] mx-auto px-6">
         <RevealOnScroll>
-        <div className="flex flex-col items-center mb-16 text-center">
+        <div className="flex flex-col items-center mb-10 md:mb-12 text-center">
           <div className="w-24 h-px bg-accent-beige/40 mb-4 relative">
             <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 size-2 rotate-45 border border-accent-beige bg-background-light"></div>
           </div>

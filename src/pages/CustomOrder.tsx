@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { Upload, Send, Check, Palette } from 'lucide-react';
+import { Upload, Send, Check } from 'lucide-react';
 import Layout from '@/components/layout/Layout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -141,27 +141,30 @@ const CustomOrder = () => {
       </Layout>;
   }
   return <Layout>
-      {/* Hero */}
-      <section className="bg-charcoal py-20 relative overflow-hidden">
-        <div className="absolute inset-0 opacity-20 bg-accent">
-          <div className="absolute top-0 right-0 w-96 h-96 bg-gold rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
-        </div>
-        
-        <div className="container mx-auto px-4 relative z-10 text-center">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gold/20 mb-6">
-            <Palette className="w-8 h-8 text-gold" />
+      <section className="relative overflow-hidden border-b border-accent-beige/10 bg-paper bg-paper-pattern py-16 md:py-24">
+        <div className="relative z-10 mx-auto max-w-[1400px] px-6">
+          <div className="flex flex-col items-center text-center">
+            <div className="mb-6 h-px w-12 bg-primary" />
+            <h1 className="mb-4 font-script text-6xl text-primary md:text-8xl">Commande Personnalisée</h1>
+            <p className="max-w-2xl text-sm font-light uppercase leading-relaxed tracking-[0.2em] text-accent-beige md:text-base">
+              Vous avez une idée précise de bijou ? Envoyez-nous votre modèle et nos artisans créeront une pièce
+              unique selon vos souhaits.
+            </p>
+            <div className="mt-6 h-px w-12 bg-primary" />
           </div>
-          <h1 className="font-display text-3xl md:text-5xl text-cream mb-4">
-            Commande Personnalisée
-          </h1>
-          <p className="font-body text-cream/80 max-w-2xl mx-auto">
-            Vous avez une idée précise de bijou? Envoyez-nous votre modèle et nos artisans 
-            créeront une pièce unique selon vos souhaits.
-          </p>
+        </div>
+        <div className="pointer-events-none absolute inset-0 opacity-10">
+          <div
+            className="h-full w-full bg-cover bg-center"
+            style={{
+              backgroundImage:
+                "url('https://lh3.googleusercontent.com/aida-public/AB6AXuAPwS7jO8A1t0pR7RdBRWLxuk5M-uQ2Pr5sW8bsJJcNxvG1WjyJVuf3Pw62lMnrvRlnI0OSSnOOmqkHjofPmZwy84ILuzFh3Bf9LPjbHlxKpPFJ44lZUsEi3Z5RqcFfOdBR0weUDXezHrCdJj5e0v_2LgVafALx3D7vMyIqOlMTAsp2URper5YYhweiF-d3AaD4a4RiPWcQEE1wIiivezdK0m1vlJ4uekuDFJ4ueIfuJdbF8j_roqacvNCt57ff2oW2UHxk6dcx6Hla')",
+            }}
+          />
         </div>
       </section>
 
-      <section className="py-12 bg-background">
+      <section className="py-12 bg-paper-pattern">
         <div className="container mx-auto px-4 max-w-3xl">
           <div className="bg-card rounded-lg p-6 md:p-8 shadow-card">
             <form onSubmit={handleSubmit} className="space-y-8">
