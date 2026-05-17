@@ -133,15 +133,19 @@ jobs:
             if [ -f "${UPLOAD_DIR}/index.html" ]; then
               SOURCE_DIR="${UPLOAD_DIR}"
             else
-              INDEX_PATH=$(find "${UPLOAD_DIR}" -maxdepth 5 -type f -name "index.html" | sed -n '1p')
+              INDEX_PATH=$(find "${UPLOAD_DIR}" -maxdepth 12 -type f -name "index.html" | sed -n '1p')
               if [ -z "${INDEX_PATH:-}" ]; then
                 echo "ERROR: index.html not found in ${UPLOAD_DIR}"
-                find "${UPLOAD_DIR}" -maxdepth 5 -type f || true
+                echo "Files found under dist-upload:"
+                find "${UPLOAD_DIR}" -maxdepth 12 -type f | sort || true
+                echo "Directories found under dist-upload:"
+                find "${UPLOAD_DIR}" -maxdepth 12 -type d | sort || true
                 exit 1
               fi
               SOURCE_DIR=$(dirname "${INDEX_PATH}")
             fi
 
+            echo "Resolved source dist directory: ${SOURCE_DIR}"
             cp -a "${SOURCE_DIR}/." "${STAGING_DIR}/"
             test -f "${STAGING_DIR}/index.html"
 
