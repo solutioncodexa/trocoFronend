@@ -126,6 +126,12 @@ jobs:
             DIST_DIR="${FRONT_ROOT}/dist"
             UPLOAD_DIR="${FRONT_ROOT}/dist-upload"
             STAGING_DIR="${FRONT_ROOT}/dist-staging"
+            NGINX_INTERNAL_CONF="${DEPLOY_PATH}/docker/nginx-internal-goldyara.conf"
+
+            echo "DEPLOY_PATH=${DEPLOY_PATH}"
+            echo "FRONT_ROOT=${FRONT_ROOT}"
+            echo "DIST_DIR=${DIST_DIR}"
+            echo "UPLOAD_DIR=${UPLOAD_DIR}"
 
             mkdir -p "${DIST_DIR}" "${UPLOAD_DIR}" "${STAGING_DIR}"
             rm -rf "${STAGING_DIR:?}/"*
@@ -154,8 +160,34 @@ jobs:
             cp -a "${STAGING_DIR}/." "${DIST_DIR}/"
 
             rm -rf "${UPLOAD_DIR}" "${STAGING_DIR}"
+            test -f "${DIST_DIR}/index.html"
+
+            # Ensure the internal nginx config exists for artifacts compose override.
+            if [ ! -f "${NGINX_INTERNAL_CONF}" ]; then
+              echo "Missing ${NGINX_INTERNAL_CONF}, creating a default SPA nginx config."
+              mkdir -p "$(dirname "${NGINX_INTERNAL_CONF}")"
+              cat > "${NGINX_INTERNAL_CONF}" <<'EOF'
+            server {
+              listen 80;
+              server_name _;
+              root /usr/share/nginx/html;
+              index index.html;
+
+              location / {
+                try_files $uri $uri/ /index.html;
+              }
+
+              location = /healthz {
+                access_log off;
+                add_header Content-Type text/plain;
+                return 200 "ok";
+              }
+            }
+            EOF
+            fi
 
             cd "${DEPLOY_PATH}"
+            docker compose -f docker-compose.yml -f docker-compose.artifacts.yml config --services
             docker compose -f docker-compose.yml -f docker-compose.artifacts.yml up -d --force-recreate --no-deps frontend
 
       - name: Deploy summary
