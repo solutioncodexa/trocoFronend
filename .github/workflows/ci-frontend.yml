@@ -95,99 +95,81 @@ jobs:
           name: goldyara-frontend-dist
           path: deploy-download
 
+      - name: Prepare GoldYara frontend directory on VPS
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.VPS_HOST || vars.VPS_HOST || vars.VPS_IP }}
+          username: ${{ secrets.VPS_USER || vars.VPS_USER || vars.VPS_SSH_USER }}
+          key: ${{ secrets.VPS_SSH_PRIVATE_KEY }}
+          port: ${{ vars.VPS_SSH_PORT || '22' }}
+          script_stop: true
+          script: |
+            set -e
+            DEPLOY_PATH=/opt/goldyara/deployment
+            FRONT_ROOT=$DEPLOY_PATH/goldyara/frontend
+            DIST_DIR=$FRONT_ROOT/dist
+            UPLOAD_DIR=$FRONT_ROOT/dist-upload
+
+            echo "DEPLOY_PATH=$DEPLOY_PATH"
+            echo "FRONT_ROOT=$FRONT_ROOT"
+            echo "DIST_DIR=$DIST_DIR"
+            echo "UPLOAD_DIR=$UPLOAD_DIR"
+
+            mkdir -p "$DIST_DIR" "$UPLOAD_DIR"
+            rm -rf "$DIST_DIR"/* "$UPLOAD_DIR"/*
+
       - name: Upload dist payload to VPS staging
         uses: appleboy/scp-action@v0.1.7
-        env:
-          DEPLOY_PATH: ${{ vars.VPS_DEPLOY_PATH || '/opt/goldyara/deployment' }}
         with:
           host: ${{ secrets.VPS_HOST || vars.VPS_HOST || vars.VPS_IP }}
           username: ${{ secrets.VPS_USER || vars.VPS_USER || vars.VPS_SSH_USER }}
           key: ${{ secrets.VPS_SSH_PRIVATE_KEY }}
           port: ${{ vars.VPS_SSH_PORT || '22' }}
           source: "deploy-download/*"
-          target: "${{ env.DEPLOY_PATH }}/goldyara/frontend/dist-upload"
+          target: "/opt/goldyara/deployment/goldyara/frontend/dist-upload"
 
-      - name: Normalize dist and restart frontend
+      - name: Normalize GoldYara dist structure on VPS
         uses: appleboy/ssh-action@v1.2.0
-        env:
-          DEPLOY_PATH: ${{ vars.VPS_DEPLOY_PATH || '/opt/goldyara/deployment' }}
         with:
           host: ${{ secrets.VPS_HOST || vars.VPS_HOST || vars.VPS_IP }}
           username: ${{ secrets.VPS_USER || vars.VPS_USER || vars.VPS_SSH_USER }}
           key: ${{ secrets.VPS_SSH_PRIVATE_KEY }}
           port: ${{ vars.VPS_SSH_PORT || '22' }}
-          command_timeout: 20m
           script_stop: true
-          envs: DEPLOY_PATH
           script: |
-            set -euo pipefail
-            DEPLOY_PATH="${DEPLOY_PATH:-/opt/goldyara/deployment}"
-            FRONT_ROOT="${DEPLOY_PATH}/goldyara/frontend"
-            DIST_DIR="${FRONT_ROOT}/dist"
-            UPLOAD_DIR="${FRONT_ROOT}/dist-upload"
-            STAGING_DIR="${FRONT_ROOT}/dist-staging"
-            NGINX_INTERNAL_CONF="${DEPLOY_PATH}/docker/nginx-internal-goldyara.conf"
+            set -e
+            FRONT_ROOT=/opt/goldyara/deployment/goldyara/frontend
+            DIST_DIR="$FRONT_ROOT/dist"
+            UPLOAD_DIR="$FRONT_ROOT/dist-upload"
 
-            echo "DEPLOY_PATH=${DEPLOY_PATH}"
-            echo "FRONT_ROOT=${FRONT_ROOT}"
-            echo "DIST_DIR=${DIST_DIR}"
-            echo "UPLOAD_DIR=${UPLOAD_DIR}"
+            mkdir -p "$DIST_DIR"
+            cd "$FRONT_ROOT"
 
-            mkdir -p "${DIST_DIR}" "${UPLOAD_DIR}" "${STAGING_DIR}"
-            rm -rf "${STAGING_DIR:?}/"*
-
-            if [ -f "${UPLOAD_DIR}/index.html" ]; then
-              SOURCE_DIR="${UPLOAD_DIR}"
-            else
-              INDEX_PATH=$(find "${UPLOAD_DIR}" -maxdepth 12 -type f -name "index.html" | sed -n '1p')
-              if [ -z "${INDEX_PATH:-}" ]; then
-                echo "ERROR: index.html not found in ${UPLOAD_DIR}"
-                echo "Files found under dist-upload:"
-                find "${UPLOAD_DIR}" -maxdepth 12 -type f | sort || true
-                echo "Directories found under dist-upload:"
-                find "${UPLOAD_DIR}" -maxdepth 12 -type d | sort || true
-                exit 1
-              fi
-              SOURCE_DIR=$(dirname "${INDEX_PATH}")
+            if [ -d "$UPLOAD_DIR/deploy-download" ]; then
+              mv "$UPLOAD_DIR/deploy-download/"* "$DIST_DIR/" || true
+              rm -rf "$UPLOAD_DIR/deploy-download"
+            fi
+            if [ -d "$UPLOAD_DIR/frontend-dist" ]; then
+              mv "$UPLOAD_DIR/frontend-dist/"* "$DIST_DIR/" || true
+              rm -rf "$UPLOAD_DIR/frontend-dist"
             fi
 
-            echo "Resolved source dist directory: ${SOURCE_DIR}"
-            cp -a "${SOURCE_DIR}/." "${STAGING_DIR}/"
-            test -f "${STAGING_DIR}/index.html"
+            # If files are directly in dist-upload, move them too.
+            find "$UPLOAD_DIR" -maxdepth 1 -type f -exec mv {} "$DIST_DIR/" \; || true
 
-            mkdir -p "${DIST_DIR}"
-            rm -rf "${DIST_DIR:?}/"*
-            cp -a "${STAGING_DIR}/." "${DIST_DIR}/"
+            [ -f "$DIST_DIR/index.html" ] || { echo "Frontend dist invalid: index.html missing"; exit 1; }
 
-            rm -rf "${UPLOAD_DIR}" "${STAGING_DIR}"
-            test -f "${DIST_DIR}/index.html"
-
-            # Ensure the internal nginx config exists for artifacts compose override.
-            if [ ! -f "${NGINX_INTERNAL_CONF}" ]; then
-              echo "Missing ${NGINX_INTERNAL_CONF}, creating a default SPA nginx config."
-              mkdir -p "$(dirname "${NGINX_INTERNAL_CONF}")"
-              cat > "${NGINX_INTERNAL_CONF}" <<'EOF'
-            server {
-              listen 80;
-              server_name _;
-              root /usr/share/nginx/html;
-              index index.html;
-
-              location / {
-                try_files $uri $uri/ /index.html;
-              }
-
-              location = /healthz {
-                access_log off;
-                add_header Content-Type text/plain;
-                return 200 "ok";
-              }
-            }
-            EOF
-            fi
-
-            cd "${DEPLOY_PATH}"
-            docker compose -f docker-compose.yml -f docker-compose.artifacts.yml config --services
+      - name: Restart GoldYara frontend on VPS
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.VPS_HOST || vars.VPS_HOST || vars.VPS_IP }}
+          username: ${{ secrets.VPS_USER || vars.VPS_USER || vars.VPS_SSH_USER }}
+          key: ${{ secrets.VPS_SSH_PRIVATE_KEY }}
+          port: ${{ vars.VPS_SSH_PORT || '22' }}
+          script_stop: true
+          script: |
+            set -e
+            cd /opt/goldyara/deployment
             docker compose -f docker-compose.yml -f docker-compose.artifacts.yml up -d --force-recreate --no-deps frontend
 
       - name: Deploy summary
