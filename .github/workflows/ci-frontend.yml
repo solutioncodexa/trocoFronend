@@ -1,0 +1,166 @@
+name: CI Frontend (Artifacts)
+
+on:
+  push:
+    branches: [main, master]
+    paths:
+      - "src/**"
+      - "public/**"
+      - "package.json"
+      - "package-lock.json"
+      - "vite.config.ts"
+      - "tsconfig*.json"
+      - "tailwind.config.*"
+      - "postcss.config.*"
+      - "index.html"
+      - ".github/workflows/ci-frontend.yml"
+  workflow_dispatch:
+    inputs:
+      vite_api_base_url:
+        description: "VITE_API_BASE_URL au build (vide = vars.VITE_API_BASE_URL ou /api)"
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+
+concurrency:
+  group: goldyara-front-artifacts-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+
+      - name: Resolve VITE_API_BASE_URL
+        id: vite_api
+        run: |
+          if [ -n "${{ github.event.inputs.vite_api_base_url }}" ]; then
+            echo "url=${{ github.event.inputs.vite_api_base_url }}" >> "$GITHUB_OUTPUT"
+          elif [ -n "${{ vars.VITE_API_BASE_URL }}" ]; then
+            echo "url=${{ vars.VITE_API_BASE_URL }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "url=/api" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build dist
+        run: npm run build
+        env:
+          VITE_API_BASE_URL: ${{ steps.vite_api.outputs.url }}
+
+      - name: Upload dist artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: goldyara-frontend-dist
+          path: dist/
+          if-no-files-found: error
+          retention-days: 7
+
+  deploy-frontend:
+    name: Deploy frontend on VPS
+    needs: build-frontend
+    runs-on: ubuntu-latest
+    if: |
+      success() &&
+      github.event_name == 'push' &&
+      (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') &&
+      vars.VPS_DEPLOY_DISABLED != 'true'
+    steps:
+      - name: Validate VPS deploy config
+        env:
+          H: ${{ secrets.VPS_HOST || vars.VPS_HOST || vars.VPS_IP }}
+          U: ${{ secrets.VPS_USER || vars.VPS_USER || vars.VPS_SSH_USER }}
+          K: ${{ secrets.VPS_SSH_PRIVATE_KEY }}
+        run: |
+          set -e
+          rc=0
+          [ -z "${H:-}" ] && echo "::error::Missing VPS_HOST or VPS_IP" && rc=1
+          [ -z "${U:-}" ] && echo "::error::Missing VPS_USER" && rc=1
+          [ -z "${K:-}" ] && echo "::error::Missing VPS_SSH_PRIVATE_KEY" && rc=1
+          exit "$rc"
+
+      - name: Download dist artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: goldyara-frontend-dist
+          path: deploy-download
+
+      - name: Upload dist payload to VPS staging
+        uses: appleboy/scp-action@v0.1.7
+        env:
+          DEPLOY_PATH: ${{ vars.VPS_DEPLOY_PATH || '/opt/goldyara/deployment' }}
+        with:
+          host: ${{ secrets.VPS_HOST || vars.VPS_HOST || vars.VPS_IP }}
+          username: ${{ secrets.VPS_USER || vars.VPS_USER || vars.VPS_SSH_USER }}
+          key: ${{ secrets.VPS_SSH_PRIVATE_KEY }}
+          port: ${{ vars.VPS_SSH_PORT || '22' }}
+          source: "deploy-download/*"
+          target: "${{ env.DEPLOY_PATH }}/goldyara/frontend/dist-upload"
+
+      - name: Normalize dist and restart frontend
+        uses: appleboy/ssh-action@v1.2.0
+        env:
+          DEPLOY_PATH: ${{ vars.VPS_DEPLOY_PATH || '/opt/goldyara/deployment' }}
+        with:
+          host: ${{ secrets.VPS_HOST || vars.VPS_HOST || vars.VPS_IP }}
+          username: ${{ secrets.VPS_USER || vars.VPS_USER || vars.VPS_SSH_USER }}
+          key: ${{ secrets.VPS_SSH_PRIVATE_KEY }}
+          port: ${{ vars.VPS_SSH_PORT || '22' }}
+          command_timeout: 20m
+          script_stop: true
+          envs: DEPLOY_PATH
+          script: |
+            set -euo pipefail
+            DEPLOY_PATH="${DEPLOY_PATH:-/opt/goldyara/deployment}"
+            FRONT_ROOT="${DEPLOY_PATH}/goldyara/frontend"
+            DIST_DIR="${FRONT_ROOT}/dist"
+            UPLOAD_DIR="${FRONT_ROOT}/dist-upload"
+            STAGING_DIR="${FRONT_ROOT}/dist-staging"
+
+            mkdir -p "${DIST_DIR}" "${UPLOAD_DIR}" "${STAGING_DIR}"
+            rm -rf "${STAGING_DIR:?}/"*
+
+            if [ -f "${UPLOAD_DIR}/index.html" ]; then
+              SOURCE_DIR="${UPLOAD_DIR}"
+            else
+              INDEX_PATH=$(find "${UPLOAD_DIR}" -maxdepth 5 -type f -name "index.html" | sed -n '1p')
+              if [ -z "${INDEX_PATH:-}" ]; then
+                echo "ERROR: index.html not found in ${UPLOAD_DIR}"
+                find "${UPLOAD_DIR}" -maxdepth 5 -type f || true
+                exit 1
+              fi
+              SOURCE_DIR=$(dirname "${INDEX_PATH}")
+            fi
+
+            cp -a "${SOURCE_DIR}/." "${STAGING_DIR}/"
+            test -f "${STAGING_DIR}/index.html"
+
+            mkdir -p "${DIST_DIR}"
+            rm -rf "${DIST_DIR:?}/"*
+            cp -a "${STAGING_DIR}/." "${DIST_DIR}/"
+
+            rm -rf "${UPLOAD_DIR}" "${STAGING_DIR}"
+
+            cd "${DEPLOY_PATH}"
+            docker compose -f docker-compose.yml -f docker-compose.artifacts.yml up -d --force-recreate --no-deps frontend
+
+      - name: Deploy summary
+        run: |
+          {
+            echo "### Frontend artifact deployed"
+            echo ""
+            echo "- Path: \`${{ vars.VPS_DEPLOY_PATH || '/opt/goldyara/deployment' }}/goldyara/frontend/dist\`"
+            echo "- Service: \`frontend\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+        env:
+          DEPLOY_PATH: ${{ vars.VPS_DEPLOY_PATH || '/opt/goldyara/deployment' }}
