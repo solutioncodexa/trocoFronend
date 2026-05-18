@@ -210,13 +210,6 @@ const Boutique = () => {
   const products: Product[] = useMemo(() => mapProductListItemListToProducts(dtoList), [dtoList]);
 
   const totalPages = Math.max(1, pageResponse?.totalPages ?? 1);
-  const totalElements = pageResponse?.totalElements ?? 0;
-  const rangeStart = totalElements === 0 ? 0 : (currentPage - 1) * PRODUCTS_PER_PAGE + 1;
-  const rangeEnd = Math.min(currentPage * PRODUCTS_PER_PAGE, totalElements);
-  const productCountLabel =
-    totalElements === 0
-      ? 'Aucun produit'
-      : `Affichage ${rangeStart}–${rangeEnd} sur ${totalElements} produit${totalElements > 1 ? 's' : ''}`;
 
   const hasActiveFilters = useMemo(
     () =>
@@ -395,25 +388,30 @@ const Boutique = () => {
   );
 
   const searchFilterBlock = (
-    <input
-      type="search"
-      value={searchQuery}
-      onChange={(e) => {
-        searchQuerySourceRef.current = 'user-typing';
-        setSearchQuery(e.target.value);
-      }}
-      onBlur={() => {
-        setSearchParams((prev) => {
-          const next = new URLSearchParams(prev);
-          const t = searchQuery.trim();
-          if (t) next.set('keyword', t);
-          else next.delete('keyword');
-          return next;
-        });
-      }}
-      placeholder="Nom ou description…"
-      className="w-full rounded-md border border-accent-beige/30 bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
-    />
+    <div className="flex w-full flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
+      <span className="text-xs text-accent-beige uppercase tracking-widest shrink-0">
+        Recherche :
+      </span>
+      <input
+        type="search"
+        value={searchQuery}
+        onChange={(e) => {
+          searchQuerySourceRef.current = 'user-typing';
+          setSearchQuery(e.target.value);
+        }}
+        onBlur={() => {
+          setSearchParams((prev) => {
+            const next = new URLSearchParams(prev);
+            const t = searchQuery.trim();
+            if (t) next.set('keyword', t);
+            else next.delete('keyword');
+            return next;
+          });
+        }}
+        placeholder="Nom ou description…"
+        className="w-full min-w-0 flex-1 rounded-md border border-accent-beige/30 bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
+      />
+    </div>
   );
 
   const inStockFilterRow = (
@@ -459,7 +457,7 @@ const Boutique = () => {
           <aside className="w-full lg:w-72 shrink-0 max-lg:w-screen max-lg:ml-[calc(50%-50vw)] max-lg:mr-[calc(50%-50vw)] max-lg:px-4 max-lg:sm:px-6 max-lg:py-6 max-lg:border-b max-lg:border-accent-beige/15 max-lg:bg-paper dark:max-lg:bg-[#2a2515]">
             <Accordion
               type="multiple"
-              className="w-full lg:hidden border-y border-accent-beige/20 -mt-2"
+              className="w-full border-t border-accent-beige/20 max-lg:-mt-2"
               defaultValue={[]}
             >
               <AccordionItem value="category" className="border-accent-beige/15">
@@ -470,68 +468,26 @@ const Boutique = () => {
                 <AccordionTrigger className={accordionTriggerClass}>Collection</AccordionTrigger>
                 <AccordionContent>{collectionFilterList}</AccordionContent>
               </AccordionItem>
-              <AccordionItem value="type" className="border-accent-beige/15">
+              <AccordionItem value="type" className="border-accent-beige/15 border-b-0">
                 <AccordionTrigger className={accordionTriggerClass}>Type de bijou</AccordionTrigger>
                 <AccordionContent>{typeFilterList}</AccordionContent>
               </AccordionItem>
-              <AccordionItem value="price" className="border-accent-beige/15 border-b-0">
-                <AccordionTrigger className={accordionTriggerClass}>Prix (MAD)</AccordionTrigger>
-                <AccordionContent>{priceFilterBlock}</AccordionContent>
-              </AccordionItem>
             </Accordion>
 
-            <div className="mt-6 space-y-6 lg:hidden">{inStockFilterRow}</div>
-
-            <div className="hidden lg:block space-y-10">
-              <div>
-                <h3 className={`${filterSectionTitleClass} mb-6 flex items-center gap-2`}>
-                  Catégorie
-                  <div className="h-px flex-grow bg-accent-beige/20"></div>
-                </h3>
-                {categoryFilterList}
-              </div>
-
-              <div>
-                <h3 className={`${filterSectionTitleClass} mb-6 flex items-center gap-2`}>
-                  Collection
-                  <div className="h-px flex-grow bg-accent-beige/20"></div>
-                </h3>
-                {collectionFilterList}
-              </div>
-
-              <div>
-                <h3 className={`${filterSectionTitleClass} mb-6 flex items-center gap-2`}>
-                  Type de bijou
-                  <div className="h-px flex-grow bg-accent-beige/20"></div>
-                </h3>
-                {typeFilterList}
-              </div>
-
-              <div>
-                <h3 className={`${filterSectionTitleClass} mb-6 flex items-center gap-2`}>
-                  Prix (MAD)
-                  <div className="h-px flex-grow bg-accent-beige/20"></div>
-                </h3>
-                {priceFilterBlock}
-              </div>
-
-              <div>{inStockFilterRow}</div>
-
-              <div>
-                <h3 className={`${filterSectionTitleClass} mb-4 flex items-center gap-2`}>
-                  Recherche
-                  <div className="h-px flex-grow bg-accent-beige/20"></div>
-                </h3>
-                {searchFilterBlock}
-              </div>
+            <div className="border-t border-accent-beige/20 pt-6">
+              <h3 className={`${filterSectionTitleClass} mb-6 flex items-center gap-2`}>
+                Prix (MAD)
+                <div className="h-px flex-grow bg-accent-beige/20" />
+              </h3>
+              {priceFilterBlock}
             </div>
+
+            <div className="mt-6">{inStockFilterRow}</div>
           </aside>
 
           <div className="flex-grow min-w-0 px-4 sm:px-0">
             <div className="flex flex-col md:flex-row justify-between items-stretch md:items-center mb-4 gap-4 border-b border-accent-beige/10 pb-6">
-              <p className="text-xs text-accent-beige uppercase tracking-widest w-full md:flex-1">
-                {productCountLabel}
-              </p>
+              <div className="w-full md:flex-1 md:max-w-md">{searchFilterBlock}</div>
               <div className="flex items-center gap-4 justify-center md:justify-end shrink-0">
                 <span className="text-xs text-accent-beige uppercase tracking-widest">Trier par :</span>
                 <Select
@@ -553,10 +509,6 @@ const Boutique = () => {
                   </SelectContent>
                 </Select>
               </div>
-            </div>
-
-            <div className="lg:hidden mb-8 -mt-2">
-              {searchFilterBlock}
             </div>
 
             {isLoading && !pageResponse ? (

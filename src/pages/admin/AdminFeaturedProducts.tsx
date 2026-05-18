@@ -20,7 +20,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { uploadImage } from '@/services/api/upload';
+import { getImageUrl, uploadImage } from '@/services/api/upload';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
@@ -285,11 +285,7 @@ const AdminFeaturedProducts = () => {
                       <div className="w-16 h-16 rounded-lg overflow-hidden bg-muted">
                         {product.imageUrl || product.product?.imageUrl ? (
                           <img
-                            src={
-                              (product.imageUrl || product.product?.imageUrl)?.startsWith('http')
-                                ? (product.imageUrl || product.product?.imageUrl)
-                                : `http://localhost:8080/api${product.imageUrl || product.product?.imageUrl}`
-                            }
+                            src={getImageUrl(product.imageUrl || product.product?.imageUrl)}
                             alt={product.title || product.product?.name}
                             className="w-full h-full object-cover"
                           />
@@ -539,11 +535,7 @@ const CreateFeaturedProductDialog = ({
                   <p className="text-sm font-medium mb-2">Aperçu:</p>
                   <div className="w-32 h-32 rounded-lg overflow-hidden border border-border">
                     <img
-                      src={
-                        formData.imageUrl.startsWith('http')
-                          ? formData.imageUrl
-                          : `http://localhost:8080/api${formData.imageUrl}`
-                      }
+                      src={getImageUrl(formData.imageUrl)}
                       alt="Aperçu"
                       className="w-full h-full object-cover"
                     />
@@ -745,11 +737,7 @@ const EditFeaturedProductDialog = ({
                   <p className="text-sm font-medium mb-2">Aperçu:</p>
                   <div className="w-32 h-32 rounded-lg overflow-hidden border border-border">
                     <img
-                      src={
-                        formData.imageUrl.startsWith('http')
-                          ? formData.imageUrl
-                          : `http://localhost:8080/api${formData.imageUrl}`
-                      }
+                      src={getImageUrl(formData.imageUrl)}
                       alt="Aperçu"
                       className="w-full h-full object-cover"
                     />

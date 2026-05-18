@@ -8,6 +8,7 @@ import { RevealOnScroll } from '@/components/animations';
 import { ANIMATIONS } from '@/config/animations';
 import { cn } from '@/lib/utils';
 import { staticCatalogQueryOptions } from '@/config/queryOptions';
+import { getImageUrl } from '@/services/api/upload';
 
 const HeritageSection = () => {
   const { data: featuredProducts = [], isLoading, error } = useQuery({
@@ -46,7 +47,11 @@ const HeritageSection = () => {
                 {displayProducts.length > 0 ? (
                   <Link to={`/produit/${displayProducts[0].productId}`} className="block h-full w-full min-h-0">
                     <img
-                      src={`http://localhost:8080/api${displayProducts[0].imageUrl || displayProducts[0].product?.imageUrl || '/uploads/placeholder.jpg'}`}
+                      src={getImageUrl(
+                        displayProducts[0].imageUrl ||
+                          displayProducts[0].product?.imageUrl ||
+                          '/uploads/placeholder.jpg'
+                      )}
                       alt={displayProducts[0].title || displayProducts[0].product?.name || 'Produit sélectionné'}
                       className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
                       loading="lazy"

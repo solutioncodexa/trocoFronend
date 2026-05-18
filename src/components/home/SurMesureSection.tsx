@@ -6,6 +6,7 @@ import { RevealOnScroll } from '@/components/animations';
 import { ANIMATIONS } from '@/config/animations';
 import { cn } from '@/lib/utils';
 import { staticCatalogQueryOptions } from '@/config/queryOptions';
+import { getImageUrl } from '@/services/api/upload';
 
 const SurMesureSection = () => {
   const { data: featuredProducts = [], isLoading, error } = useQuery({
@@ -34,22 +35,11 @@ const SurMesureSection = () => {
                 {activeProducts.length > 0 ? (
                   <Link to={`/produit/${activeProducts[0].productId}`} className="block h-full w-full min-h-0">
                     <img
-                      src={
-                        // Priorité: imageUrl personnalisée > product.imageUrl > placeholder
-                        activeProducts[0].imageUrl 
-                          ? (activeProducts[0].imageUrl.startsWith('http') 
-                              ? activeProducts[0].imageUrl 
-                              : (activeProducts[0].imageUrl.startsWith('/uploads/')
-                                  ? `http://localhost:8080/api${activeProducts[0].imageUrl}`
-                                  : `http://localhost:8080${activeProducts[0].imageUrl}`))
-                          : (activeProducts[0].product?.imageUrl 
-                              ? (activeProducts[0].product.imageUrl.startsWith('http') 
-                                  ? activeProducts[0].product.imageUrl 
-                                  : (activeProducts[0].product.imageUrl.startsWith('/uploads/')
-                                      ? `http://localhost:8080/api${activeProducts[0].product.imageUrl}`
-                                      : `http://localhost:8080${activeProducts[0].product.imageUrl}`))
-                              : 'https://picsum.photos/400/600?random=1')
-                      }
+                      src={getImageUrl(
+                        activeProducts[0].imageUrl ||
+                          activeProducts[0].product?.imageUrl ||
+                          'https://picsum.photos/400/600?random=1'
+                      )}
                       alt={activeProducts[0].title || activeProducts[0].product?.name || 'Produit sélectionné'}
                       className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
                       loading="lazy"
