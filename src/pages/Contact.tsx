@@ -1,8 +1,14 @@
 import { useState } from 'react';
 import Layout from '@/components/layout/Layout';
 
-const CONTACT_WHATSAPP = 'https://wa.me/212600000000';
-const CONTACT_INSTAGRAM = 'https://www.instagram.com/gold_yara_/';
+import {
+  CONTACT_PHONE_DISPLAY,
+  CONTACT_PHONE_E164,
+  CONTACT_WHATSAPP_URL,
+  FACEBOOK_PAGE_URL,
+  INSTAGRAM_URL,
+  TIKTOK_URL,
+} from '@/config/site';
 
 const Contact = () => {
   const [formData, setFormData] = useState({
@@ -130,12 +136,12 @@ const Contact = () => {
                     <h4 className="text-xs uppercase tracking-[0.3em] text-primary font-bold">Téléphone</h4>
                     <a
                       className="inline-flex w-fit max-w-full items-center gap-3 rounded-lg border border-accent-beige/25 bg-secondary-dark/[0.02] px-4 py-3 text-secondary-dark transition-colors hover:border-primary/40 hover:bg-primary/[0.04]"
-                      href="tel:+212522000000"
+                      href={`tel:${CONTACT_PHONE_E164}`}
                     >
                       <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-primary/10">
                         <span className="material-symbols-outlined text-primary text-xl">phone_iphone</span>
                       </span>
-                      <span className="font-medium tracking-wide">+212 5 22 00 00 00</span>
+                      <span className="font-medium tracking-wide">{CONTACT_PHONE_DISPLAY}</span>
                     </a>
                   </div>
 
@@ -154,9 +160,9 @@ const Contact = () => {
 
                   <div className="space-y-3">
                     <h4 className="text-xs uppercase tracking-[0.3em] text-primary font-bold">Messagerie</h4>
-                    <div className="grid grid-cols-1 min-[420px]:grid-cols-2 gap-3">
+                    <div className="grid grid-cols-2 min-[520px]:grid-cols-2 lg:grid-cols-4 gap-3">
                       <a
-                        href={CONTACT_WHATSAPP}
+                        href={CONTACT_WHATSAPP_URL}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="inline-flex items-center justify-center gap-2 rounded-lg border border-green-700/25 bg-green-50/90 px-4 py-3.5 text-sm font-semibold text-green-900 shadow-sm transition-all hover:border-green-700 hover:bg-green-700 hover:text-white"
@@ -167,15 +173,37 @@ const Contact = () => {
                         WhatsApp
                       </a>
                       <a
-                        href={CONTACT_INSTAGRAM}
+                        href={INSTAGRAM_URL}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="inline-flex items-center justify-center gap-2 rounded-lg border border-pink-900/15 bg-gradient-to-br from-amber-50/90 via-rose-50/80 to-fuchsia-50/90 px-4 py-3.5 text-sm font-semibold text-secondary-dark shadow-sm transition-all hover:border-primary/50 hover:shadow-md"
+                        className="inline-flex items-center justify-center gap-2 rounded-lg border border-pink-900/25 bg-gradient-to-br from-amber-50/90 via-rose-50/80 to-fuchsia-50/90 px-4 py-3.5 text-sm font-semibold text-pink-900 shadow-sm transition-all hover:border-pink-700 hover:bg-gradient-to-br hover:from-purple-600 hover:via-pink-600 hover:to-orange-500 hover:text-white"
                       >
-                        <svg className="size-5 shrink-0 fill-current text-pink-900/90" viewBox="0 0 24 24" aria-hidden>
+                        <svg className="size-5 shrink-0 fill-current" viewBox="0 0 24 24" aria-hidden>
                           <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zM5.838 12a6.162 6.162 0 1112.324 0 6.162 6.162 0 01-12.324 0zM12 16a4 4 0 110-8 4 4 0 010 8zm4.965-10.405a1.44 1.44 0 112.881.001 1.44 1.44 0 01-2.881-.001z" />
                         </svg>
                         Instagram
+                      </a>
+                      <a
+                        href={FACEBOOK_PAGE_URL}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center justify-center gap-2 rounded-lg border border-blue-900/15 bg-blue-50/90 px-4 py-3.5 text-sm font-semibold text-blue-900 shadow-sm transition-all hover:border-blue-700 hover:bg-blue-700 hover:text-white"
+                      >
+                        <svg className="size-5 shrink-0 fill-current" viewBox="0 0 24 24" aria-hidden>
+                          <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
+                        </svg>
+                        Facebook
+                      </a>
+                      <a
+                        href={TIKTOK_URL}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center justify-center gap-2 rounded-lg border border-secondary-dark/15 bg-secondary-dark/[0.04] px-4 py-3.5 text-sm font-semibold text-secondary-dark shadow-sm transition-all hover:border-secondary-dark hover:bg-secondary-dark hover:text-white"
+                      >
+                        <svg className="size-5 shrink-0 fill-current" viewBox="0 0 24 24" aria-hidden>
+                          <path d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-5.2 1.74 2.89 2.89 0 012.31-4.64 2.93 2.93 0 01.88.13V9.4a6.84 6.84 0 00-1-.05A6.33 6.33 0 005 20.1a6.34 6.34 0 0010.86-4.43v-7a8.16 8.16 0 004.77 1.52v-3.4a4.85 4.85 0 01-1-.1z" />
+                        </svg>
+                        TikTok
                       </a>
                     </div>
                   </div>

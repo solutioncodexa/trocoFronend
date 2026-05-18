@@ -1,4 +1,5 @@
 import { Quote, Users, Facebook, Instagram } from 'lucide-react';
+import { FACEBOOK_PAGE_URL, INSTAGRAM_URL, TIKTOK_URL } from '@/config/site';
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { featuredProductsApi } from '@/services/api/featuredProducts';
@@ -134,7 +135,7 @@ const HeritageSection = () => {
               <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-2 pt-1 sm:pt-0">
                 <div className="flex -space-x-2 overflow-hidden shrink-0">
                   <a 
-                    href="https://www.facebook.com/votrefacebook" 
+                    href={FACEBOOK_PAGE_URL}
                     target="_blank" 
                     rel="noopener noreferrer"
                     className="inline-flex items-center justify-center h-11 w-11 sm:h-10 sm:w-10 rounded-full ring-2 ring-white bg-blue-600 hover:bg-blue-700 transition-colors"
@@ -142,12 +143,23 @@ const HeritageSection = () => {
                     <Facebook className="w-5 h-5 text-white" />
                   </a>
                   <a 
-                    href="https://www.instagram.com/gold_yara_/" 
+                    href={INSTAGRAM_URL}
                     target="_blank" 
                     rel="noopener noreferrer"
                     className="inline-flex items-center justify-center h-11 w-11 sm:h-10 sm:w-10 rounded-full ring-2 ring-white bg-gradient-to-br from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 transition-colors"
                   >
                     <Instagram className="w-5 h-5 text-white" />
+                  </a>
+                  <a
+                    href={TIKTOK_URL}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center justify-center h-11 w-11 sm:h-10 sm:w-10 rounded-full ring-2 ring-white bg-secondary-dark hover:bg-black transition-colors"
+                    aria-label="TikTok"
+                  >
+                    <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 24 24" aria-hidden>
+                      <path d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-5.2 1.74 2.89 2.89 0 012.31-4.64 2.93 2.93 0 01.88.13V9.4a6.84 6.84 0 00-1-.05A6.33 6.33 0 005 20.1a6.34 6.34 0 0010.86-4.43v-7a8.16 8.16 0 004.77 1.52v-3.4a4.85 4.85 0 01-1-.1z" />
+                    </svg>
                   </a>
                 </div>
                 <span className="text-xs sm:text-sm italic text-accent-beige flex items-center justify-center gap-1.5 text-center max-w-[16rem] sm:max-w-none leading-snug">
