@@ -1,5 +1,5 @@
 import { buildApiUrl, apiRequest } from '@/config/api';
-import type { ProductDetailDTO, ProductListItemDTO } from '@/types/product-dtos';
+import type { ProductDetailDTO, ProductListItemDTO, ProductVariant } from '@/types/product-dtos';
 import type { PageResponse } from '@/types/api';
 
 export interface ProductFilters {
@@ -43,6 +43,7 @@ export interface ProductFormData {
   availableSizes?: string[];
   stockQuantity?: number;
   badges?: string[];
+  variants?: ProductVariant[];
 }
 
 function buildProductsQueryString(params: ProductQueryParams): string {

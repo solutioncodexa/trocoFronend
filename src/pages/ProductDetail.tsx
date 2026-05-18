@@ -15,7 +15,14 @@ import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import type { ProductDetailDTO } from '@/types/product-dtos';
 import { productsApi } from '@/services/api';
-import { mapProductDetailToProduct, mapProductListItemListToProducts, normalizeAvailableSizes } from '@/utils/productMapper';
+import {
+  applyVariantToProduct,
+  getDefaultVariant,
+  mapProductDetailToProduct,
+  mapProductListItemListToProducts,
+  normalizeAvailableSizes,
+} from '@/utils/productMapper';
+import type { ProductVariant } from '@/types/product-variant';
 import {
   buildProductShareMessage,
   buildProductShareTitle,
@@ -123,6 +130,7 @@ const ProductDetail = () => {
   const [quantity, setQuantity] = useState(1);
   /** `undefined` = aucune taille (requis pour Radix Select + validation explicite) */
   const [selectedSize, setSelectedSize] = useState<string | undefined>(undefined);
+  const [selectedVariantKey, setSelectedVariantKey] = useState<string>('');
   const [lightboxOpen, setLightboxOpen] = useState(false);
   /** Message inline (mobile) si taille obligatoire non choisie */
   const [sizeError, setSizeError] = useState(false);
@@ -163,21 +171,28 @@ const ProductDetail = () => {
     setSizeError(false);
     setQuantity(1);
     setSelectedImageIndex(0);
+    const def = getDefaultVariant(product);
+    setSelectedVariantKey(def.id ?? `w-${def.weight}`);
   }, [product?.id]);
 
   /** Open Graph / Twitter : aperçu riche quand le lien est partagé */
   useEffect(() => {
     if (!product || !id) return;
     const imageUrl = product.images[0] ? resolvePublicImageUrl(product.images[0]) : undefined;
+    const v = getDefaultVariant(product);
+    const variantsList = product.variants ?? [];
+    const getKey = (variant: ProductVariant) => variant.id ?? `w-${variant.weight}`;
+    const active =
+      variantsList.find((variant) => getKey(variant) === selectedVariantKey) ?? v;
     applyProductMeta({
       id,
       name: product.name,
       description: product.description,
-      price: product.price,
+      price: active.price,
       imageUrl,
     });
     return () => resetProductMeta();
-  }, [product, id]);
+  }, [product, id, selectedVariantKey]);
 
   if (isLoadingProduct) {
     return (
@@ -205,6 +220,16 @@ const ProductDetail = () => {
   const availableSizesList = normalizeAvailableSizes(product.availableSizes);
   const requiresSize = availableSizesList.length > 0;
 
+  const variants = product.variants ?? [];
+  const hasMultipleVariants = variants.length > 1;
+  const getVariantKey = (v: ProductVariant) => v.id ?? `w-${v.weight}`;
+  const selectedVariant =
+    variants.find((v) => getVariantKey(v) === selectedVariantKey) ?? getDefaultVariant(product);
+  const cartProduct = applyVariantToProduct(product, selectedVariant);
+  const displayPrice = selectedVariant.price;
+  const displayOriginalPrice = selectedVariant.originalPrice;
+  const displayWeight = selectedVariant.weight;
+
   const showSizeRequired = () => {
     setSizeError(true);
     requestAnimationFrame(() => {
@@ -229,7 +254,7 @@ const ProductDetail = () => {
       toast.error(`Quantité maximale : ${MAX_ORDER_QUANTITY}`);
       return;
     }
-    addToCart(product, quantity, selectedSize || undefined);
+    addToCart(cartProduct, quantity, selectedSize || undefined, selectedVariant.id);
   };
 
   const handleWishlistToggle = () => {
@@ -244,10 +269,10 @@ const ProductDetail = () => {
   const shareMessage = buildProductShareMessage({
     name: product.name,
     url: shareUrl,
-    price: product.price,
-    originalPrice: product.originalPrice,
+    price: displayPrice,
+    originalPrice: displayOriginalPrice,
     description: product.description,
-    weight: product.weight,
+    weight: displayWeight,
     category: product.category,
     type: product.type,
     collection: product.collection,
@@ -334,7 +359,7 @@ const ProductDetail = () => {
       toast.error(`Quantité maximale : ${MAX_ORDER_QUANTITY}`);
       return;
     }
-    addToCart(product, quantity, selectedSize || undefined);
+    addToCart(cartProduct, quantity, selectedSize || undefined, selectedVariant.id);
     navigate('/panier');
   };
 
@@ -494,9 +519,41 @@ const ProductDetail = () => {
 
             {/* Price + weight row */}
             <div className="flex items-baseline gap-4 flex-wrap">
-              <span className="text-xl sm:text-2xl font-bold text-primary">{formatPrice(product.price)}</span>
-              <span className="text-xs text-accent-beige">{product.weight}g · Or 18 carats</span>
+              <div className="flex items-baseline gap-2 flex-wrap">
+                <span className="text-xl sm:text-2xl font-bold text-primary">{formatPrice(displayPrice)}</span>
+                {displayOriginalPrice != null && displayOriginalPrice > displayPrice && (
+                  <span className="text-sm text-muted-foreground line-through">{formatPrice(displayOriginalPrice)}</span>
+                )}
+              </div>
+              <span className="text-xs text-accent-beige">{displayWeight}g · Or 18 carats</span>
             </div>
+
+            {hasMultipleVariants && (
+              <div className="space-y-2">
+                <Label className="text-[11px] sm:text-xs">Poids *</Label>
+                <div className="flex flex-wrap gap-2">
+                  {variants.map((v) => {
+                    const key = getVariantKey(v);
+                    const active = key === selectedVariantKey;
+                    return (
+                      <button
+                        key={key}
+                        type="button"
+                        onClick={() => setSelectedVariantKey(key)}
+                        className={cn(
+                          'min-h-9 rounded-sm border px-3 py-1.5 text-xs font-medium transition-colors',
+                          active
+                            ? 'border-primary bg-primary/10 text-primary'
+                            : 'border-accent-beige/30 text-secondary-dark/80 hover:border-primary/40'
+                        )}
+                      >
+                        {v.label || `${v.weight} g`}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
 
             {/* Description (collapsed on small screens) */}
             <p className="text-secondary-dark/70 dark:text-white/70 text-xs sm:text-sm leading-relaxed line-clamp-3 lg:line-clamp-none">

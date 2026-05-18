@@ -87,6 +87,7 @@ const Checkout = () => {
       },
       quantity: item.quantity,
       selectedSize: item.selectedSize,
+      selectedVariantId: item.selectedVariantId,
     }));
 
     const shipping = getTotal() >= 2000 ? 0 : 50;

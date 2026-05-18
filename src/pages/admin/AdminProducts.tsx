@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
-import { Plus, Pencil, Trash2, Search, Upload, X, Settings2, ArrowLeft, ArrowRight, Star } from 'lucide-react';
+import { Plus, Pencil, Trash2, Search, Upload, X, Settings2, ArrowLeft, ArrowRight, Star, GripVertical } from 'lucide-react';
+import { createEmptyVariantRow, type ProductVariantFormRow } from '@/types/product-variant';
+import { ProductVariantEditor } from '@/components/admin/ProductVariantEditor';
 import AdminLayout from '@/components/admin/AdminLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -71,22 +73,38 @@ const AdminProducts = () => {
   const [imageFiles, setImageFiles] = useState<File[]>([]);
   // URLs des images existantes (pour affichage en mode édition)
   const [existingImageUrls, setExistingImageUrls] = useState<string[]>([]);
+  const [variantRows, setVariantRows] = useState<ProductVariantFormRow[]>([createEmptyVariantRow('500', true)]);
 
-  // Prix calculé : (grammes × prix au gramme) + marge du produit
+  const isPromo = formData.badges.includes('promo');
+
+  // Prix calculé par variante : (grammes × prix au gramme) + marge
   useEffect(() => {
-    if (!goldPriceSettings) return;
-    const weight = parseFloat(formData.weight);
-    const marginGain = parseFloat(formData.marginGain);
-    if (Number.isNaN(weight) || weight <= 0) return;
-    const margin = Number.isNaN(marginGain) || marginGain < 0 ? 500 : marginGain;
-    const calculated = Math.round(
-      calculatePrice(weight, goldPriceSettings.pricePerGram, margin)
+    if (!goldPriceSettings || isPromo) return;
+    setVariantRows((prev) =>
+      prev.map((row) => {
+        const weight = parseFloat(row.weight);
+        const marginGain = parseFloat(row.marginGain);
+        if (Number.isNaN(weight) || weight <= 0) return row;
+        const margin = Number.isNaN(marginGain) || marginGain < 0 ? 500 : marginGain;
+        const calculated = String(
+          Math.round(calculatePrice(weight, goldPriceSettings.pricePerGram, margin))
+        );
+        if (row.price === calculated) return row;
+        return { ...row, price: calculated };
+      })
     );
-    setFormData((prev) => {
-      if (prev.price === String(calculated)) return prev;
-      return { ...prev, price: String(calculated) };
-    });
-  }, [formData.weight, formData.marginGain, goldPriceSettings?.pricePerGram]);
+  }, [variantRows.map((r) => `${r.weight}-${r.marginGain}`).join('|'), goldPriceSettings?.pricePerGram, isPromo]);
+
+  useEffect(() => {
+    const defaultRow = variantRows.find((r) => r.isDefault) ?? variantRows[0];
+    if (!defaultRow) return;
+    setFormData((prev) => ({
+      ...prev,
+      weight: defaultRow.weight,
+      price: defaultRow.price,
+      marginGain: defaultRow.marginGain,
+    }));
+  }, [variantRows]);
 
   const filteredProducts = products.filter(product => {
     const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -115,6 +133,28 @@ const AdminProducts = () => {
         collection: product.collection || '',
         badges: product.badges,
       });
+      const rows: ProductVariantFormRow[] = (product.variants?.length ? product.variants : []).map((v) => ({
+        id: v.id,
+        label: v.label ?? '',
+        weight: String(v.weight),
+        marginGain: String(v.marginGain ?? 500),
+        price: String(v.price),
+        originalPrice: v.originalPrice != null ? String(v.originalPrice) : '',
+        isDefault: Boolean(v.isDefault),
+      }));
+      setVariantRows(
+        rows.length > 0 ? rows : [createEmptyVariantRow(String(product.marginGain ?? 500), true)]
+      );
+      if (rows.length === 0) {
+        setVariantRows([
+          {
+            ...createEmptyVariantRow(String(product.marginGain ?? 500), true),
+            weight: String(product.weight),
+            price: String(product.price),
+            originalPrice: product.originalPrice != null ? String(product.originalPrice) : '',
+          },
+        ]);
+      }
       setExistingImageUrls(product.images || []);
       setImageFiles([]);
     } else {
@@ -130,6 +170,7 @@ const AdminProducts = () => {
         collection: '',
         badges: [],
       });
+      setVariantRows([createEmptyVariantRow('500', true)]);
       setExistingImageUrls([]);
       setImageFiles([]);
     }
@@ -193,24 +234,45 @@ const AdminProducts = () => {
       return;
     }
 
-    const weightNum = parseFloat(formData.weight);
-    const marginGainNum = parseFloat(formData.marginGain);
-    const margin = Number.isNaN(marginGainNum) || marginGainNum < 0 ? 500 : marginGainNum;
-    let priceValue = parseFloat(formData.price);
-    if ((Number.isNaN(priceValue) || priceValue <= 0) && goldPriceSettings && !Number.isNaN(weightNum) && weightNum > 0) {
-      priceValue = Math.round(calculatePrice(weightNum, goldPriceSettings.pricePerGram, margin));
+    const parsedVariants = variantRows
+      .map((row, index) => {
+        const weight = parseFloat(row.weight);
+        const margin = parseFloat(row.marginGain);
+        const marginGain = Number.isNaN(margin) || margin < 0 ? 500 : margin;
+        let price = parseFloat(row.price);
+        if ((Number.isNaN(price) || price <= 0) && goldPriceSettings && !Number.isNaN(weight) && weight > 0) {
+          price = Math.round(calculatePrice(weight, goldPriceSettings.pricePerGram, marginGain));
+        }
+        const originalPrice = row.originalPrice ? parseFloat(row.originalPrice) : undefined;
+        return {
+          id: row.id,
+          label: row.label.trim() || undefined,
+          weight,
+          marginGain,
+          price,
+          originalPrice: isPromo && originalPrice && originalPrice > price ? originalPrice : undefined,
+          isDefault: row.isDefault,
+          displayOrder: index,
+        };
+      })
+      .filter((v) => !Number.isNaN(v.weight) && v.weight > 0);
+
+    if (parsedVariants.length === 0) {
+      toast.error('Ajoutez au moins une variante avec un poids valide');
+      return;
     }
 
+    const defaultVariant = parsedVariants.find((v) => v.isDefault) ?? parsedVariants[0];
     const typeCode = productTypes.find((pt) => pt.code.toLowerCase() === formData.type)?.code ?? (formData.type as string).toUpperCase();
-    const isPromo = formData.badges.includes('promo');
     const originalPriceNum = formData.originalPrice ? parseFloat(formData.originalPrice) : undefined;
     const productPayload: ProductFormData = {
       name: formData.name,
       description: formData.description,
-      price: priceValue,
-      originalPrice: isPromo && originalPriceNum && originalPriceNum > priceValue ? originalPriceNum : undefined,
-      weight: parseFloat(formData.weight),
-      marginGain: margin,
+      price: defaultVariant.price,
+      originalPrice: isPromo && originalPriceNum && originalPriceNum > defaultVariant.price ? originalPriceNum : defaultVariant.originalPrice,
+      weight: defaultVariant.weight,
+      marginGain: defaultVariant.marginGain,
+      variants: parsedVariants,
       category: formData.category,
       type: typeCode,
       /** Valeur fixe : le backend conserve le champ ; plus géré côté UI */
@@ -522,68 +584,13 @@ const AdminProducts = () => {
               />
             </div>
 
-            <div className="grid md:grid-cols-2 lg:grid-cols-5 gap-4">
-              <div>
-                <Label htmlFor="weight">Poids (g) *</Label>
-                <Input
-                  id="weight"
-                  type="number"
-                  value={formData.weight}
-                  onChange={(e) => setFormData(prev => ({ ...prev, weight: e.target.value }))}
-                  required
-                  min={0.1}
-                  step={0.1}
-                  className="mt-1"
-                />
-              </div>
-              <div>
-                <Label htmlFor="price">
-                  {formData.badges.includes('promo') ? 'Prix promo (MAD) *' : 'Prix (MAD) *'}
-                </Label>
-                <Input
-                  id="price"
-                  type="number"
-                  value={formData.price}
-                  readOnly={!formData.badges.includes('promo')}
-                  onChange={formData.badges.includes('promo') ? (e) => setFormData(prev => ({ ...prev, price: e.target.value })) : undefined}
-                  className={formData.badges.includes('promo') ? 'mt-1' : 'mt-1 bg-muted'}
-                />
-                {goldPriceSettings && !formData.badges.includes('promo') && (
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Calculé : (grammes × {goldPriceSettings.pricePerGram} + marge) MAD
-                  </p>
-                )}
-              </div>
-              {formData.badges.includes('promo') && (
-                <div>
-                  <Label htmlFor="originalPrice">Prix original avant réduction (MAD)</Label>
-                  <Input
-                    id="originalPrice"
-                    type="number"
-                    min={0}
-                    value={formData.originalPrice}
-                    onChange={(e) => setFormData(prev => ({ ...prev, originalPrice: e.target.value }))}
-                    className="mt-1"
-                  />
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Prix affiché barré sur la fiche produit
-                  </p>
-                </div>
-              )}
-              <div>
-                <Label htmlFor="marginGain">Marge / gain (MAD)</Label>
-                <Input
-                  id="marginGain"
-                  type="number"
-                  min={0}
-                  step={1}
-                  value={formData.marginGain}
-                  onChange={(e) => setFormData(prev => ({ ...prev, marginGain: e.target.value }))}
-                  className="mt-1"
-                />
-                <p className="text-xs text-muted-foreground mt-1">Par produit (ex: 500, 200…)</p>
-              </div>
-            </div>
+            <ProductVariantEditor
+              rows={variantRows}
+              onChange={setVariantRows}
+              isPromo={isPromo}
+              pricePerGram={goldPriceSettings?.pricePerGram}
+              defaultMarginGain={formData.marginGain}
+            />
 
             <div className="grid md:grid-cols-2 gap-4">
               <div>

@@ -54,7 +54,7 @@ const Cart = () => {
             {/* Cart Items */}
             <div className="lg:col-span-2 space-y-8">
               {items.map((item, index) => (
-                <div key={`${item.product.id}-${item.selectedSize ?? ''}-${index}`} className="bg-white/60 dark:bg-[#2a2515]/40 backdrop-blur-sm p-6 ornate-border rounded-sm">
+                <div key={`${item.product.id}-${item.selectedVariantId ?? ''}-${item.selectedSize ?? ''}-${index}`} className="bg-white/60 dark:bg-[#2a2515]/40 backdrop-blur-sm p-6 ornate-border rounded-sm">
                   <div className="flex flex-col md:flex-row gap-6">
                     <div className="w-full md:w-40 aspect-square border border-accent-beige/20 p-2 bg-white dark:bg-background-dark shrink-0">
                       <div className="w-full h-full bg-cover bg-center" style={{ backgroundImage: `url(${item.product.images[0]})` }}></div>
@@ -64,7 +64,7 @@ const Cart = () => {
                         <div className="flex justify-between items-start mb-2">
                           <h3 className="text-xl font-display font-bold text-secondary-dark dark:text-white">{item.product.name}</h3>
                           <button 
-                            onClick={() => removeFromCart(item.product.id, item.selectedSize)}
+                            onClick={() => removeFromCart(item.product.id, item.selectedSize, item.selectedVariantId)}
                             className="text-accent-beige hover:text-red-800 transition-colors"
                           >
                             <X className="text-xl" />
@@ -80,7 +80,7 @@ const Cart = () => {
                         <div className="flex items-center border border-accent-beige/30">
                           <button 
                             type="button"
-                            onClick={() => updateQuantity(item.product.id, Math.max(1, item.quantity - 1), item.selectedSize)}
+                            onClick={() => updateQuantity(item.product.id, Math.max(1, item.quantity - 1), item.selectedSize, item.selectedVariantId)}
                             disabled={item.quantity <= 1}
                             className="px-3 py-1 text-accent-beige hover:bg-accent-beige/10 transition-colors border-r border-accent-beige/30"
                           >
@@ -89,7 +89,7 @@ const Cart = () => {
                           <span className="px-4 py-1 text-sm font-bold text-secondary-dark dark:text-white">{item.quantity}</span>
                           <button 
                             type="button"
-                            onClick={() => updateQuantity(item.product.id, item.quantity + 1, item.selectedSize)}
+                            onClick={() => updateQuantity(item.product.id, item.quantity + 1, item.selectedSize, item.selectedVariantId)}
                             className="px-3 py-1 text-accent-beige hover:bg-accent-beige/10 transition-colors border-l border-accent-beige/30"
                           >
                             +

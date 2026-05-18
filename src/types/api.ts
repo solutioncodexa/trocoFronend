@@ -26,6 +26,7 @@ export interface CartItemDTO {
   product: ProductDetailDTO;
   quantity: number;
   selectedSize?: string;
+  selectedVariantId?: string;
   selectedGoldType?: string;
 }
 

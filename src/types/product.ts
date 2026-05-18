@@ -1,3 +1,5 @@
+import type { ProductVariant } from './product-variant';
+
 export type ProductCategory = 'beldi' | 'modern';
 export type ProductType = 'bracelet' | 'ring' | 'necklace' | 'earrings' | 'set';
 export type PaymentMethod = 'cash_on_delivery' | 'online';
@@ -71,6 +73,7 @@ export interface CartItem {
   product: Product;
   quantity: number;
   selectedSize?: string;
+  selectedVariantId?: string;
 }
 
 export interface Order {

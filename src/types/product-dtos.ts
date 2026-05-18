@@ -1,7 +1,11 @@
+import type { ProductVariant } from './product-variant';
+
 /**
  * DTOs produit alignés sur le backend (list vs détail).
  * @see ProductListItemDTO / ProductDetailDTO (Java)
  */
+
+export type { ProductVariant };
 
 /** Grille boutique, filtres, pagination publique — sans description longue */
 export interface ProductListItemDTO {
@@ -26,6 +30,7 @@ export interface ProductDetailDTO extends ProductListItemDTO {
   description: string;
   availableSizes?: string[];
   marginGain?: number;
+  variants?: ProductVariant[];
 }
 
 /** @deprecated Utiliser ProductDetailDTO */

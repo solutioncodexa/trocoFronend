@@ -4,9 +4,9 @@ import { toast } from 'sonner';
 
 interface CartContextType {
   items: CartItem[];
-  addToCart: (product: Product, quantity?: number, selectedSize?: string) => void;
-  removeFromCart: (productId: string, selectedSize?: string) => void;
-  updateQuantity: (productId: string, quantity: number, selectedSize?: string) => void;
+  addToCart: (product: Product, quantity?: number, selectedSize?: string, selectedVariantId?: string) => void;
+  removeFromCart: (productId: string, selectedSize?: string, selectedVariantId?: string) => void;
+  updateQuantity: (productId: string, quantity: number, selectedSize?: string, selectedVariantId?: string) => void;
   clearCart: () => void;
   getTotal: () => number;
   getItemCount: () => number;
@@ -45,17 +45,19 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     }
   }, []);
 
-  const addToCart = (product: Product, quantity = 1, selectedSize?: string) => {
+  const addToCart = (product: Product, quantity = 1, selectedSize?: string, selectedVariantId?: string) => {
     setItems((prev) => {
       const existing = prev.find(
         (item) =>
           normalizeId(item.product.id) === normalizeId(product.id) &&
-          normalizeVariant(item.selectedSize) === normalizeVariant(selectedSize)
+          normalizeVariant(item.selectedSize) === normalizeVariant(selectedSize) &&
+          normalizeVariant(item.selectedVariantId) === normalizeVariant(selectedVariantId)
       );
       if (existing) {
         const newItems = prev.map((item) =>
           normalizeId(item.product.id) === normalizeId(product.id) &&
-          normalizeVariant(item.selectedSize) === normalizeVariant(selectedSize)
+          normalizeVariant(item.selectedSize) === normalizeVariant(selectedSize) &&
+          normalizeVariant(item.selectedVariantId) === normalizeVariant(selectedVariantId)
             ? { ...item, quantity: item.quantity + quantity }
             : item
         );
@@ -63,7 +65,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
         toast.success('Quantité mise à jour dans le panier');
         return newItems;
       }
-      const newItems = [...prev, { product, quantity, selectedSize }];
+      const newItems = [...prev, { product, quantity, selectedSize, selectedVariantId }];
       localStorage.setItem('cart', JSON.stringify(newItems));
       toast.success('Produit ajouté au panier');
       return newItems;
@@ -85,16 +87,17 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     });
   };
 
-  const updateQuantity = (productId: string, quantity: number, selectedSize?: string) => {
+  const updateQuantity = (productId: string, quantity: number, selectedSize?: string, selectedVariantId?: string) => {
     if (quantity <= 0) {
-      removeFromCart(productId, selectedSize);
+      removeFromCart(productId, selectedSize, selectedVariantId);
       return;
     }
 
     setItems((prev) => {
       const newItems = prev.map((item) =>
         normalizeId(item.product.id) === normalizeId(productId) &&
-        normalizeVariant(item.selectedSize) === normalizeVariant(selectedSize)
+        normalizeVariant(item.selectedSize) === normalizeVariant(selectedSize) &&
+        normalizeVariant(item.selectedVariantId) === normalizeVariant(selectedVariantId)
           ? { ...item, quantity }
           : item
       );
