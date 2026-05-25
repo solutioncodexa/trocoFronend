@@ -1,9 +1,13 @@
 import { Link } from 'react-router-dom';
 import { Trash2, Plus, Minus, ShoppingBag, ArrowRight, ArrowLeft, X, Search, Verified } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
 import Layout from '@/components/layout/Layout';
 import { Button } from '@/components/ui/button';
 import { useCart } from '@/contexts/CartContext';
 import { formatPrice } from '@/utils/formatPrice';
+import { productsApi } from '@/services/api';
+import { mapProductListItemListToProducts } from '@/utils/productMapper';
+import ProductCard from '@/components/ui/ProductCard';
 
 const Cart = () => {
   const {
@@ -33,6 +37,59 @@ const Cart = () => {
       </Layout>
     );
   }
+
+  const cartCategories = [...new Set(items.map(i => i.product.category))];
+  const cartTypes = [...new Set(items.map(i => i.product.type).filter(Boolean))];
+  const cartProductIds = new Set(items.map(i => i.product.id));
+
+  const complementaryTypes: Record<string, string[]> = {
+    bague: ['bracelet', 'collier', 'boucles-oreilles'],
+    bracelet: ['bague', 'collier', 'boucles-oreilles'],
+    collier: ['bague', 'bracelet', 'boucles-oreilles'],
+    'boucles-oreilles': ['collier', 'bague', 'bracelet'],
+  };
+
+  const suggestedTypes = cartTypes.length > 0
+    ? [...new Set(cartTypes.flatMap(t => complementaryTypes[t] || []))]
+    : [];
+
+  const { data: crossSellProducts = [] } = useQuery({
+    queryKey: ['cross-sell', cartCategories.join(','), cartTypes.join(',')],
+    queryFn: async () => {
+      const category = cartCategories[0];
+      let products: ReturnType<typeof mapProductListItemListToProducts> = [];
+
+      for (const type of suggestedTypes) {
+        if (products.length >= 4) break;
+        const res = await productsApi.getAllProducts({
+          page: 0,
+          size: 4,
+          category,
+          type,
+        });
+        const mapped = mapProductListItemListToProducts(res.content)
+          .filter(p => !cartProductIds.has(p.id) && !products.some(e => e.id === p.id));
+        products = [...products, ...mapped];
+      }
+
+      if (products.length < 4) {
+        const res = await productsApi.getAllProducts({
+          page: 0,
+          size: 8,
+          category,
+          sortBy: 'createdAt',
+          sortDir: 'DESC',
+        });
+        const mapped = mapProductListItemListToProducts(res.content)
+          .filter(p => !cartProductIds.has(p.id) && !products.some(e => e.id === p.id));
+        products = [...products, ...mapped];
+      }
+
+      return products.slice(0, 4);
+    },
+    enabled: items.length > 0,
+    staleTime: 5 * 60 * 1000,
+  });
 
   const shipping = getTotal() >= 2000 ? 0 : 50;
   const total = getTotal() + shipping;
@@ -155,6 +212,27 @@ const Cart = () => {
             </div>
           </div>
         </div>
+
+        {crossSellProducts.length > 0 && (
+          <section className="max-w-[1200px] mx-auto w-full mt-16 mb-4">
+            <div className="flex flex-col items-center mb-8 text-center">
+              <div className="w-16 h-px bg-accent-beige/40 mb-3 relative">
+                <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 size-2 rotate-45 border border-accent-beige bg-paper" />
+              </div>
+              <h3 className="font-display text-xl sm:text-2xl text-secondary-dark dark:text-white mb-1">
+                Complétez votre parure
+              </h3>
+              <p className="text-accent-beige uppercase tracking-widest text-[10px] sm:text-xs">
+                Des pièces assorties pour sublimer votre collection
+              </p>
+            </div>
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6 px-4 sm:px-0">
+              {crossSellProducts.map((p) => (
+                <ProductCard key={p.id} product={p} />
+              ))}
+            </div>
+          </section>
+        )}
       </main>
     </Layout>
   );

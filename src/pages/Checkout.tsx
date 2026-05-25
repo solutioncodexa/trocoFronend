@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { useMutation } from '@tanstack/react-query';
-import { Check, Banknote, CheckCircle, Verified } from 'lucide-react';
+import { useMutation, useQuery } from '@tanstack/react-query';
+import { Check, Banknote, CheckCircle, Verified, Tag, X, Loader2, ArrowRight, Sparkles } from 'lucide-react';
 import Layout from '@/components/layout/Layout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -11,7 +11,9 @@ import { formatPrice } from '@/utils/formatPrice';
 import { toast } from 'sonner';
 import { PaymentMethod } from '@/types/product';
 import { ordersApi } from '@/services/api';
+import { promoCodesApi } from '@/services/api/promoCodes';
 import { OrderDTO, CartItemDTO } from '@/types/api';
+import { DiscountType } from '@/types/promo-codes';
 
 const Checkout = () => {
   const navigate = useNavigate();
@@ -22,6 +24,15 @@ const Checkout = () => {
     updateQuantity,
     removeFromCart
   } = useCart();
+  const subtotal = getTotal();
+
+  const { data: promoSuggestions = [] } = useQuery({
+    queryKey: ['promo-suggestions', subtotal],
+    queryFn: () => promoCodesApi.getSuggestions(subtotal),
+    enabled: subtotal > 0,
+    staleTime: 30_000,
+  });
+
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('cash_on_delivery');
@@ -32,6 +43,55 @@ const Checkout = () => {
     city: '',
     notes: ''
   });
+
+  // ─── Promo code state ──────────────────────────────────
+  const [promoCodeInput, setPromoCodeInput] = useState('');
+  const [appliedPromo, setAppliedPromo] = useState<{
+    code: string;
+    discountType: DiscountType;
+    discountValue: number;
+  } | null>(null);
+  const [promoLoading, setPromoLoading] = useState(false);
+  const [promoError, setPromoError] = useState('');
+
+  const handleApplyPromo = async (codeOverride?: string) => {
+    const code = (codeOverride ?? promoCodeInput).trim().toUpperCase();
+    if (!code) return;
+    setPromoLoading(true);
+    setPromoError('');
+    try {
+      const res = await promoCodesApi.validate(code, getTotal());
+      if (res.valid && res.discountType && res.discountValue) {
+        setAppliedPromo({
+          code: res.code ?? code,
+          discountType: res.discountType,
+          discountValue: res.discountValue,
+        });
+        toast.success('Code promo appliqué !');
+      } else {
+        setPromoError(res.message || 'Code invalide');
+      }
+    } catch {
+      setPromoError('Erreur lors de la vérification');
+    } finally {
+      setPromoLoading(false);
+    }
+  };
+
+  const removePromo = () => {
+    setAppliedPromo(null);
+    setPromoCodeInput('');
+    setPromoError('');
+  };
+
+  const calculateDiscount = () => {
+    if (!appliedPromo) return 0;
+    const subtotal = getTotal();
+    if (appliedPromo.discountType === 'percentage') {
+      return Math.round(subtotal * (appliedPromo.discountValue / 100));
+    }
+    return Math.min(appliedPromo.discountValue, subtotal);
+  };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -90,12 +150,14 @@ const Checkout = () => {
       selectedVariantId: item.selectedVariantId,
     }));
 
-    const shipping = getTotal() >= 2000 ? 0 : 50;
-    const total = getTotal() + shipping;
+    const subtotal = getTotal();
+    const discount = calculateDiscount();
+    const afterDiscount = subtotal - discount;
+    const shipping = afterDiscount >= 2000 ? 0 : 50;
+    const total = afterDiscount + shipping;
 
-    // Créer l'objet OrderDTO
     const orderDTO: OrderDTO = {
-      id: '', // Sera généré par le backend
+      id: '',
       items: cartItems,
       customer: {
         fullName: formData.fullName,
@@ -107,6 +169,10 @@ const Checkout = () => {
       paymentMethod: paymentMethod,
       status: 'new',
       createdAt: new Date().toISOString(),
+      ...(appliedPromo && {
+        promoCode: appliedPromo.code,
+        discount: discount,
+      }),
     };
 
     createOrderMutation.mutate(orderDTO);
@@ -147,8 +213,10 @@ const Checkout = () => {
       </Layout>;
   }
 
-  const shipping = getTotal() >= 2000 ? 0 : 50;
-  const total = getTotal() + shipping;
+  const discount = calculateDiscount();
+  const afterDiscount = subtotal - discount;
+  const shipping = afterDiscount >= 2000 ? 0 : 50;
+  const total = afterDiscount + shipping;
 
   return (
     <Layout>
@@ -305,11 +373,118 @@ const Checkout = () => {
                 ))}
               </div>
 
+              {/* Promo Code Input */}
+              <div className="border-t border-accent-beige/10 pt-6 mb-4">
+                <Label className="block text-xs uppercase tracking-widest text-accent-beige mb-2 font-bold">
+                  Code Promo
+                </Label>
+                {appliedPromo ? (
+                  <div className="flex items-center justify-between bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg px-4 py-3">
+                    <div className="flex items-center gap-2">
+                      <Tag className="w-4 h-4 text-green-600" />
+                      <span className="font-mono font-bold text-sm text-green-700 dark:text-green-400">
+                        {appliedPromo.code}
+                      </span>
+                      <span className="text-xs text-green-600">
+                        (−{appliedPromo.discountType === 'percentage' ? `${appliedPromo.discountValue}%` : formatPrice(appliedPromo.discountValue)})
+                      </span>
+                    </div>
+                    <button onClick={removePromo} className="text-green-600 hover:text-red-500 transition-colors">
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex gap-2">
+                    <Input
+                      value={promoCodeInput}
+                      onChange={(e) => {
+                        setPromoCodeInput(e.target.value.toUpperCase());
+                        setPromoError('');
+                      }}
+                      placeholder="Entrez votre code"
+                      className="font-mono uppercase bg-transparent border-accent-beige/30 focus:border-primary"
+                      onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleApplyPromo())}
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => handleApplyPromo()}
+                      disabled={promoLoading || !promoCodeInput.trim()}
+                      className="border-accent-beige/30 hover:border-primary shrink-0"
+                    >
+                      {promoLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Appliquer'}
+                    </Button>
+                  </div>
+                )}
+                {promoError && (
+                  <p className="text-xs text-red-500 mt-1.5">{promoError}</p>
+                )}
+              </div>
+
+              {/* Promo suggestions — AliExpress style */}
+              {promoSuggestions.length > 0 && !appliedPromo && (
+                <div className="mb-4 space-y-2">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Sparkles className="w-4 h-4 text-primary" />
+                    <span className="text-xs uppercase tracking-widest text-accent-beige font-bold">
+                      Offres disponibles
+                    </span>
+                  </div>
+                  {promoSuggestions.map((s) => (
+                    <Link
+                      key={s.code}
+                      to="/codes-promo"
+                      className={`block rounded-lg border px-3 py-2.5 transition-all hover:shadow-md ${
+                        s.qualified
+                          ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800'
+                          : 'bg-amber-50 dark:bg-amber-900/15 border-amber-200 dark:border-amber-800'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex-1 min-w-0">
+                          {s.qualified ? (
+                            <p className="text-xs font-bold text-green-700 dark:text-green-400">
+                              🎉 Vous bénéficiez de{' '}
+                              {s.discountType === 'percentage'
+                                ? `${s.discountValue}%`
+                                : `${s.discountValue} DH`}{' '}
+                              de réduction !
+                            </p>
+                          ) : (
+                            <p className="text-xs text-amber-700 dark:text-amber-400">
+                              <span className="font-bold">
+                                Plus que {formatPrice(s.amountNeeded)}
+                              </span>{' '}
+                              pour obtenir{' '}
+                              <span className="font-bold">
+                                {s.discountType === 'percentage'
+                                  ? `${s.discountValue}%`
+                                  : `${formatPrice(s.discountValue)}`}
+                              </span>{' '}
+                              de réduction
+                            </p>
+                          )}
+                        </div>
+                        <ArrowRight className={`w-3.5 h-3.5 shrink-0 ${
+                          s.qualified ? 'text-green-600' : 'text-amber-500'
+                        }`} />
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              )}
+
               <div className="border-t border-accent-beige/10 pt-6 space-y-3">
                 <div className="flex justify-between text-sm">
                   <span className="text-accent-beige uppercase tracking-wider">Sous-total</span>
-                  <span className="text-secondary-dark dark:text-white">{formatPrice(getTotal())}</span>
+                  <span className="text-secondary-dark dark:text-white">{formatPrice(subtotal)}</span>
                 </div>
+                {discount > 0 && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-green-600 uppercase tracking-wider">Réduction</span>
+                    <span className="text-green-600 font-medium">−{formatPrice(discount)}</span>
+                  </div>
+                )}
                 <div className="flex justify-between text-sm">
                   <span className="text-accent-beige uppercase tracking-wider">Livraison</span>
                   <span className={shipping === 0 ? 'text-green-600 font-medium' : 'text-secondary-dark dark:text-white'}>

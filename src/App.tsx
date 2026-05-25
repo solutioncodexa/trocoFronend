@@ -26,6 +26,7 @@ const GuideTailles = lazy(() => import("./pages/GuideTailles"));
 const CoursOr = lazy(() => import("./pages/CoursOr"));
 const MaMaison = lazy(() => import("./pages/MaMaison"));
 const NosAteliers = lazy(() => import("./pages/NosAteliers"));
+const PromoCodes = lazy(() => import("./pages/PromoCodes"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 const AdminLogin = lazy(() => import("./pages/admin/AdminLogin"));
@@ -40,6 +41,7 @@ const AdminCollections = lazy(() => import("./pages/admin/AdminCollections"));
 const AdminFeaturedProducts = lazy(() => import("./pages/admin/AdminFeaturedProducts"));
 const AdminTopBarMessages = lazy(() => import("./pages/admin/AdminTopBarMessages"));
 const AdminPromoModals = lazy(() => import("./pages/admin/AdminPromoModals"));
+const AdminPromoCodes = lazy(() => import("./pages/admin/AdminPromoCodes"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -74,6 +76,7 @@ const App = () => (
                   <Route path="/produit/:id" element={<ProductDetail />} />
                   <Route path="/panier" element={<Cart />} />
                   <Route path="/checkout" element={<Checkout />} />
+                  <Route path="/codes-promo" element={<PromoCodes />} />
                   <Route path="/commande-personnalisee" element={<CustomOrder />} />
                   <Route path="/sur-mesure" element={<SurMesure />} />
                   <Route path="/contact" element={<Contact />} />
@@ -96,6 +99,7 @@ const App = () => (
                   <Route path="/admin/produits-selectionnes" element={<ProtectedAdminRoute><AdminFeaturedProducts /></ProtectedAdminRoute>} />
                   <Route path="/admin/top-bar-messages" element={<ProtectedAdminRoute><AdminTopBarMessages /></ProtectedAdminRoute>} />
                   <Route path="/admin/promo-modals" element={<ProtectedAdminRoute><AdminPromoModals /></ProtectedAdminRoute>} />
+                  <Route path="/admin/codes-promo" element={<ProtectedAdminRoute><AdminPromoCodes /></ProtectedAdminRoute>} />
                   <Route path="/admin/*" element={<Navigate to="/admin" replace />} />
                   <Route path="*" element={<NotFound />} />
                 </Routes>

@@ -9,6 +9,7 @@ import {
   MessageSquare, 
   Image as ImageIcon,
   Tag,
+  Ticket,
   FolderOpen,
   Layers,
   ChevronRight,
@@ -41,6 +42,7 @@ const navSections = [
       { href: '/admin/produits-selectionnes', label: 'Produits Sélectionnés', icon: Star },
       { href: '/admin/top-bar-messages', label: 'Messages Top Bar', icon: MessageSquare },
       { href: '/admin/promo-modals', label: 'Promo Modals', icon: ImageIcon },
+      { href: '/admin/codes-promo', label: 'Codes Promo', icon: Ticket },
     ],
   },
   {

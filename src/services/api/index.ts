@@ -12,3 +12,4 @@ export * from './goldPriceSettings';
 export * from './goldPrices';
 export * from './notifications';
 export * from './upload';
+export * from './promoCodes';

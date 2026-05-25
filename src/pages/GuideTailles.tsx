@@ -1,4 +1,41 @@
+import { useState } from 'react';
 import Layout from '@/components/layout/Layout';
+import { generateSizeGuidePdf } from '@/utils/generateSizeGuidePdf';
+
+const RING_SIZES = [
+  { fr: 41, circumference: 41, diameter: 13.0 },
+  { fr: 42, circumference: 42, diameter: 13.4 },
+  { fr: 43, circumference: 43, diameter: 13.7 },
+  { fr: 44, circumference: 44, diameter: 14.0 },
+  { fr: 45, circumference: 45, diameter: 14.3 },
+  { fr: 46, circumference: 46, diameter: 14.6 },
+  { fr: 47, circumference: 47, diameter: 15.0 },
+  { fr: 48, circumference: 48, diameter: 15.3 },
+  { fr: 49, circumference: 49, diameter: 15.6 },
+  { fr: 50, circumference: 50, diameter: 15.9 },
+  { fr: 51, circumference: 51, diameter: 16.2 },
+  { fr: 52, circumference: 52, diameter: 16.5 },
+  { fr: 53, circumference: 53, diameter: 16.9 },
+  { fr: 54, circumference: 54, diameter: 17.2 },
+  { fr: 55, circumference: 55, diameter: 17.5 },
+  { fr: 56, circumference: 56, diameter: 17.8 },
+  { fr: 57, circumference: 57, diameter: 18.1 },
+  { fr: 58, circumference: 58, diameter: 18.5 },
+  { fr: 59, circumference: 59, diameter: 18.8 },
+  { fr: 60, circumference: 60, diameter: 19.1 },
+  { fr: 61, circumference: 61, diameter: 19.4 },
+  { fr: 62, circumference: 62, diameter: 19.7 },
+  { fr: 63, circumference: 63, diameter: 20.1 },
+  { fr: 64, circumference: 64, diameter: 20.4 },
+  { fr: 65, circumference: 65, diameter: 20.7 },
+  { fr: 66, circumference: 66, diameter: 21.0 },
+  { fr: 67, circumference: 67, diameter: 21.3 },
+  { fr: 68, circumference: 68, diameter: 21.6 },
+  { fr: 69, circumference: 69, diameter: 22.0 },
+  { fr: 70, circumference: 70, diameter: 22.3 },
+  { fr: 71, circumference: 71, diameter: 22.6 },
+  { fr: 72, circumference: 72, diameter: 22.9 },
+];
 
 const RING_SIZE_CARDS: { label: string; circleClass: string }[] = [
   { label: '41 (13mm)', circleClass: 'w-10 h-10' },
@@ -13,6 +50,17 @@ const ringCardClass =
   'bg-white border border-primary/20 flex min-h-0 min-w-0 h-52 flex-col rounded-lg p-4 hover:border-primary transition-colors';
 
 const GuideTailles = () => {
+  const [circumference, setCircumference] = useState<string>('');
+
+  const circumferenceNum = parseFloat(circumference);
+  const matchedSize = !isNaN(circumferenceNum) && circumferenceNum >= 40 && circumferenceNum <= 73
+    ? RING_SIZES.reduce((closest, size) =>
+        Math.abs(size.circumference - circumferenceNum) < Math.abs(closest.circumference - circumferenceNum)
+          ? size
+          : closest
+      )
+    : null;
+
   return (
     <Layout>
       <main className="flex flex-1 justify-center py-12 px-4 min-w-0 max-w-full overflow-x-hidden w-full">
@@ -23,14 +71,13 @@ const GuideTailles = () => {
               <h1 className="text-secondary-dark text-3xl sm:text-5xl font-black leading-tight tracking-[-0.033em] italic break-words">Guide des Tailles</h1>
               <p className="text-primary text-lg font-normal leading-normal italic">L'art de la mesure par YaraGold Heritage</p>
             </div>
-            <a 
-              href="/guide-tailles-yaragold.pdf" 
-              download="guide-tailles-yaragold.pdf"
+            <button
+              onClick={() => generateSizeGuidePdf()}
               className="flex w-full sm:w-auto min-w-0 sm:min-w-[280px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-12 px-4 sm:px-6 bg-primary text-white text-sm font-bold leading-normal tracking-[0.05em] uppercase transition-transform hover:scale-105"
             >
               <span className="material-symbols-outlined mr-2">picture_as_pdf</span>
               <span className="truncate">Télécharger le Guide Imprimable (PDF)</span>
-            </a>
+            </button>
           </div>
           
           <div className="flex justify-center py-12">
@@ -54,10 +101,6 @@ const GuideTailles = () => {
                 <p className="text-accent-beige text-base font-normal leading-relaxed mb-4">
                   Enroulez un ruban ou une bande de papier autour de la base de votre doigt. Marquez le point de rencontre et mesurez la distance avec une règle millimétrée. Cette mesure correspond à votre taille française.
                 </p>
-                <a className="text-sm font-bold leading-normal tracking-[0.015em] flex items-center gap-2 text-primary hover:underline" href="#">
-                  Voir le tutoriel vidéo
-                  <span className="material-symbols-outlined text-sm">arrow_forward</span>
-                </a>
               </div>
               <div className="bg-white/50 p-6 rounded-xl border border-accent-beige/20">
                 <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
@@ -69,6 +112,96 @@ const GuideTailles = () => {
                   <li>• Si vous hésitez entre deux tailles, choisissez la plus grande.</li>
                   <li>• N'oubliez pas de prendre en compte la taille de l'articulation.</li>
                 </ul>
+              </div>
+            </div>
+
+            {/* Interactive Ring Size Calculator */}
+            <div className="p-4 mt-4">
+              <div className="bg-gradient-to-br from-primary/5 to-primary/10 border-2 border-primary/20 rounded-xl p-6 sm:p-8">
+                <h3 className="text-lg font-bold mb-1 flex items-center gap-2">
+                  <span className="material-symbols-outlined text-primary">calculate</span>
+                  Calculateur de Taille
+                </h3>
+                <p className="text-sm text-accent-beige mb-6">
+                  Entrez la circonférence de votre doigt en millimètres pour trouver votre taille.
+                </p>
+
+                <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-end">
+                  <div className="flex-1 max-w-xs">
+                    <label className="block text-xs uppercase tracking-widest text-accent-beige mb-2 font-bold">
+                      Circonférence (mm)
+                    </label>
+                    <input
+                      type="number"
+                      min={40}
+                      max={75}
+                      step={0.5}
+                      value={circumference}
+                      onChange={(e) => setCircumference(e.target.value)}
+                      placeholder="Ex: 52"
+                      className="w-full h-12 px-4 text-lg font-bold rounded-lg border-2 border-primary/30 bg-white focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
+                    />
+                  </div>
+
+                  {matchedSize && (
+                    <div className="flex gap-4 items-center bg-white rounded-lg border border-primary/20 px-6 py-3 shadow-sm">
+                      <div className="text-center">
+                        <p className="text-xs text-accent-beige uppercase tracking-widest">Taille FR</p>
+                        <p className="text-3xl font-black text-primary">{matchedSize.fr}</p>
+                      </div>
+                      <div className="w-px h-12 bg-primary/20" />
+                      <div className="text-center">
+                        <p className="text-xs text-accent-beige uppercase tracking-widest">Diamètre</p>
+                        <p className="text-xl font-bold text-secondary-dark">{matchedSize.diameter} mm</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {circumference && !matchedSize && (
+                    <p className="text-sm text-red-500 font-medium py-3">
+                      Valeur hors plage (41-72 mm)
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Conversion Table */}
+            <div className="p-4 mt-2">
+              <div className="bg-white/50 rounded-xl border border-accent-beige/20 overflow-hidden">
+                <div className="px-6 py-4 border-b border-accent-beige/10">
+                  <h3 className="text-lg font-bold flex items-center gap-2">
+                    <span className="material-symbols-outlined text-primary">table_chart</span>
+                    Tableau de Correspondance
+                  </h3>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="bg-primary/5">
+                        <th className="px-4 py-3 text-left font-bold text-xs uppercase tracking-wider text-accent-beige">Taille FR</th>
+                        <th className="px-4 py-3 text-left font-bold text-xs uppercase tracking-wider text-accent-beige">Circonférence</th>
+                        <th className="px-4 py-3 text-left font-bold text-xs uppercase tracking-wider text-accent-beige">Diamètre</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-accent-beige/10">
+                      {RING_SIZES.filter((_, i) => i % 2 === 0).map((size) => (
+                        <tr
+                          key={size.fr}
+                          className={`transition-colors ${
+                            matchedSize?.fr === size.fr
+                              ? 'bg-primary/10 font-bold'
+                              : 'hover:bg-primary/5'
+                          }`}
+                        >
+                          <td className="px-4 py-2.5 font-bold">{size.fr}</td>
+                          <td className="px-4 py-2.5">{size.circumference} mm</td>
+                          <td className="px-4 py-2.5">{size.diameter} mm</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </div>
             

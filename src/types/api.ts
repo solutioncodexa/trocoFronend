@@ -46,6 +46,8 @@ export interface OrderDTO {
   paymentMethod: string; // 'cash_on_delivery' or 'online'
   status: string; // 'new', 'confirmed', 'delivered', 'cancelled'
   createdAt: string;
+  promoCode?: string;
+  discount?: number;
 }
 
 export interface CustomOrderDTO {
