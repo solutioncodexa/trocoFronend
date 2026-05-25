@@ -11,6 +11,7 @@ import { Plus, Pencil, Trash2, Search, ToggleLeft, ToggleRight, Loader2 } from '
 import { collectionsApi } from '@/services/api';
 import { CollectionDTO } from '@/types/api';
 import { toast } from 'sonner';
+import { toastError } from '@/utils/toastMessages';
 import { staticCatalogQueryOptions } from '@/config/queryOptions';
 import { cn } from '@/lib/utils';
 
@@ -39,7 +40,7 @@ const AdminCollections = () => {
       toast.success('Collection créée avec succès');
       handleCloseModal();
     },
-    onError: (e: Error) => toast.error(e.message || 'Erreur'),
+    onError: (e: Error) => toastError(e, 'Erreur lors de la création'),
   });
 
   const updateMutation = useMutation({
@@ -50,7 +51,7 @@ const AdminCollections = () => {
       toast.success('Collection modifiée avec succès');
       handleCloseModal();
     },
-    onError: (e: Error) => toast.error(e.message || 'Erreur'),
+    onError: (e: Error) => toastError(e, 'Erreur lors de la modification'),
   });
 
   const deleteMutation = useMutation({
@@ -59,7 +60,7 @@ const AdminCollections = () => {
       queryClient.invalidateQueries({ queryKey: ['collections'] });
       toast.success('Collection supprimée');
     },
-    onError: (e: Error) => toast.error(e.message || 'Erreur'),
+    onError: (e: Error) => toastError(e, 'Erreur lors de la suppression'),
   });
 
   const filteredCollections = collections.filter(

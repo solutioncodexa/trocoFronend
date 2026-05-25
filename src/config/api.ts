@@ -35,8 +35,11 @@ export const apiRequest = async <T>(
     if (response.status === 401) {
       localStorage.removeItem('goldyara_admin_token');
     }
-    const error = await response.json().catch(() => ({ message: 'Une erreur est survenue' }));
-    throw new Error(error.message || `HTTP error! status: ${response.status}`);
+    const error = await response.json().catch(() => ({}));
+    const safeMessage = typeof error.message === 'string' && error.message.length < 200
+      ? error.message
+      : 'Une erreur est survenue';
+    throw new Error(safeMessage);
   }
 
   if (response.status === 204 || response.headers.get('content-length') === '0') {

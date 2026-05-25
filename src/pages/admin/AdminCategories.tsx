@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { categoriesApi } from '@/services/api';
 import { CategoryDTO } from '@/types/api';
 import { toast } from 'sonner';
+import { toastError } from '@/utils/toastMessages';
 import { staticCatalogQueryOptions } from '@/config/queryOptions';
 
 const AdminCategories = () => {
@@ -36,7 +37,7 @@ const AdminCategories = () => {
       toast.success('Catégorie créée avec succès');
       handleCloseModal();
     },
-    onError: (e: Error) => toast.error(e.message || 'Erreur lors de la création'),
+    onError: (e: Error) => toastError(e, 'Erreur lors de la création'),
   });
 
   const updateMutation = useMutation({
@@ -47,7 +48,7 @@ const AdminCategories = () => {
       toast.success('Catégorie modifiée avec succès');
       handleCloseModal();
     },
-    onError: (e: Error) => toast.error(e.message || 'Erreur lors de la modification'),
+    onError: (e: Error) => toastError(e, 'Erreur lors de la modification'),
   });
 
   const deleteMutation = useMutation({
@@ -56,7 +57,7 @@ const AdminCategories = () => {
       queryClient.invalidateQueries({ queryKey: ['categories'] });
       toast.success('Catégorie supprimée');
     },
-    onError: (e: Error) => toast.error(e.message || 'Erreur lors de la suppression'),
+    onError: (e: Error) => toastError(e, 'Erreur lors de la suppression'),
   });
 
   const handleOpenModal = (category?: CategoryDTO) => {

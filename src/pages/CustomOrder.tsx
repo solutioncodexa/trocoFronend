@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
+import { toastError } from '@/utils/toastMessages';
 import { customOrdersApi, productTypesApi, categoriesApi } from '@/services/api';
 import { CustomOrderDTO } from '@/types/api';
 import { staticCatalogQueryOptions } from '@/config/queryOptions';
@@ -79,7 +80,7 @@ const CustomOrder = () => {
     },
     onError: (error: Error) => {
       setIsSubmitting(false);
-      toast.error(error.message || 'Erreur lors de l\'envoi de la demande');
+      toastError(error, 'Erreur lors de l\'envoi de la demande');
     },
   });
 

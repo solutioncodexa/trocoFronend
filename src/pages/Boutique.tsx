@@ -1,17 +1,25 @@
 import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
-import { ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Loader2, SlidersHorizontal, X } from 'lucide-react';
 import Layout from '@/components/layout/Layout';
 import ProductCard from '@/components/ui/ProductCard';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Slider } from '@/components/ui/slider';
+import { Button } from '@/components/ui/button';
 import {
   Accordion,
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
 } from '@/components/ui/accordion';
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from '@/components/ui/sheet';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Product } from '@/types/product';
 import type { ProductListItemDTO } from '@/types/product-dtos';
@@ -21,6 +29,7 @@ import { sortProductTypesForDisplay } from '@/utils/productTypeSort';
 import { RevealOnScroll } from '@/components/animations';
 import { ANIMATIONS } from '@/config/animations';
 import { toast } from 'sonner';
+import { sanitizeErrorMessage } from '@/utils/toastMessages';
 import { staticCatalogQueryOptions } from '@/config/queryOptions';
 import { cn } from '@/lib/utils';
 
@@ -69,6 +78,7 @@ const Boutique = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState<SortOption>('newest');
   const [currentPage, setCurrentPage] = useState(1);
+  const [filtersOpen, setFiltersOpen] = useState(false);
 
   /** 'user-typing' => changement de mot-clé depuis le champ : repasser à la page 1. Autres sources : ne pas forcer la page. */
   const searchQuerySourceRef = useRef<'user-typing' | 'other'>('other');
@@ -202,8 +212,8 @@ const Boutique = () => {
 
   useEffect(() => {
     if (!isError) return;
-    const msg = error instanceof Error ? error.message : 'Erreur lors du chargement des produits';
-    toast.error(msg, { id: 'boutique-products-error' });
+    const raw = error instanceof Error ? error.message : undefined;
+    toast.error(sanitizeErrorMessage(raw), { id: 'boutique-products-error' });
   }, [isError, error]);
 
   const dtoList: ProductListItemDTO[] = pageResponse?.content ?? [];
@@ -428,6 +438,62 @@ const Boutique = () => {
     </label>
   );
 
+  const activeFilterCount = useMemo(() => {
+    let count = 0;
+    if (selectedCategory) count++;
+    if (selectedTypes.length > 0) count++;
+    if (selectedCollections.length > 0) count++;
+    if (priceRange[0] > 0 || priceRange[1] < 50000) count++;
+    if (inStockOnly) count++;
+    return count;
+  }, [selectedCategory, selectedTypes, selectedCollections, priceRange, inStockOnly]);
+
+  const filterPanelContent = (
+    <div className="flex flex-col gap-0">
+      <Accordion
+        type="multiple"
+        className="w-full"
+        defaultValue={['category']}
+      >
+        <AccordionItem value="category" className="border-accent-beige/15">
+          <AccordionTrigger className={accordionTriggerClass}>Catégorie</AccordionTrigger>
+          <AccordionContent>{categoryFilterList}</AccordionContent>
+        </AccordionItem>
+        <AccordionItem value="collection" className="border-accent-beige/15">
+          <AccordionTrigger className={accordionTriggerClass}>Collection</AccordionTrigger>
+          <AccordionContent>{collectionFilterList}</AccordionContent>
+        </AccordionItem>
+        <AccordionItem value="type" className="border-accent-beige/15 border-b-0">
+          <AccordionTrigger className={accordionTriggerClass}>Type de bijou</AccordionTrigger>
+          <AccordionContent>{typeFilterList}</AccordionContent>
+        </AccordionItem>
+      </Accordion>
+
+      <div className="border-t border-accent-beige/20 pt-6 px-0">
+        <h3 className={`${filterSectionTitleClass} mb-6 flex items-center gap-2`}>
+          Prix (MAD)
+          <div className="h-px flex-grow bg-accent-beige/20" />
+        </h3>
+        {priceFilterBlock}
+      </div>
+
+      <div className="mt-6">{inStockFilterRow}</div>
+
+      {hasActiveFilters && (
+        <button
+          type="button"
+          onClick={() => {
+            resetBrowseFilters();
+            setFiltersOpen(false);
+          }}
+          className="mt-6 w-full inline-flex items-center justify-center rounded-sm border border-primary px-6 py-2.5 text-xs font-bold uppercase tracking-widest text-primary hover:bg-primary hover:text-primary-foreground transition-colors"
+        >
+          Réinitialiser les filtres
+        </button>
+      )}
+    </div>
+  );
+
   return (
     <Layout>
       <section className="relative bg-paper py-16 md:py-24 border-b border-accent-beige/10 bg-paper-pattern overflow-hidden">
@@ -452,63 +518,142 @@ const Boutique = () => {
         </div>
       </section>
 
-      <main className="max-w-[1400px] mx-auto w-full min-w-0 px-0 sm:px-6 py-12 overflow-x-hidden">
+      <main className="max-w-[1400px] mx-auto w-full min-w-0 px-0 sm:px-6 py-8 md:py-12 overflow-x-hidden">
         <div className="flex flex-col lg:flex-row gap-8 lg:gap-12 min-w-0">
-          <aside className="w-full lg:w-72 shrink-0 max-lg:w-screen max-lg:ml-[calc(50%-50vw)] max-lg:mr-[calc(50%-50vw)] max-lg:px-4 max-lg:sm:px-6 max-lg:py-6 max-lg:border-b max-lg:border-accent-beige/15 max-lg:bg-paper dark:max-lg:bg-[#2a2515]">
-            <Accordion
-              type="multiple"
-              className="w-full border-t border-accent-beige/20 max-lg:-mt-2"
-              defaultValue={[]}
-            >
-              <AccordionItem value="category" className="border-accent-beige/15">
-                <AccordionTrigger className={accordionTriggerClass}>Catégorie</AccordionTrigger>
-                <AccordionContent>{categoryFilterList}</AccordionContent>
-              </AccordionItem>
-              <AccordionItem value="collection" className="border-accent-beige/15">
-                <AccordionTrigger className={accordionTriggerClass}>Collection</AccordionTrigger>
-                <AccordionContent>{collectionFilterList}</AccordionContent>
-              </AccordionItem>
-              <AccordionItem value="type" className="border-accent-beige/15 border-b-0">
-                <AccordionTrigger className={accordionTriggerClass}>Type de bijou</AccordionTrigger>
-                <AccordionContent>{typeFilterList}</AccordionContent>
-              </AccordionItem>
-            </Accordion>
 
-            <div className="border-t border-accent-beige/20 pt-6">
-              <h3 className={`${filterSectionTitleClass} mb-6 flex items-center gap-2`}>
-                Prix (MAD)
-                <div className="h-px flex-grow bg-accent-beige/20" />
-              </h3>
-              {priceFilterBlock}
-            </div>
-
-            <div className="mt-6">{inStockFilterRow}</div>
+          {/* Desktop sidebar — hidden on mobile */}
+          <aside className="hidden lg:block w-72 shrink-0">
+            {filterPanelContent}
           </aside>
 
           <div className="flex-grow min-w-0 px-4 sm:px-0">
-            <div className="flex flex-col md:flex-row justify-between items-stretch md:items-center mb-4 gap-4 border-b border-accent-beige/10 pb-6">
-              <div className="w-full md:flex-1 md:max-w-md">{searchFilterBlock}</div>
-              <div className="flex items-center gap-4 justify-center md:justify-end shrink-0">
-                <span className="text-xs text-accent-beige uppercase tracking-widest">Trier par :</span>
-                <Select
-                  value={sortBy}
-                  onValueChange={(value) => {
-                    clearKeywordSearch();
-                    setSortBy(value as SortOption);
-                  }}
-                >
-                  <SelectTrigger className="bg-transparent border-none text-xs font-bold uppercase tracking-widest text-secondary-dark focus:ring-0 cursor-pointer w-[min(100vw-2rem,220px)]">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {sortOptions.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+            {/* Toolbar: Filter button (mobile) + Search + Sort */}
+            <div className="flex flex-col gap-4 mb-6 border-b border-accent-beige/10 pb-6">
+              {/* Row 1: Filter button + Sort */}
+              <div className="flex items-center gap-3">
+                {/* Mobile filter button */}
+                <Sheet open={filtersOpen} onOpenChange={setFiltersOpen}>
+                  <SheetTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="lg:hidden flex items-center gap-2 border-accent-beige/30 text-secondary-dark hover:border-primary hover:text-primary shrink-0"
+                    >
+                      <SlidersHorizontal className="w-4 h-4" />
+                      <span className="text-xs font-bold uppercase tracking-widest">Filtres</span>
+                      {activeFilterCount > 0 && (
+                        <span className="min-w-[18px] h-[18px] px-1 flex items-center justify-center rounded-full bg-primary text-primary-foreground text-[10px] font-bold">
+                          {activeFilterCount}
+                        </span>
+                      )}
+                    </Button>
+                  </SheetTrigger>
+                  <SheetContent side="left" className="w-[320px] sm:w-[360px] overflow-y-auto scrollbar-app p-0">
+                    <SheetHeader className="px-5 pt-5 pb-4 border-b border-accent-beige/15 sticky top-0 bg-background z-10">
+                      <div className="flex items-center justify-between">
+                        <SheetTitle className="text-sm font-bold uppercase tracking-widest text-secondary-dark flex items-center gap-2">
+                          <SlidersHorizontal className="w-4 h-4 text-primary" />
+                          Filtres
+                          {activeFilterCount > 0 && (
+                            <span className="min-w-[18px] h-[18px] px-1 flex items-center justify-center rounded-full bg-primary text-primary-foreground text-[10px] font-bold">
+                              {activeFilterCount}
+                            </span>
+                          )}
+                        </SheetTitle>
+                      </div>
+                    </SheetHeader>
+                    <div className="px-5 py-4">
+                      {filterPanelContent}
+                    </div>
+                    {/* Sticky apply button */}
+                    <div className="sticky bottom-0 bg-background border-t border-accent-beige/15 p-4">
+                      <Button
+                        onClick={() => setFiltersOpen(false)}
+                        className="w-full bg-primary text-primary-foreground hover:bg-primary/90 text-xs font-bold uppercase tracking-widest"
+                      >
+                        Voir les résultats
+                      </Button>
+                    </div>
+                  </SheetContent>
+                </Sheet>
+
+                <div className="flex-1" />
+
+                {/* Sort — always visible */}
+                <div className="flex items-center gap-2 shrink-0">
+                  <span className="text-xs text-accent-beige uppercase tracking-widest hidden sm:inline">Trier par :</span>
+                  <Select
+                    value={sortBy}
+                    onValueChange={(value) => {
+                      clearKeywordSearch();
+                      setSortBy(value as SortOption);
+                    }}
+                  >
+                    <SelectTrigger className="bg-transparent border-none text-xs font-bold uppercase tracking-widest text-secondary-dark focus:ring-0 cursor-pointer w-auto max-w-[180px]">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {sortOptions.map((option) => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
+
+              {/* Row 2: Search */}
+              <div className="w-full">{searchFilterBlock}</div>
+
+              {/* Active filter tags (mobile) */}
+              {hasActiveFilters && (
+                <div className="flex flex-wrap items-center gap-2 lg:hidden">
+                  {selectedCategory && (
+                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-primary/10 text-primary text-[11px] font-medium">
+                      {categories.find(c => c.slug === selectedCategory)?.name ?? selectedCategory}
+                      <button type="button" onClick={() => handleCategoryChange(null)} className="hover:text-primary/70"><X className="w-3 h-3" /></button>
+                    </span>
+                  )}
+                  {selectedTypes.map(t => {
+                    const pt = productTypes.find(p => p.code.toLowerCase() === t);
+                    return (
+                      <span key={t} className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-primary/10 text-primary text-[11px] font-medium">
+                        {pt?.name ?? t}
+                        <button type="button" onClick={() => handleTypeToggle(t)} className="hover:text-primary/70"><X className="w-3 h-3" /></button>
+                      </span>
+                    );
+                  })}
+                  {selectedCollections.map(c => {
+                    const col = collections.find(x => x.slug === c);
+                    return (
+                      <span key={c} className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-primary/10 text-primary text-[11px] font-medium">
+                        {col?.name ?? c}
+                        <button type="button" onClick={() => handleCollectionToggle(c)} className="hover:text-primary/70"><X className="w-3 h-3" /></button>
+                      </span>
+                    );
+                  })}
+                  {(priceRange[0] > 0 || priceRange[1] < 50000) && (
+                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-primary/10 text-primary text-[11px] font-medium">
+                      {priceRange[0]}–{priceRange[1]} MAD
+                      <button type="button" onClick={() => setPriceRange([0, 50000])} className="hover:text-primary/70"><X className="w-3 h-3" /></button>
+                    </span>
+                  )}
+                  {inStockOnly && (
+                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-primary/10 text-primary text-[11px] font-medium">
+                      En stock
+                      <button type="button" onClick={() => setInStockOnly(false)} className="hover:text-primary/70"><X className="w-3 h-3" /></button>
+                    </span>
+                  )}
+                  <button
+                    type="button"
+                    onClick={resetBrowseFilters}
+                    className="text-[11px] text-accent-beige hover:text-primary underline underline-offset-2 transition-colors"
+                  >
+                    Tout effacer
+                  </button>
+                </div>
+              )}
             </div>
 
             {isLoading && !pageResponse ? (

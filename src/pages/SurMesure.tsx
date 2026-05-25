@@ -10,6 +10,7 @@ import { sortProductTypesForEnsemble } from '@/utils/productTypeSort';
 import { getSurMesureSizeOptionsForCategory } from '@/config/surMesureSizes';
 import { CustomOrderDTO } from '@/types/api';
 import { toast } from 'sonner';
+import { toastError } from '@/utils/toastMessages';
 import { staticCatalogQueryOptions } from '@/config/queryOptions';
 import { CloudUpload, X, Loader2, Check } from 'lucide-react';
 
@@ -124,7 +125,7 @@ const SurMesure = () => {
       toast.success('Votre demande a été envoyée avec succès !');
     },
     onError: (err: Error) => {
-      toast.error(err.message || 'Erreur lors de l\'envoi');
+      toastError(err, 'Erreur lors de l\'envoi');
     },
   });
 

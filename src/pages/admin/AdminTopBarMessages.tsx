@@ -20,6 +20,7 @@ import { Label } from '@/components/ui/label';
 import { topBarMessagesApi } from '@/services/api/topBarMessages';
 import { TopBarMessageDTO, CreateTopBarMessageRequest, UpdateTopBarMessageRequest } from '@/types/top-bar-messages';
 import { toast } from 'sonner';
+import { toastError } from '@/utils/toastMessages';
 import { cn } from '@/lib/utils';
 
 const AdminTopBarMessages = () => {
@@ -54,7 +55,7 @@ const AdminTopBarMessages = () => {
     },
     onError: (error: any) => {
       console.error('❌ Erreur création:', error);
-      toast.error(error.message || 'Erreur lors de la création du message');
+      toastError(error, 'Erreur lors de la création du message');
     },
   });
 
@@ -68,27 +69,25 @@ const AdminTopBarMessages = () => {
       setSelectedMessage(null);
     },
     onError: (error: any) => {
-      toast.error(error.message || 'Erreur lors de la mise à jour du message');
+      toastError(error, 'Erreur lors de la mise à jour du message');
     },
   });
 
   const deleteMutation = useMutation({
     mutationFn: topBarMessagesApi.deleteMessage,
     onSuccess: (_, deletedId) => {
-      // Mettre à jour le cache immédiatement
       queryClient.setQueryData(['top-bar-messages'], (old: any) => {
         const currentMessages = old || [];
         return currentMessages.filter((msg: any) => msg.id !== deletedId);
       });
       
-      // Invalider pour s'assurer que le serveur est synchronisé
       queryClient.invalidateQueries({ queryKey: ['top-bar-messages'] });
       
       toast.success('Message supprimé avec succès');
     },
     onError: (error: any) => {
       console.error('❌ Erreur suppression:', error);
-      toast.error(error.message || 'Erreur lors de la suppression du message');
+      toastError(error, 'Erreur lors de la suppression du message');
     },
   });
 
@@ -100,7 +99,7 @@ const AdminTopBarMessages = () => {
       toast.success('Statut du message mis à jour avec succès');
     },
     onError: (error: any) => {
-      toast.error(error.message || 'Erreur lors de la mise à jour du statut');
+      toastError(error, 'Erreur lors de la mise à jour du statut');
     },
   });
 

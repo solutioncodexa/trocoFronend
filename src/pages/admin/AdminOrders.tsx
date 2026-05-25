@@ -12,6 +12,7 @@ import { ordersApi, getImageUrl } from '@/services/api';
 import { OrderDTO } from '@/types/api';
 import { formatPrice } from '@/utils/formatPrice';
 import { toast } from 'sonner';
+import { toastError } from '@/utils/toastMessages';
 import { cn } from '@/lib/utils';
 
 const AdminOrders = () => {
@@ -30,7 +31,7 @@ const AdminOrders = () => {
       queryClient.invalidateQueries({ queryKey: ['orders'] });
       toast.success('Statut mis à jour');
     },
-    onError: (err: Error) => toast.error(err.message),
+    onError: (err: Error) => toastError(err, 'Erreur lors de la mise à jour du statut'),
   });
 
   const [searchTerm, setSearchTerm] = useState('');

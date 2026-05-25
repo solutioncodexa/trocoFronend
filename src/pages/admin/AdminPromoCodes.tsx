@@ -37,6 +37,7 @@ import {
 } from '@/types/promo-codes';
 import { formatPrice } from '@/utils/formatPrice';
 import { toast } from 'sonner';
+import { toastError } from '@/utils/toastMessages';
 import { cn } from '@/lib/utils';
 
 function generateLocalCode(): string {
@@ -77,7 +78,7 @@ const AdminPromoCodes = () => {
       setIsPromoDialogOpen(false);
       toast.success('Code promo créé');
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toastError(e, 'Erreur lors de la création du code promo'),
   });
 
   const updatePromoMut = useMutation({
@@ -88,7 +89,7 @@ const AdminPromoCodes = () => {
       setIsPromoDialogOpen(false);
       toast.success('Code promo mis à jour');
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toastError(e, 'Erreur lors de la mise à jour'),
   });
 
   const deletePromoMut = useMutation({
@@ -97,14 +98,14 @@ const AdminPromoCodes = () => {
       queryClient.invalidateQueries({ queryKey: ['promo-codes'] });
       toast.success('Code promo supprimé');
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toastError(e, 'Erreur lors de la suppression'),
   });
 
   const togglePromoMut = useMutation({
     mutationFn: ({ id, isActive }: { id: number; isActive: boolean }) =>
       promoCodesApi.toggleActive(id, isActive),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['promo-codes'] }),
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toastError(e, 'Erreur lors du changement de statut'),
   });
 
   const openCreatePromo = () => {

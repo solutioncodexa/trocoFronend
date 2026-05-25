@@ -13,6 +13,7 @@ import { Separator } from '@/components/ui/separator';
 import { customOrdersApi, getImageUrl } from '@/services/api';
 import { CustomOrderDTO } from '@/types/api';
 import { toast } from 'sonner';
+import { toastError } from '@/utils/toastMessages';
 import { cn } from '@/lib/utils';
 import QuoteDialog, { QuoteData } from '@/components/admin/QuoteDialog';
 
@@ -32,7 +33,7 @@ const AdminCustomRequests = () => {
       queryClient.invalidateQueries({ queryKey: ['customOrders'] });
       toast.success('Statut mis à jour');
     },
-    onError: (err: Error) => toast.error(err.message),
+    onError: (err: Error) => toastError(err, 'Erreur lors de la mise à jour du statut'),
   });
 
   const [searchTerm, setSearchTerm] = useState('');

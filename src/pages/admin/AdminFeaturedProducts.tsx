@@ -29,6 +29,7 @@ import { featuredProductsApi } from '@/services/api/featuredProducts';
 import { productsApi } from '@/services/api/products';
 import { FeaturedProductDTO, CreateFeaturedProductRequest, UpdateFeaturedProductRequest } from '@/types/featured-products';
 import { toast } from 'sonner';
+import { toastError } from '@/utils/toastMessages';
 import { cn } from '@/lib/utils';
 
 const AdminFeaturedProducts = () => {
@@ -66,7 +67,7 @@ const AdminFeaturedProducts = () => {
       toast.success('Produit sélectionné ajouté avec succès');
       setIsCreateDialogOpen(false);
     },
-    onError: (error: Error) => toast.error(error.message),
+    onError: (error: Error) => toastError(error, 'Erreur lors de l\'ajout'),
   });
 
   const updateMutation = useMutation({
@@ -78,7 +79,7 @@ const AdminFeaturedProducts = () => {
       setIsEditDialogOpen(false);
       setSelectedProduct(null);
     },
-    onError: (error: Error) => toast.error(error.message),
+    onError: (error: Error) => toastError(error, 'Erreur lors de la mise à jour'),
   });
 
   const deleteMutation = useMutation({
@@ -87,7 +88,7 @@ const AdminFeaturedProducts = () => {
       queryClient.invalidateQueries({ queryKey: ['featured-products'] });
       toast.success('Produit sélectionné supprimé avec succès');
     },
-    onError: (error: Error) => toast.error(error.message),
+    onError: (error: Error) => toastError(error, 'Erreur lors de la suppression'),
   });
 
   const toggleMutation = useMutation({
@@ -97,7 +98,7 @@ const AdminFeaturedProducts = () => {
       queryClient.invalidateQueries({ queryKey: ['featured-products'] });
       toast.success('Statut mis à jour avec succès');
     },
-    onError: (error: Error) => toast.error(error.message),
+    onError: (error: Error) => toastError(error, 'Erreur lors du changement de statut'),
   });
 
   // Filtrer les produits

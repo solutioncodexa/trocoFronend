@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label';
 import { useCart } from '@/contexts/CartContext';
 import { formatPrice } from '@/utils/formatPrice';
 import { toast } from 'sonner';
+import { toastError } from '@/utils/toastMessages';
 import { PaymentMethod } from '@/types/product';
 import { ordersApi } from '@/services/api';
 import { promoCodesApi } from '@/services/api/promoCodes';
@@ -114,7 +115,7 @@ const Checkout = () => {
     },
     onError: (error: Error) => {
       setIsSubmitting(false);
-      toast.error(error.message || 'Erreur lors de la création de la commande');
+      toastError(error, 'Erreur lors de la création de la commande');
     },
   });
 

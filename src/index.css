@@ -551,6 +551,53 @@
   }
 }
 
+/* ─── Sonner Toast – Luxury Gold Theme ─── */
+[data-sonner-toaster] [data-sonner-toast] {
+  transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1),
+              opacity 0.3s ease;
+}
+
+[data-sonner-toaster] [data-sonner-toast][data-styled="true"]::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  border-radius: 9999px 9999px 0 0;
+  background: linear-gradient(90deg, hsl(43, 70%, 47%), hsl(43, 60%, 55%), hsl(43, 75%, 40%));
+  opacity: 0.6;
+}
+
+[data-sonner-toaster] [data-sonner-toast][data-type="error"]::before {
+  background: linear-gradient(90deg, hsl(0, 72%, 51%), hsl(0, 60%, 60%), hsl(0, 72%, 45%));
+}
+
+[data-sonner-toaster] [data-sonner-toast][data-type="warning"]::before {
+  background: linear-gradient(90deg, hsl(35, 80%, 50%), hsl(40, 70%, 55%), hsl(35, 85%, 45%));
+}
+
+[data-sonner-toaster] [data-sonner-toast] [data-title] {
+  font-family: 'Montserrat', sans-serif;
+  letter-spacing: 0.01em;
+}
+
+[data-sonner-toaster] [data-sonner-toast] [data-description] {
+  font-family: 'Montserrat', sans-serif;
+}
+
+.dark [data-sonner-toaster] [data-sonner-toast] {
+  --toast-bg: hsl(30, 12%, 12%);
+  --toast-text: hsl(40, 20%, 95%);
+  --toast-border: hsl(43, 70%, 55%, 0.25);
+}
+
+.dark [data-sonner-toaster] [data-sonner-toast][data-styled="true"] {
+  background: var(--toast-bg) !important;
+  color: var(--toast-text) !important;
+  border-color: var(--toast-border) !important;
+}
+
 /* Protection des visuels sur le site public (pas l'admin) */
 .site-protected-media img {
   -webkit-user-drag: none;

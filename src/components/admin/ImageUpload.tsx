@@ -4,6 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Upload, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { toast } from 'sonner';
 import { compressImageWithReport } from '@/utils/compressImage';
 import { notifyCompressionReports } from '@/utils/notifyCompression';
 
@@ -44,12 +45,12 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
     if (!rawFile) return;
 
     if (!rawFile.type.startsWith('image/')) {
-      alert('Veuillez sélectionner une image valide (JPG, PNG, WebP, GIF, SVG).');
+      toast.error('Veuillez sélectionner une image valide (JPG, PNG, WebP, GIF, SVG).');
       return;
     }
 
     if (rawFile.size > MAX_INPUT_SIZE_MB * 1024 * 1024) {
-      alert(`L'image ne doit pas dépasser ${MAX_INPUT_SIZE_MB} MB.`);
+      toast.error(`L'image ne doit pas dépasser ${MAX_INPUT_SIZE_MB} MB.`);
       return;
     }
 
@@ -90,7 +91,7 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
       onChange(url);
     } catch (error) {
       console.error('Upload error:', error);
-      alert("Erreur lors de l'upload de l'image");
+      toast.error("Erreur lors de l'upload de l'image");
     } finally {
       setUploading(false);
     }

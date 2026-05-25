@@ -10,6 +10,7 @@ import { categoriesApi } from '@/services/api/categories';
 import { getImageUrl, uploadImage } from '@/services/api/upload';
 import type { CategoryDTO, HeroCategoryPatchDTO } from '@/types/api';
 import { toast } from 'sonner';
+import { toastError } from '@/utils/toastMessages';
 import { staticCatalogQueryOptions } from '@/config/queryOptions';
 
 type RowState = Record<
@@ -117,7 +118,7 @@ const AdminHeroCategories = () => {
       }
 
       if (err) {
-        toast.error(err instanceof Error ? err.message : 'Erreur lors de l’enregistrement');
+        toastError(err, 'Erreur lors de l\'enregistrement');
       }
       setSaving(false);
     }, 450);
@@ -169,7 +170,7 @@ const AdminHeroCategories = () => {
       }));
       toast.success('Image mise à jour');
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Upload impossible');
+      toastError(e, 'Erreur lors de l\'upload de l\'image');
     }
   };
 

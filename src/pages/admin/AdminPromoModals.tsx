@@ -29,6 +29,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { promoModalsApi } from '@/services/api/promoModals';
 import { PromoModalDTO, CreatePromoModalRequest, UpdatePromoModalRequest } from '@/types/promo-modals';
 import { toast } from 'sonner';
+import { toastError } from '@/utils/toastMessages';
 import { cn } from '@/lib/utils';
 
 const AdminPromoModals = () => {
@@ -81,7 +82,7 @@ const AdminPromoModals = () => {
     },
     onError: (error: any) => {
       console.error('❌ Erreur création:', error);
-      toast.error(error.message || 'Erreur lors de la création du promo modal');
+      toastError(error, 'Erreur lors de la création du promo modal');
     },
   });
 
@@ -97,20 +98,18 @@ const AdminPromoModals = () => {
       sessionStorage.removeItem('hasSeenPromoModal');
     },
     onError: (error: any) => {
-      toast.error(error.message || 'Erreur lors de la mise à jour du promo modal');
+      toastError(error, 'Erreur lors de la mise à jour du promo modal');
     },
   });
 
   const deleteMutation = useMutation({
     mutationFn: promoModalsApi.deletePromoModal,
     onSuccess: (_, deletedId) => {
-      // Mettre à jour le cache immédiatement
       queryClient.setQueryData(['promo-modals'], (old: any) => {
         const currentModals = old || [];
         return currentModals.filter((modal: any) => modal.id !== deletedId);
       });
       
-      // Invalider pour s'assurer que le serveur est synchronisé
       queryClient.invalidateQueries({ queryKey: ['promo-modals'] });
       
       sessionStorage.removeItem('hasSeenPromoModal');
@@ -119,7 +118,7 @@ const AdminPromoModals = () => {
     },
     onError: (error: any) => {
       console.error('❌ Erreur suppression:', error);
-      toast.error(error.message || 'Erreur lors de la suppression du promo modal');
+      toastError(error, 'Erreur lors de la suppression du promo modal');
     },
   });
 
@@ -133,7 +132,7 @@ const AdminPromoModals = () => {
       sessionStorage.removeItem('hasSeenPromoModal');
     },
     onError: (error: any) => {
-      toast.error(error.message || 'Erreur lors de la mise à jour du statut');
+      toastError(error, 'Erreur lors de la mise à jour du statut');
     },
   });
 

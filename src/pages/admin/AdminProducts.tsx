@@ -18,6 +18,7 @@ import { productsApi } from '@/services/api/products';
 import { mapProductDetailListToProducts } from '@/utils/productMapper';
 import { formatPrice } from '@/utils/formatPrice';
 import { toast } from 'sonner';
+import { toastError } from '@/utils/toastMessages';
 import { staticCatalogQueryOptions } from '@/config/queryOptions';
 import { cn } from '@/lib/utils';
 import { compressImageWithReport } from '@/utils/compressImage';
@@ -192,7 +193,7 @@ const AdminProducts = () => {
       toast.success('Produit ajouté avec succès');
       handleCloseModal();
     },
-    onError: (err: Error) => toast.error(err.message),
+    onError: (err: Error) => toastError(err, 'Erreur lors de l\'ajout du produit'),
   });
 
   const updateMutation = useMutation({
@@ -203,7 +204,7 @@ const AdminProducts = () => {
       toast.success('Produit modifié avec succès');
       handleCloseModal();
     },
-    onError: (err: Error) => toast.error(err.message),
+    onError: (err: Error) => toastError(err, 'Erreur lors de la modification'),
   });
 
   const deleteMutation = useMutation({
@@ -212,7 +213,7 @@ const AdminProducts = () => {
       queryClient.invalidateQueries({ queryKey: ['products'] });
       toast.success('Produit supprimé');
     },
-    onError: (err: Error) => toast.error(err.message),
+    onError: (err: Error) => toastError(err, 'Erreur lors de la suppression'),
   });
 
   const updatePriceSettingsMutation = useMutation({
@@ -222,7 +223,7 @@ const AdminProducts = () => {
       toast.success('Paramètres de prix enregistrés');
       setIsPriceSettingsOpen(false);
     },
-    onError: (err: Error) => toast.error(err.message),
+    onError: (err: Error) => toastError(err, 'Erreur lors de la mise à jour des prix'),
   });
 
   const handleSubmit = (e: React.FormEvent) => {

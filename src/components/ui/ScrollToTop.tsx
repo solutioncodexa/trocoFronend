@@ -1,16 +1,15 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 
 const ScrollToTop = () => {
   const { pathname } = useLocation();
+  const prevPathname = useRef(pathname);
 
   useEffect(() => {
-    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    window.scrollTo({
-      top: 0,
-      left: 0,
-      behavior: prefersReducedMotion ? 'auto' : 'smooth',
-    });
+    if (prevPathname.current !== pathname) {
+      window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+      prevPathname.current = pathname;
+    }
   }, [pathname]);
 
   return null;

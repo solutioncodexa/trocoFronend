@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { productTypesApi } from '@/services/api';
 import { ProductTypeDTO } from '@/types/api';
 import { toast } from 'sonner';
+import { toastError } from '@/utils/toastMessages';
 import { staticCatalogQueryOptions } from '@/config/queryOptions';
 
 const AdminProductTypes = () => {
@@ -36,7 +37,7 @@ const AdminProductTypes = () => {
       toast.success('Type de produit créé avec succès');
       handleCloseModal();
     },
-    onError: (e: Error) => toast.error(e.message || 'Erreur'),
+    onError: (e: Error) => toastError(e, 'Erreur lors de la création'),
   });
 
   const updateMutation = useMutation({
@@ -47,7 +48,7 @@ const AdminProductTypes = () => {
       toast.success('Type de produit modifié avec succès');
       handleCloseModal();
     },
-    onError: (e: Error) => toast.error(e.message || 'Erreur'),
+    onError: (e: Error) => toastError(e, 'Erreur lors de la modification'),
   });
 
   const deleteMutation = useMutation({
@@ -56,7 +57,7 @@ const AdminProductTypes = () => {
       queryClient.invalidateQueries({ queryKey: ['productTypes'] });
       toast.success('Type de produit supprimé');
     },
-    onError: (e: Error) => toast.error(e.message || 'Erreur'),
+    onError: (e: Error) => toastError(e, 'Erreur lors de la suppression'),
   });
 
   const handleOpenModal = (type?: ProductTypeDTO) => {
