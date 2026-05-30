@@ -38,6 +38,13 @@ export interface CustomerDTO {
   city?: string;
 }
 
+/** Client allégé pour listes admin */
+export interface CustomerSummaryDTO {
+  fullName: string;
+  phone: string;
+  city?: string;
+}
+
 export interface OrderDTO {
   id: string;
   items: CartItemDTO[];
@@ -48,6 +55,18 @@ export interface OrderDTO {
   createdAt: string;
   promoCode?: string;
   discount?: number;
+}
+
+/** Liste paginée admin — sans articles ni produits complets */
+export interface OrderListItemDTO {
+  id: string;
+  customer: CustomerSummaryDTO;
+  total: number;
+  status: string;
+  createdAt: string;
+  itemCount: number;
+  previewProductName?: string;
+  previewProductImage?: string;
 }
 
 export interface CustomOrderStatsDTO {
@@ -69,6 +88,19 @@ export interface CustomOrderDTO {
   customer: CustomerDTO;
   status: string; // 'pending', 'contacted', 'completed'
   estimatedPrice?: number;
+  createdAt: string;
+}
+
+/** Liste paginée admin — description tronquée, sans images de référence multiples */
+export interface CustomOrderListItemDTO {
+  id: string;
+  imageUrl?: string;
+  description: string;
+  type: string;
+  weight?: number;
+  style: string;
+  customer: CustomerSummaryDTO;
+  status: string;
   createdAt: string;
 }
 

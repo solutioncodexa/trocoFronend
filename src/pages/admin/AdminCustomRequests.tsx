@@ -12,7 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { customOrdersApi, getImageUrl } from '@/services/api';
-import { CustomOrderDTO } from '@/types/api';
+import { CustomOrderDTO, CustomOrderListItemDTO } from '@/types/api';
 import { toast } from 'sonner';
 import { toastError } from '@/utils/toastMessages';
 import { cn } from '@/lib/utils';
@@ -30,6 +30,7 @@ const AdminCustomRequests = () => {
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [selectedRequest, setSelectedRequest] = useState<CustomOrderDTO | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
+  const [isLoadingDetail, setIsLoadingDetail] = useState(false);
   const [adminNotes, setAdminNotes] = useState<Record<string, string>>({});
 
   const [isQuoteOpen, setIsQuoteOpen] = useState(false);
@@ -131,28 +132,31 @@ const AdminCustomRequests = () => {
     return labels[status];
   };
 
-  const handleViewRequest = (request: CustomOrderDTO) => {
-    setSelectedRequest(request);
+  const openRequestDetail = async (requestId: string) => {
     setIsDetailOpen(true);
+    setIsLoadingDetail(true);
+    try {
+      const full = await customOrdersApi.getCustomOrderById(requestId);
+      setSelectedRequest(full);
+    } catch (err) {
+      toastError(err, 'Impossible de charger la demande');
+      setIsDetailOpen(false);
+      setSelectedRequest(null);
+    } finally {
+      setIsLoadingDetail(false);
+    }
+  };
+
+  const handleViewRequest = (request: CustomOrderListItemDTO) => {
+    openRequestDetail(request.id);
   };
 
   useEffect(() => {
     if (!idParam) return;
-    const request = requests.find((r) => String(r.id) === idParam);
-    if (request) {
-      setSelectedRequest(request);
-      setIsDetailOpen(true);
+    openRequestDetail(idParam).finally(() => {
       setSearchParams({}, { replace: true });
-    } else if (idParam) {
-      customOrdersApi.getCustomOrderById(idParam)
-        .then((r) => {
-          setSelectedRequest(r);
-          setIsDetailOpen(true);
-          setSearchParams({}, { replace: true });
-        })
-        .catch(() => {});
-    }
-  }, [idParam, requests, setSearchParams]);
+    });
+  }, [idParam, setSearchParams]);
 
   const handleStatusChange = (requestId: string, newStatus: string) => {
     updateStatusMutation.mutate({ id: requestId, status: newStatus });
@@ -165,10 +169,18 @@ const AdminCustomRequests = () => {
     toast.success('Notes enregistrées');
   };
 
-  const handleCreateQuote = (request: CustomOrderDTO) => {
-    setSelectedRequest(request);
-    setIsQuoteOpen(true);
-    setIsDetailOpen(false);
+  const handleCreateQuote = async (request: CustomOrderListItemDTO) => {
+    setIsLoadingDetail(true);
+    try {
+      const full = await customOrdersApi.getCustomOrderById(request.id);
+      setSelectedRequest(full);
+      setIsQuoteOpen(true);
+      setIsDetailOpen(false);
+    } catch (err) {
+      toastError(err, 'Impossible de charger la demande');
+    } finally {
+      setIsLoadingDetail(false);
+    }
   };
 
   const handleQuoteSent = (requestId: string, quote: QuoteData) => {
@@ -357,7 +369,7 @@ const AdminCustomRequests = () => {
                       size="sm"
                       asChild
                     >
-                      <a href={`tel:${request.customer.phone}`}>
+                      <a href={`tel:${request.customer?.phone}`}>
                         <Phone className="w-4 h-4" />
                       </a>
                     </Button>
@@ -395,7 +407,9 @@ const AdminCustomRequests = () => {
             </DialogTitle>
           </DialogHeader>
 
-          {selectedRequest && (
+          {isLoadingDetail ? (
+            <div className="py-12 text-center text-muted-foreground">Chargement de la demande…</div>
+          ) : selectedRequest ? (
             <div className="flex-1 overflow-y-auto">
               {/* Vertical Layout - Image on top, content below for all devices */}
               <div className="flex flex-col gap-3 p-3">
@@ -600,7 +614,7 @@ const AdminCustomRequests = () => {
                 </div>
               </div>
             </div>
-          )}
+          ) : null}
         </DialogContent>
       </Dialog>
 

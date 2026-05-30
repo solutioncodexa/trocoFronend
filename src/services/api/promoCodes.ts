@@ -2,6 +2,7 @@ import { buildApiUrl, apiRequest } from '@/config/api';
 import type { PageResponse } from '@/types/api';
 import {
   PromoCodeDTO,
+  PromoCodeListItemDTO,
   PromoCodeStatsDTO,
   CreatePromoCodeRequest,
   UpdatePromoCodeRequest,
@@ -36,9 +37,9 @@ function buildPromoCodesQueryString(params: PromoCodeQueryParams): string {
 }
 
 export const promoCodesApi = {
-  getAll: async (params: PromoCodeQueryParams = {}): Promise<PageResponse<PromoCodeDTO>> => {
+  getAll: async (params: PromoCodeQueryParams = {}): Promise<PageResponse<PromoCodeListItemDTO>> => {
     const qs = buildPromoCodesQueryString(params);
-    return apiRequest<PageResponse<PromoCodeDTO>>(buildApiUrl(`/promo-codes?${qs}`));
+    return apiRequest<PageResponse<PromoCodeListItemDTO>>(buildApiUrl(`/promo-codes?${qs}`));
   },
 
   getStats: async (): Promise<PromoCodeStatsDTO> => {

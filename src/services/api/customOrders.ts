@@ -1,5 +1,5 @@
 import { buildApiUrl, apiRequest } from '@/config/api';
-import { CustomOrderDTO, CustomOrderStatsDTO, PageResponse } from '@/types/api';
+import { CustomOrderDTO, CustomOrderListItemDTO, CustomOrderStatsDTO, PageResponse } from '@/types/api';
 
 export interface CustomOrderQueryParams {
   page?: number;
@@ -31,9 +31,9 @@ function buildCustomOrdersQueryString(params: CustomOrderQueryParams): string {
 }
 
 export const customOrdersApi = {
-  getAllCustomOrders: async (params: CustomOrderQueryParams = {}): Promise<PageResponse<CustomOrderDTO>> => {
+  getAllCustomOrders: async (params: CustomOrderQueryParams = {}): Promise<PageResponse<CustomOrderListItemDTO>> => {
     const qs = buildCustomOrdersQueryString(params);
-    return apiRequest<PageResponse<CustomOrderDTO>>(buildApiUrl(`/custom-orders?${qs}`));
+    return apiRequest<PageResponse<CustomOrderListItemDTO>>(buildApiUrl(`/custom-orders?${qs}`));
   },
 
   getStats: async (): Promise<CustomOrderStatsDTO> => {

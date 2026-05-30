@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { ordersApi, getImageUrl } from '@/services/api';
-import { OrderDTO } from '@/types/api';
+import { OrderDTO, OrderListItemDTO } from '@/types/api';
 import { formatPrice } from '@/utils/formatPrice';
 import { toast } from 'sonner';
 import { toastError } from '@/utils/toastMessages';
@@ -28,6 +28,7 @@ const AdminOrders = () => {
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [selectedOrder, setSelectedOrder] = useState<OrderDTO | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
+  const [isLoadingDetail, setIsLoadingDetail] = useState(false);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -89,28 +90,31 @@ const AdminOrders = () => {
     return labels[status] ?? status;
   };
 
-  const handleViewOrder = (order: OrderDTO) => {
-    setSelectedOrder(order);
+  const openOrderDetail = async (orderId: string) => {
     setIsDetailOpen(true);
+    setIsLoadingDetail(true);
+    try {
+      const full = await ordersApi.getOrderById(orderId);
+      setSelectedOrder(full);
+    } catch (err) {
+      toastError(err, 'Impossible de charger la commande');
+      setIsDetailOpen(false);
+      setSelectedOrder(null);
+    } finally {
+      setIsLoadingDetail(false);
+    }
+  };
+
+  const handleViewOrder = (order: OrderListItemDTO) => {
+    openOrderDetail(order.id);
   };
 
   useEffect(() => {
     if (!orderIdParam) return;
-    const order = orders.find((o) => String(o.id) === orderIdParam);
-    if (order) {
-      setSelectedOrder(order);
-      setIsDetailOpen(true);
+    openOrderDetail(orderIdParam).finally(() => {
       setSearchParams({}, { replace: true });
-    } else {
-      ordersApi.getOrderById(orderIdParam)
-        .then((o) => {
-          setSelectedOrder(o);
-          setIsDetailOpen(true);
-          setSearchParams({}, { replace: true });
-        })
-        .catch(() => {});
-    }
-  }, [orderIdParam, orders, setSearchParams]);
+    });
+  }, [orderIdParam, setSearchParams]);
 
   const handleStatusChange = (orderId: string, newStatus: string) => {
     updateStatusMutation.mutate({ id: orderId, status: newStatus });
@@ -185,12 +189,12 @@ const AdminOrders = () => {
                 {getStatusLabel(order.status)}
               </Badge>
             </div>
-            {order.items && order.items.length > 0 && (
+            {order.previewProductName && (
               <div className="flex items-center gap-2">
-                {order.items[0].product?.images?.[0] ? (
+                {order.previewProductImage ? (
                   <img
-                    src={getImageUrl(order.items[0].product.images[0])}
-                    alt={order.items[0].product?.name}
+                    src={getImageUrl(order.previewProductImage)}
+                    alt={order.previewProductName}
                     className="w-10 h-10 rounded object-cover shrink-0"
                   />
                 ) : (
@@ -199,13 +203,16 @@ const AdminOrders = () => {
                   </div>
                 )}
                 <div className="flex-1 min-w-0">
-                  <p className="font-body text-sm truncate">{order.items[0].product?.name}</p>
-                  {order.items.length > 1 && (
-                    <p className="font-body text-xs text-muted-foreground">+{order.items.length - 1} article(s)</p>
+                  <p className="font-body text-sm truncate">{order.previewProductName}</p>
+                  {(order.itemCount ?? 0) > 1 && (
+                    <p className="font-body text-xs text-muted-foreground">+{(order.itemCount ?? 0) - 1} article(s)</p>
                   )}
                 </div>
                 <p className="font-body font-medium text-sm shrink-0">{formatPrice(order.total ?? 0)}</p>
               </div>
+            )}
+            {!order.previewProductName && (
+              <p className="font-body font-medium text-sm">{formatPrice(order.total ?? 0)}</p>
             )}
             <div className="flex items-center gap-2">
               <Select
@@ -265,12 +272,12 @@ const AdminOrders = () => {
                   </td>
                   <td className="px-4 py-3 font-body text-muted-foreground">{order.customer?.city ?? '—'}</td>
                   <td className="px-4 py-3">
-                    {order.items && order.items.length > 0 ? (
+                    {order.previewProductName ? (
                       <div className="flex items-center gap-2">
-                        {order.items[0].product?.images?.[0] ? (
+                        {order.previewProductImage ? (
                           <img
-                            src={getImageUrl(order.items[0].product.images[0])}
-                            alt={order.items[0].product?.name}
+                            src={getImageUrl(order.previewProductImage)}
+                            alt={order.previewProductName}
                             className="w-10 h-10 rounded object-cover"
                           />
                         ) : (
@@ -279,9 +286,9 @@ const AdminOrders = () => {
                           </div>
                         )}
                         <div className="flex-1 min-w-0">
-                          <p className="font-body text-sm truncate">{order.items[0].product?.name}</p>
-                          {order.items.length > 1 && (
-                            <p className="font-body text-xs text-muted-foreground">+{order.items.length - 1} article(s)</p>
+                          <p className="font-body text-sm truncate">{order.previewProductName}</p>
+                          {(order.itemCount ?? 0) > 1 && (
+                            <p className="font-body text-xs text-muted-foreground">+{(order.itemCount ?? 0) - 1} article(s)</p>
                           )}
                         </div>
                       </div>
@@ -347,7 +354,9 @@ const AdminOrders = () => {
             </DialogTitle>
           </DialogHeader>
 
-          {selectedOrder && (
+          {isLoadingDetail ? (
+            <div className="py-12 text-center text-muted-foreground">Chargement de la commande…</div>
+          ) : selectedOrder ? (
             <div className="space-y-6">
               <div className="flex items-center justify-between">
                 <Badge className={cn('text-sm', getStatusStyle(selectedOrder.status))}>
@@ -438,7 +447,7 @@ const AdminOrders = () => {
                 </Button>
               </div>
             </div>
-          )}
+          ) : null}
         </DialogContent>
       </Dialog>
     </AdminLayout>

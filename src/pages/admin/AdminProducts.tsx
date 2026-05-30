@@ -16,7 +16,7 @@ import { Product, ProductCategory, ProductType } from '@/types/product';
 import { categoriesApi, productTypesApi, collectionsApi, goldPriceSettingsApi, calculatePrice, getImageUrl } from '@/services/api';
 import { ProductFormData } from '@/services/api/products';
 import { productsApi } from '@/services/api/products';
-import { mapProductDetailListToProducts } from '@/utils/productMapper';
+import { mapProductListItemListToProducts, mapProductDetailToProduct } from '@/utils/productMapper';
 import { formatPrice } from '@/utils/formatPrice';
 import { toast } from 'sonner';
 import { toastError } from '@/utils/toastMessages';
@@ -76,7 +76,7 @@ const AdminProducts = () => {
 
   const { data: productsPage, isLoading, isFetching } = useQuery({
     queryKey: ['products', 'admin', page, pageSize, filterCategory, debouncedSearch],
-    queryFn: () => productsApi.getAllProductsFullPage({
+    queryFn: () => productsApi.getAllProducts({
       page,
       size: pageSize,
       sortBy: 'createdAt',
@@ -86,8 +86,9 @@ const AdminProducts = () => {
     }),
     placeholderData: keepPreviousData,
   });
-  const products = mapProductDetailListToProducts(productsPage?.content) ?? [];
+  const products = mapProductListItemListToProducts(productsPage?.content) ?? [];
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isLoadingProduct, setIsLoadingProduct] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [formData, setFormData] = useState({
     name: '',
@@ -145,62 +146,79 @@ const AdminProducts = () => {
     return pt?.sizeOptions;
   };
 
-  const handleOpenModal = (product?: Product) => {
+  const populateFormFromProduct = (product: Product) => {
+    setEditingProduct(product);
+    setFormData({
+      name: product.name,
+      description: product.description,
+      price: product.price.toString(),
+      originalPrice: (product.originalPrice ?? '').toString(),
+      weight: product.weight.toString(),
+      marginGain: (product.marginGain ?? 500).toString(),
+      category: product.category,
+      type: product.type,
+      collection: product.collection || '',
+      badges: product.badges,
+    });
+    const rows: ProductVariantFormRow[] = (product.variants?.length ? product.variants : []).map((v) => ({
+      id: v.id,
+      label: v.label ?? '',
+      weight: String(v.weight),
+      marginGain: String(v.marginGain ?? 500),
+      price: String(v.price),
+      originalPrice: v.originalPrice != null ? String(v.originalPrice) : '',
+      isDefault: Boolean(v.isDefault),
+    }));
+    setVariantRows(
+      rows.length > 0 ? rows : [createEmptyVariantRow(String(product.marginGain ?? 500), true)]
+    );
+    if (rows.length === 0) {
+      setVariantRows([
+        {
+          ...createEmptyVariantRow(String(product.marginGain ?? 500), true),
+          weight: String(product.weight),
+          price: String(product.price),
+          originalPrice: product.originalPrice != null ? String(product.originalPrice) : '',
+        },
+      ]);
+    }
+    setExistingImageUrls(product.images || []);
+    setImageFiles([]);
+  };
+
+  const handleOpenModal = async (product?: Product) => {
     if (product) {
       setEditingProduct(product);
-      setFormData({
-        name: product.name,
-        description: product.description,
-        price: product.price.toString(),
-        originalPrice: (product.originalPrice ?? '').toString(),
-        weight: product.weight.toString(),
-        marginGain: (product.marginGain ?? 500).toString(),
-        category: product.category,
-        type: product.type,
-        collection: product.collection || '',
-        badges: product.badges,
-      });
-      const rows: ProductVariantFormRow[] = (product.variants?.length ? product.variants : []).map((v) => ({
-        id: v.id,
-        label: v.label ?? '',
-        weight: String(v.weight),
-        marginGain: String(v.marginGain ?? 500),
-        price: String(v.price),
-        originalPrice: v.originalPrice != null ? String(v.originalPrice) : '',
-        isDefault: Boolean(v.isDefault),
-      }));
-      setVariantRows(
-        rows.length > 0 ? rows : [createEmptyVariantRow(String(product.marginGain ?? 500), true)]
-      );
-      if (rows.length === 0) {
-        setVariantRows([
-          {
-            ...createEmptyVariantRow(String(product.marginGain ?? 500), true),
-            weight: String(product.weight),
-            price: String(product.price),
-            originalPrice: product.originalPrice != null ? String(product.originalPrice) : '',
-          },
-        ]);
+      setIsModalOpen(true);
+      setIsLoadingProduct(true);
+      try {
+        const fullProduct = mapProductDetailToProduct(await productsApi.getProductById(product.id));
+        populateFormFromProduct(fullProduct);
+      } catch (err) {
+        toastError(err, 'Impossible de charger le produit');
+        setIsModalOpen(false);
+        setEditingProduct(null);
+      } finally {
+        setIsLoadingProduct(false);
       }
-      setExistingImageUrls(product.images || []);
-      setImageFiles([]);
-    } else {
-      setEditingProduct(null);
-      setFormData({
-        name: '',
-        description: '',
-        price: '',
-        weight: '',
-        marginGain: '500',
-        category: 'beldi',
-        type: 'bracelet',
-        collection: '',
-        badges: [],
-      });
-      setVariantRows([createEmptyVariantRow('500', true)]);
-      setExistingImageUrls([]);
-      setImageFiles([]);
+      return;
     }
+
+    setEditingProduct(null);
+    setFormData({
+      name: '',
+      description: '',
+      price: '',
+      weight: '',
+      marginGain: '500',
+      category: 'beldi',
+      type: 'bracelet',
+      collection: '',
+      badges: [],
+    });
+    setVariantRows([createEmptyVariantRow('500', true)]);
+    setExistingImageUrls([]);
+    setImageFiles([]);
     setIsModalOpen(true);
   };
 
@@ -654,6 +672,9 @@ const AdminProducts = () => {
             </DialogTitle>
           </DialogHeader>
 
+          {isLoadingProduct ? (
+            <div className="py-12 text-center text-muted-foreground">Chargement du produit…</div>
+          ) : (
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="grid md:grid-cols-2 gap-4">
               <div>
@@ -906,6 +927,7 @@ const AdminProducts = () => {
               </Button>
             </DialogFooter>
           </form>
+          )}
         </DialogContent>
       </Dialog>
 

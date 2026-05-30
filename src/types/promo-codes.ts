@@ -15,6 +15,20 @@ export interface PromoCodeDTO {
   createdAt: string;
 }
 
+/** Liste paginée admin — champs affichés dans le tableau */
+export interface PromoCodeListItemDTO {
+  id: number;
+  code: string;
+  type: PromoCodeType;
+  discountType: DiscountType;
+  discountValue: number;
+  minOrderAmount?: number;
+  maxUses?: number;
+  currentUses: number;
+  isActive: boolean;
+  expiresAt?: string;
+}
+
 export interface PromoCodeStatsDTO {
   total: number;
   active: number;

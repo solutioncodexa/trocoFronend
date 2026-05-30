@@ -32,6 +32,7 @@ import {
 import { promoCodesApi } from '@/services/api/promoCodes';
 import {
   PromoCodeDTO,
+  PromoCodeListItemDTO,
   CreatePromoCodeRequest,
   PromoCodeType,
   DiscountType,
@@ -67,6 +68,7 @@ const AdminPromoCodes = () => {
   const [debouncedSearch, setDebouncedSearch] = useState('');
 
   const [isPromoDialogOpen, setIsPromoDialogOpen] = useState(false);
+  const [isLoadingPromo, setIsLoadingPromo] = useState(false);
   const [editingPromo, setEditingPromo] = useState<PromoCodeDTO | null>(null);
   const [promoForm, setPromoForm] = useState<CreatePromoCodeRequest>(emptyPromoForm);
 
@@ -141,14 +143,7 @@ const AdminPromoCodes = () => {
     onError: (e: Error) => toastError(e, 'Erreur lors du changement de statut'),
   });
 
-  const openCreatePromo = () => {
-    setEditingPromo(null);
-    setPromoForm({ ...emptyPromoForm, code: generateLocalCode() });
-    setIsPromoDialogOpen(true);
-  };
-
-  const openEditPromo = (p: PromoCodeDTO) => {
-    setEditingPromo(p);
+  const populatePromoForm = (p: PromoCodeDTO | PromoCodeListItemDTO) => {
     setPromoForm({
       code: p.code,
       type: p.type,
@@ -159,7 +154,28 @@ const AdminPromoCodes = () => {
       isActive: p.isActive,
       expiresAt: p.expiresAt,
     });
+  };
+
+  const openCreatePromo = () => {
+    setEditingPromo(null);
+    setPromoForm({ ...emptyPromoForm, code: generateLocalCode() });
     setIsPromoDialogOpen(true);
+  };
+
+  const openEditPromo = async (p: PromoCodeListItemDTO) => {
+    setIsPromoDialogOpen(true);
+    setIsLoadingPromo(true);
+    try {
+      const full = await promoCodesApi.getById(p.id);
+      setEditingPromo(full);
+      populatePromoForm(full);
+    } catch (err) {
+      toastError(err, 'Impossible de charger le code promo');
+      setIsPromoDialogOpen(false);
+      setEditingPromo(null);
+    } finally {
+      setIsLoadingPromo(false);
+    }
   };
 
   const handleSavePromo = () => {
@@ -441,6 +457,10 @@ const AdminPromoCodes = () => {
             </DialogTitle>
           </DialogHeader>
 
+          {isLoadingPromo ? (
+            <div className="py-12 text-center text-muted-foreground">Chargement du code promo…</div>
+          ) : (
+          <>
           <div className="space-y-5 py-2">
             {/* Code + generate */}
             <div>
@@ -610,6 +630,8 @@ const AdminPromoCodes = () => {
               {editingPromo ? 'Enregistrer' : 'Créer'}
             </Button>
           </DialogFooter>
+          </>
+          )}
         </DialogContent>
       </Dialog>
     </AdminLayout>
