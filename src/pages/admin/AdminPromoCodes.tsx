@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useState, useEffect, useCallback } from 'react';
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import {
   Plus,
   Edit,
@@ -9,6 +9,7 @@ import {
   RefreshCw,
 } from 'lucide-react';
 import AdminLayout from '@/components/admin/AdminLayout';
+import AdminPagination from '@/components/admin/AdminPagination';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -60,21 +61,53 @@ const emptyPromoForm: CreatePromoCodeRequest = {
 
 const AdminPromoCodes = () => {
   const queryClient = useQueryClient();
+  const [page, setPage] = useState(0);
+  const [pageSize, setPageSize] = useState(20);
   const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
 
   const [isPromoDialogOpen, setIsPromoDialogOpen] = useState(false);
   const [editingPromo, setEditingPromo] = useState<PromoCodeDTO | null>(null);
   const [promoForm, setPromoForm] = useState<CreatePromoCodeRequest>(emptyPromoForm);
 
-  const { data: promoCodes = [], isLoading: loadingCodes } = useQuery({
-    queryKey: ['promo-codes'],
-    queryFn: promoCodesApi.getAll,
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchTerm);
+      setPage(0);
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
+  const handlePageSizeChange = useCallback((size: number) => {
+    setPageSize(size);
+    setPage(0);
+  }, []);
+
+  const { data: promoCodesPage, isLoading: loadingCodes, isFetching } = useQuery({
+    queryKey: ['promo-codes', 'page', page, pageSize, debouncedSearch],
+    queryFn: () => promoCodesApi.getAll({
+      page,
+      size: pageSize,
+      keyword: debouncedSearch || undefined,
+    }),
+    placeholderData: keepPreviousData,
   });
+
+  const { data: stats } = useQuery({
+    queryKey: ['promo-codes', 'stats'],
+    queryFn: () => promoCodesApi.getStats(),
+  });
+
+  const promoCodes = promoCodesPage?.content ?? [];
+
+  const invalidatePromoQueries = () => {
+    queryClient.invalidateQueries({ queryKey: ['promo-codes'] });
+  };
 
   const createPromoMut = useMutation({
     mutationFn: (d: CreatePromoCodeRequest) => promoCodesApi.create(d),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['promo-codes'] });
+      invalidatePromoQueries();
       setIsPromoDialogOpen(false);
       toast.success('Code promo créé');
     },
@@ -85,7 +118,7 @@ const AdminPromoCodes = () => {
     mutationFn: ({ id, data }: { id: number; data: CreatePromoCodeRequest }) =>
       promoCodesApi.update(id, data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['promo-codes'] });
+      invalidatePromoQueries();
       setIsPromoDialogOpen(false);
       toast.success('Code promo mis à jour');
     },
@@ -95,7 +128,7 @@ const AdminPromoCodes = () => {
   const deletePromoMut = useMutation({
     mutationFn: (id: number) => promoCodesApi.delete(id),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['promo-codes'] });
+      invalidatePromoQueries();
       toast.success('Code promo supprimé');
     },
     onError: (e: Error) => toastError(e, 'Erreur lors de la suppression'),
@@ -104,7 +137,7 @@ const AdminPromoCodes = () => {
   const togglePromoMut = useMutation({
     mutationFn: ({ id, isActive }: { id: number; isActive: boolean }) =>
       promoCodesApi.toggleActive(id, isActive),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['promo-codes'] }),
+    onSuccess: () => invalidatePromoQueries(),
     onError: (e: Error) => toastError(e, 'Erreur lors du changement de statut'),
   });
 
@@ -150,22 +183,52 @@ const AdminPromoCodes = () => {
     toast.success(`Code "${code}" copié`);
   };
 
-  const filteredCodes = promoCodes.filter(
-    (p) =>
-      p.code.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
   const formatDiscount = (type: DiscountType, value: number) =>
     type === 'percentage' ? `${value}%` : formatPrice(value);
 
   const formatDate = (d?: string) =>
     d ? new Date(d).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' }) : '—';
 
+  if (loadingCodes && !promoCodesPage) {
+    return (
+      <AdminLayout title="Codes Promo" breadcrumbs={[{ label: 'Codes Promo' }]}>
+        <div className="p-8 text-center text-muted-foreground">Chargement...</div>
+      </AdminLayout>
+    );
+  }
+
   return (
     <AdminLayout
       title="Codes Promo"
       breadcrumbs={[{ label: 'Codes Promo' }]}
     >
+      {/* Stats */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 mb-4">
+        <div className="bg-card rounded-lg p-3 sm:p-4 border border-border">
+          <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Total</p>
+          <p className="font-display text-xl sm:text-2xl">{stats?.total ?? 0}</p>
+        </div>
+        <div className="bg-card rounded-lg p-3 sm:p-4 border border-border">
+          <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Actifs</p>
+          <p className="font-display text-xl sm:text-2xl text-green-600">{stats?.active ?? 0}</p>
+        </div>
+        <div className="bg-card rounded-lg p-3 sm:p-4 border border-border">
+          <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Usage unique</p>
+          <p className="font-display text-xl sm:text-2xl text-blue-600">{stats?.singleUse ?? 0}</p>
+        </div>
+        <div className="bg-card rounded-lg p-3 sm:p-4 border border-border">
+          <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Réutilisables</p>
+          <p className="font-display text-xl sm:text-2xl text-purple-600">{stats?.reusable ?? 0}</p>
+        </div>
+      </div>
+
+      <p className="text-xs sm:text-sm text-muted-foreground mb-3 flex flex-wrap items-center gap-x-1.5 gap-y-1">
+        <span className="font-medium text-foreground">{promoCodesPage?.totalElements ?? 0}</span>
+        résultat{(promoCodesPage?.totalElements ?? 0) > 1 ? 's' : ''}
+        {debouncedSearch && <>· &quot;{debouncedSearch}&quot;</>}
+        {isFetching && <span className="text-[10px]">(mise à jour…)</span>}
+      </p>
+
       <div className="flex flex-col sm:flex-row gap-4 mb-6">
         <div className="flex-1 relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
@@ -182,131 +245,191 @@ const AdminPromoCodes = () => {
         </Button>
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-        <div className="bg-card rounded-lg p-4 border border-border">
-          <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Total</p>
-          <p className="font-display text-2xl">{promoCodes.length}</p>
-        </div>
-        <div className="bg-card rounded-lg p-4 border border-border">
-          <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Actifs</p>
-          <p className="font-display text-2xl text-green-600">
-            {promoCodes.filter((p) => p.isActive).length}
-          </p>
-        </div>
-        <div className="bg-card rounded-lg p-4 border border-border">
-          <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Usage unique</p>
-          <p className="font-display text-2xl text-blue-600">
-            {promoCodes.filter((p) => p.type === 'single_use').length}
-          </p>
-        </div>
-        <div className="bg-card rounded-lg p-4 border border-border">
-          <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Réutilisables</p>
-          <p className="font-display text-2xl text-purple-600">
-            {promoCodes.filter((p) => p.type === 'reusable').length}
-          </p>
-        </div>
-      </div>
-
-      {loadingCodes ? (
-        <div className="p-8 text-center text-muted-foreground">Chargement...</div>
-      ) : (
-        <div className="bg-card rounded-lg border border-border overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-muted/50">
-                <tr>
-                  <th className="px-4 py-3 text-left font-body text-sm font-medium text-muted-foreground">Code</th>
-                  <th className="px-4 py-3 text-left font-body text-sm font-medium text-muted-foreground">Type</th>
-                  <th className="px-4 py-3 text-left font-body text-sm font-medium text-muted-foreground">Réduction</th>
-                  <th className="px-4 py-3 text-left font-body text-sm font-medium text-muted-foreground">Min. commande</th>
-                  <th className="px-4 py-3 text-left font-body text-sm font-medium text-muted-foreground">Utilisations</th>
-                  <th className="px-4 py-3 text-left font-body text-sm font-medium text-muted-foreground">Expire</th>
-                  <th className="px-4 py-3 text-left font-body text-sm font-medium text-muted-foreground">Statut</th>
-                  <th className="px-4 py-3 text-right font-body text-sm font-medium text-muted-foreground">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border">
-                {filteredCodes.map((promo) => (
-                  <tr key={promo.id} className="hover:bg-muted/30">
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-2">
-                        <code className="font-mono font-bold text-sm bg-muted px-2 py-1 rounded">
-                          {promo.code}
-                        </code>
-                        <button
-                          onClick={() => copyCode(promo.code)}
-                          className="text-muted-foreground hover:text-foreground"
-                        >
-                          <Copy className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3">
-                      <Badge
-                        className={cn(
-                          promo.type === 'single_use'
-                            ? 'bg-blue-100 text-blue-800 border-blue-200'
-                            : 'bg-purple-100 text-purple-800 border-purple-200'
-                        )}
-                      >
-                        {promo.type === 'single_use' ? 'Unique' : 'Réutilisable'}
-                      </Badge>
-                    </td>
-                    <td className="px-4 py-3 font-body font-medium">
-                      {formatDiscount(promo.discountType, promo.discountValue)}
-                    </td>
-                    <td className="px-4 py-3 font-body text-sm text-muted-foreground">
-                      {promo.minOrderAmount ? formatPrice(promo.minOrderAmount) : '—'}
-                    </td>
-                    <td className="px-4 py-3 font-body text-sm">
-                      {promo.currentUses}
-                      {promo.maxUses ? ` / ${promo.maxUses}` : ' / ∞'}
-                    </td>
-                    <td className="px-4 py-3 font-body text-sm text-muted-foreground">
-                      {formatDate(promo.expiresAt)}
-                    </td>
-                    <td className="px-4 py-3">
-                      <Switch
-                        checked={promo.isActive}
-                        onCheckedChange={(checked) =>
-                          togglePromoMut.mutate({ id: promo.id, isActive: checked })
-                        }
-                      />
-                    </td>
-                    <td className="px-4 py-3 text-right">
-                      <div className="flex items-center justify-end gap-1">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => openEditPromo(promo)}
-                        >
-                          <Edit className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="text-red-600 hover:text-red-700"
-                          onClick={() => {
-                            if (confirm('Supprimer ce code promo ?'))
-                              deletePromoMut.mutate(promo.id);
-                          }}
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+      <>
+          {/* Mobile: card layout */}
+          <div className="block lg:hidden space-y-3">
+            {promoCodes.map((promo) => (
+              <div key={promo.id} className="bg-card rounded-lg border border-border p-3 sm:p-4 space-y-3">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <code className="font-mono font-bold text-sm bg-muted px-2 py-1 rounded">
+                      {promo.code}
+                    </code>
+                    <button
+                      onClick={() => copyCode(promo.code)}
+                      className="text-muted-foreground hover:text-foreground shrink-0"
+                    >
+                      <Copy className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                  <Switch
+                    checked={promo.isActive}
+                    onCheckedChange={(checked) =>
+                      togglePromoMut.mutate({ id: promo.id, isActive: checked })
+                    }
+                  />
+                </div>
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <Badge
+                    className={cn(
+                      'text-[10px]',
+                      promo.type === 'single_use'
+                        ? 'bg-blue-100 text-blue-800 border-blue-200'
+                        : 'bg-purple-100 text-purple-800 border-purple-200'
+                    )}
+                  >
+                    {promo.type === 'single_use' ? 'Unique' : 'Réutilisable'}
+                  </Badge>
+                  <span className="font-body font-medium text-sm">
+                    {formatDiscount(promo.discountType, promo.discountValue)}
+                  </span>
+                  <span className="text-xs text-muted-foreground">
+                    {promo.currentUses}{promo.maxUses ? ` / ${promo.maxUses}` : ' / ∞'} utilisations
+                  </span>
+                </div>
+                <div className="flex items-center justify-between text-xs text-muted-foreground">
+                  <span>Min: {promo.minOrderAmount ? formatPrice(promo.minOrderAmount) : '—'}</span>
+                  <span>Expire: {formatDate(promo.expiresAt)}</span>
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="flex-1 h-8 text-xs"
+                    onClick={() => openEditPromo(promo)}
+                  >
+                    <Edit className="w-3.5 h-3.5 mr-1" />
+                    Modifier
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-8 w-8 p-0 text-red-600 hover:text-red-700"
+                    onClick={() => {
+                      if (confirm('Supprimer ce code promo ?'))
+                        deletePromoMut.mutate(promo.id);
+                    }}
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </Button>
+                </div>
+              </div>
+            ))}
+            {promoCodes.length === 0 && (
+              <div className="p-8 text-center text-muted-foreground">
+                Aucun code promo trouvé
+              </div>
+            )}
           </div>
-          {filteredCodes.length === 0 && (
-            <div className="p-8 text-center text-muted-foreground">
-              Aucun code promo trouvé
+
+          {/* Desktop: table layout */}
+          <div className="hidden lg:block bg-card rounded-lg border border-border overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-muted/50">
+                  <tr>
+                    <th className="px-4 py-3 text-left font-body text-sm font-medium text-muted-foreground">Code</th>
+                    <th className="px-4 py-3 text-left font-body text-sm font-medium text-muted-foreground">Type</th>
+                    <th className="px-4 py-3 text-left font-body text-sm font-medium text-muted-foreground">Réduction</th>
+                    <th className="px-4 py-3 text-left font-body text-sm font-medium text-muted-foreground">Min. commande</th>
+                    <th className="px-4 py-3 text-left font-body text-sm font-medium text-muted-foreground">Utilisations</th>
+                    <th className="px-4 py-3 text-left font-body text-sm font-medium text-muted-foreground">Expire</th>
+                    <th className="px-4 py-3 text-left font-body text-sm font-medium text-muted-foreground">Statut</th>
+                    <th className="px-4 py-3 text-right font-body text-sm font-medium text-muted-foreground">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {promoCodes.map((promo) => (
+                    <tr key={promo.id} className="hover:bg-muted/30">
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-2">
+                          <code className="font-mono font-bold text-sm bg-muted px-2 py-1 rounded">
+                            {promo.code}
+                          </code>
+                          <button
+                            onClick={() => copyCode(promo.code)}
+                            className="text-muted-foreground hover:text-foreground"
+                          >
+                            <Copy className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <Badge
+                          className={cn(
+                            promo.type === 'single_use'
+                              ? 'bg-blue-100 text-blue-800 border-blue-200'
+                              : 'bg-purple-100 text-purple-800 border-purple-200'
+                          )}
+                        >
+                          {promo.type === 'single_use' ? 'Unique' : 'Réutilisable'}
+                        </Badge>
+                      </td>
+                      <td className="px-4 py-3 font-body font-medium">
+                        {formatDiscount(promo.discountType, promo.discountValue)}
+                      </td>
+                      <td className="px-4 py-3 font-body text-sm text-muted-foreground">
+                        {promo.minOrderAmount ? formatPrice(promo.minOrderAmount) : '—'}
+                      </td>
+                      <td className="px-4 py-3 font-body text-sm">
+                        {promo.currentUses}
+                        {promo.maxUses ? ` / ${promo.maxUses}` : ' / ∞'}
+                      </td>
+                      <td className="px-4 py-3 font-body text-sm text-muted-foreground">
+                        {formatDate(promo.expiresAt)}
+                      </td>
+                      <td className="px-4 py-3">
+                        <Switch
+                          checked={promo.isActive}
+                          onCheckedChange={(checked) =>
+                            togglePromoMut.mutate({ id: promo.id, isActive: checked })
+                          }
+                        />
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        <div className="flex items-center justify-end gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => openEditPromo(promo)}
+                          >
+                            <Edit className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="text-red-600 hover:text-red-700"
+                            onClick={() => {
+                              if (confirm('Supprimer ce code promo ?'))
+                                deletePromoMut.mutate(promo.id);
+                            }}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
-          )}
-        </div>
+            {promoCodes.length === 0 && (
+              <div className="p-8 text-center text-muted-foreground">
+                Aucun code promo trouvé
+              </div>
+            )}
+          </div>
+        </>
+
+      {promoCodesPage && promoCodesPage.totalElements > 0 && (
+        <AdminPagination
+          page={page}
+          totalPages={promoCodesPage.totalPages}
+          totalElements={promoCodesPage.totalElements}
+          size={pageSize}
+          onPageChange={setPage}
+          onSizeChange={handlePageSizeChange}
+        />
       )}
 
       {/* ═══════════ Dialog: Create/Edit Promo Code ═══════════ */}

@@ -209,20 +209,20 @@ const AdminFeaturedProducts = () => {
   return (
     <AdminLayout title="Produits Sélectionnés" breadcrumbs={[{ label: 'Produits Sélectionnés' }]}>
       {/* Stats */}
-      <div className="grid grid-cols-3 gap-4 mb-6">
-        <div className="bg-card rounded-lg p-4 border border-border">
-          <p className="text-sm text-muted-foreground mb-1">Total</p>
-          <p className="font-display text-2xl">{featuredProducts.length}</p>
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4 mb-6">
+        <div className="bg-card rounded-lg p-3 sm:p-4 border border-border">
+          <p className="text-xs sm:text-sm text-muted-foreground mb-1">Total</p>
+          <p className="font-display text-xl sm:text-2xl">{featuredProducts.length}</p>
         </div>
-        <div className="bg-card rounded-lg p-4 border border-border">
-          <p className="text-sm text-muted-foreground mb-1">Heritage</p>
-          <p className="font-display text-2xl">
+        <div className="bg-card rounded-lg p-3 sm:p-4 border border-border">
+          <p className="text-xs sm:text-sm text-muted-foreground mb-1">Heritage</p>
+          <p className="font-display text-xl sm:text-2xl">
             {featuredProducts.filter(p => p.section === 'heritage').length}
           </p>
         </div>
-        <div className="bg-card rounded-lg p-4 border border-border">
-          <p className="text-sm text-muted-foreground mb-1">Sur-Mesure</p>
-          <p className="font-display text-2xl">
+        <div className="bg-card rounded-lg p-3 sm:p-4 border border-border col-span-2 sm:col-span-1">
+          <p className="text-xs sm:text-sm text-muted-foreground mb-1">Sur-Mesure</p>
+          <p className="font-display text-xl sm:text-2xl">
             {featuredProducts.filter(p => p.section === 'sur-mesure').length}
           </p>
         </div>
@@ -278,12 +278,12 @@ const AdminFeaturedProducts = () => {
               </div>
               <div className="divide-y divide-border">
                 {sectionProducts.map((product) => (
-                  <div key={product.id} className="p-4 hover:bg-muted/50 transition-colors">
-                    <div className="flex items-center gap-4">
-                      <GripVertical className="w-5 h-5 text-muted-foreground cursor-move" />
+                  <div key={product.id} className="p-3 sm:p-4 hover:bg-muted/50 transition-colors">
+                    <div className="flex items-start sm:items-center gap-3 sm:gap-4">
+                      <GripVertical className="w-5 h-5 text-muted-foreground cursor-move shrink-0 mt-1 sm:mt-0" />
                       
                       {/* Image */}
-                      <div className="w-16 h-16 rounded-lg overflow-hidden bg-muted">
+                      <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-lg overflow-hidden bg-muted shrink-0">
                         {product.imageUrl || product.product?.imageUrl ? (
                           <img
                             src={getImageUrl(product.imageUrl || product.product?.imageUrl)}
@@ -292,36 +292,36 @@ const AdminFeaturedProducts = () => {
                           />
                         ) : (
                           <div className="w-full h-full flex items-center justify-center">
-                            <ImageIcon className="w-6 h-6 text-muted-foreground" />
+                            <ImageIcon className="w-5 h-5 sm:w-6 sm:h-6 text-muted-foreground" />
                           </div>
                         )}
                       </div>
 
                       {/* Info */}
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                          <h4 className="font-medium">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 mb-1">
+                          <h4 className="font-medium text-sm sm:text-base truncate">
                             {product.title || product.product?.name}
                           </h4>
-                          <Badge className={getSectionBadgeColor(product.section)}>
+                          <Badge className={cn('text-[10px] sm:text-xs', getSectionBadgeColor(product.section))}>
                             {getSectionLabel(product.section)}
                           </Badge>
                           {!product.isActive && (
-                            <Badge variant="outline" className="text-muted-foreground">
+                            <Badge variant="outline" className="text-[10px] sm:text-xs text-muted-foreground">
                               Inactif
                             </Badge>
                           )}
                         </div>
-                        <p className="text-sm text-muted-foreground">
+                        <p className="text-xs sm:text-sm text-muted-foreground line-clamp-1 sm:line-clamp-2">
                           {product.description || product.product?.description}
                         </p>
                         <p className="text-xs text-muted-foreground mt-1">
-                          Ordre d'affichage: {product.displayOrder}
+                          Ordre: {product.displayOrder}
                         </p>
                       </div>
 
                       {/* Actions */}
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
                         <Switch
                           checked={product.isActive}
                           onCheckedChange={(checked) => handleToggleActive(product.id, checked)}
@@ -329,6 +329,7 @@ const AdminFeaturedProducts = () => {
                         <Button
                           variant="outline"
                           size="sm"
+                          className="h-8 w-8 p-0 sm:h-9 sm:w-auto sm:px-3"
                           onClick={() => handleEdit(product)}
                         >
                           <Edit className="w-4 h-4" />
@@ -336,6 +337,7 @@ const AdminFeaturedProducts = () => {
                         <Button
                           variant="outline"
                           size="sm"
+                          className="h-8 w-8 p-0 sm:h-9 sm:w-auto sm:px-3"
                           onClick={() => handleDelete(product.id)}
                         >
                           <Trash2 className="w-4 h-4" />

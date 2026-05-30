@@ -50,6 +50,13 @@ export interface OrderDTO {
   discount?: number;
 }
 
+export interface CustomOrderStatsDTO {
+  total: number;
+  pending: number;
+  contacted: number;
+  completed: number;
+}
+
 export interface CustomOrderDTO {
   id: string;
   imageUrl?: string;

@@ -1,17 +1,48 @@
 import { buildApiUrl, apiRequest } from '@/config/api';
+import type { PageResponse } from '@/types/api';
 import {
   PromoCodeDTO,
+  PromoCodeStatsDTO,
   CreatePromoCodeRequest,
   UpdatePromoCodeRequest,
   ValidatePromoCodeResponse,
   PromoSuggestionDTO,
 } from '@/types/promo-codes';
 
+export interface PromoCodeQueryParams {
+  page?: number;
+  size?: number;
+  sortBy?: string;
+  sortDir?: 'ASC' | 'DESC';
+  keyword?: string;
+}
+
+function buildPromoCodesQueryString(params: PromoCodeQueryParams): string {
+  const {
+    page = 0,
+    size = 20,
+    sortBy = 'createdAt',
+    sortDir = 'DESC',
+    keyword,
+  } = params;
+
+  const qs = new URLSearchParams();
+  qs.set('page', String(page));
+  qs.set('size', String(size));
+  qs.set('sortBy', sortBy);
+  qs.set('sortDir', sortDir);
+  if (keyword?.trim()) qs.set('keyword', keyword.trim());
+  return qs.toString();
+}
+
 export const promoCodesApi = {
-  // ─── Admin: Promo Codes ───────────────────────────────────
-  getAll: async (): Promise<PromoCodeDTO[]> => {
-    const url = buildApiUrl('/promo-codes');
-    return apiRequest<PromoCodeDTO[]>(url);
+  getAll: async (params: PromoCodeQueryParams = {}): Promise<PageResponse<PromoCodeDTO>> => {
+    const qs = buildPromoCodesQueryString(params);
+    return apiRequest<PageResponse<PromoCodeDTO>>(buildApiUrl(`/promo-codes?${qs}`));
+  },
+
+  getStats: async (): Promise<PromoCodeStatsDTO> => {
+    return apiRequest<PromoCodeStatsDTO>(buildApiUrl('/promo-codes/stats'));
   },
 
   getById: async (id: number): Promise<PromoCodeDTO> => {
@@ -50,7 +81,6 @@ export const promoCodesApi = {
     return apiRequest<string>(url);
   },
 
-  // ─── Public: Validate code at checkout ────────────────────
   validate: async (code: string, orderTotal: number): Promise<ValidatePromoCodeResponse> => {
     const url = buildApiUrl(`/promo-codes/validate?code=${encodeURIComponent(code)}&orderTotal=${orderTotal}`);
     const res = await fetch(url, { headers: { 'Content-Type': 'application/json' } });
@@ -59,7 +89,6 @@ export const promoCodesApi = {
     return data;
   },
 
-  // ─── Public: Get nearby promo suggestions based on cart total ──
   getSuggestions: async (orderTotal: number): Promise<PromoSuggestionDTO[]> => {
     const url = buildApiUrl(`/promo-codes/suggestions?orderTotal=${orderTotal}`);
     const res = await fetch(url, { headers: { 'Content-Type': 'application/json' } });
@@ -68,7 +97,6 @@ export const promoCodesApi = {
     return data;
   },
 
-  // ─── Public: Get all active public promo codes ────────────
   getPublicCodes: async (): Promise<PromoCodeDTO[]> => {
     const url = buildApiUrl('/promo-codes/public');
     const res = await fetch(url, { headers: { 'Content-Type': 'application/json' } });

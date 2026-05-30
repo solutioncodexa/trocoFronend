@@ -1,8 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Eye, Search, Phone, MapPin } from 'lucide-react';
 import AdminLayout from '@/components/admin/AdminLayout';
+import AdminPagination from '@/components/admin/AdminPagination';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -19,10 +20,44 @@ const AdminOrders = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const orderIdParam = searchParams.get('order');
   const queryClient = useQueryClient();
-  const { data: orders = [], isLoading } = useQuery({
-    queryKey: ['orders'],
-    queryFn: () => ordersApi.getAllOrders(),
+
+  const [page, setPage] = useState(0);
+  const [pageSize, setPageSize] = useState(20);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [filterStatus, setFilterStatus] = useState<string>('all');
+  const [selectedOrder, setSelectedOrder] = useState<OrderDTO | null>(null);
+  const [isDetailOpen, setIsDetailOpen] = useState(false);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchTerm);
+      setPage(0);
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
+  const handleFilterStatusChange = useCallback((status: string) => {
+    setFilterStatus(status);
+    setPage(0);
+  }, []);
+
+  const handlePageSizeChange = useCallback((size: number) => {
+    setPageSize(size);
+    setPage(0);
+  }, []);
+
+  const { data: ordersPage, isLoading } = useQuery({
+    queryKey: ['orders', 'page', page, pageSize, filterStatus, debouncedSearch],
+    queryFn: () => ordersApi.getAllOrders({
+      page,
+      size: pageSize,
+      status: filterStatus !== 'all' ? filterStatus : undefined,
+      keyword: debouncedSearch || undefined,
+    }),
   });
+
+  const orders = ordersPage?.content ?? [];
 
   const updateStatusMutation = useMutation({
     mutationFn: ({ id, status }: { id: string; status: string }) =>
@@ -32,20 +67,6 @@ const AdminOrders = () => {
       toast.success('Statut mis à jour');
     },
     onError: (err: Error) => toastError(err, 'Erreur lors de la mise à jour du statut'),
-  });
-
-  const [searchTerm, setSearchTerm] = useState('');
-  const [filterStatus, setFilterStatus] = useState<string>('all');
-  const [selectedOrder, setSelectedOrder] = useState<OrderDTO | null>(null);
-  const [isDetailOpen, setIsDetailOpen] = useState(false);
-
-  const filteredOrders = orders.filter((order) => {
-    const matchesSearch =
-      order.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      order.customer?.fullName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      order.customer?.phone?.includes(searchTerm);
-    const matchesStatus = filterStatus === 'all' || order.status === filterStatus;
-    return matchesSearch && matchesStatus;
   });
 
   const getStatusStyle = (status: string) => {
@@ -80,7 +101,7 @@ const AdminOrders = () => {
       setSelectedOrder(order);
       setIsDetailOpen(true);
       setSearchParams({}, { replace: true });
-    } else if (orders.length > 0) {
+    } else {
       ordersApi.getOrderById(orderIdParam)
         .then((o) => {
           setSelectedOrder(o);
@@ -118,19 +139,13 @@ const AdminOrders = () => {
 
   return (
     <AdminLayout title="Gestion des Commandes" breadcrumbs={[{ label: 'Commandes' }]}>
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-        {['new', 'confirmed', 'delivered', 'cancelled'].map((status) => {
-          const count = orders.filter((o) => o.status === status).length;
-          return (
-            <div key={status} className="bg-card rounded-lg p-4 border border-border">
-              <Badge className={cn('mb-2', getStatusStyle(status))}>
-                {getStatusLabel(status)}
-              </Badge>
-              <p className="font-display text-2xl">{count}</p>
-            </div>
-          );
-        })}
-      </div>
+      <p className="text-xs sm:text-sm text-muted-foreground mb-3 flex flex-wrap items-center gap-x-1.5 gap-y-1">
+        <span className="font-medium text-foreground">{ordersPage?.totalElements ?? 0}</span>
+        commande{(ordersPage?.totalElements ?? 0) > 1 ? 's' : ''}
+        {filterStatus !== 'all' && (
+          <>· filtre <Badge className={cn('text-[10px] px-1.5 py-0', getStatusStyle(filterStatus))}>{getStatusLabel(filterStatus)}</Badge></>
+        )}
+      </p>
 
       <div className="flex flex-col sm:flex-row gap-4 mb-6">
         <div className="flex-1 relative">
@@ -142,7 +157,7 @@ const AdminOrders = () => {
             className="pl-10"
           />
         </div>
-        <Select value={filterStatus} onValueChange={setFilterStatus}>
+        <Select value={filterStatus} onValueChange={handleFilterStatusChange}>
           <SelectTrigger className="w-full sm:w-48">
             <SelectValue placeholder="Statut" />
           </SelectTrigger>
@@ -156,7 +171,76 @@ const AdminOrders = () => {
         </Select>
       </div>
 
-      <div className="bg-card rounded-lg border border-border overflow-hidden">
+      {/* Mobile: card layout */}
+      <div className="block lg:hidden space-y-3">
+        {orders.map((order) => (
+          <div key={order.id} className="bg-card rounded-lg border border-border p-3 sm:p-4 space-y-3">
+            <div className="flex items-start justify-between gap-2">
+              <div className="min-w-0">
+                <p className="font-body font-medium text-sm">{order.customer?.fullName}</p>
+                <p className="font-body text-xs text-muted-foreground">{order.customer?.phone}</p>
+                <p className="font-body text-xs text-muted-foreground">{order.customer?.city ?? '—'}</p>
+              </div>
+              <Badge className={cn('shrink-0 text-[10px]', getStatusStyle(order.status))}>
+                {getStatusLabel(order.status)}
+              </Badge>
+            </div>
+            {order.items && order.items.length > 0 && (
+              <div className="flex items-center gap-2">
+                {order.items[0].product?.images?.[0] ? (
+                  <img
+                    src={getImageUrl(order.items[0].product.images[0])}
+                    alt={order.items[0].product?.name}
+                    className="w-10 h-10 rounded object-cover shrink-0"
+                  />
+                ) : (
+                  <div className="w-10 h-10 bg-muted rounded flex items-center justify-center shrink-0">
+                    <span className="text-xs text-muted-foreground">—</span>
+                  </div>
+                )}
+                <div className="flex-1 min-w-0">
+                  <p className="font-body text-sm truncate">{order.items[0].product?.name}</p>
+                  {order.items.length > 1 && (
+                    <p className="font-body text-xs text-muted-foreground">+{order.items.length - 1} article(s)</p>
+                  )}
+                </div>
+                <p className="font-body font-medium text-sm shrink-0">{formatPrice(order.total ?? 0)}</p>
+              </div>
+            )}
+            <div className="flex items-center gap-2">
+              <Select
+                value={order.status}
+                onValueChange={(value) => handleStatusChange(order.id, value)}
+              >
+                <SelectTrigger className={cn('flex-1 h-8 text-xs', getStatusStyle(order.status))}>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="new">Nouvelle</SelectItem>
+                  <SelectItem value="confirmed">Confirmée</SelectItem>
+                  <SelectItem value="delivered">Livrée</SelectItem>
+                  <SelectItem value="cancelled">Annulée</SelectItem>
+                </SelectContent>
+              </Select>
+              <Button variant="outline" size="sm" className="h-8 text-xs" onClick={() => handleViewOrder(order)}>
+                <Eye className="w-4 h-4 mr-1" />
+                Détails
+              </Button>
+            </div>
+            <p className="font-body text-[10px] text-muted-foreground">
+              {order.createdAt ? formatDate(order.createdAt) : '—'}
+            </p>
+          </div>
+        ))}
+        {orders.length === 0 && (
+          <div className="p-8 text-center">
+            <p className="font-body text-muted-foreground">Aucune commande trouvée</p>
+          </div>
+        )}
+      </div>
+
+      {/* Desktop: table layout */}
+      <div className="hidden lg:block bg-card rounded-lg border border-border overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead className="bg-muted/50">
@@ -172,7 +256,7 @@ const AdminOrders = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
-              {filteredOrders.map((order) => (
+              {orders.map((order) => (
                 <tr key={order.id} className="hover:bg-muted/30">
                   <td className="px-4 py-3 font-body font-medium">{order.id}</td>
                   <td className="px-4 py-3">
@@ -237,12 +321,23 @@ const AdminOrders = () => {
           </table>
         </div>
 
-        {filteredOrders.length === 0 && (
+        {orders.length === 0 && (
           <div className="p-8 text-center">
             <p className="font-body text-muted-foreground">Aucune commande trouvée</p>
           </div>
         )}
       </div>
+
+      {ordersPage && ordersPage.totalPages > 1 && (
+        <AdminPagination
+          page={page}
+          totalPages={ordersPage.totalPages}
+          totalElements={ordersPage.totalElements}
+          size={pageSize}
+          onPageChange={setPage}
+          onSizeChange={handlePageSizeChange}
+        />
+      )}
 
       <Dialog open={isDetailOpen} onOpenChange={setIsDetailOpen}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">

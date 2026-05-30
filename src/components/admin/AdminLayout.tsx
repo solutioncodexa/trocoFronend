@@ -64,7 +64,7 @@ const AdminLayout = ({ children, title, breadcrumbs }: AdminLayoutProps) => {
   const location = useLocation();
   const navigate = useNavigate();
   const { logout, isAuthenticated } = useAdmin();
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true); // Commence ouvert sur desktop
+  const [isSidebarOpen, setIsSidebarOpen] = useState(() => window.innerWidth >= 1024);
 
   // Redirect if not authenticated
   if (!isAuthenticated) {

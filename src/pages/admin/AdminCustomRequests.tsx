@@ -1,8 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { Eye, Search, Phone, Mail, MessageSquare, ExternalLink, FileText, Calculator, Check, X } from 'lucide-react';
 import AdminLayout from '@/components/admin/AdminLayout';
+import AdminPagination from '@/components/admin/AdminPagination';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -21,10 +22,54 @@ const AdminCustomRequests = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const idParam = searchParams.get('id');
   const queryClient = useQueryClient();
-  const { data: requests = [], isLoading } = useQuery({
-    queryKey: ['customOrders'],
-    queryFn: () => customOrdersApi.getAllCustomOrders(),
+
+  const [page, setPage] = useState(0);
+  const [pageSize, setPageSize] = useState(20);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [filterStatus, setFilterStatus] = useState<string>('all');
+  const [selectedRequest, setSelectedRequest] = useState<CustomOrderDTO | null>(null);
+  const [isDetailOpen, setIsDetailOpen] = useState(false);
+  const [adminNotes, setAdminNotes] = useState<Record<string, string>>({});
+
+  const [isQuoteOpen, setIsQuoteOpen] = useState(false);
+  const [quotes, setQuotes] = useState<Record<string, QuoteData>>({});
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchTerm);
+      setPage(0);
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
+  const handleFilterStatusChange = useCallback((status: string) => {
+    setFilterStatus(status);
+    setPage(0);
+  }, []);
+
+  const handlePageSizeChange = useCallback((size: number) => {
+    setPageSize(size);
+    setPage(0);
+  }, []);
+
+  const { data: requestsPage, isLoading, isFetching } = useQuery({
+    queryKey: ['customOrders', 'page', page, pageSize, filterStatus, debouncedSearch],
+    queryFn: () => customOrdersApi.getAllCustomOrders({
+      page,
+      size: pageSize,
+      status: filterStatus !== 'all' ? filterStatus : undefined,
+      keyword: debouncedSearch || undefined,
+    }),
+    placeholderData: keepPreviousData,
   });
+
+  const { data: stats } = useQuery({
+    queryKey: ['customOrders', 'stats'],
+    queryFn: () => customOrdersApi.getStats(),
+  });
+
+  const requests = requestsPage?.content ?? [];
 
   const updateStatusMutation = useMutation({
     mutationFn: ({ id, status }: { id: string; status: string }) =>
@@ -34,24 +79,6 @@ const AdminCustomRequests = () => {
       toast.success('Statut mis à jour');
     },
     onError: (err: Error) => toastError(err, 'Erreur lors de la mise à jour du statut'),
-  });
-
-  const [searchTerm, setSearchTerm] = useState('');
-  const [filterStatus, setFilterStatus] = useState<string>('all');
-  const [selectedRequest, setSelectedRequest] = useState<CustomOrderDTO | null>(null);
-  const [isDetailOpen, setIsDetailOpen] = useState(false);
-  const [adminNotes, setAdminNotes] = useState<Record<string, string>>({});
-
-  const [isQuoteOpen, setIsQuoteOpen] = useState(false);
-  const [quotes, setQuotes] = useState<Record<string, QuoteData>>({});
-
-  const filteredRequests = requests.filter((request) => {
-    const matchesSearch =
-      request.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      request.customer?.fullName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (request.customer?.email ?? '').toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = filterStatus === 'all' || request.status === filterStatus;
-    return matchesSearch && matchesStatus;
   });
 
   const getStatusStyle = (status: string) => {
@@ -110,12 +137,20 @@ const AdminCustomRequests = () => {
   };
 
   useEffect(() => {
-    if (!idParam || requests.length === 0) return;
+    if (!idParam) return;
     const request = requests.find((r) => String(r.id) === idParam);
     if (request) {
       setSelectedRequest(request);
       setIsDetailOpen(true);
       setSearchParams({}, { replace: true });
+    } else if (idParam) {
+      customOrdersApi.getCustomOrderById(idParam)
+        .then((r) => {
+          setSelectedRequest(r);
+          setIsDetailOpen(true);
+          setSearchParams({}, { replace: true });
+        })
+        .catch(() => {});
     }
   }, [idParam, requests, setSearchParams]);
 
@@ -175,7 +210,7 @@ const AdminCustomRequests = () => {
     }).format(price);
   };
 
-  if (isLoading) {
+  if (isLoading && !requestsPage) {
     return (
       <AdminLayout title="Demandes de Personnalisation" breadcrumbs={[{ label: 'Personnalisations' }]}>
         <div className="p-8 text-center text-muted-foreground">Chargement...</div>
@@ -185,20 +220,30 @@ const AdminCustomRequests = () => {
 
   return (
     <AdminLayout title="Demandes de Personnalisation" breadcrumbs={[{ label: 'Personnalisations' }]}>
-      {/* Stats */}
-      <div className="grid grid-cols-3 gap-4 mb-6">
-        {['pending', 'contacted', 'completed'].map(status => {
-          const count = requests.filter(r => r.status === status).length;
-          return (
-            <div key={status} className="bg-card rounded-lg p-4 border border-border">
-              <Badge className={cn('mb-2', getStatusStyle(status))}>
-                {getStatusLabel(status)}
-              </Badge>
-              <p className="font-display text-2xl">{count}</p>
-            </div>
-          );
-        })}
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4 mb-4">
+        <div className="bg-card rounded-lg p-3 sm:p-4 border border-border">
+          <Badge className={cn('mb-2 text-[10px]', getStatusStyle('pending'))}>En attente</Badge>
+          <p className="font-display text-xl sm:text-2xl">{stats?.pending ?? 0}</p>
+        </div>
+        <div className="bg-card rounded-lg p-3 sm:p-4 border border-border">
+          <Badge className={cn('mb-2 text-[10px]', getStatusStyle('contacted'))}>Contacté</Badge>
+          <p className="font-display text-xl sm:text-2xl">{stats?.contacted ?? 0}</p>
+        </div>
+        <div className="bg-card rounded-lg p-3 sm:p-4 border border-border col-span-2 sm:col-span-1">
+          <Badge className={cn('mb-2 text-[10px]', getStatusStyle('completed'))}>Terminée</Badge>
+          <p className="font-display text-xl sm:text-2xl">{stats?.completed ?? 0}</p>
+        </div>
       </div>
+
+      <p className="text-xs sm:text-sm text-muted-foreground mb-3 flex flex-wrap items-center gap-x-1.5 gap-y-1">
+        <span className="font-medium text-foreground">{requestsPage?.totalElements ?? 0}</span>
+        demande{(requestsPage?.totalElements ?? 0) > 1 ? 's' : ''}
+        {filterStatus !== 'all' && (
+          <>· filtre <Badge className={cn('text-[10px] px-1.5 py-0', getStatusStyle(filterStatus))}>{getStatusLabel(filterStatus)}</Badge></>
+        )}
+        {debouncedSearch && <>· &quot;{debouncedSearch}&quot;</>}
+        {isFetching && <span className="text-[10px]">(mise à jour…)</span>}
+      </p>
 
       {/* Toolbar */}
       <div className="flex flex-col sm:flex-row gap-4 mb-6">
@@ -211,7 +256,7 @@ const AdminCustomRequests = () => {
             className="pl-10"
           />
         </div>
-        <Select value={filterStatus} onValueChange={setFilterStatus}>
+        <Select value={filterStatus} onValueChange={handleFilterStatusChange}>
           <SelectTrigger className="w-full sm:w-48">
             <SelectValue placeholder="Statut" />
           </SelectTrigger>
@@ -226,7 +271,7 @@ const AdminCustomRequests = () => {
 
       {/* Requests Grid */}
       <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {filteredRequests.map((request) => {
+        {requests.map((request) => {
           const quote = quotes[request.id];
           return (
             <div
@@ -324,10 +369,21 @@ const AdminCustomRequests = () => {
         })}
       </div>
 
-      {filteredRequests.length === 0 && (
+      {requests.length === 0 && (
         <div className="bg-card rounded-lg p-8 text-center border border-border">
           <p className="font-body text-muted-foreground">Aucune demande trouvée</p>
         </div>
+      )}
+
+      {requestsPage && requestsPage.totalElements > 0 && (
+        <AdminPagination
+          page={page}
+          totalPages={requestsPage.totalPages}
+          totalElements={requestsPage.totalElements}
+          size={pageSize}
+          onPageChange={setPage}
+          onSizeChange={handlePageSizeChange}
+        />
       )}
 
       {/* Request Detail Modal - Responsive Design */}

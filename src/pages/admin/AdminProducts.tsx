@@ -1,8 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Plus, Pencil, Trash2, Search, Upload, X, Settings2, ArrowLeft, ArrowRight, Star, GripVertical } from 'lucide-react';
 import { createEmptyVariantRow, type ProductVariantFormRow } from '@/types/product-variant';
 import { ProductVariantEditor } from '@/components/admin/ProductVariantEditor';
 import AdminLayout from '@/components/admin/AdminLayout';
+import AdminPagination from '@/components/admin/AdminPagination';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -10,7 +11,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { Product, ProductCategory, ProductType } from '@/types/product';
 import { categoriesApi, productTypesApi, collectionsApi, goldPriceSettingsApi, calculatePrice, getImageUrl } from '@/services/api';
 import { ProductFormData } from '@/services/api/products';
@@ -26,11 +27,14 @@ import { notifyCompressionReports } from '@/utils/notifyCompression';
 
 const AdminProducts = () => {
   const queryClient = useQueryClient();
-  const { data: productsPage, isLoading } = useQuery({
-    queryKey: ['products', 'admin'],
-    queryFn: () => productsApi.getAllProductsFullPage({ page: 0, size: 500 }),
-  });
-  const products = mapProductDetailListToProducts(productsPage?.content);
+  const [page, setPage] = useState(0);
+  const [pageSize, setPageSize] = useState(12);
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+
+  const handlePageSizeChange = useCallback((size: number) => {
+    setPageSize(size);
+    setPage(0);
+  }, []);
 
   const { data: categories = [] } = useQuery({
     queryKey: ['categories'],
@@ -56,6 +60,33 @@ const AdminProducts = () => {
   const [isPriceSettingsOpen, setIsPriceSettingsOpen] = useState(false);
   const [priceSettingsForm, setPriceSettingsForm] = useState({ pricePerGram: '' });
   const [filterCategory, setFilterCategory] = useState<string>('all');
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchTerm);
+      setPage(0);
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
+  const handleFilterCategoryChange = useCallback((cat: string) => {
+    setFilterCategory(cat);
+    setPage(0);
+  }, []);
+
+  const { data: productsPage, isLoading, isFetching } = useQuery({
+    queryKey: ['products', 'admin', page, pageSize, filterCategory, debouncedSearch],
+    queryFn: () => productsApi.getAllProductsFullPage({
+      page,
+      size: pageSize,
+      sortBy: 'createdAt',
+      sortDir: 'DESC',
+      category: filterCategory !== 'all' ? filterCategory : undefined,
+      keyword: debouncedSearch || undefined,
+    }),
+    placeholderData: keepPreviousData,
+  });
+  const products = mapProductDetailListToProducts(productsPage?.content) ?? [];
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [formData, setFormData] = useState({
@@ -107,12 +138,7 @@ const AdminProducts = () => {
     }));
   }, [variantRows]);
 
-  const filteredProducts = products.filter(product => {
-    const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      product.description.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCategory = filterCategory === 'all' || product.category === filterCategory;
-    return matchesSearch && matchesCategory;
-  });
+  const getCategoryLabel = (cat: string) => (cat === 'beldi' ? 'Beldi' : cat === 'modern' ? 'Moderne' : cat);
 
   const getAvailableSizes = (typeCode: string) => {
     const pt = productTypes.find((p) => p.code.toLowerCase() === typeCode.toLowerCase());
@@ -386,7 +412,7 @@ const AdminProducts = () => {
     }
   };
 
-  if (isLoading) {
+  if (isLoading && !productsPage) {
     return (
       <AdminLayout title="Gestion des Produits" breadcrumbs={[{ label: 'Produits' }]}>
         <div className="p-8 text-center text-muted-foreground">Chargement...</div>
@@ -396,6 +422,18 @@ const AdminProducts = () => {
 
   return (
     <AdminLayout title="Gestion des Produits" breadcrumbs={[{ label: 'Produits' }]}>
+      <p className="text-xs sm:text-sm text-muted-foreground mb-3 flex flex-wrap items-center gap-x-1.5 gap-y-1">
+        <span className="font-medium text-foreground">{productsPage?.totalElements ?? 0}</span>
+        produit{(productsPage?.totalElements ?? 0) > 1 ? 's' : ''}
+        {filterCategory !== 'all' && (
+          <>· filtre <Badge variant="secondary" className="text-[10px] px-1.5 py-0">{getCategoryLabel(filterCategory)}</Badge></>
+        )}
+        {debouncedSearch && (
+          <>· &quot;{debouncedSearch}&quot;</>
+        )}
+        {isFetching && <span className="text-[10px]">(mise à jour…)</span>}
+      </p>
+
       {/* Toolbar */}
       <div className="flex flex-col sm:flex-row gap-4 mb-6">
         <div className="flex-1 relative">
@@ -407,7 +445,7 @@ const AdminProducts = () => {
             className="pl-10"
           />
         </div>
-        <Select value={filterCategory} onValueChange={setFilterCategory}>
+        <Select value={filterCategory} onValueChange={handleFilterCategoryChange}>
           <SelectTrigger className="w-full sm:w-48">
             <SelectValue placeholder="Catégorie" />
           </SelectTrigger>
@@ -435,8 +473,71 @@ const AdminProducts = () => {
         </Button>
       </div>
 
-      {/* Products Table */}
-      <div className="bg-card rounded-lg border border-border overflow-hidden">
+      {/* Mobile: card layout */}
+      <div className="block lg:hidden space-y-3">
+        {products.map((product) => (
+          <div key={product.id} className="bg-card rounded-lg border border-border p-3 sm:p-4">
+            <div className="flex items-start gap-3">
+              <img
+                src={product.images?.[0] ? getImageUrl(product.images[0]) : 'https://images.unsplash.com/photo-1611652022419-a9419f74343d?w=100'}
+                alt={product.name}
+                className="w-14 h-14 rounded-lg object-cover shrink-0"
+              />
+              <div className="flex-1 min-w-0">
+                <p className="font-body font-medium text-sm truncate">{product.name}</p>
+                <p className="font-body text-xs text-muted-foreground">{product.weight}g</p>
+                <div className="flex flex-wrap items-center gap-1 mt-1">
+                  <Badge variant={product.category === 'beldi' ? 'default' : 'secondary'} className="text-[10px]">
+                    {product.category === 'beldi' ? 'Beldi' : 'Moderne'}
+                  </Badge>
+                  {product.badges.map(badge => (
+                    <Badge key={badge} variant={badge === 'promo' ? 'destructive' : 'outline'} className="text-[10px]">
+                      {badge === 'new' ? 'Nouveau' : badge === 'bestseller' ? 'Best-seller' : 'Promo'}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+              <div className="text-right shrink-0">
+                <span className={cn('font-body text-sm', product.originalPrice && product.originalPrice > product.price ? 'text-green-600 font-medium' : '')}>
+                  {formatPrice(product.price)}
+                </span>
+                {product.originalPrice && product.originalPrice > product.price && (
+                  <div className="text-[10px] text-muted-foreground line-through">
+                    {formatPrice(product.originalPrice)}
+                  </div>
+                )}
+              </div>
+            </div>
+            <div className="flex gap-2 mt-3">
+              <Button
+                variant="outline"
+                size="sm"
+                className="flex-1 h-8 text-xs"
+                onClick={() => handleOpenModal(product)}
+              >
+                <Pencil className="w-3.5 h-3.5 mr-1" />
+                Modifier
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 w-8 p-0 text-destructive hover:bg-destructive hover:text-destructive-foreground"
+                onClick={() => handleDelete(product.id)}
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+              </Button>
+            </div>
+          </div>
+        ))}
+        {products.length === 0 && (
+          <div className="p-8 text-center">
+            <p className="font-body text-muted-foreground">Aucun produit trouvé</p>
+          </div>
+        )}
+      </div>
+
+      {/* Desktop: table layout */}
+      <div className="hidden lg:block bg-card rounded-lg border border-border overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead className="bg-muted/50">
@@ -450,7 +551,7 @@ const AdminProducts = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
-              {filteredProducts.map((product) => (
+              {products.map((product) => (
                 <tr key={product.id} className="hover:bg-muted/30">
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-3">
@@ -525,12 +626,24 @@ const AdminProducts = () => {
           </table>
         </div>
         
-        {filteredProducts.length === 0 && (
+        {products.length === 0 && (
           <div className="p-8 text-center">
             <p className="font-body text-muted-foreground">Aucun produit trouvé</p>
           </div>
         )}
       </div>
+
+      {productsPage && productsPage.totalElements > 0 && (
+        <AdminPagination
+          page={page}
+          totalPages={productsPage.totalPages}
+          totalElements={productsPage.totalElements}
+          size={pageSize}
+          onPageChange={setPage}
+          onSizeChange={handlePageSizeChange}
+          pageSizeOptions={[12, 20, 50]}
+        />
+      )}
 
       {/* Product Modal */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>

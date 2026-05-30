@@ -120,17 +120,17 @@ const AdminProductTypes = () => {
 
   return (
     <AdminLayout title="Types de Produits" breadcrumbs={[{ label: 'Types de Produits' }]}>
-      <div className="flex justify-between items-center mb-6">
-        <p className="font-body text-muted-foreground">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-6">
+        <p className="font-body text-sm sm:text-base text-muted-foreground">
           Gérez les types de produits (bracelet, bague, collier, etc.) et leurs options de tailles
         </p>
-        <Button onClick={() => handleOpenModal()} className="font-body">
+        <Button onClick={() => handleOpenModal()} className="font-body w-full sm:w-auto">
           <Plus className="w-4 h-4 mr-2" />
           Nouveau type
         </Button>
       </div>
 
-      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {productTypes.map((type) => (
           <div
             key={type.id}

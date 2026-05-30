@@ -15,6 +15,13 @@ export interface PromoCodeDTO {
   createdAt: string;
 }
 
+export interface PromoCodeStatsDTO {
+  total: number;
+  active: number;
+  singleUse: number;
+  reusable: number;
+}
+
 export interface CreatePromoCodeRequest {
   code: string;
   type: PromoCodeType;

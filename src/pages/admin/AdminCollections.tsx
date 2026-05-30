@@ -143,15 +143,15 @@ const AdminCollections = () => {
   return (
     <AdminLayout title="Collections">
       <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <h1 className="text-3xl font-bold">Gérez les collections de produits</h1>
-          <Button onClick={() => handleOpenModal()}>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <h1 className="text-2xl sm:text-3xl font-bold">Gérez les collections de produits</h1>
+          <Button onClick={() => handleOpenModal()} className="w-full sm:w-auto">
             <Plus className="w-4 h-4 mr-2" />
             Nouvelle collection
           </Button>
         </div>
 
-        <div className="relative flex-1 max-w-sm">
+        <div className="relative flex-1 sm:max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground w-4 h-4" />
           <Input
             placeholder="Rechercher une collection..."
@@ -161,88 +161,151 @@ const AdminCollections = () => {
           />
         </div>
 
-        <div className="bg-background rounded-lg border">
-          <table className="w-full">
-            <thead className="bg-muted/50">
-              <tr>
-                <th className="px-4 py-3 text-left text-sm font-medium">Collection</th>
-                <th className="px-4 py-3 text-left text-sm font-medium">Slug</th>
-                <th className="px-4 py-3 text-left text-sm font-medium">Description</th>
-                <th className="px-4 py-3 text-left text-sm font-medium">Statut</th>
-                <th className="px-4 py-3 text-right text-sm font-medium">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y">
-              {filteredCollections.map((collection) => (
-                <tr key={collection.id} className="hover:bg-muted/30">
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
-                        <span className="text-primary font-bold">
-                          {collection.name.charAt(0).toUpperCase()}
-                        </span>
-                      </div>
-                      <div>
-                        <p className="font-medium">{collection.name}</p>
-                        {collection.createdAt && (
-                          <p className="text-xs text-muted-foreground">
-                            Créée le {new Date(collection.createdAt).toLocaleDateString()}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-4 py-3">
-                    <code className="text-xs bg-muted px-2 py-1 rounded">{collection.slug}</code>
-                  </td>
-                  <td className="px-4 py-3">
-                    <p className="text-sm text-muted-foreground max-w-xs truncate">
-                      {collection.description || 'Aucune description'}
-                    </p>
-                  </td>
-                  <td className="px-4 py-3">
-                    <button
-                      type="button"
-                      onClick={() => toggleActive(collection)}
-                      className="flex items-center gap-2 text-sm"
-                    >
-                      {collection.isActive ? (
-                        <>
-                          <ToggleRight className="w-5 h-5 text-green-600" />
-                          <span className="text-green-600">Active</span>
-                        </>
-                      ) : (
-                        <>
-                          <ToggleLeft className="w-5 h-5 text-gray-400" />
-                          <span className="text-gray-400">Inactive</span>
-                        </>
-                      )}
-                    </button>
-                  </td>
-                  <td className="px-4 py-3 text-right">
-                    <div className="flex justify-end gap-2">
-                      <Button variant="outline" size="sm" onClick={() => handleOpenModal(collection)}>
-                        <Pencil className="w-4 h-4" />
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="text-destructive hover:bg-destructive hover:text-destructive-foreground"
-                        onClick={() => handleDelete(collection.id)}
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        {/* Mobile: card layout */}
+        <div className="block md:hidden space-y-3">
+          {filteredCollections.map((collection) => (
+            <div key={collection.id} className="bg-background rounded-lg border p-4 space-y-3">
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center shrink-0">
+                    <span className="text-primary font-bold">
+                      {collection.name.charAt(0).toUpperCase()}
+                    </span>
+                  </div>
+                  <div className="min-w-0">
+                    <p className="font-medium truncate">{collection.name}</p>
+                    <code className="text-xs bg-muted px-1.5 py-0.5 rounded">{collection.slug}</code>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => toggleActive(collection)}
+                  className="flex items-center gap-1.5 text-xs shrink-0"
+                >
+                  {collection.isActive ? (
+                    <>
+                      <ToggleRight className="w-5 h-5 text-green-600" />
+                      <span className="text-green-600">Active</span>
+                    </>
+                  ) : (
+                    <>
+                      <ToggleLeft className="w-5 h-5 text-gray-400" />
+                      <span className="text-gray-400">Inactive</span>
+                    </>
+                  )}
+                </button>
+              </div>
+              {collection.description && (
+                <p className="text-xs text-muted-foreground line-clamp-2">{collection.description}</p>
+              )}
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm" className="flex-1" onClick={() => handleOpenModal(collection)}>
+                  <Pencil className="w-4 h-4 mr-1.5" />
+                  Modifier
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="text-destructive hover:bg-destructive hover:text-destructive-foreground"
+                  onClick={() => handleDelete(collection.id)}
+                >
+                  <Trash2 className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
+          ))}
           {filteredCollections.length === 0 && (
             <div className="p-8 text-center">
               <p className="text-muted-foreground">Aucune collection trouvée</p>
             </div>
           )}
+        </div>
+
+        {/* Desktop: table layout */}
+        <div className="hidden md:block bg-background rounded-lg border">
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-muted/50">
+                <tr>
+                  <th className="px-4 py-3 text-left text-sm font-medium">Collection</th>
+                  <th className="px-4 py-3 text-left text-sm font-medium">Slug</th>
+                  <th className="px-4 py-3 text-left text-sm font-medium">Description</th>
+                  <th className="px-4 py-3 text-left text-sm font-medium">Statut</th>
+                  <th className="px-4 py-3 text-right text-sm font-medium">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y">
+                {filteredCollections.map((collection) => (
+                  <tr key={collection.id} className="hover:bg-muted/30">
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
+                          <span className="text-primary font-bold">
+                            {collection.name.charAt(0).toUpperCase()}
+                          </span>
+                        </div>
+                        <div>
+                          <p className="font-medium">{collection.name}</p>
+                          {collection.createdAt && (
+                            <p className="text-xs text-muted-foreground">
+                              Créée le {new Date(collection.createdAt).toLocaleDateString()}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3">
+                      <code className="text-xs bg-muted px-2 py-1 rounded">{collection.slug}</code>
+                    </td>
+                    <td className="px-4 py-3">
+                      <p className="text-sm text-muted-foreground max-w-xs truncate">
+                        {collection.description || 'Aucune description'}
+                      </p>
+                    </td>
+                    <td className="px-4 py-3">
+                      <button
+                        type="button"
+                        onClick={() => toggleActive(collection)}
+                        className="flex items-center gap-2 text-sm"
+                      >
+                        {collection.isActive ? (
+                          <>
+                            <ToggleRight className="w-5 h-5 text-green-600" />
+                            <span className="text-green-600">Active</span>
+                          </>
+                        ) : (
+                          <>
+                            <ToggleLeft className="w-5 h-5 text-gray-400" />
+                            <span className="text-gray-400">Inactive</span>
+                          </>
+                        )}
+                      </button>
+                    </td>
+                    <td className="px-4 py-3 text-right">
+                      <div className="flex justify-end gap-2">
+                        <Button variant="outline" size="sm" onClick={() => handleOpenModal(collection)}>
+                          <Pencil className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="text-destructive hover:bg-destructive hover:text-destructive-foreground"
+                          onClick={() => handleDelete(collection.id)}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            {filteredCollections.length === 0 && (
+              <div className="p-8 text-center">
+                <p className="text-muted-foreground">Aucune collection trouvée</p>
+              </div>
+            )}
+          </div>
         </div>
 
         <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>

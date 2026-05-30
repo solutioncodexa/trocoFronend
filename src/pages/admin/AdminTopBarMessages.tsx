@@ -190,26 +190,26 @@ const AdminTopBarMessages = () => {
 
   return (
     <AdminLayout title="Messages Top Bar" breadcrumbs={[{ label: 'Messages Top Bar' }]}>
-      <div className="p-8 max-h-[calc(100vh-8rem)] overflow-y-auto">
-        <div className="flex justify-between items-center mb-6">
+      <div className="max-h-[calc(100vh-8rem)] overflow-y-auto">
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
           <div>
-            <h1 className="text-3xl font-bold text-foreground">Messages de la Top Bar</h1>
-            <p className="text-muted-foreground mt-2">
+            <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Messages de la Top Bar</h1>
+            <p className="text-sm text-muted-foreground mt-1 sm:mt-2">
               Gérez les messages et la durée d&apos;affichage avant passage au suivant (si plusieurs messages
               actifs), sur le même principe que la fermeture auto des promo modals.
             </p>
           </div>
-          <Button onClick={() => setIsCreateDialogOpen(true)}>
+          <Button onClick={() => setIsCreateDialogOpen(true)} className="w-full sm:w-auto">
             <Plus className="w-4 h-4 mr-2" />
             Ajouter un message
           </Button>
         </div>
 
         <div className="bg-card rounded-lg border">
-          <div className="p-6">
-            <div className="flex items-center justify-between mb-4">
+          <div className="p-4 sm:p-6">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-4">
               <h3 className="text-lg font-semibold">Messages Actifs</h3>
-              <div className="flex items-center gap-4 text-sm text-muted-foreground">
+              <div className="flex flex-wrap items-center gap-3 sm:gap-4 text-xs sm:text-sm text-muted-foreground">
                 <span>Total: {messages.length}</span>
                 <span>Actifs: {messages.filter(m => m.isActive).length}</span>
                 <span>Inactifs: {messages.filter(m => !m.isActive).length}</span>
@@ -227,29 +227,30 @@ const AdminTopBarMessages = () => {
             ) : (
               <div className="space-y-4">
                 {messages.map((message, index) => (
-                  <div key={message.id} className="flex items-center gap-4 p-4 border rounded-lg hover:bg-muted/50 transition-colors">
-                    <div className="flex-1">
-                      <p className="font-medium">{message.message}</p>
-                      <div className="flex items-center gap-2 mt-2">
-                        <Badge variant={message.isActive ? "default" : "secondary"}>
+                  <div key={message.id} className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 p-3 sm:p-4 border rounded-lg hover:bg-muted/50 transition-colors">
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-sm sm:text-base">{message.message}</p>
+                      <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 mt-2">
+                        <Badge variant={message.isActive ? "default" : "secondary"} className="text-[10px] sm:text-xs">
                           {message.isActive ? 'Actif' : 'Inactif'}
                         </Badge>
-                        <span className="text-sm text-muted-foreground">
+                        <span className="text-[10px] sm:text-sm text-muted-foreground">
                           Ordre: {message.displayOrder}
                         </span>
-                        <span className="text-sm text-muted-foreground">
-                          Durée: {message.displayDurationSeconds ?? 7}s
+                        <span className="text-[10px] sm:text-sm text-muted-foreground">
+                          {message.displayDurationSeconds ?? 7}s
                         </span>
-                        <span className="text-sm text-muted-foreground">
-                          Position: {index + 1}/{messages.length}
+                        <span className="text-[10px] sm:text-sm text-muted-foreground">
+                          {index + 1}/{messages.length}
                         </span>
                       </div>
                     </div>
                     
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
                       <Button
                         variant="outline"
                         size="sm"
+                        className="h-8 w-8 p-0"
                         onClick={() => moveMessage(index, 'up')}
                         disabled={index === 0}
                       >
@@ -258,13 +259,14 @@ const AdminTopBarMessages = () => {
                       <Button
                         variant="outline"
                         size="sm"
+                        className="h-8 w-8 p-0"
                         onClick={() => moveMessage(index, 'down')}
                         disabled={index === messages.length - 1}
                       >
                         <MoveDown className="w-4 h-4" />
                       </Button>
                       
-                      <div className="flex items-center space-x-2">
+                      <div className="flex items-center">
                         <Switch
                           checked={message.isActive}
                           onCheckedChange={(checked) => handleToggleActive(message.id, checked)}
@@ -275,6 +277,7 @@ const AdminTopBarMessages = () => {
                       <Button
                         variant="outline"
                         size="sm"
+                        className="h-8 w-8 p-0"
                         onClick={() => {
                           setSelectedMessage(message);
                           setIsEditDialogOpen(true);
@@ -286,6 +289,7 @@ const AdminTopBarMessages = () => {
                       <Button
                         variant="outline"
                         size="sm"
+                        className="h-8 w-8 p-0"
                         onClick={() => handleDelete(message.id)}
                       >
                         <Trash2 className="w-4 h-4" />

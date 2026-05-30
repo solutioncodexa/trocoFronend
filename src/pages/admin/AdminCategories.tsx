@@ -123,17 +123,17 @@ const AdminCategories = () => {
 
   return (
     <AdminLayout title="Gestion des Catégories" breadcrumbs={[{ label: 'Catégories' }]}>
-      <div className="flex justify-between items-center mb-6">
-        <p className="font-body text-muted-foreground">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-6">
+        <p className="font-body text-sm sm:text-base text-muted-foreground">
           Gérez les catégories de produits de votre boutique
         </p>
-        <Button onClick={() => handleOpenModal()} className="font-body">
+        <Button onClick={() => handleOpenModal()} className="font-body w-full sm:w-auto">
           <Plus className="w-4 h-4 mr-2" />
           Nouvelle catégorie
         </Button>
       </div>
 
-      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {categories.map((category) => (
           <div
             key={category.id}

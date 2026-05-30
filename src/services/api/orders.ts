@@ -1,41 +1,64 @@
 import { buildApiUrl, apiRequest } from '@/config/api';
-import { OrderDTO } from '@/types/api';
+import { OrderDTO, PageResponse } from '@/types/api';
+
+export interface OrderQueryParams {
+  page?: number;
+  size?: number;
+  sortBy?: string;
+  sortDir?: 'ASC' | 'DESC';
+  status?: string;
+  keyword?: string;
+}
+
+function buildOrdersQueryString(params: OrderQueryParams): string {
+  const {
+    page = 0,
+    size = 20,
+    sortBy = 'createdAt',
+    sortDir = 'DESC',
+    status,
+    keyword,
+  } = params;
+
+  const qs = new URLSearchParams();
+  qs.set('page', String(page));
+  qs.set('size', String(size));
+  qs.set('sortBy', sortBy);
+  qs.set('sortDir', sortDir);
+  if (status && status !== 'all') qs.set('status', status);
+  if (keyword?.trim()) qs.set('keyword', keyword.trim());
+  return qs.toString();
+}
 
 export const ordersApi = {
-  // Récupérer toutes les commandes
-  getAllOrders: async (): Promise<OrderDTO[]> => {
-    const url = buildApiUrl('/orders');
-    return apiRequest<OrderDTO[]>(url);
+  getAllOrders: async (params: OrderQueryParams = {}): Promise<PageResponse<OrderDTO>> => {
+    const qs = buildOrdersQueryString(params);
+    return apiRequest<PageResponse<OrderDTO>>(buildApiUrl(`/orders?${qs}`));
   },
 
-  // Récupérer une commande par ID
   getOrderById: async (id: string): Promise<OrderDTO> => {
     const url = buildApiUrl(`/orders/${id}`);
     return apiRequest<OrderDTO>(url);
   },
 
-  // Récupérer une commande par numéro
   getOrderByNumber: async (orderNumber: string): Promise<OrderDTO> => {
     const url = buildApiUrl(`/orders/number/${orderNumber}`);
     return apiRequest<OrderDTO>(url);
   },
 
-  // Récupérer les commandes par statut
   getOrdersByStatus: async (status: string): Promise<OrderDTO[]> => {
     const url = buildApiUrl(`/orders/status/${status}`);
     return apiRequest<OrderDTO[]>(url);
   },
 
-  // Créer une commande
   createOrder: async (order: OrderDTO): Promise<OrderDTO> => {
     const url = buildApiUrl('/orders');
     return apiRequest<OrderDTO>(url, {
       method: 'POST',
       body: JSON.stringify(order),
-    }, true); // skipAuth = true pour les commandes client
+    }, true);
   },
 
-  // Mettre à jour le statut d'une commande
   updateOrderStatus: async (id: string, status: string): Promise<OrderDTO> => {
     const url = buildApiUrl(`/orders/${id}/status`);
     return apiRequest<OrderDTO>(url, {
@@ -44,7 +67,6 @@ export const ordersApi = {
     });
   },
 
-  // Supprimer une commande
   deleteOrder: async (id: string): Promise<void> => {
     const url = buildApiUrl(`/orders/${id}`);
     return apiRequest<void>(url, {

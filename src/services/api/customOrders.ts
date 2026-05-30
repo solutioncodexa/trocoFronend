@@ -1,26 +1,55 @@
 import { buildApiUrl, apiRequest } from '@/config/api';
-import { CustomOrderDTO } from '@/types/api';
+import { CustomOrderDTO, CustomOrderStatsDTO, PageResponse } from '@/types/api';
+
+export interface CustomOrderQueryParams {
+  page?: number;
+  size?: number;
+  sortBy?: string;
+  sortDir?: 'ASC' | 'DESC';
+  status?: string;
+  keyword?: string;
+}
+
+function buildCustomOrdersQueryString(params: CustomOrderQueryParams): string {
+  const {
+    page = 0,
+    size = 20,
+    sortBy = 'createdAt',
+    sortDir = 'DESC',
+    status,
+    keyword,
+  } = params;
+
+  const qs = new URLSearchParams();
+  qs.set('page', String(page));
+  qs.set('size', String(size));
+  qs.set('sortBy', sortBy);
+  qs.set('sortDir', sortDir);
+  if (status && status !== 'all') qs.set('status', status);
+  if (keyword?.trim()) qs.set('keyword', keyword.trim());
+  return qs.toString();
+}
 
 export const customOrdersApi = {
-  // Récupérer toutes les commandes personnalisées
-  getAllCustomOrders: async (): Promise<CustomOrderDTO[]> => {
-    const url = buildApiUrl('/custom-orders');
-    return apiRequest<CustomOrderDTO[]>(url);
+  getAllCustomOrders: async (params: CustomOrderQueryParams = {}): Promise<PageResponse<CustomOrderDTO>> => {
+    const qs = buildCustomOrdersQueryString(params);
+    return apiRequest<PageResponse<CustomOrderDTO>>(buildApiUrl(`/custom-orders?${qs}`));
   },
 
-  // Récupérer une commande personnalisée par ID
+  getStats: async (): Promise<CustomOrderStatsDTO> => {
+    return apiRequest<CustomOrderStatsDTO>(buildApiUrl('/custom-orders/stats'));
+  },
+
   getCustomOrderById: async (id: string): Promise<CustomOrderDTO> => {
     const url = buildApiUrl(`/custom-orders/${id}`);
     return apiRequest<CustomOrderDTO>(url);
   },
 
-  // Récupérer les commandes personnalisées par statut
   getCustomOrdersByStatus: async (status: string): Promise<CustomOrderDTO[]> => {
     const url = buildApiUrl(`/custom-orders/status/${status}`);
     return apiRequest<CustomOrderDTO[]>(url);
   },
 
-  // Créer une commande personnalisée (JSON)
   createCustomOrder: async (customOrder: Partial<CustomOrderDTO>): Promise<CustomOrderDTO> => {
     const url = buildApiUrl('/custom-orders');
     return apiRequest<CustomOrderDTO>(url, {
@@ -29,7 +58,6 @@ export const customOrdersApi = {
     });
   },
 
-  // Créer une commande personnalisée avec images (multipart)
   createCustomOrderWithImages: async (
     customOrder: Partial<CustomOrderDTO>,
     images: File[]
@@ -53,7 +81,6 @@ export const customOrdersApi = {
     return (data?.data ?? data) as CustomOrderDTO;
   },
 
-  // Mettre à jour le statut d'une commande personnalisée
   updateCustomOrderStatus: async (id: string, status: string): Promise<CustomOrderDTO> => {
     const url = buildApiUrl(`/custom-orders/${id}/status`);
     return apiRequest<CustomOrderDTO>(url, {
@@ -62,7 +89,6 @@ export const customOrdersApi = {
     });
   },
 
-  // Mettre à jour le prix estimé
   updateEstimatedPrice: async (id: string, estimatedPrice: number): Promise<CustomOrderDTO> => {
     const url = buildApiUrl(`/custom-orders/${id}/price`);
     return apiRequest<CustomOrderDTO>(url, {
@@ -71,7 +97,6 @@ export const customOrdersApi = {
     });
   },
 
-  // Supprimer une commande personnalisée
   deleteCustomOrder: async (id: string): Promise<void> => {
     const url = buildApiUrl(`/custom-orders/${id}`);
     return apiRequest<void>(url, {

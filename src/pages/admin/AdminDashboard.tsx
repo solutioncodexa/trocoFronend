@@ -14,20 +14,41 @@ const AdminDashboard = () => {
     queryKey: ['products', 'dashboard'],
     queryFn: () => productsApi.getAllProducts({ page: 0, size: 1 }),
   });
-  const { data: orders = [] } = useQuery({
-    queryKey: ['orders'],
-    queryFn: () => ordersApi.getAllOrders(),
+  const { data: ordersPage } = useQuery({
+    queryKey: ['orders', 'dashboard'],
+    queryFn: () => ordersApi.getAllOrders({ page: 0, size: 5 }),
   });
-  const { data: customOrders = [] } = useQuery({
-    queryKey: ['customOrders'],
-    queryFn: () => customOrdersApi.getAllCustomOrders(),
+  const { data: ordersStatsPage } = useQuery({
+    queryKey: ['orders', 'dashboard', 'stats'],
+    queryFn: () => ordersApi.getAllOrders({ page: 0, size: 1 }),
+  });
+  const { data: newOrdersPage } = useQuery({
+    queryKey: ['orders', 'dashboard', 'new'],
+    queryFn: () => ordersApi.getAllOrders({ page: 0, size: 1, status: 'new' }),
+  });
+  const { data: deliveredOrdersPage } = useQuery({
+    queryKey: ['orders', 'dashboard', 'delivered'],
+    queryFn: () => ordersApi.getAllOrders({ page: 0, size: 100, status: 'delivered' }),
+  });
+  const { data: customOrdersPage } = useQuery({
+    queryKey: ['customOrders', 'dashboard'],
+    queryFn: () => customOrdersApi.getAllCustomOrders({ page: 0, size: 5, status: 'pending' }),
+  });
+  const { data: customOrdersStatsPage } = useQuery({
+    queryKey: ['customOrders', 'dashboard', 'stats'],
+    queryFn: () => customOrdersApi.getAllCustomOrders({ page: 0, size: 1 }),
+  });
+  const { data: pendingCustomPage } = useQuery({
+    queryKey: ['customOrders', 'dashboard', 'pending'],
+    queryFn: () => customOrdersApi.getAllCustomOrders({ page: 0, size: 1, status: 'pending' }),
   });
 
   const productCount = productsPage?.totalElements ?? 0;
-  const newOrdersCount = orders.filter((o) => o.status === 'new').length;
-  const pendingCustomCount = customOrders.filter((r) => r.status === 'pending').length;
-  const totalRevenue = orders
-    .filter((o) => o.status === 'delivered')
+  const orders = ordersPage?.content ?? [];
+  const customOrders = customOrdersPage?.content ?? [];
+  const newOrdersCount = newOrdersPage?.totalElements ?? 0;
+  const pendingCustomCount = pendingCustomPage?.totalElements ?? 0;
+  const totalRevenue = (deliveredOrdersPage?.content ?? [])
     .reduce((sum, o) => sum + (o.total ?? 0), 0);
 
   const stats = [
@@ -40,7 +61,7 @@ const AdminDashboard = () => {
     },
     {
       title: 'Commandes',
-      value: orders.length,
+      value: ordersStatsPage?.totalElements ?? 0,
       subValue: `${newOrdersCount} nouvelles`,
       icon: ShoppingCart,
       color: 'bg-green-500',
@@ -48,7 +69,7 @@ const AdminDashboard = () => {
     },
     {
       title: 'Personnalisations',
-      value: customOrders.length,
+      value: customOrdersStatsPage?.totalElements ?? 0,
       subValue: `${pendingCustomCount} en attente`,
       icon: Palette,
       color: 'bg-purple-500',
@@ -63,8 +84,8 @@ const AdminDashboard = () => {
     },
   ];
 
-  const recentOrders = orders.slice(0, 5);
-  const pendingRequests = customOrders.filter((r) => r.status === 'pending');
+  const recentOrders = orders;
+  const pendingRequests = customOrders;
 
   const getStatusBadge = (status: string) => {
     const styles: Record<string, string> = {
@@ -94,6 +115,33 @@ const AdminDashboard = () => {
 
   return (
     <AdminLayout title="Tableau de bord" breadcrumbs={[{ label: 'Tableau de bord' }]}>
+      <div className="mb-8">
+        <h2 className="font-display text-lg mb-4">Actions rapides</h2>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <Link
+            to="/admin/produits?action=new"
+            className="p-4 bg-card rounded-lg border border-border hover:border-primary transition-colors text-center"
+          >
+            <Package className="w-8 h-8 mx-auto text-primary mb-2" />
+            <p className="font-body font-medium">Ajouter un produit</p>
+          </Link>
+          <Link
+            to="/admin/commandes"
+            className="p-4 bg-card rounded-lg border border-border hover:border-primary transition-colors text-center"
+          >
+            <ShoppingCart className="w-8 h-8 mx-auto text-primary mb-2" />
+            <p className="font-body font-medium">Gérer les commandes</p>
+          </Link>
+          <Link
+            to="/admin/categories"
+            className="p-4 bg-card rounded-lg border border-border hover:border-primary transition-colors text-center"
+          >
+            <TrendingUp className="w-8 h-8 mx-auto text-primary mb-2" />
+            <p className="font-body font-medium">Gérer les catégories</p>
+          </Link>
+        </div>
+      </div>
+
       <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         {stats.map((stat, index) => (
           <Card key={index} className="hover:shadow-lg transition-shadow">
@@ -204,33 +252,6 @@ const AdminDashboard = () => {
             </div>
           </CardContent>
         </Card>
-      </div>
-
-      <div className="mt-8">
-        <h2 className="font-display text-lg mb-4">Actions rapides</h2>
-        <div className="grid sm:grid-cols-3 gap-4">
-          <Link
-            to="/admin/produits?action=new"
-            className="p-4 bg-card rounded-lg border border-border hover:border-primary transition-colors text-center"
-          >
-            <Package className="w-8 h-8 mx-auto text-primary mb-2" />
-            <p className="font-body font-medium">Ajouter un produit</p>
-          </Link>
-          <Link
-            to="/admin/commandes"
-            className="p-4 bg-card rounded-lg border border-border hover:border-primary transition-colors text-center"
-          >
-            <ShoppingCart className="w-8 h-8 mx-auto text-primary mb-2" />
-            <p className="font-body font-medium">Gérer les commandes</p>
-          </Link>
-          <Link
-            to="/admin/categories"
-            className="p-4 bg-card rounded-lg border border-border hover:border-primary transition-colors text-center"
-          >
-            <TrendingUp className="w-8 h-8 mx-auto text-primary mb-2" />
-            <p className="font-body font-medium">Gérer les catégories</p>
-          </Link>
-        </div>
       </div>
     </AdminLayout>
   );
