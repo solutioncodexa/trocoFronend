@@ -101,6 +101,8 @@ const AdminProducts = () => {
     type: 'bracelet' as ProductType,
     collection: '',
     badges: [] as string[],
+    stockQuantity: '1',
+    showWeight: true,
   });
   // Fichiers images à envoyer (nouveaux uploads)
   const [imageFiles, setImageFiles] = useState<File[]>([]);
@@ -159,6 +161,8 @@ const AdminProducts = () => {
       type: product.type,
       collection: product.collection || '',
       badges: product.badges,
+      stockQuantity: String(product.stockQuantity ?? 1),
+      showWeight: product.showWeight !== false,
     });
     const rows: ProductVariantFormRow[] = (product.variants?.length ? product.variants : []).map((v) => ({
       id: v.id,
@@ -215,6 +219,8 @@ const AdminProducts = () => {
       type: 'bracelet',
       collection: '',
       badges: [],
+      stockQuantity: '1',
+      showWeight: true,
     });
     setVariantRows([createEmptyVariantRow('500', true)]);
     setExistingImageUrls([]);
@@ -320,7 +326,6 @@ const AdminProducts = () => {
       variants: parsedVariants,
       category: formData.category,
       type: typeCode,
-      /** Valeur fixe : le backend conserve le champ ; plus géré côté UI */
       goldType: 'yellow',
       collection: formData.collection || undefined,
       availableSizes: (() => {
@@ -328,8 +333,9 @@ const AdminProducts = () => {
         if (!sizes) return undefined;
         return Array.isArray(sizes) ? sizes : String(sizes).split(',').map((s) => s.trim());
       })(),
-      stockQuantity: 1,
+      stockQuantity: parseInt(formData.stockQuantity) || 1,
       badges: formData.badges,
+      showWeight: formData.showWeight,
     };
 
     if (editingProduct) {
@@ -508,6 +514,9 @@ const AdminProducts = () => {
                   <Badge variant={product.category === 'beldi' ? 'default' : 'secondary'} className="text-[10px]">
                     {product.category === 'beldi' ? 'Beldi' : 'Moderne'}
                   </Badge>
+                  {!product.inStock && (
+                    <Badge variant="destructive" className="text-[10px]">Rupture</Badge>
+                  )}
                   {product.badges.map(badge => (
                     <Badge key={badge} variant={badge === 'promo' ? 'destructive' : 'outline'} className="text-[10px]">
                       {badge === 'new' ? 'Nouveau' : badge === 'bestseller' ? 'Best-seller' : 'Promo'}
@@ -563,6 +572,7 @@ const AdminProducts = () => {
                 <th className="px-4 py-3 text-left font-body text-sm font-medium text-muted-foreground">Produit</th>
                 <th className="px-4 py-3 text-left font-body text-sm font-medium text-muted-foreground">Catégorie</th>
                 <th className="px-4 py-3 text-left font-body text-sm font-medium text-muted-foreground">Collection</th>
+                <th className="px-4 py-3 text-left font-body text-sm font-medium text-muted-foreground">Stock</th>
                 <th className="px-4 py-3 text-left font-body text-sm font-medium text-muted-foreground">Prix</th>
                 <th className="px-4 py-3 text-left font-body text-sm font-medium text-muted-foreground">Badges</th>
                 <th className="px-4 py-3 text-right font-body text-sm font-medium text-muted-foreground">Actions</th>
@@ -596,6 +606,15 @@ const AdminProducts = () => {
                       </Badge>
                     ) : (
                       <span className="text-muted-foreground text-sm">Aucune</span>
+                    )}
+                  </td>
+                  <td className="px-4 py-3">
+                    {product.inStock ? (
+                      <Badge variant="outline" className="text-green-600 border-green-600 text-xs">
+                        En stock ({product.stockQuantity})
+                      </Badge>
+                    ) : (
+                      <Badge variant="destructive" className="text-xs">Rupture</Badge>
                     )}
                   </td>
                   <td className="px-4 py-3 font-body">
@@ -798,6 +817,52 @@ const AdminProducts = () => {
                   </Button>
                 </div>
               </div>
+
+            <div className="grid md:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="stockQuantity">Quantité en stock</Label>
+                <Input
+                  id="stockQuantity"
+                  type="number"
+                  min={0}
+                  step={1}
+                  value={formData.stockQuantity}
+                  onChange={(e) => setFormData(prev => ({ ...prev, stockQuantity: e.target.value }))}
+                  className="mt-1"
+                  placeholder="0 = rupture de stock"
+                />
+                {parseInt(formData.stockQuantity) === 0 && (
+                  <p className="text-xs text-destructive mt-1">⚠ Ce produit sera affiché en rupture de stock</p>
+                )}
+              </div>
+              <div className="flex flex-col justify-end pb-1">
+                <label className="flex items-center gap-3 cursor-pointer">
+                  <div className="relative">
+                    <input
+                      type="checkbox"
+                      className="sr-only"
+                      checked={formData.showWeight}
+                      onChange={(e) => setFormData(prev => ({ ...prev, showWeight: e.target.checked }))}
+                    />
+                    <div className={cn(
+                      'w-10 h-6 rounded-full transition-colors',
+                      formData.showWeight ? 'bg-primary' : 'bg-muted-foreground/30'
+                    )}>
+                      <div className={cn(
+                        'w-4 h-4 rounded-full bg-white absolute top-1 transition-transform',
+                        formData.showWeight ? 'translate-x-5' : 'translate-x-1'
+                      )} />
+                    </div>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium">Afficher le poids</p>
+                    <p className="text-xs text-muted-foreground">
+                      {formData.showWeight ? 'Le poids est visible sur la fiche produit' : 'Le poids est masqué'}
+                    </p>
+                  </div>
+                </label>
+              </div>
+            </div>
 
             {/* Images */}
             <div>

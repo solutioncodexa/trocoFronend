@@ -44,6 +44,7 @@ export interface ProductFormData {
   stockQuantity?: number;
   badges?: string[];
   variants?: ProductVariant[];
+  showWeight?: boolean;
 }
 
 function buildProductsQueryString(params: ProductQueryParams): string {

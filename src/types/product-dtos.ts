@@ -23,6 +23,7 @@ export interface ProductListItemDTO {
   stockQuantity?: number;
   badges?: string[];
   createdAt?: string;
+  showWeight?: boolean;
 }
 
 /** Fiche produit, panier, commandes, admin — champs complets */
@@ -31,6 +32,7 @@ export interface ProductDetailDTO extends ProductListItemDTO {
   availableSizes?: string[];
   marginGain?: number;
   variants?: ProductVariant[];
+  deleted?: boolean;
 }
 
 /** @deprecated Utiliser ProductDetailDTO */

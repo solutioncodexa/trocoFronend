@@ -39,6 +39,7 @@ export interface Product {
   marginGain?: number;
   badges: ('new' | 'bestseller' | 'promo')[];
   createdAt: string;
+  showWeight?: boolean;
 }
 
 // Collections par défaut

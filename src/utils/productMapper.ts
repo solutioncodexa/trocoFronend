@@ -51,6 +51,7 @@ export const mapProductDetailToProduct = (dto: ProductDetailDTO): Product => {
     variants,
     badges: (dto.badges || []) as ('new' | 'bestseller' | 'promo')[],
     createdAt: dto.createdAt || new Date().toISOString(),
+    showWeight: dto.showWeight !== false,
   };
 };
 
@@ -75,7 +76,11 @@ function formatWeightLabel(weight: number): string {
   if (weight === Math.floor(weight)) {
     return `${weight} g`;
   }
-  return `${weight.toFixed(1)} g`;
+  const rounded1 = Math.round(weight * 10) / 10;
+  if (rounded1 === weight) {
+    return `${weight.toFixed(1)} g`;
+  }
+  return `${weight.toFixed(2)} g`;
 }
 
 export function getDefaultVariant(product: Pick<Product, 'variants' | 'price' | 'weight' | 'originalPrice' | 'marginGain'>): ProductVariant {

@@ -174,7 +174,9 @@ const ProductCard = ({ product, className }: ProductCardProps) => {
                 </span>
               )}
             </div>
-            <span className="text-xs text-muted-foreground tabular-nums">{product.weight}g</span>
+            {product.showWeight !== false && (
+              <span className="text-xs text-muted-foreground tabular-nums">{product.weight}g</span>
+            )}
           </div>
         </div>
       </Link>

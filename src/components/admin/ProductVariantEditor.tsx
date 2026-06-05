@@ -69,8 +69,8 @@ export function ProductVariantEditor({ rows, onChange, isPromo, pricePerGram, de
               <Label>Poids (g) *</Label>
               <Input
                 type="number"
-                min={0.1}
-                step={0.1}
+                min={0.01}
+                step={0.01}
                 value={row.weight}
                 onChange={(e) => updateRow(index, { weight: e.target.value })}
                 className="mt-1"
