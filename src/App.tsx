@@ -7,6 +7,7 @@ import { CartProvider } from "@/contexts/CartContext";
 import { AdminProvider } from "@/contexts/AdminContext";
 import { WishlistProvider } from "@/contexts/WishlistContext";
 import ScrollToTop from "@/components/ui/ScrollToTop";
+import WhatsAppButton from "@/components/ui/WhatsAppButton";
 import { ProtectedAdminRoute } from "@/components/ProtectedAdminRoute";
 import PageLoader from "@/components/layout/PageLoader";
 
@@ -67,6 +68,7 @@ const App = () => (
               }}
             >
               <ScrollToTop />
+              <WhatsAppButton />
               <Suspense fallback={<PageLoader />}>
                 <Routes>
                   <Route path="/" element={<Index />} />
