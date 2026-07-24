@@ -1,30 +1,34 @@
-import { ReactNode } from 'react';
+import { ReactNode, useMemo, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { 
-  LayoutDashboard, 
-  ShoppingCart, 
-  Package, 
-  Palette, 
-  Star, 
-  MessageSquare, 
+import {
+  LayoutDashboard,
+  ShoppingCart,
+  Package,
+  Palette,
+  Star,
+  MessageSquare,
   Image as ImageIcon,
-  Tag,
   Ticket,
   FolderOpen,
-  Layers,
   ChevronRight,
-  Settings,
   LogOut,
+  ExternalLink,
   Menu,
   X,
   Sparkles,
+  Warehouse,
+  TrendingUp,
+  Share2,
+  Users,
+  History,
 } from 'lucide-react';
 import AdminNotification from './AdminNotification';
+import StockAlertDialog from './StockAlertDialog';
 import { Button } from '@/components/ui/button';
 import { useAdmin } from '@/contexts/AdminContext';
+import { PERMISSIONS } from '@/config/permissions';
 import { cn } from '@/lib/utils';
 import { BrandLogoImg } from '@/components/layout/BrandLogoImg';
-import { useState } from 'react';
 
 interface AdminLayoutProps {
   children: ReactNode;
@@ -32,41 +36,66 @@ interface AdminLayoutProps {
   breadcrumbs?: { label: string; href?: string }[];
 }
 
-const navSections = [
+type NavItem = {
+  href: string;
+  label: string;
+  icon: typeof LayoutDashboard;
+  permission?: string;
+  adminOnly?: boolean;
+};
+
+type NavSection = { label: string; items: NavItem[] };
+
+const ALL_NAV: NavSection[] = [
   {
     label: 'Principal',
     items: [
       { href: '/admin/dashboard', label: 'Tableau de bord', icon: LayoutDashboard },
-      { href: '/admin/commandes', label: 'Commandes', icon: ShoppingCart },
-      { href: '/admin/personnalisations', label: 'Personnalisations', icon: Palette },
-      { href: '/admin/produits-selectionnes', label: 'Produits Sélectionnés', icon: Star },
-      { href: '/admin/top-bar-messages', label: 'Messages Top Bar', icon: MessageSquare },
-      { href: '/admin/promo-modals', label: 'Promo Modals', icon: ImageIcon },
-      { href: '/admin/codes-promo', label: 'Codes Promo', icon: Ticket },
+      { href: '/admin/commandes', label: 'Commandes', icon: ShoppingCart, permission: PERMISSIONS.ORDERS_VIEW },
+      { href: '/admin/personnalisations', label: 'Personnalisations', icon: Palette, permission: PERMISSIONS.CUSTOM_ORDERS_VIEW },
+      { href: '/admin/produits-selectionnes', label: 'Produits Sélectionnés', icon: Star, permission: PERMISSIONS.CATALOG_MANAGE },
+      { href: '/admin/stock', label: 'Stock', icon: Warehouse, permission: PERMISSIONS.STOCK_VIEW },
+      { href: '/admin/revenus', label: 'Revenus', icon: TrendingUp, permission: PERMISSIONS.STATS_VIEW },
+      { href: '/admin/top-bar-messages', label: 'Messages Top Bar', icon: MessageSquare, permission: PERMISSIONS.CONTENT_MANAGE },
+      { href: '/admin/promo-modals', label: 'Promo Modals', icon: ImageIcon, permission: PERMISSIONS.CONTENT_MANAGE },
+      { href: '/admin/codes-promo', label: 'Codes Promo', icon: Ticket, permission: PERMISSIONS.CONTENT_MANAGE },
+      { href: '/admin/reseaux-sociaux', label: 'Réseaux sociaux', icon: Share2, permission: PERMISSIONS.CONTENT_MANAGE },
     ],
   },
   {
     label: 'Catalogue',
     items: [
-      { href: '/admin/produits', label: 'Produits', icon: Package },
-      { href: '/admin/types', label: 'Types de Produits', icon: Tag },
-      { href: '/admin/categories', label: 'Catégories', icon: FolderOpen },
-      { href: '/admin/accueil-categories', label: 'Accueil (hero)', icon: Sparkles },
-      { href: '/admin/collections', label: 'Collections', icon: Layers },
+      { href: '/admin/categories', label: 'Catégories', icon: FolderOpen, permission: PERMISSIONS.CATALOG_MANAGE },
+      { href: '/admin/produits', label: 'Produits', icon: Package, permission: PERMISSIONS.PRODUCTS_VIEW },
+      { href: '/admin/accueil-categories', label: 'Catégories accueil', icon: Sparkles, permission: PERMISSIONS.CATALOG_MANAGE },
+    ],
+  },
+  {
+    label: 'Équipe',
+    items: [
+      { href: '/admin/membres', label: 'Membres', icon: Users, adminOnly: true },
+      { href: '/admin/audit', label: 'Audit', icon: History, permission: PERMISSIONS.AUDIT_VIEW },
     ],
   },
 ];
 
-// Liste plate pour compatibilité (évite "navItems is not defined" si cache ancien)
-const navItems = navSections.flatMap((s) => s.items);
-
 const AdminLayout = ({ children, title, breadcrumbs }: AdminLayoutProps) => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { logout, isAuthenticated } = useAdmin();
+  const { logout, isAuthenticated, isAdmin, hasPermission, user } = useAdmin();
   const [isSidebarOpen, setIsSidebarOpen] = useState(() => window.innerWidth >= 1024);
 
-  // Redirect if not authenticated
+  const navSections = useMemo(() => {
+    return ALL_NAV.map((section) => ({
+      ...section,
+      items: section.items.filter((item) => {
+        if (item.adminOnly) return isAdmin;
+        if (!item.permission) return true;
+        return hasPermission(item.permission);
+      }),
+    })).filter((s) => s.items.length > 0);
+  }, [hasPermission, isAdmin]);
+
   if (!isAuthenticated) {
     navigate('/admin');
     return null;
@@ -80,57 +109,59 @@ const AdminLayout = ({ children, title, breadcrumbs }: AdminLayoutProps) => {
   const isActive = (href: string) => location.pathname === href;
 
   return (
-    <div className="flex h-screen min-h-0 overflow-hidden bg-background">
-      {/* Mobile sidebar overlay */}
+    <div className="flex h-screen min-h-0 overflow-hidden bg-background surface-mesh">
+      <StockAlertDialog />
       {isSidebarOpen && (
         <div
-          className="fixed inset-0 bg-charcoal/50 z-40 lg:hidden"
+          className="fixed inset-0 z-40 bg-foreground/40 backdrop-blur-sm lg:hidden"
           onClick={() => setIsSidebarOpen(false)}
+          aria-hidden
         />
       )}
 
-      {/* Sidebar */}
       <aside
         className={cn(
-          'fixed inset-y-0 left-0 z-50 w-64 bg-white text-charcoal transform transition-transform duration-300 flex flex-col',
-          isSidebarOpen ? 'translate-x-0' : '-translate-x-full' // Toggle pour tous les écrans
+          'fixed inset-y-0 left-0 z-50 flex h-full w-64 flex-col border-r border-border/80 bg-card/95 text-foreground shadow-elegant backdrop-blur-xl transition-transform duration-300 ease-premium',
+          isSidebarOpen ? 'translate-x-0' : '-translate-x-full',
         )}
       >
-        {/* Logo - Aligné avec le header principal */}
-        <div className="h-16 shrink-0 flex items-center justify-between px-6 border-b border-gray-200">
-          <Link to="/admin/dashboard" className="flex items-center min-w-0" aria-label="YaraGold — tableau de bord">
-            <BrandLogoImg className="h-10 w-auto max-w-[12rem]" draggable={false} />
+        <div className="flex h-16 shrink-0 items-center justify-between border-b border-border px-5">
+          <Link to="/admin/dashboard" className="flex min-w-0 items-center" aria-label="Troco — tableau de bord">
+            <BrandLogoImg className="h-9 w-auto max-w-[11rem]" draggable={false} />
           </Link>
           <button
-            className="lg:hidden text-gray-600 hover:text-gray-900"
+            type="button"
+            className="rounded-lg p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground lg:hidden"
             onClick={() => setIsSidebarOpen(false)}
+            aria-label="Fermer le menu"
           >
-            <X className="w-5 h-5" />
+            <X className="h-5 w-5" />
           </button>
         </div>
 
-        {/* Navigation - scrollable pour afficher toutes les interfaces */}
-        <nav className="flex-1 min-h-0 overflow-y-auto overscroll-contain scrollbar-app p-4 space-y-6">
+        <nav className="min-h-0 flex-1 space-y-6 overflow-y-auto overscroll-contain p-3 scrollbar-app">
           {navSections.map((section) => (
             <div key={section.label}>
-              <p className="px-4 mb-2 text-xs font-semibold uppercase tracking-wider text-gray-500">
+              <p className="mb-2 px-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
                 {section.label}
               </p>
-              <div className="space-y-1">
+              <div className="space-y-0.5">
                 {section.items.map((item) => (
                   <Link
                     key={item.href}
                     to={item.href}
-                    onClick={() => setIsSidebarOpen(false)}
+                    onClick={() => {
+                      if (window.innerWidth < 1024) setIsSidebarOpen(false);
+                    }}
                     className={cn(
-                      'flex items-center gap-3 px-4 py-3 rounded-lg font-body text-sm transition-all',
+                      'flex items-center gap-3 rounded-xl px-3 py-2.5 font-body text-sm transition-all duration-200',
                       isActive(item.href)
-                        ? 'bg-gold text-white font-medium'
-                        : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
+                        ? 'bg-primary text-primary-foreground shadow-soft font-medium'
+                        : 'text-muted-foreground hover:bg-muted hover:text-foreground',
                     )}
                   >
-                    <item.icon className="w-5 h-5 shrink-0" />
-                    {item.label}
+                    <item.icon className="h-4 w-4 shrink-0" />
+                    <span className="truncate">{item.label}</span>
                   </Link>
                 ))}
               </div>
@@ -138,82 +169,58 @@ const AdminLayout = ({ children, title, breadcrumbs }: AdminLayoutProps) => {
           ))}
         </nav>
 
-        {/* Footer - Absolument fixé en bas de la sidebar */}
-        <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-200 bg-white">
-          <Link
-            to="/"
-            className="block text-center font-body text-xs text-gray-500 hover:text-gray-700 mb-3 transition-colors"
-          >
-            ← Voir le site
-          </Link>
-          <Button
-            variant="outline"
-            onClick={handleLogout}
-            className="w-full border-gray-300 text-gray-700 hover:bg-gray-50 font-body transition-colors"
-          >
-            <LogOut className="w-4 h-4 mr-2" />
+        <div className="shrink-0 border-t border-border p-3 space-y-2">
+          <div className="px-3 py-1">
+            <p className="text-xs font-medium truncate">{user?.fullName || user?.email}</p>
+            <p className="text-[10px] text-muted-foreground uppercase tracking-wide">{user?.role}</p>
+          </div>
+          <Button variant="ghost" className="w-full justify-start gap-2" asChild>
+            <Link to="/">
+              <ExternalLink className="h-4 w-4" />
+              Voir le site
+            </Link>
+          </Button>
+          <Button variant="ghost" className="w-full justify-start gap-2" onClick={handleLogout}>
+            <LogOut className="h-4 w-4" />
             Déconnexion
           </Button>
         </div>
       </aside>
 
-      {/* Main content — flex column + min-h-0 so <main> can scroll (overflow-y-auto) */}
-      <div
-        className={cn(
-          'flex min-h-0 flex-1 flex-col transition-all duration-300',
-          isSidebarOpen ? 'lg:ml-64' : 'lg:ml-0'
-        )}
-      >
-        {/* Header - Aligné avec le header du sidebar */}
-        <header className="h-16 shrink-0 bg-white border-b border-gray-200 px-4 lg:px-8 flex items-center">
-          <div className="flex items-center gap-4 flex-1">
-            {/* Bouton toggle sidebar */}
+      <div className="flex min-w-0 flex-1 flex-col lg:pl-64">
+        <header className="flex h-16 shrink-0 items-center justify-between gap-3 border-b border-border bg-card/80 px-4 backdrop-blur-md sm:px-6">
+          <div className="flex min-w-0 items-center gap-3">
             <button
-              className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-              onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+              type="button"
+              className="rounded-lg p-2 text-muted-foreground hover:bg-muted lg:hidden"
+              onClick={() => setIsSidebarOpen(true)}
+              aria-label="Ouvrir le menu"
             >
-              {isSidebarOpen ? (
-                <ChevronRight className="w-5 h-5" />
-              ) : (
-                <Menu className="w-5 h-5" />
-              )}
+              <Menu className="h-5 w-5" />
             </button>
-            {/* Breadcrumbs */}
-            <div className="flex items-center gap-2 font-body text-sm">
-              <Link to="/admin/dashboard" className="text-gray-600 hover:text-gray-900">
-                Admin
-              </Link>
-              {breadcrumbs?.map((crumb, index) => (
-                <div key={index} className="flex items-center gap-2">
-                  <ChevronRight className="w-4 h-4 text-gray-400" />
-                  {crumb.href ? (
-                    <Link to={crumb.href} className="text-gray-600 hover:text-gray-900">
-                      {crumb.label}
-                    </Link>
-                  ) : (
-                    <span className="text-gray-900">{crumb.label}</span>
-                  )}
+            <div className="min-w-0">
+              {breadcrumbs && breadcrumbs.length > 0 && (
+                <div className="mb-0.5 flex items-center gap-1 text-xs text-muted-foreground">
+                  {breadcrumbs.map((b, i) => (
+                    <span key={b.label} className="flex items-center gap-1">
+                      {i > 0 && <ChevronRight className="h-3 w-3" />}
+                      {b.href ? (
+                        <Link to={b.href} className="hover:text-foreground">
+                          {b.label}
+                        </Link>
+                      ) : (
+                        <span>{b.label}</span>
+                      )}
+                    </span>
+                  ))}
                 </div>
-              ))}
+              )}
+              <h1 className="truncate font-display text-lg sm:text-xl">{title}</h1>
             </div>
           </div>
-
-          <div className="flex items-center gap-2">
-            <AdminNotification />
-            <span className="font-body text-sm text-gray-600 hidden md:block">
-              Administrateur
-            </span>
-            <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-primary-foreground font-body font-semibold">
-              A
-            </div>
-          </div>
+          <AdminNotification />
         </header>
-
-        {/* Page content — min-h-0 required for flex child to shrink and show vertical scroll */}
-        <main className="min-h-0 flex-1 overflow-y-auto overscroll-contain scrollbar-app p-4 lg:p-8">
-          <h1 className="font-display text-2xl md:text-3xl text-foreground mb-6">{title}</h1>
-          {children}
-        </main>
+        <main className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6">{children}</main>
       </div>
     </div>
   );

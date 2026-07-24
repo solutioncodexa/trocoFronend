@@ -1,5 +1,5 @@
 # =============================================================================
-# Goldyara Frontend — Dockerfile multi-stage
+# Troco Frontend — Dockerfile multi-stage
 # =============================================================================
 # Stage 1 : build Vite avec Node
 # Stage 2 : Nginx Alpine servant le contenu statique

@@ -9,7 +9,7 @@ import { API_BASE_URL } from '@/config/api';
  *      `/uploads/xxx.jpg`, qu'il faut préfixer par `${API_BASE_URL}` (donc `/api/uploads/xxx.jpg`).
  *
  *   2. Stockage MinIO/S3 → l'API renvoie déjà une URL absolue
- *      `https://files.goldyara.ma/goldyara-uploads/xxx.jpg`. On la retourne telle quelle.
+ *      `https://files.troco.ma/troco-uploads/xxx.jpg`. On la retourne telle quelle.
  *
  *   3. Compat héritée : URL avec `/api/...` (déjà préfixée).
  */

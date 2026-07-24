@@ -2,7 +2,7 @@ import { API_BASE_URL } from '@/config/api';
 import { TopBarMessageDTO, CreateTopBarMessageRequest, UpdateTopBarMessageRequest } from '@/types/top-bar-messages';
 
 const getAuthHeaders = () => {
-  const token = localStorage.getItem('goldyara_admin_token');
+  const token = localStorage.getItem('troco_admin_token');
   return {
     'Content-Type': 'application/json',
     ...(token && { Authorization: `Bearer ${token}` }),

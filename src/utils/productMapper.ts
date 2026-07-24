@@ -1,5 +1,5 @@
 import type { ProductDetailDTO, ProductListItemDTO } from '@/types/product-dtos';
-import { Product, ProductCategory, ProductType } from '@/types/product';
+import { Product } from '@/types/product';
 import type { ProductVariant } from '@/types/product-variant';
 import { resolvePublicImageUrl } from '@/utils/resolvePublicImageUrl';
 
@@ -18,40 +18,37 @@ export function normalizeAvailableSizes(raw: unknown): string[] {
   return [];
 }
 
-function resolveDtoImages(dto: Pick<ProductListItemDTO, 'images' | 'category'>): string[] {
+function resolveDtoImages(dto: Pick<ProductListItemDTO, 'images'>): string[] {
   const images = (dto.images || []).map((img) => resolvePublicImageUrl(img)).filter(Boolean);
   if (images.length > 0) return images;
-  return [
-    dto.category === 'beldi' ? '/placeholder-beldi-fixed.svg' : '/placeholder-modern-fixed.svg',
-  ];
+  return ['/placeholder-modern-fixed.svg'];
 }
 
-/** Fiche complète (GET /products/{id}, panier, commande) */
 export const mapProductDetailToProduct = (dto: ProductDetailDTO): Product => {
   const finalImages = resolveDtoImages(dto);
-
   const variants = normalizeVariants(dto.variants, dto);
 
   return {
     id: String(dto.id),
     name: dto.name,
     description: dto.description ?? '',
+    shortDescription: dto.shortDescription,
     price: dto.price,
     originalPrice: dto.originalPrice,
-    weight: dto.weight,
     images: finalImages,
-    category: (dto.category === 'beldi' ? 'beldi' : 'modern') as ProductCategory,
-    type: dto.type as ProductType,
+    category: dto.category || '',
+    sku: dto.sku,
     goldType: dto.goldType ? String(dto.goldType) : undefined,
-    collection: dto.collection,
     availableSizes: normalizeAvailableSizes(dto.availableSizes),
     inStock: dto.inStock ?? true,
     stockQuantity: dto.stockQuantity ?? 0,
     marginGain: dto.marginGain,
+    weight: dto.weight,
     variants,
     badges: (dto.badges || []) as ('new' | 'bestseller' | 'promo')[],
     createdAt: dto.createdAt || new Date().toISOString(),
-    showWeight: dto.showWeight !== false,
+    showWeight: dto.showWeight === true,
+    customizable: dto.customizable === true,
   };
 };
 
@@ -61,39 +58,43 @@ function normalizeVariants(raw: ProductVariant[] | undefined, dto: ProductListIt
   }
   return [
     {
-      label: formatWeightLabel(dto.weight),
-      weight: dto.weight,
+      label: 'Standard',
       price: dto.price,
       originalPrice: dto.originalPrice,
-      marginGain: 'marginGain' in dto ? (dto as ProductDetailDTO).marginGain : undefined,
+      stock: dto.stockQuantity,
+      sku: dto.sku,
       displayOrder: 0,
       isDefault: true,
     },
   ];
 }
 
-function formatWeightLabel(weight: number): string {
-  if (weight === Math.floor(weight)) {
-    return `${weight} g`;
-  }
-  const rounded1 = Math.round(weight * 10) / 10;
-  if (rounded1 === weight) {
-    return `${weight.toFixed(1)} g`;
-  }
-  return `${weight.toFixed(2)} g`;
-}
+export const mapProductListItemToProduct = (dto: ProductListItemDTO): Product => {
+  return mapProductDetailToProduct({
+    ...dto,
+    description: '',
+  });
+};
 
-export function getDefaultVariant(product: Pick<Product, 'variants' | 'price' | 'weight' | 'originalPrice' | 'marginGain'>): ProductVariant {
+export const mapProductListItemListToProducts = (list?: ProductListItemDTO[] | null): Product[] => {
+  if (!list) return [];
+  return list.map(mapProductListItemToProduct);
+};
+
+export function getDefaultVariant(product: Product): ProductVariant {
   const variants = product.variants ?? [];
-  return variants.find((v) => v.isDefault) ?? variants[0] ?? {
-    label: formatWeightLabel(product.weight),
-    weight: product.weight,
-    price: product.price,
-    originalPrice: product.originalPrice,
-    marginGain: product.marginGain,
-    isDefault: true,
-    displayOrder: 0,
-  };
+  if (variants.length === 0) {
+    return {
+      label: 'Standard',
+      price: product.price,
+      originalPrice: product.originalPrice,
+      stock: product.stockQuantity,
+      sku: product.sku,
+      isDefault: true,
+      displayOrder: 0,
+    };
+  }
+  return variants.find((v) => v.isDefault) ?? variants[0];
 }
 
 export function applyVariantToProduct(product: Product, variant: ProductVariant): Product {
@@ -101,29 +102,12 @@ export function applyVariantToProduct(product: Product, variant: ProductVariant)
     ...product,
     price: variant.price,
     originalPrice: variant.originalPrice,
-    weight: variant.weight,
-    marginGain: variant.marginGain ?? product.marginGain,
+    stockQuantity: variant.stock ?? product.stockQuantity,
+    sku: variant.sku ?? product.sku,
+    weight: variant.weight ?? product.weight,
   };
 }
 
-/** Grille / filtres (GET /products, ProductListItemDTO) */
-export const mapProductListItemToProduct = (dto: ProductListItemDTO): Product => {
-  const asDetail: ProductDetailDTO = {
-    ...dto,
-    description: '',
-    availableSizes: [],
-  };
-  return mapProductDetailToProduct(asDetail);
-};
-
-/** @deprecated Utiliser mapProductDetailToProduct */
-export const mapProductDTOToProduct = mapProductDetailToProduct;
-
-export const mapProductListItemListToProducts = (dtos?: ProductListItemDTO[] | null): Product[] =>
-  (dtos ?? []).map(mapProductListItemToProduct);
-
-export const mapProductDetailListToProducts = (dtos?: ProductDetailDTO[] | null): Product[] =>
-  (dtos ?? []).map(mapProductDetailToProduct);
-
-/** Alias historique : listes API légères */
-export const mapProductDTOListToProducts = mapProductListItemListToProducts;
+export function getVariantKey(v: ProductVariant): string {
+  return v.id ?? `a-${v.attributeName ?? ''}-${v.attributeValue ?? v.label ?? v.price}`;
+}

@@ -1,7 +1,7 @@
 import { buildApiUrl, apiRequest } from '@/config/api';
 import type { AuthResponse, UserInfoDTO, LoginRequest, RegisterRequest } from '@/types/api';
 
-const AUTH_TOKEN_KEY = 'goldyara_admin_token';
+const AUTH_TOKEN_KEY = 'troco_admin_token';
 
 export function getStoredToken(): string | null {
   return localStorage.getItem(AUTH_TOKEN_KEY);

@@ -4,7 +4,7 @@ export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api';
 
 // Récupération du token pour les requêtes authentifiées (évite import circulaire)
 const getAuthToken = (): string | null => {
-  return localStorage.getItem('goldyara_admin_token');
+  return localStorage.getItem('troco_admin_token');
 };
 
 // Helper pour construire les URLs
@@ -33,13 +33,14 @@ export const apiRequest = async <T>(
 
   if (!response.ok) {
     if (response.status === 401) {
-      localStorage.removeItem('goldyara_admin_token');
+      localStorage.removeItem('troco_admin_token');
     }
-    const error = await response.json().catch(() => ({}));
-    const safeMessage = typeof error.message === 'string' && error.message.length < 200
-      ? error.message
-      : 'Une erreur est survenue';
-    throw new Error(safeMessage);
+    const error = await response.json().catch(() => ({} as Record<string, unknown>));
+    const detail = typeof error.detail === 'string' ? error.detail : '';
+    const message = typeof error.message === 'string' ? error.message : '';
+    const title = typeof error.title === 'string' ? error.title : '';
+    const candidate = [detail, message, title].find((s) => s.length > 0 && s.length < 200);
+    throw new Error(candidate || 'Une erreur est survenue');
   }
 
   if (response.status === 204 || response.headers.get('content-length') === '0') {

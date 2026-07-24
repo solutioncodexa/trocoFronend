@@ -1,23 +1,25 @@
 import { useLocation } from 'react-router-dom';
-import { CONTACT_WHATSAPP_URL } from '@/config/site';
 import { cn } from '@/lib/utils';
+import { useSocialNetworks } from '@/hooks/useSocialNetworks';
 
 const WhatsAppButton = () => {
   const { pathname } = useLocation();
+  const { isEnabled, getUrl } = useSocialNetworks();
   const isAdminRoute = pathname.startsWith('/admin');
+  const whatsappUrl = getUrl('whatsapp');
 
-  if (isAdminRoute) return null;
+  if (isAdminRoute || !isEnabled('whatsapp') || !whatsappUrl) return null;
 
   return (
     <a
-      href={CONTACT_WHATSAPP_URL}
+      href={whatsappUrl}
       target="_blank"
       rel="noopener noreferrer"
-      aria-label="Contacter YaraGold sur WhatsApp"
+      aria-label="Contacter Troco sur WhatsApp"
       className={cn(
         'group fixed z-40 flex h-14 w-14 items-center justify-center overflow-hidden rounded-full',
-        'bg-green-600 text-white shadow-lg ring-2 ring-white/90',
-        'transition-all duration-500 ease-out hover:scale-[1.03] hover:bg-green-700 hover:shadow-xl',
+        'bg-[#25D366] text-white shadow-elegant ring-2 ring-white/90',
+        'transition-all duration-500 ease-premium hover:scale-[1.03] hover:bg-[#1ebe57] hover:shadow-glow',
         'sm:hover:w-auto sm:hover:justify-start sm:hover:pl-4 sm:hover:pr-2',
         'bottom-6 right-6 max-sm:bottom-5 max-sm:right-5',
         'supports-[padding:max(0px)]:bottom-[max(1.5rem,env(safe-area-inset-bottom))]',

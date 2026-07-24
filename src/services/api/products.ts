@@ -4,9 +4,7 @@ import type { PageResponse } from '@/types/api';
 
 export interface ProductFilters {
   category?: string;
-  type?: string;
   goldType?: string;
-  collection?: string;
   minPrice?: number;
   maxPrice?: number;
   inStock?: boolean;
@@ -18,9 +16,7 @@ export interface ProductQueryParams {
   sortBy?: string;
   sortDir?: 'ASC' | 'DESC';
   category?: string;
-  type?: string;
   goldType?: string;
-  collection?: string;
   minPrice?: number;
   maxPrice?: number;
   inStock?: boolean;
@@ -31,20 +27,22 @@ export interface ProductQueryParams {
 export interface ProductFormData {
   name: string;
   description: string;
+  shortDescription?: string;
   price: number;
   originalPrice?: number;
-  weight: number;
-  marginGain?: number;
   category: string;
-  type: string;
-  /** Optionnel côté UI ; défaut côté API si absent */
-  goldType?: string;
-  collection?: string;
-  availableSizes?: string[];
+  sku?: string;
   stockQuantity?: number;
   badges?: string[];
   variants?: ProductVariant[];
+  /** Legacy optionnels */
+  goldType?: string;
+  availableSizes?: string[];
+  weight?: number;
+  marginGain?: number;
   showWeight?: boolean;
+  /** Produit personnalisable : upload logo client */
+  customizable?: boolean;
 }
 
 function buildProductsQueryString(params: ProductQueryParams): string {
@@ -54,9 +52,7 @@ function buildProductsQueryString(params: ProductQueryParams): string {
     sortBy = 'createdAt',
     sortDir = 'DESC',
     category,
-    type,
     goldType,
-    collection,
     minPrice,
     maxPrice,
     inStock,
@@ -69,9 +65,7 @@ function buildProductsQueryString(params: ProductQueryParams): string {
   qs.set('sortBy', sortBy);
   qs.set('sortDir', sortDir);
   if (category) qs.set('category', category);
-  if (type) qs.set('type', type);
   if (goldType) qs.set('goldType', goldType);
-  if (collection) qs.set('collection', collection);
   if (minPrice !== undefined) qs.set('minPrice', String(minPrice));
   if (maxPrice !== undefined) qs.set('maxPrice', String(maxPrice));
   if (inStock === true) qs.set('inStock', 'true');
@@ -101,9 +95,7 @@ export const productsApi = {
   filterProducts: async (filters: ProductFilters): Promise<ProductListItemDTO[]> => {
     const params = new URLSearchParams();
     if (filters.category) params.append('category', filters.category);
-    if (filters.type) params.append('type', filters.type);
     if (filters.goldType) params.append('goldType', filters.goldType);
-    if (filters.collection) params.append('collection', filters.collection);
     if (filters.minPrice !== undefined) params.append('minPrice', filters.minPrice.toString());
     if (filters.maxPrice !== undefined) params.append('maxPrice', filters.maxPrice.toString());
     if (filters.inStock !== undefined) params.append('inStock', filters.inStock.toString());
@@ -118,7 +110,7 @@ export const productsApi = {
     formData.append('product', new Blob([JSON.stringify(product)], { type: 'application/json' }));
     images.forEach((file) => formData.append('images', file));
 
-    const token = localStorage.getItem('goldyara_admin_token');
+    const token = localStorage.getItem('troco_admin_token');
     const response = await fetch(url, {
       method: 'POST',
       headers: token ? { Authorization: `Bearer ${token}` } : {},
@@ -137,7 +129,7 @@ export const productsApi = {
       images.forEach((file) => formData.append('images', file));
     }
 
-    const token = localStorage.getItem('goldyara_admin_token');
+    const token = localStorage.getItem('troco_admin_token');
     const response = await fetch(url, {
       method: 'PUT',
       headers: token ? { Authorization: `Bearer ${token}` } : {},

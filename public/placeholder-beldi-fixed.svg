@@ -6,6 +6,6 @@
   <circle cx="130" cy="140" r="8" fill="#f2b90d"/>
   <circle cx="170" cy="140" r="8" fill="#f2b90d"/>
   <circle cx="150" cy="200" r="10" fill="#f2b90d"/>
-  <text x="150" y="320" text-anchor="middle" font-family="serif" font-size="14" fill="#8a8060">YaraGold</text>
+  <text x="150" y="320" text-anchor="middle" font-family="serif" font-size="14" fill="#8a8060">Troco</text>
   <text x="150" y="340" text-anchor="middle" font-family="serif" font-size="12" fill="#8a8060">Beldi Style</text>
 </svg>

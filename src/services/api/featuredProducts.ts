@@ -1,175 +1,51 @@
-import { 
-  FeaturedProductDTO, 
-  CreateFeaturedProductRequest, 
+import { buildApiUrl, apiRequest } from '@/config/api';
+import type {
+  FeaturedProductDTO,
+  CreateFeaturedProductRequest,
   UpdateFeaturedProductRequest,
-  FeaturedProductSection 
 } from '@/types/featured-products';
-import { API_BASE_URL } from '@/config/api';
 
-class FeaturedProductsApi {
-  private getAuthHeaders() {
-    const token = localStorage.getItem('goldyara_admin_token');
-    return {
-      'Content-Type': 'application/json',
-      ...(token && { Authorization: `Bearer ${token}` }),
-    };
-  }
+export const featuredProductsApi = {
+  /** Public / home : actifs uniquement */
+  getAllFeaturedProducts: () =>
+    apiRequest<FeaturedProductDTO[]>(buildApiUrl('/featured-products')),
 
-  // Récupérer tous les produits sélectionnés
-  async getAllFeaturedProducts(): Promise<FeaturedProductDTO[]> {
-    try {
-      const response = await fetch(`${API_BASE_URL}/products/featured-products-mock`, {
-        headers: this.getAuthHeaders(),
-      });
+  /** Admin : actifs + inactifs */
+  getAllFeaturedProductsAdmin: () =>
+    apiRequest<FeaturedProductDTO[]>(buildApiUrl('/featured-products?includeInactive=true')),
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('Error response:', errorText);
-        throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
-      }
+  getFeaturedProductsBySection: (section: 'heritage' | 'sur-mesure') =>
+    apiRequest<FeaturedProductDTO[]>(buildApiUrl(`/featured-products/section/${section}`)),
 
-      const data = await response.json();
-      return data;
-    } catch (error) {
-      console.error('Error fetching featured products:', error);
-      throw error;
-    }
-  }
+  getFeaturedProductById: (id: string) =>
+    apiRequest<FeaturedProductDTO>(buildApiUrl(`/featured-products/${id}`)),
 
-  // Récupérer les produits par section
-  async getFeaturedProductsBySection(section: 'heritage' | 'sur-mesure'): Promise<FeaturedProductDTO[]> {
-    try {
-      const response = await fetch(`${API_BASE_URL}/featured-products/section/${section}`, {
-        headers: this.getAuthHeaders(),
-      });
+  createFeaturedProduct: (data: CreateFeaturedProductRequest) =>
+    apiRequest<FeaturedProductDTO>(buildApiUrl('/featured-products'), {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
+  updateFeaturedProduct: (id: string, data: UpdateFeaturedProductRequest) =>
+    apiRequest<FeaturedProductDTO>(buildApiUrl(`/featured-products/${id}`), {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
 
-      return await response.json();
-    } catch (error) {
-      console.error(`Error fetching featured products for section ${section}:`, error);
-      throw error;
-    }
-  }
+  deleteFeaturedProduct: (id: string) =>
+    apiRequest<void>(buildApiUrl(`/featured-products/${id}`), {
+      method: 'DELETE',
+    }),
 
-  // Récupérer un produit sélectionné par ID
-  async getFeaturedProductById(id: string): Promise<FeaturedProductDTO> {
-    try {
-      const response = await fetch(`${API_BASE_URL}/featured-products/${id}`, {
-        headers: this.getAuthHeaders(),
-      });
+  reorderFeaturedProducts: (section: 'heritage' | 'sur-mesure', productIds: string[]) =>
+    apiRequest<void>(buildApiUrl('/featured-products/reorder'), {
+      method: 'POST',
+      body: JSON.stringify({ section, productIds }),
+    }),
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      return await response.json();
-    } catch (error) {
-      console.error(`Error fetching featured product ${id}:`, error);
-      throw error;
-    }
-  }
-
-  // Créer un nouveau produit sélectionné
-  async createFeaturedProduct(data: CreateFeaturedProductRequest): Promise<FeaturedProductDTO> {
-    try {
-      const response = await fetch(`${API_BASE_URL}/products/featured-products`, {
-        method: 'POST',
-        headers: this.getAuthHeaders(),
-        body: JSON.stringify(data),
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('Create error response:', errorText);
-        throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
-      }
-
-      return await response.json();
-    } catch (error) {
-      console.error('Error creating featured product:', error);
-      throw error;
-    }
-  }
-
-  // Mettre à jour un produit sélectionné
-  async updateFeaturedProduct(id: string, data: UpdateFeaturedProductRequest): Promise<FeaturedProductDTO> {
-    try {
-      const response = await fetch(`${API_BASE_URL}/featured-products/${id}`, {
-        method: 'PUT',
-        headers: this.getAuthHeaders(),
-        body: JSON.stringify(data),
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('❌ Update failed:', response.status, errorText);
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      return await response.json();
-    } catch (error) {
-      console.error(`Error updating featured product ${id}:`, error);
-      throw error;
-    }
-  }
-
-  // Supprimer un produit sélectionné
-  async deleteFeaturedProduct(id: string): Promise<void> {
-    try {
-      const response = await fetch(`${API_BASE_URL}/featured-products/${id}`, {
-        method: 'DELETE',
-        headers: this.getAuthHeaders(),
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-    } catch (error) {
-      console.error(`Error deleting featured product ${id}:`, error);
-      throw error;
-    }
-  }
-
-  // Réorganiser l'ordre des produits
-  async reorderFeaturedProducts(section: 'heritage' | 'sur-mesure', productIds: string[]): Promise<void> {
-    try {
-      const response = await fetch(`${API_BASE_URL}/featured-products/reorder`, {
-        method: 'POST',
-        headers: this.getAuthHeaders(),
-        body: JSON.stringify({ section, productIds }),
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-    } catch (error) {
-      console.error('Error reordering featured products:', error);
-      throw error;
-    }
-  }
-
-  // Activer/Désactiver un produit sélectionné
-  async toggleFeaturedProduct(id: string, isActive: boolean): Promise<FeaturedProductDTO> {
-    try {
-      const response = await fetch(`${API_BASE_URL}/featured-products/${id}/toggle`, {
-        method: 'PATCH',
-        headers: this.getAuthHeaders(),
-        body: JSON.stringify({ isActive }),
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      return await response.json();
-    } catch (error) {
-      console.error(`Error toggling featured product ${id}:`, error);
-      throw error;
-    }
-  }
-}
-
-export const featuredProductsApi = new FeaturedProductsApi();
+  toggleFeaturedProduct: (id: string, isActive: boolean) =>
+    apiRequest<FeaturedProductDTO>(buildApiUrl(`/featured-products/${id}/toggle`), {
+      method: 'PATCH',
+      body: JSON.stringify({ isActive }),
+    }),
+};

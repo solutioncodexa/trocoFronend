@@ -27,7 +27,9 @@ export interface CartItemDTO {
   quantity: number;
   selectedSize?: string;
   selectedVariantId?: string;
+  /** @deprecated leftover jewelry field — unused for packaging */
   selectedGoldType?: string;
+  customLogoUrl?: string;
 }
 
 export interface CustomerDTO {
@@ -81,10 +83,10 @@ export interface CustomOrderDTO {
   imageUrl?: string;
   referenceImageUrls?: string[];
   description: string;
-  type: string; // ProductType
+  type: string;
   size?: string;
   weight?: number;
-  style: string; // ProductCategory
+  style: string;
   customer: CustomerDTO;
   status: string; // 'pending', 'contacted', 'completed'
   estimatedPrice?: number;
@@ -109,10 +111,13 @@ export interface CategoryDTO {
   name: string;
   slug: string;
   description?: string;
+  parentId?: number | null;
+  parentName?: string | null;
   /** Bandeau accueil — géré en admin */
   heroImageUrl?: string | null;
   showOnHero?: boolean;
   heroSortOrder?: number | null;
+  productCount?: number;
 }
 
 export interface HeroCategoryPatchDTO {
@@ -124,28 +129,11 @@ export interface HeroCategoryPatchDTO {
   heroImageUrl?: string | null;
 }
 
-export interface CollectionDTO {
-  id: string;
-  name: string;
-  slug: string;
-  description?: string;
-  isActive: boolean;
-  createdAt: string;
-}
-
 export interface CartDTO {
   id: number;
   sessionId: string;
   items: CartItemDTO[];
   createdAt?: string;
-}
-
-export interface ProductTypeDTO {
-  id: string;
-  name: string;
-  code: string;
-  requiresSize: boolean;
-  sizeOptions?: string[];
 }
 
 // Auth DTOs
@@ -156,6 +144,8 @@ export interface AuthResponse {
   id: number;
   email: string;
   role: string;
+  fullName?: string;
+  permissions?: string[];
   expires_in: number;
 }
 
@@ -163,6 +153,38 @@ export interface UserInfoDTO {
   id: number;
   email: string;
   role: string;
+  fullName?: string;
+  active?: boolean;
+  permissions?: string[];
+}
+
+export interface PermissionDTO {
+  code: string;
+  label: string;
+  category: string;
+  description?: string;
+}
+
+export interface MemberDTO {
+  id: number;
+  email: string;
+  fullName?: string;
+  role: string;
+  active: boolean;
+  createdAt?: string;
+  permissions: string[];
+}
+
+export interface AuditLogDTO {
+  id: number;
+  action: string;
+  entityName?: string;
+  entityId?: string;
+  description?: string;
+  createdAt: string;
+  userId?: number;
+  username?: string;
+  userFullName?: string;
 }
 
 export interface LoginRequest {
@@ -176,15 +198,10 @@ export interface RegisterRequest {
   role?: string;
 }
 
-export interface GoldPriceSettingDTO {
-  id: number;
-  pricePerGram: number;
-}
-
 // Notifications
 export interface NotificationDTO {
   id: number;
-  type: string; // ORDER, CUSTOM_ORDER
+  type: string; // ORDER, CUSTOM_ORDER, LOW_STOCK, OUT_OF_STOCK, EXPIRING_SOON
   title: string;
   message: string;
   referenceId: number | null;
@@ -192,17 +209,4 @@ export interface NotificationDTO {
   createdAt: string;
 }
 
-// Gold price API (or.fr / goldbroker.com)
-export interface GoldPricePointDTO {
-  date: string;
-  price: number;
-}
-
-export interface GoldPriceDTO {
-  currentPrice: number;
-  currency: string;
-  metal: string;
-  weightUnit: string;
-  source: string;
-  history: GoldPricePointDTO[];
-}
+// (types gold / cours or retirés — projet emballage)

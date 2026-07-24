@@ -13,7 +13,8 @@ import {
   MoveUp,
   MoveDown,
   Upload,
-  X
+  X,
+  Loader2
 } from 'lucide-react';
 import AdminLayout from '@/components/admin/AdminLayout';
 import { Button } from '@/components/ui/button';
@@ -31,6 +32,8 @@ import { FeaturedProductDTO, CreateFeaturedProductRequest, UpdateFeaturedProduct
 import { toast } from 'sonner';
 import { toastError } from '@/utils/toastMessages';
 import { cn } from '@/lib/utils';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { ErrorState } from '@/components/ui/ErrorState';
 
 const AdminFeaturedProducts = () => {
   const queryClient = useQueryClient();
@@ -43,9 +46,9 @@ const AdminFeaturedProducts = () => {
   const [uploadingImage, setUploadingImage] = useState(false);
 
   // Récupérer tous les produits sélectionnés
-  const { data: featuredProducts = [], isLoading, error } = useQuery({
+  const { data: featuredProducts = [], isLoading, error, refetch } = useQuery({
     queryKey: ['featured-products'],
-    queryFn: () => featuredProductsApi.getAllFeaturedProducts(),
+    queryFn: () => featuredProductsApi.getAllFeaturedProductsAdmin(),
     retry: 3,
     retryDelay: 1000,
   });
@@ -123,19 +126,19 @@ const AdminFeaturedProducts = () => {
   });
 
   const getSectionLabel = (section: string) => {
-    const labels = {
-      heritage: 'Notre Histoire & Passion',
-      'sur-mesure': "L'Art du Sur-Mesure"
+    const labels: Record<string, string> = {
+      heritage: 'Vitrine (accueil)',
+      'sur-mesure': 'Sur-mesure / Devis',
     };
-    return labels[section as keyof typeof labels] || section;
+    return labels[section] || section;
   };
 
   const getSectionBadgeColor = (section: string) => {
-    const colors = {
+    const colors: Record<string, string> = {
       heritage: 'bg-blue-100 text-blue-800',
-      'sur-mesure': 'bg-purple-100 text-purple-800'
+      'sur-mesure': 'bg-purple-100 text-purple-800',
     };
-    return colors[section as keyof typeof colors] || 'bg-gray-100 text-gray-800';
+    return colors[section] || 'bg-gray-100 text-gray-800';
   };
 
   const handleCreate = (data: CreateFeaturedProductRequest) => {
@@ -180,7 +183,9 @@ const AdminFeaturedProducts = () => {
   if (isLoading) {
     return (
       <AdminLayout title="Produits Sélectionnés" breadcrumbs={[{ label: 'Produits Sélectionnés' }]}>
-        <div className="p-8 text-center text-muted-foreground">Chargement...</div>
+        <div className="flex items-center justify-center py-16">
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        </div>
       </AdminLayout>
     );
   }
@@ -188,20 +193,11 @@ const AdminFeaturedProducts = () => {
   if (error) {
     return (
       <AdminLayout title="Produits Sélectionnés" breadcrumbs={[{ label: 'Produits Sélectionnés' }]}>
-        <div className="p-8">
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-            <h3 className="text-red-800 font-medium mb-2">Erreur de chargement</h3>
-            <p className="text-red-600">
-              Impossible de charger les produits sélectionnés. Veuillez vérifier que le serveur backend est en cours d'exécution.
-            </p>
-            <details className="mt-2">
-              <summary className="text-red-500 cursor-pointer">Détails techniques</summary>
-              <pre className="mt-2 text-xs text-red-400 whitespace-pre-wrap">
-                {error instanceof Error ? error.message : 'Erreur inconnue'}
-              </pre>
-            </details>
-          </div>
-        </div>
+        <ErrorState
+          title="Erreur de chargement"
+          description="Impossible de charger les produits sélectionnés. Veuillez vérifier que le serveur backend est en cours d'exécution."
+          onRetry={() => refetch()}
+        />
       </AdminLayout>
     );
   }
@@ -210,17 +206,17 @@ const AdminFeaturedProducts = () => {
     <AdminLayout title="Produits Sélectionnés" breadcrumbs={[{ label: 'Produits Sélectionnés' }]}>
       {/* Stats */}
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4 mb-6">
-        <div className="bg-card rounded-lg p-3 sm:p-4 border border-border">
+        <div className="bg-card rounded-2xl shadow-soft p-3 sm:p-4 border border-border">
           <p className="text-xs sm:text-sm text-muted-foreground mb-1">Total</p>
           <p className="font-display text-xl sm:text-2xl">{featuredProducts.length}</p>
         </div>
-        <div className="bg-card rounded-lg p-3 sm:p-4 border border-border">
+        <div className="bg-card rounded-2xl shadow-soft p-3 sm:p-4 border border-border">
           <p className="text-xs sm:text-sm text-muted-foreground mb-1">Heritage</p>
           <p className="font-display text-xl sm:text-2xl">
             {featuredProducts.filter(p => p.section === 'heritage').length}
           </p>
         </div>
-        <div className="bg-card rounded-lg p-3 sm:p-4 border border-border col-span-2 sm:col-span-1">
+        <div className="bg-card rounded-2xl shadow-soft p-3 sm:p-4 border border-border col-span-2 sm:col-span-1">
           <p className="text-xs sm:text-sm text-muted-foreground mb-1">Sur-Mesure</p>
           <p className="font-display text-xl sm:text-2xl">
             {featuredProducts.filter(p => p.section === 'sur-mesure').length}
@@ -245,8 +241,8 @@ const AdminFeaturedProducts = () => {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Toutes les sections</SelectItem>
-            <SelectItem value="heritage">Notre Histoire & Passion</SelectItem>
-            <SelectItem value="sur-mesure">L'Art du Sur-Mesure</SelectItem>
+            <SelectItem value="heritage">Vitrine (accueil)</SelectItem>
+            <SelectItem value="sur-mesure">Sur-mesure / Devis</SelectItem>
           </SelectContent>
         </Select>
         <Select value={filterStatus} onValueChange={(value: any) => setFilterStatus(value)}>
@@ -272,7 +268,7 @@ const AdminFeaturedProducts = () => {
           if (sectionProducts.length === 0) return null;
 
           return (
-            <div key={section} className="bg-card rounded-lg border border-border">
+            <div key={section} className="bg-card rounded-2xl shadow-soft border border-border overflow-hidden">
               <div className="p-4 border-b border-border bg-muted/50">
                 <h3 className="font-display text-lg">{getSectionLabel(section)}</h3>
               </div>
@@ -353,10 +349,13 @@ const AdminFeaturedProducts = () => {
       </div>
 
       {sortedProducts.length === 0 && (
-        <div className="bg-card rounded-lg p-8 text-center border border-border">
-          <Package className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-          <p className="text-muted-foreground">Aucun produit sélectionné trouvé</p>
-        </div>
+        <EmptyState
+          icon={Package}
+          title="Aucun produit sélectionné trouvé"
+          description="Ajoutez des produits à mettre en avant sur la vitrine ou en sur-mesure."
+          actionLabel="Ajouter"
+          onAction={() => setIsCreateDialogOpen(true)}
+        />
       )}
 
       {/* Create Dialog */}
@@ -454,8 +453,8 @@ const CreateFeaturedProductDialog = ({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="heritage">Notre Histoire & Passion</SelectItem>
-                <SelectItem value="sur-mesure">L'Art du Sur-Mesure</SelectItem>
+                <SelectItem value="heritage">Vitrine (accueil)</SelectItem>
+                <SelectItem value="sur-mesure">Sur-mesure / Devis</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -656,8 +655,8 @@ const EditFeaturedProductDialog = ({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="heritage">Notre Histoire & Passion</SelectItem>
-                <SelectItem value="sur-mesure">L'Art du Sur-Mesure</SelectItem>
+                <SelectItem value="heritage">Vitrine (accueil)</SelectItem>
+                <SelectItem value="sur-mesure">Sur-mesure / Devis</SelectItem>
               </SelectContent>
             </Select>
           </div>

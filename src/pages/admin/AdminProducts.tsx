@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Plus, Pencil, Trash2, Search, Upload, X, Settings2, ArrowLeft, ArrowRight, Star, GripVertical } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Plus, Pencil, Trash2, Search, Upload, X, ArrowLeft, ArrowRight, Star } from 'lucide-react';
 import { createEmptyVariantRow, type ProductVariantFormRow } from '@/types/product-variant';
 import { ProductVariantEditor } from '@/components/admin/ProductVariantEditor';
 import AdminLayout from '@/components/admin/AdminLayout';
@@ -9,11 +10,13 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
+import { Switch } from '@/components/ui/switch';
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
-import { Product, ProductCategory, ProductType } from '@/types/product';
-import { categoriesApi, productTypesApi, collectionsApi, goldPriceSettingsApi, calculatePrice, getImageUrl } from '@/services/api';
+import { Product } from '@/types/product';
+import { categoriesApi } from '@/services/api/categories';
+import { getImageUrl } from '@/services/api';
 import { ProductFormData } from '@/services/api/products';
 import { productsApi } from '@/services/api/products';
 import { mapProductListItemListToProducts, mapProductDetailToProduct } from '@/utils/productMapper';
@@ -24,9 +27,30 @@ import { staticCatalogQueryOptions } from '@/config/queryOptions';
 import { cn } from '@/lib/utils';
 import { compressImageWithReport } from '@/utils/compressImage';
 import { notifyCompressionReports } from '@/utils/notifyCompression';
+import { useAdmin } from '@/contexts/AdminContext';
+import { PERMISSIONS } from '@/config/permissions';
+
+type AdminFormData = {
+  name: string;
+  shortDescription: string;
+  description: string;
+  price: string;
+  originalPrice: string;
+  category: string;
+  sku: string;
+  stockQuantity: string;
+  badges: string[];
+  customizable: boolean;
+};
+
+const PLACEHOLDER_IMAGE = '/placeholder-modern-fixed.svg';
 
 const AdminProducts = () => {
   const queryClient = useQueryClient();
+  const { hasPermission } = useAdmin();
+  const canCreate = hasPermission(PERMISSIONS.PRODUCTS_CREATE);
+  const canUpdate = hasPermission(PERMISSIONS.PRODUCTS_UPDATE);
+  const canDelete = hasPermission(PERMISSIONS.PRODUCTS_DELETE);
   const [page, setPage] = useState(0);
   const [pageSize, setPageSize] = useState(12);
   const [debouncedSearch, setDebouncedSearch] = useState('');
@@ -41,24 +65,8 @@ const AdminProducts = () => {
     queryFn: () => categoriesApi.getAllCategories(),
     ...staticCatalogQueryOptions,
   });
-  const { data: productTypes = [] } = useQuery({
-    queryKey: ['productTypes'],
-    queryFn: () => productTypesApi.getAllProductTypes(),
-    ...staticCatalogQueryOptions,
-  });
-  const { data: collections = [] } = useQuery({
-    queryKey: ['collections'],
-    queryFn: () => collectionsApi.getAllCollections(),
-    ...staticCatalogQueryOptions,
-  });
-  const { data: goldPriceSettings } = useQuery({
-    queryKey: ['goldPriceSettings'],
-    queryFn: () => goldPriceSettingsApi.getSettings(),
-    ...staticCatalogQueryOptions,
-  });
+
   const [searchTerm, setSearchTerm] = useState('');
-  const [isPriceSettingsOpen, setIsPriceSettingsOpen] = useState(false);
-  const [priceSettingsForm, setPriceSettingsForm] = useState({ pricePerGram: '' });
   const [filterCategory, setFilterCategory] = useState<string>('all');
 
   useEffect(() => {
@@ -87,106 +95,103 @@ const AdminProducts = () => {
     placeholderData: keepPreviousData,
   });
   const products = mapProductListItemListToProducts(productsPage?.content) ?? [];
+
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isLoadingProduct, setIsLoadingProduct] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<AdminFormData>({
     name: '',
+    shortDescription: '',
     description: '',
     price: '',
     originalPrice: '',
-    weight: '',
-    marginGain: '500',
-    category: 'beldi' as ProductCategory,
-    type: 'bracelet' as ProductType,
-    collection: '',
-    badges: [] as string[],
-    stockQuantity: '1',
-    showWeight: true,
+    category: '',
+    sku: '',
+    stockQuantity: '100',
+    badges: [],
+    customizable: false,
   });
-  // Fichiers images à envoyer (nouveaux uploads)
   const [imageFiles, setImageFiles] = useState<File[]>([]);
-  // URLs des images existantes (pour affichage en mode édition)
   const [existingImageUrls, setExistingImageUrls] = useState<string[]>([]);
-  const [variantRows, setVariantRows] = useState<ProductVariantFormRow[]>([createEmptyVariantRow('500', true)]);
+  const [variantRows, setVariantRows] = useState<ProductVariantFormRow[]>([createEmptyVariantRow(true)]);
 
   const isPromo = formData.badges.includes('promo');
-
-  // Prix calculé par variante : (grammes × prix au gramme) + marge
-  useEffect(() => {
-    if (!goldPriceSettings || isPromo) return;
-    setVariantRows((prev) =>
-      prev.map((row) => {
-        const weight = parseFloat(row.weight);
-        const marginGain = parseFloat(row.marginGain);
-        if (Number.isNaN(weight) || weight <= 0) return row;
-        const margin = Number.isNaN(marginGain) || marginGain < 0 ? 500 : marginGain;
-        const calculated = String(
-          Math.round(calculatePrice(weight, goldPriceSettings.pricePerGram, margin))
-        );
-        if (row.price === calculated) return row;
-        return { ...row, price: calculated };
-      })
-    );
-  }, [variantRows.map((r) => `${r.weight}-${r.marginGain}`).join('|'), goldPriceSettings?.pricePerGram, isPromo]);
 
   useEffect(() => {
     const defaultRow = variantRows.find((r) => r.isDefault) ?? variantRows[0];
     if (!defaultRow) return;
     setFormData((prev) => ({
       ...prev,
-      weight: defaultRow.weight,
       price: defaultRow.price,
-      marginGain: defaultRow.marginGain,
     }));
   }, [variantRows]);
 
-  const getCategoryLabel = (cat: string) => (cat === 'beldi' ? 'Beldi' : cat === 'modern' ? 'Moderne' : cat);
-
-  const getAvailableSizes = (typeCode: string) => {
-    const pt = productTypes.find((p) => p.code.toLowerCase() === typeCode.toLowerCase());
-    return pt?.sizeOptions;
+  const getCategoryLabel = (slug: string) => {
+    const cat = categories.find((c) => c.slug === slug);
+    return cat?.name ?? slug;
   };
 
   const populateFormFromProduct = (product: Product) => {
     setEditingProduct(product);
     setFormData({
       name: product.name,
+      shortDescription: product.shortDescription ?? '',
       description: product.description,
       price: product.price.toString(),
       originalPrice: (product.originalPrice ?? '').toString(),
-      weight: product.weight.toString(),
-      marginGain: (product.marginGain ?? 500).toString(),
       category: product.category,
-      type: product.type,
-      collection: product.collection || '',
+      sku: product.sku ?? '',
+      stockQuantity: String(product.stockQuantity ?? 0),
       badges: product.badges,
-      stockQuantity: String(product.stockQuantity ?? 1),
-      showWeight: product.showWeight !== false,
+      customizable: product.customizable === true,
     });
+
     const rows: ProductVariantFormRow[] = (product.variants?.length ? product.variants : []).map((v) => ({
       id: v.id,
-      label: v.label ?? '',
-      weight: String(v.weight),
-      marginGain: String(v.marginGain ?? 500),
+      attributeName: v.attributeName ?? 'Capacité',
+      attributeValue: v.attributeValue ?? v.label ?? '',
+      label: v.label ?? v.attributeValue ?? '',
       price: String(v.price),
       originalPrice: v.originalPrice != null ? String(v.originalPrice) : '',
+      stock: v.stock != null ? String(v.stock) : String(product.stockQuantity ?? 0),
+      safetyStock: v.safetyStock != null ? String(v.safetyStock) : '',
+      sku: v.sku ?? '',
       isDefault: Boolean(v.isDefault),
     }));
-    setVariantRows(
-      rows.length > 0 ? rows : [createEmptyVariantRow(String(product.marginGain ?? 500), true)]
-    );
-    if (rows.length === 0) {
+
+    if (rows.length > 0) {
+      setVariantRows(rows);
+    } else {
       setVariantRows([
         {
-          ...createEmptyVariantRow(String(product.marginGain ?? 500), true),
-          weight: String(product.weight),
+          ...createEmptyVariantRow(true),
           price: String(product.price),
           originalPrice: product.originalPrice != null ? String(product.originalPrice) : '',
+          stock: String(product.stockQuantity ?? 0),
+          sku: product.sku ?? '',
         },
       ]);
     }
+
     setExistingImageUrls(product.images || []);
+    setImageFiles([]);
+  };
+
+  const resetForm = () => {
+    setFormData({
+      name: '',
+      shortDescription: '',
+      description: '',
+      price: '',
+      originalPrice: '',
+      category: categories[0]?.slug ?? '',
+      sku: '',
+      stockQuantity: '100',
+      badges: [],
+      customizable: false,
+    });
+    setVariantRows([createEmptyVariantRow(true)]);
+    setExistingImageUrls([]);
     setImageFiles([]);
   };
 
@@ -209,22 +214,7 @@ const AdminProducts = () => {
     }
 
     setEditingProduct(null);
-    setFormData({
-      name: '',
-      description: '',
-      price: '',
-      weight: '',
-      marginGain: '500',
-      category: 'beldi',
-      type: 'bracelet',
-      collection: '',
-      badges: [],
-      stockQuantity: '1',
-      showWeight: true,
-    });
-    setVariantRows([createEmptyVariantRow('500', true)]);
-    setExistingImageUrls([]);
-    setImageFiles([]);
+    resetForm();
     setIsModalOpen(true);
   };
 
@@ -266,81 +256,74 @@ const AdminProducts = () => {
     onError: (err: Error) => toastError(err, 'Erreur lors de la suppression'),
   });
 
-  const updatePriceSettingsMutation = useMutation({
-    mutationFn: (pricePerGram: number) => goldPriceSettingsApi.updateSettings(pricePerGram),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['goldPriceSettings'] });
-      toast.success('Paramètres de prix enregistrés');
-      setIsPriceSettingsOpen(false);
-    },
-    onError: (err: Error) => toastError(err, 'Erreur lors de la mise à jour des prix'),
-  });
-
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Validation: au moins une image (nouvelle ou existante)
     if (imageFiles.length === 0 && existingImageUrls.length === 0) {
       toast.error('Veuillez ajouter au moins une image');
       return;
     }
 
+    if (!formData.category) {
+      toast.error('Veuillez sélectionner une catégorie');
+      return;
+    }
+
     const parsedVariants = variantRows
       .map((row, index) => {
-        const weight = parseFloat(row.weight);
-        const margin = parseFloat(row.marginGain);
-        const marginGain = Number.isNaN(margin) || margin < 0 ? 500 : margin;
-        let price = parseFloat(row.price);
-        if ((Number.isNaN(price) || price <= 0) && goldPriceSettings && !Number.isNaN(weight) && weight > 0) {
-          price = Math.round(calculatePrice(weight, goldPriceSettings.pricePerGram, marginGain));
-        }
+        const price = parseFloat(row.price);
         const originalPrice = row.originalPrice ? parseFloat(row.originalPrice) : undefined;
+        const stock = row.stock ? parseInt(row.stock, 10) : undefined;
+        const safetyStock = row.safetyStock.trim() !== '' ? parseInt(row.safetyStock, 10) : undefined;
+        const attributeValue = row.attributeValue.trim();
         return {
           id: row.id,
-          label: row.label.trim() || undefined,
-          weight,
-          marginGain,
+          attributeName: row.attributeName.trim() || undefined,
+          attributeValue,
+          label: row.label.trim() || attributeValue || undefined,
           price,
           originalPrice: isPromo && originalPrice && originalPrice > price ? originalPrice : undefined,
+          stock: Number.isNaN(stock) ? undefined : stock,
+          safetyStock: safetyStock != null && !Number.isNaN(safetyStock) ? safetyStock : undefined,
+          sku: row.sku.trim() || undefined,
           isDefault: row.isDefault,
           displayOrder: index,
         };
       })
-      .filter((v) => !Number.isNaN(v.weight) && v.weight > 0);
+      .filter((v) => v.attributeValue && !Number.isNaN(v.price) && v.price > 0);
 
     if (parsedVariants.length === 0) {
-      toast.error('Ajoutez au moins une variante avec un poids valide');
+      toast.error('Ajoutez au moins une variante avec une valeur et un prix valides');
       return;
     }
 
     const defaultVariant = parsedVariants.find((v) => v.isDefault) ?? parsedVariants[0];
-    const typeCode = productTypes.find((pt) => pt.code.toLowerCase() === formData.type)?.code ?? (formData.type as string).toUpperCase();
     const originalPriceNum = formData.originalPrice ? parseFloat(formData.originalPrice) : undefined;
+    const stockQuantity = parseInt(formData.stockQuantity, 10);
+
     const productPayload: ProductFormData = {
       name: formData.name,
       description: formData.description,
+      shortDescription: formData.shortDescription.trim() || undefined,
       price: defaultVariant.price,
-      originalPrice: isPromo && originalPriceNum && originalPriceNum > defaultVariant.price ? originalPriceNum : defaultVariant.originalPrice,
-      weight: defaultVariant.weight,
-      marginGain: defaultVariant.marginGain,
-      variants: parsedVariants,
+      originalPrice:
+        isPromo && originalPriceNum && originalPriceNum > defaultVariant.price
+          ? originalPriceNum
+          : defaultVariant.originalPrice,
       category: formData.category,
-      type: typeCode,
-      goldType: 'yellow',
-      collection: formData.collection || undefined,
-      availableSizes: (() => {
-        const sizes = getAvailableSizes(formData.type);
-        if (!sizes) return undefined;
-        return Array.isArray(sizes) ? sizes : String(sizes).split(',').map((s) => s.trim());
-      })(),
-      stockQuantity: parseInt(formData.stockQuantity) || 1,
+      sku: formData.sku.trim() || undefined,
+      stockQuantity: Number.isNaN(stockQuantity) ? 0 : stockQuantity,
       badges: formData.badges,
-      showWeight: formData.showWeight,
+      variants: parsedVariants,
+      customizable: formData.customizable,
     };
 
     if (editingProduct) {
-      // En mise à jour : envoie les nouveaux fichiers seulement si ajoutés
-      updateMutation.mutate({ id: editingProduct.id, product: productPayload, images: imageFiles.length > 0 ? imageFiles : undefined });
+      updateMutation.mutate({
+        id: editingProduct.id,
+        product: productPayload,
+        images: imageFiles.length > 0 ? imageFiles : undefined,
+      });
     } else {
       createMutation.mutate({ product: productPayload, images: imageFiles });
     }
@@ -353,9 +336,9 @@ const AdminProducts = () => {
   };
 
   const toggleBadge = (badge: string) => {
-    setFormData(prev => {
+    setFormData((prev) => {
       const isAdding = !prev.badges.includes(badge);
-      const newBadges = isAdding ? [...prev.badges, badge] : prev.badges.filter(b => b !== badge);
+      const newBadges = isAdding ? [...prev.badges, badge] : prev.badges.filter((b) => b !== badge);
       if (badge === 'promo' && isAdding && !prev.originalPrice) {
         return { ...prev, badges: newBadges, originalPrice: prev.price };
       }
@@ -458,7 +441,6 @@ const AdminProducts = () => {
         {isFetching && <span className="text-[10px]">(mise à jour…)</span>}
       </p>
 
-      {/* Toolbar */}
       <div className="flex flex-col sm:flex-row gap-4 mb-6">
         <div className="flex-1 relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
@@ -475,53 +457,54 @@ const AdminProducts = () => {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Toutes les catégories</SelectItem>
-            <SelectItem value="beldi">Beldi</SelectItem>
-            <SelectItem value="modern">Moderne</SelectItem>
+            {categories.map((cat) => (
+              <SelectItem key={cat.id} value={cat.slug}>
+                {cat.name}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
-        <Button onClick={() => handleOpenModal()} className="font-body">
-          <Plus className="w-4 h-4 mr-2" />
-          Ajouter
-        </Button>
-        <Button
-          variant="outline"
-          onClick={() => {
-            if (goldPriceSettings) {
-              setPriceSettingsForm({ pricePerGram: String(goldPriceSettings.pricePerGram) });
-            }
-            setIsPriceSettingsOpen(true);
-          }}
-        >
-          <Settings2 className="w-4 h-4 mr-2" />
-          Paramètres prix
-        </Button>
+        {canCreate && (
+          <Button onClick={() => handleOpenModal()} className="font-body">
+            <Plus className="w-4 h-4 mr-2" />
+            Ajouter
+          </Button>
+        )}
       </div>
 
-      {/* Mobile: card layout */}
       <div className="block lg:hidden space-y-3">
         {products.map((product) => (
           <div key={product.id} className="bg-card rounded-lg border border-border p-3 sm:p-4">
             <div className="flex items-start gap-3">
               <img
-                src={product.images?.[0] ? getImageUrl(product.images[0]) : 'https://images.unsplash.com/photo-1611652022419-a9419f74343d?w=100'}
+                src={product.images?.[0] ? getImageUrl(product.images[0]) : PLACEHOLDER_IMAGE}
                 alt={product.name}
                 className="w-14 h-14 rounded-lg object-cover shrink-0"
               />
               <div className="flex-1 min-w-0">
                 <p className="font-body font-medium text-sm truncate">{product.name}</p>
-                <p className="font-body text-xs text-muted-foreground">{product.weight}g</p>
+                <p className="font-body text-xs text-muted-foreground">
+                  {getCategoryLabel(product.category)}
+                  {product.sku ? ` · ${product.sku}` : ''}
+                </p>
                 <div className="flex flex-wrap items-center gap-1 mt-1">
-                  <Badge variant={product.category === 'beldi' ? 'default' : 'secondary'} className="text-[10px]">
-                    {product.category === 'beldi' ? 'Beldi' : 'Moderne'}
-                  </Badge>
-                  {!product.inStock && (
+                  {!product.inStock ? (
                     <Badge variant="destructive" className="text-[10px]">Rupture</Badge>
+                  ) : (
+                    <Badge variant="outline" className="text-[10px] text-green-600 border-green-600">
+                      Stock {product.stockQuantity}
+                    </Badge>
                   )}
-                  {product.badges.map(badge => (
+                  {product.badges.map((badge) => (
                     <Badge key={badge} variant={badge === 'promo' ? 'destructive' : 'outline'} className="text-[10px]">
                       {badge === 'new' ? 'Nouveau' : badge === 'bestseller' ? 'Best-seller' : 'Promo'}
                     </Badge>
                   ))}
+                  {product.customizable && (
+                    <Badge variant="outline" className="text-[10px] border-primary/40 text-primary">
+                      Logo
+                    </Badge>
+                  )}
                 </div>
               </div>
               <div className="text-right shrink-0">
@@ -536,23 +519,27 @@ const AdminProducts = () => {
               </div>
             </div>
             <div className="flex gap-2 mt-3">
-              <Button
-                variant="outline"
-                size="sm"
-                className="flex-1 h-8 text-xs"
-                onClick={() => handleOpenModal(product)}
-              >
-                <Pencil className="w-3.5 h-3.5 mr-1" />
-                Modifier
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-8 w-8 p-0 text-destructive hover:bg-destructive hover:text-destructive-foreground"
-                onClick={() => handleDelete(product.id)}
-              >
-                <Trash2 className="w-3.5 h-3.5" />
-              </Button>
+              {canUpdate && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="flex-1 h-8 text-xs"
+                  onClick={() => handleOpenModal(product)}
+                >
+                  <Pencil className="w-3.5 h-3.5 mr-1" />
+                  Modifier
+                </Button>
+              )}
+              {canDelete && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-8 w-8 p-0 text-destructive hover:bg-destructive hover:text-destructive-foreground"
+                  onClick={() => handleDelete(product.id)}
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </Button>
+              )}
             </div>
           </div>
         ))}
@@ -563,7 +550,6 @@ const AdminProducts = () => {
         )}
       </div>
 
-      {/* Desktop: table layout */}
       <div className="hidden lg:block bg-card rounded-lg border border-border overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full">
@@ -571,7 +557,6 @@ const AdminProducts = () => {
               <tr>
                 <th className="px-4 py-3 text-left font-body text-sm font-medium text-muted-foreground">Produit</th>
                 <th className="px-4 py-3 text-left font-body text-sm font-medium text-muted-foreground">Catégorie</th>
-                <th className="px-4 py-3 text-left font-body text-sm font-medium text-muted-foreground">Collection</th>
                 <th className="px-4 py-3 text-left font-body text-sm font-medium text-muted-foreground">Stock</th>
                 <th className="px-4 py-3 text-left font-body text-sm font-medium text-muted-foreground">Prix</th>
                 <th className="px-4 py-3 text-left font-body text-sm font-medium text-muted-foreground">Badges</th>
@@ -584,29 +569,20 @@ const AdminProducts = () => {
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-3">
                       <img
-                        src={product.images?.[0] ? getImageUrl(product.images[0]) : 'https://images.unsplash.com/photo-1611652022419-a9419f74343d?w=100'}
+                        src={product.images?.[0] ? getImageUrl(product.images[0]) : PLACEHOLDER_IMAGE}
                         alt={product.name}
                         className="w-12 h-12 rounded-lg object-cover"
                       />
                       <div>
                         <p className="font-body font-medium">{product.name}</p>
-                        <p className="font-body text-xs text-muted-foreground">{product.weight}g</p>
+                        {product.sku && (
+                          <p className="font-body text-xs text-muted-foreground">SKU {product.sku}</p>
+                        )}
                       </div>
                     </div>
                   </td>
                   <td className="px-4 py-3">
-                    <Badge variant={product.category === 'beldi' ? 'default' : 'secondary'}>
-                      {product.category === 'beldi' ? 'Beldi' : 'Moderne'}
-                    </Badge>
-                  </td>
-                  <td className="px-4 py-3">
-                    {product.collection ? (
-                      <Badge variant="outline">
-                        {collections.find((c) => c.slug === product.collection)?.name || product.collection}
-                      </Badge>
-                    ) : (
-                      <span className="text-muted-foreground text-sm">Aucune</span>
-                    )}
+                    <Badge variant="secondary">{getCategoryLabel(product.category)}</Badge>
                   </td>
                   <td className="px-4 py-3">
                     {product.inStock ? (
@@ -630,31 +606,40 @@ const AdminProducts = () => {
                     </div>
                   </td>
                   <td className="px-4 py-3">
-                    <div className="flex gap-1">
-                      {product.badges.map(badge => (
+                    <div className="flex flex-wrap gap-1">
+                      {product.badges.map((badge) => (
                         <Badge key={badge} variant={badge === 'promo' ? 'destructive' : 'outline'} className="text-xs">
                           {badge === 'new' ? 'Nouveau' : badge === 'bestseller' ? 'Best-seller' : 'Promo'}
                         </Badge>
                       ))}
+                      {product.customizable && (
+                        <Badge variant="outline" className="text-xs border-primary/40 text-primary">
+                          Logo
+                        </Badge>
+                      )}
                     </div>
                   </td>
                   <td className="px-4 py-3 text-right">
                     <div className="flex justify-end gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleOpenModal(product)}
-                      >
-                        <Pencil className="w-4 h-4" />
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="text-destructive hover:bg-destructive hover:text-destructive-foreground"
-                        onClick={() => handleDelete(product.id)}
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
+                      {canUpdate && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleOpenModal(product)}
+                        >
+                          <Pencil className="w-4 h-4" />
+                        </Button>
+                      )}
+                      {canDelete && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="text-destructive hover:bg-destructive hover:text-destructive-foreground"
+                          onClick={() => handleDelete(product.id)}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      )}
                     </div>
                   </td>
                 </tr>
@@ -662,7 +647,7 @@ const AdminProducts = () => {
             </tbody>
           </table>
         </div>
-        
+
         {products.length === 0 && (
           <div className="p-8 text-center">
             <p className="font-body text-muted-foreground">Aucun produit trouvé</p>
@@ -682,361 +667,379 @@ const AdminProducts = () => {
         />
       )}
 
-      {/* Product Modal */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="font-display text-xl">
+        <DialogContent className="flex max-h-[92vh] w-[calc(100%-1.5rem)] max-w-3xl flex-col gap-0 overflow-hidden p-0 sm:rounded-2xl">
+          <DialogHeader className="shrink-0 border-b border-border px-5 py-4 sm:px-6">
+            <DialogTitle className="font-display text-xl text-foreground">
               {editingProduct ? 'Modifier le produit' : 'Nouveau produit'}
             </DialogTitle>
+            <DialogDescription className="text-sm text-muted-foreground">
+              Renseignez les infos, les variantes de prix, puis les images. Activez la personnalisation
+              pour permettre l&apos;upload de logo sur la boutique.
+            </DialogDescription>
           </DialogHeader>
 
           {isLoadingProduct ? (
-            <div className="py-12 text-center text-muted-foreground">Chargement du produit…</div>
+            <div className="px-6 py-12 text-center text-muted-foreground">Chargement du produit…</div>
           ) : (
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="grid md:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="name">Nom du produit *</Label>
-                <Input
-                  id="name"
-                  value={formData.name}
-                  onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                  required
-                  className="mt-1"
-                />
-              </div>
-              <div>
-                <Label htmlFor="type">Type *</Label>
-                <Select
-                  value={formData.type}
-                  onValueChange={(value: ProductType) => setFormData(prev => ({ ...prev, type: value }))}
-                >
-                  <SelectTrigger className="mt-1">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {productTypes.map((pt) => (
-                      <SelectItem key={pt.id} value={pt.code.toLowerCase()}>
-                        {pt.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            <div>
-              <Label htmlFor="description">Description *</Label>
-              <Textarea
-                id="description"
-                value={formData.description}
-                onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-                required
-                rows={3}
-                className="mt-1"
-              />
-            </div>
-
-            <ProductVariantEditor
-              rows={variantRows}
-              onChange={setVariantRows}
-              isPromo={isPromo}
-              pricePerGram={goldPriceSettings?.pricePerGram}
-              defaultMarginGain={formData.marginGain}
-            />
-
-            <div className="grid md:grid-cols-2 gap-4">
-              <div>
-                <Label>Catégorie *</Label>
-                <Select
-                  value={formData.category}
-                  onValueChange={(value: ProductCategory) => setFormData(prev => ({ ...prev, category: value }))}
-                >
-                  <SelectTrigger className="mt-1">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {categories.map((cat) => (
-                      <SelectItem key={cat.id} value={cat.slug}>
-                        {cat.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label>Collection</Label>
-                <Select
-                  value={formData.collection || '__none__'}
-                  onValueChange={(value: string) => setFormData(prev => ({ ...prev, collection: value === '__none__' ? '' : value }))}
-                >
-                  <SelectTrigger className="mt-1">
-                    <SelectValue placeholder="Aucune" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="__none__">Aucune</SelectItem>
-                    {collections.filter((c) => c.isActive).map((col) => (
-                      <SelectItem key={col.id} value={col.slug}>
-                        {col.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-              <div>
-                <Label>Badges</Label>
-                <p className="text-xs text-muted-foreground mt-1 mb-2">
-                  Badges affichés sur la fiche produit
-                </p>
-                <div className="flex gap-2 mt-2">
-                  <Button
-                    type="button"
-                    variant={formData.badges.includes('new') ? 'default' : 'outline'}
-                    size="sm"
-                    onClick={() => toggleBadge('new')}
-                  >
-                    Nouveau
-                  </Button>
-                  <Button
-                    type="button"
-                    variant={formData.badges.includes('bestseller') ? 'default' : 'outline'}
-                    size="sm"
-                    onClick={() => toggleBadge('bestseller')}
-                  >
-                    Best-seller
-                  </Button>
-                  <Button
-                    type="button"
-                    variant={formData.badges.includes('promo') ? 'destructive' : 'outline'}
-                    size="sm"
-                    onClick={() => toggleBadge('promo')}
-                  >
-                    Promo
-                  </Button>
-                </div>
-              </div>
-
-            <div className="grid md:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="stockQuantity">Quantité en stock</Label>
-                <Input
-                  id="stockQuantity"
-                  type="number"
-                  min={0}
-                  step={1}
-                  value={formData.stockQuantity}
-                  onChange={(e) => setFormData(prev => ({ ...prev, stockQuantity: e.target.value }))}
-                  className="mt-1"
-                  placeholder="0 = rupture de stock"
-                />
-                {parseInt(formData.stockQuantity) === 0 && (
-                  <p className="text-xs text-destructive mt-1">⚠ Ce produit sera affiché en rupture de stock</p>
-                )}
-              </div>
-              <div className="flex flex-col justify-end pb-1">
-                <label className="flex items-center gap-3 cursor-pointer">
-                  <div className="relative">
-                    <input
-                      type="checkbox"
-                      className="sr-only"
-                      checked={formData.showWeight}
-                      onChange={(e) => setFormData(prev => ({ ...prev, showWeight: e.target.checked }))}
-                    />
-                    <div className={cn(
-                      'w-10 h-6 rounded-full transition-colors',
-                      formData.showWeight ? 'bg-primary' : 'bg-muted-foreground/30'
-                    )}>
-                      <div className={cn(
-                        'w-4 h-4 rounded-full bg-white absolute top-1 transition-transform',
-                        formData.showWeight ? 'translate-x-5' : 'translate-x-1'
-                      )} />
+            <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col">
+              <div className="min-h-0 flex-1 space-y-6 overflow-y-auto px-5 py-5 sm:px-6">
+                <section className="space-y-4">
+                  <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    Informations
+                  </h3>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="sm:col-span-2 md:col-span-1">
+                      <Label htmlFor="name">Nom du produit *</Label>
+                      <Input
+                        id="name"
+                        value={formData.name}
+                        onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
+                        required
+                        className="mt-1"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="sku">SKU</Label>
+                      <Input
+                        id="sku"
+                        value={formData.sku}
+                        onChange={(e) => setFormData((prev) => ({ ...prev, sku: e.target.value }))}
+                        className="mt-1"
+                        placeholder="Référence produit"
+                      />
+                    </div>
+                    <div className="sm:col-span-2">
+                      <Label htmlFor="shortDescription">Description courte</Label>
+                      <Input
+                        id="shortDescription"
+                        value={formData.shortDescription}
+                        onChange={(e) =>
+                          setFormData((prev) => ({ ...prev, shortDescription: e.target.value }))
+                        }
+                        className="mt-1"
+                        placeholder="Résumé affiché sur les cartes produit"
+                      />
+                    </div>
+                    <div className="sm:col-span-2">
+                      <Label htmlFor="description">Description *</Label>
+                      <Textarea
+                        id="description"
+                        value={formData.description}
+                        onChange={(e) =>
+                          setFormData((prev) => ({ ...prev, description: e.target.value }))
+                        }
+                        required
+                        rows={3}
+                        className="mt-1"
+                      />
                     </div>
                   </div>
+                </section>
+
+                <section>
+                  <div
+                    className={cn(
+                      'flex items-start justify-between gap-4 rounded-2xl border p-4 transition-colors',
+                      formData.customizable
+                        ? 'border-primary/40 bg-primary/5'
+                        : 'border-border bg-muted/20',
+                    )}
+                  >
+                    <div className="min-w-0 space-y-1">
+                      <Label htmlFor="customizable" className="text-sm font-semibold cursor-pointer">
+                        Produit personnalisable (logo client)
+                      </Label>
+                      <p className="text-xs text-muted-foreground leading-relaxed">
+                        Si activé, la fiche boutique affiche un champ pour téléverser un logo (comme
+                        sur les emballages personnalisés). Le logo est joint au panier et à la
+                        commande.
+                      </p>
+                    </div>
+                    <Switch
+                      id="customizable"
+                      checked={formData.customizable}
+                      onCheckedChange={(checked) =>
+                        setFormData((prev) => ({ ...prev, customizable: checked }))
+                      }
+                      className="mt-0.5 shrink-0"
+                    />
+                  </div>
+                </section>
+
+                <section className="space-y-3">
+                  <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    Variantes &amp; prix
+                  </h3>
+                  <ProductVariantEditor
+                    rows={variantRows}
+                    onChange={setVariantRows}
+                    isPromo={isPromo}
+                  />
+                </section>
+
+                <section className="space-y-4">
+                  <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    Catalogue
+                  </h3>
+                  <div className="grid items-start gap-4 sm:grid-cols-2">
+                    <div>
+                      <Label>Catégorie *</Label>
+                      <Select
+                        value={formData.category}
+                        onValueChange={(value: string) =>
+                          setFormData((prev) => ({ ...prev, category: value }))
+                        }
+                      >
+                        <SelectTrigger className="mt-1">
+                          <SelectValue placeholder="Choisir une catégorie" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {categories.length === 0 ? (
+                            <SelectItem value="__none" disabled>
+                              Aucune catégorie — créez-en une
+                            </SelectItem>
+                          ) : (
+                            categories.map((cat) => (
+                              <SelectItem key={cat.id} value={cat.slug}>
+                                {cat.name}
+                              </SelectItem>
+                            ))
+                          )}
+                        </SelectContent>
+                      </Select>
+                      <Link
+                        to="/admin/categories?action=new"
+                        className="mt-1.5 inline-block text-xs text-primary hover:underline"
+                      >
+                        + Créer une catégorie
+                      </Link>
+                    </div>
+                    <div>
+                      <Label htmlFor="stockQuantity">Stock global (fallback)</Label>
+                      <Input
+                        id="stockQuantity"
+                        type="number"
+                        min={0}
+                        step={1}
+                        value={formData.stockQuantity}
+                        onChange={(e) =>
+                          setFormData((prev) => ({ ...prev, stockQuantity: e.target.value }))
+                        }
+                        className="mt-1"
+                        placeholder="Utilisé si une variante n’a pas de stock"
+                      />
+                      {parseInt(formData.stockQuantity, 10) === 0 && (
+                        <p className="mt-1 text-xs text-destructive">
+                          Ce produit pourra s&apos;afficher en rupture de stock
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
                   <div>
-                    <p className="text-sm font-medium">Afficher le poids</p>
-                    <p className="text-xs text-muted-foreground">
-                      {formData.showWeight ? 'Le poids est visible sur la fiche produit' : 'Le poids est masqué'}
+                    <Label>Badges</Label>
+                    <p className="mb-2 mt-1 text-xs text-muted-foreground">
+                      Affichés sur la fiche produit
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      <Button
+                        type="button"
+                        variant={formData.badges.includes('new') ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => toggleBadge('new')}
+                      >
+                        Nouveau
+                      </Button>
+                      <Button
+                        type="button"
+                        variant={formData.badges.includes('bestseller') ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => toggleBadge('bestseller')}
+                      >
+                        Best-seller
+                      </Button>
+                      <Button
+                        type="button"
+                        variant={formData.badges.includes('promo') ? 'destructive' : 'outline'}
+                        size="sm"
+                        onClick={() => toggleBadge('promo')}
+                      >
+                        Promo
+                      </Button>
+                    </div>
+                  </div>
+                </section>
+
+                <section className="space-y-3">
+                  <div>
+                    <Label>Images du produit *</Label>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      La première image est l&apos;image principale. Survolez pour réordonner ou
+                      définir la principale.
                     </p>
                   </div>
-                </label>
-              </div>
-            </div>
-
-            {/* Images */}
-            <div>
-              <Label>Images du produit *</Label>
-              <p className="text-xs text-muted-foreground mt-1 mb-2">
-                La première image sera l'image principale. Cliquez sur l'étoile pour définir l'image principale, ou les flèches pour réordonner.
-              </p>
-              <div className="mt-2 space-y-3">
-                {/* Existing images */}
-                {existingImageUrls.length > 0 && (
-                  <div>
-                    <p className="text-xs font-medium text-muted-foreground mb-1.5">Images actuelles</p>
-                    <div className="flex flex-wrap gap-2">
-                      {existingImageUrls.map((url, index) => (
-                        <div
-                          key={`existing-${index}`}
-                          className={cn(
-                            'relative group rounded-lg overflow-hidden',
-                            index === 0 && imageFiles.length === 0 && 'ring-2 ring-primary'
-                          )}
-                        >
-                          <img
-                            src={getImageUrl(url)}
-                            alt={`Image ${index + 1}`}
-                            className="w-20 h-20 object-cover"
-                          />
-                          {index === 0 && imageFiles.length === 0 && (
-                            <div className="absolute top-0.5 left-0.5 bg-primary text-white text-[8px] font-bold px-1 py-0.5 rounded">
-                              1ère
+                  <div className="space-y-3">
+                    {existingImageUrls.length > 0 && (
+                      <div>
+                        <p className="mb-1.5 text-xs font-medium text-muted-foreground">
+                          Images actuelles
+                        </p>
+                        <div className="flex flex-wrap gap-2">
+                          {existingImageUrls.map((url, index) => (
+                            <div
+                              key={`existing-${index}`}
+                              className={cn(
+                                'group relative overflow-hidden rounded-xl',
+                                index === 0 && imageFiles.length === 0 && 'ring-2 ring-primary',
+                              )}
+                            >
+                              <img
+                                src={getImageUrl(url)}
+                                alt={`Image ${index + 1}`}
+                                className="h-20 w-20 object-cover"
+                              />
+                              {index === 0 && imageFiles.length === 0 && (
+                                <div className="absolute left-0.5 top-0.5 rounded bg-primary px-1 py-0.5 text-[8px] font-bold text-white">
+                                  1ère
+                                </div>
+                              )}
+                              <div className="absolute inset-0 flex items-center justify-center gap-1 bg-black/50 opacity-0 transition-opacity group-hover:opacity-100">
+                                {index > 0 && (
+                                  <button
+                                    type="button"
+                                    onClick={() => moveExistingImage(index, index - 1)}
+                                    className="flex h-5 w-5 items-center justify-center rounded bg-white/90"
+                                  >
+                                    <ArrowLeft className="h-3 w-3 text-black" />
+                                  </button>
+                                )}
+                                {index > 0 && (
+                                  <button
+                                    type="button"
+                                    onClick={() => setAsPrimary('existing', index)}
+                                    className="flex h-5 w-5 items-center justify-center rounded bg-primary"
+                                    title="Définir comme principale"
+                                  >
+                                    <Star className="h-3 w-3 text-white" />
+                                  </button>
+                                )}
+                                {index < existingImageUrls.length - 1 && (
+                                  <button
+                                    type="button"
+                                    onClick={() => moveExistingImage(index, index + 1)}
+                                    className="flex h-5 w-5 items-center justify-center rounded bg-white/90"
+                                  >
+                                    <ArrowRight className="h-3 w-3 text-black" />
+                                  </button>
+                                )}
+                                <button
+                                  type="button"
+                                  onClick={() => removeExistingImage(index)}
+                                  className="flex h-5 w-5 items-center justify-center rounded bg-destructive"
+                                >
+                                  <X className="h-3 w-3 text-white" />
+                                </button>
+                              </div>
                             </div>
-                          )}
-                          <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1">
-                            {index > 0 && (
-                              <button type="button" onClick={() => moveExistingImage(index, index - 1)} className="w-5 h-5 bg-white/90 rounded flex items-center justify-center">
-                                <ArrowLeft className="w-3 h-3 text-black" />
-                              </button>
-                            )}
-                            {index > 0 && (
-                              <button type="button" onClick={() => setAsPrimary('existing', index)} className="w-5 h-5 bg-primary rounded flex items-center justify-center" title="Définir comme principale">
-                                <Star className="w-3 h-3 text-white" />
-                              </button>
-                            )}
-                            {index < existingImageUrls.length - 1 && (
-                              <button type="button" onClick={() => moveExistingImage(index, index + 1)} className="w-5 h-5 bg-white/90 rounded flex items-center justify-center">
-                                <ArrowRight className="w-3 h-3 text-black" />
-                              </button>
-                            )}
-                            <button type="button" onClick={() => removeExistingImage(index)} className="w-5 h-5 bg-destructive rounded flex items-center justify-center">
-                              <X className="w-3 h-3 text-white" />
-                            </button>
-                          </div>
+                          ))}
                         </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
+                      </div>
+                    )}
 
-                {/* New images to upload */}
-                {imageFiles.length > 0 && (
-                  <div>
-                    <p className="text-xs font-medium text-muted-foreground mb-1.5">Nouvelles images à envoyer</p>
-                    <div className="flex flex-wrap gap-2">
-                      {imageFiles.map((file, index) => (
-                        <div
-                          key={`new-${index}`}
-                          className={cn(
-                            'relative group rounded-lg overflow-hidden border-2 border-primary/40',
-                            index === 0 && existingImageUrls.length === 0 && 'ring-2 ring-primary'
-                          )}
-                        >
-                          <img
-                            src={URL.createObjectURL(file)}
-                            alt={`Nouvelle ${index + 1}`}
-                            className="w-20 h-20 object-cover"
-                          />
-                          {index === 0 && existingImageUrls.length === 0 && (
-                            <div className="absolute top-0.5 left-0.5 bg-primary text-white text-[8px] font-bold px-1 py-0.5 rounded">
-                              1ère
+                    {imageFiles.length > 0 && (
+                      <div>
+                        <p className="mb-1.5 text-xs font-medium text-muted-foreground">
+                          Nouvelles images à envoyer
+                        </p>
+                        <div className="flex flex-wrap gap-2">
+                          {imageFiles.map((file, index) => (
+                            <div
+                              key={`new-${index}`}
+                              className={cn(
+                                'group relative overflow-hidden rounded-xl border-2 border-primary/40',
+                                index === 0 &&
+                                  existingImageUrls.length === 0 &&
+                                  'ring-2 ring-primary',
+                              )}
+                            >
+                              <img
+                                src={URL.createObjectURL(file)}
+                                alt={`Nouvelle ${index + 1}`}
+                                className="h-20 w-20 object-cover"
+                              />
+                              {index === 0 && existingImageUrls.length === 0 && (
+                                <div className="absolute left-0.5 top-0.5 rounded bg-primary px-1 py-0.5 text-[8px] font-bold text-white">
+                                  1ère
+                                </div>
+                              )}
+                              <div className="absolute inset-0 flex items-center justify-center gap-1 bg-black/50 opacity-0 transition-opacity group-hover:opacity-100">
+                                {index > 0 && (
+                                  <button
+                                    type="button"
+                                    onClick={() => moveNewImage(index, index - 1)}
+                                    className="flex h-5 w-5 items-center justify-center rounded bg-white/90"
+                                  >
+                                    <ArrowLeft className="h-3 w-3 text-black" />
+                                  </button>
+                                )}
+                                {index > 0 && existingImageUrls.length === 0 && (
+                                  <button
+                                    type="button"
+                                    onClick={() => setAsPrimary('new', index)}
+                                    className="flex h-5 w-5 items-center justify-center rounded bg-primary"
+                                    title="Définir comme principale"
+                                  >
+                                    <Star className="h-3 w-3 text-white" />
+                                  </button>
+                                )}
+                                {index < imageFiles.length - 1 && (
+                                  <button
+                                    type="button"
+                                    onClick={() => moveNewImage(index, index + 1)}
+                                    className="flex h-5 w-5 items-center justify-center rounded bg-white/90"
+                                  >
+                                    <ArrowRight className="h-3 w-3 text-black" />
+                                  </button>
+                                )}
+                                <button
+                                  type="button"
+                                  onClick={() => removeImageFile(index)}
+                                  className="flex h-5 w-5 items-center justify-center rounded bg-destructive"
+                                >
+                                  <X className="h-3 w-3 text-white" />
+                                </button>
+                              </div>
                             </div>
-                          )}
-                          <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1">
-                            {index > 0 && (
-                              <button type="button" onClick={() => moveNewImage(index, index - 1)} className="w-5 h-5 bg-white/90 rounded flex items-center justify-center">
-                                <ArrowLeft className="w-3 h-3 text-black" />
-                              </button>
-                            )}
-                            {index > 0 && existingImageUrls.length === 0 && (
-                              <button type="button" onClick={() => setAsPrimary('new', index)} className="w-5 h-5 bg-primary rounded flex items-center justify-center" title="Définir comme principale">
-                                <Star className="w-3 h-3 text-white" />
-                              </button>
-                            )}
-                            {index < imageFiles.length - 1 && (
-                              <button type="button" onClick={() => moveNewImage(index, index + 1)} className="w-5 h-5 bg-white/90 rounded flex items-center justify-center">
-                                <ArrowRight className="w-3 h-3 text-black" />
-                              </button>
-                            )}
-                            <button type="button" onClick={() => removeImageFile(index)} className="w-5 h-5 bg-destructive rounded flex items-center justify-center">
-                              <X className="w-3 h-3 text-white" />
-                            </button>
-                          </div>
+                          ))}
                         </div>
-                      ))}
-                    </div>
+                      </div>
+                    )}
+
+                    <label className="inline-flex h-20 w-20 cursor-pointer items-center justify-center rounded-xl border-2 border-dashed border-border transition-colors hover:border-primary">
+                      <input
+                        type="file"
+                        accept="image/jpeg,image/png,image/gif,image/webp"
+                        multiple
+                        className="sr-only"
+                        onChange={handleImageSelect}
+                      />
+                      <Upload className="h-6 w-6 text-muted-foreground" />
+                    </label>
                   </div>
-                )}
-
-                {/* Upload button */}
-                <label className="w-20 h-20 rounded-lg border-2 border-dashed border-border flex items-center justify-center hover:border-primary transition-colors cursor-pointer inline-flex">
-                  <input
-                    type="file"
-                    accept="image/jpeg,image/png,image/gif,image/webp"
-                    multiple
-                    className="sr-only"
-                    onChange={handleImageSelect}
-                  />
-                  <Upload className="w-6 h-6 text-muted-foreground" />
-                </label>
+                </section>
               </div>
-            </div>
 
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={handleCloseModal}>
-                Annuler
-              </Button>
-              <Button type="submit">
-                {editingProduct ? 'Enregistrer' : 'Créer'}
-              </Button>
-            </DialogFooter>
-          </form>
+              <DialogFooter className="shrink-0 gap-2 border-t border-border bg-card px-5 py-4 sm:px-6">
+                <Button type="button" variant="outline" onClick={handleCloseModal}>
+                  Annuler
+                </Button>
+                <Button type="submit" disabled={createMutation.isPending || updateMutation.isPending}>
+                  {editingProduct ? 'Enregistrer' : 'Créer'}
+                </Button>
+              </DialogFooter>
+            </form>
           )}
-        </DialogContent>
-      </Dialog>
-
-      {/* Paramètres : prix au gramme (la marge est par produit) */}
-      <Dialog open={isPriceSettingsOpen} onOpenChange={setIsPriceSettingsOpen}>
-        <DialogContent className="max-w-sm">
-          <DialogHeader>
-            <DialogTitle>Prix au gramme</DialogTitle>
-          </DialogHeader>
-          <p className="text-sm text-muted-foreground">
-            Prix produit = (grammes × prix au gramme) + marge. La marge est définie par produit.
-          </p>
-          <div className="space-y-4 py-4">
-            <div>
-              <Label htmlFor="pricePerGram">Prix au gramme (MAD)</Label>
-              <Input
-                id="pricePerGram"
-                type="number"
-                min={0}
-                step={1}
-                value={priceSettingsForm.pricePerGram}
-                onChange={(e) => setPriceSettingsForm((prev) => ({ ...prev, pricePerGram: e.target.value }))}
-                className="mt-1"
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsPriceSettingsOpen(false)}>
-              Annuler
-            </Button>
-            <Button
-              onClick={() => {
-                const pricePerGram = parseFloat(priceSettingsForm.pricePerGram);
-                if (Number.isNaN(pricePerGram) || pricePerGram <= 0) {
-                  toast.error('Prix au gramme invalide');
-                  return;
-                }
-                updatePriceSettingsMutation.mutate(pricePerGram);
-              }}
-              disabled={updatePriceSettingsMutation.isPending}
-            >
-              Enregistrer
-            </Button>
-          </DialogFooter>
         </DialogContent>
       </Dialog>
     </AdminLayout>

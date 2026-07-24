@@ -22,7 +22,7 @@ const Wishlist = () => {
     <Layout>
       <main className="max-w-[1280px] mx-auto px-6 py-16 md:py-24">
         <div className="flex flex-col items-center mb-16 text-center">
-          <h2 className="font-script text-6xl text-primary mb-2">Vos Favoris</h2>
+          <h2 className="mb-2 font-display text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">Vos Favoris</h2>
           <div className="flex items-center justify-center gap-4">
             <div className="h-px w-12 bg-accent-beige/30"></div>
             <p className="text-accent-beige uppercase tracking-[0.3em] text-xs">Articles favoris pour vous</p>
@@ -60,9 +60,8 @@ const Wishlist = () => {
                 </div>
                 <div className="text-center">
                   <h4 className="text-base font-bold text-secondary-dark mb-1 font-display tracking-tight">{product.name}</h4>
-                  <div className="flex flex-col gap-1 mb-4">
-                    <p className="text-primary font-bold text-lg">{formatPrice(product.price)}</p>
-                    <p className="text-accent-beige/60 text-[10px]">~ {Math.round(product.price * 11)} MAD</p>
+                  <div className="mb-4">
+                    <p className="text-lg font-bold text-primary">{formatPrice(product.price)}</p>
                   </div>
                   <button
                     type="button"
@@ -98,7 +97,7 @@ const Wishlist = () => {
               className="bg-primary text-white px-10 py-4 text-xs uppercase tracking-widest font-bold shadow-lg hover:bg-secondary-dark transition-all"
             >
               <Link to="/boutique">
-                Parcourir les collections
+                Parcourir la boutique
               </Link>
             </Button>
           </div>

@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useAdmin } from '@/contexts/AdminContext';
 import { BrandLogoImg } from '@/components/layout/BrandLogoImg';
+import { markStockAlertPending } from '@/utils/stockAlertSession';
 
 const AdminLogin = () => {
   const navigate = useNavigate();
@@ -27,38 +28,38 @@ const AdminLogin = () => {
     setError('');
     setIsLoading(true);
 
-    const success = await login(email, password);
-
-    if (success) {
+    const result = await login(email.trim(), password);
+    if (result.ok) {
+      markStockAlertPending();
       navigate('/admin/dashboard');
     } else {
-      setError('Email ou mot de passe incorrect');
+      setError(result.error || 'Email ou mot de passe incorrect');
     }
 
     setIsLoading(false);
   };
 
   return (
-    <div className="min-h-screen bg-charcoal flex items-center justify-center p-4">
+    <div className="min-h-screen bg-background surface-mesh flex items-center justify-center p-4 relative overflow-hidden">
       {/* Background decorations */}
-      <div className="absolute inset-0 overflow-hidden">
-        <div className="absolute top-20 right-20 w-96 h-96 bg-gold/10 rounded-full blur-3xl" />
-        <div className="absolute bottom-20 left-20 w-72 h-72 bg-gold/5 rounded-full blur-2xl" />
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-20 right-20 w-96 h-96 bg-primary/10 rounded-full blur-3xl" />
+        <div className="absolute bottom-20 left-20 w-72 h-72 bg-primary/5 rounded-full blur-2xl" />
       </div>
 
       <div className="w-full max-w-md relative z-10">
         {/* Logo */}
         <div className="text-center mb-8">
           <BrandLogoImg className="h-[4.5rem] sm:h-24 md:h-28 w-auto mx-auto mb-3 max-w-[min(100%,320px)]" draggable={false} />
-          <p className="text-accent-beige text-sm uppercase tracking-widest">
+          <p className="text-muted-foreground text-sm uppercase tracking-widest">
             Administration
           </p>
         </div>
 
         {/* Login Card */}
-        <div className="bg-cream rounded-2xl p-8 shadow-elegant">
+        <div className="bg-card border border-border rounded-2xl p-8 shadow-soft">
           <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary/10 mb-4">
+            <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-primary/10 mb-4">
               <Lock className="w-8 h-8 text-primary" />
             </div>
             <h2 className="font-display text-2xl text-foreground">Connexion Admin</h2>
@@ -68,7 +69,7 @@ const AdminLogin = () => {
           </div>
 
           {error && (
-            <div className="flex items-center gap-2 p-3 mb-6 bg-destructive/10 text-destructive rounded-lg">
+            <div className="flex items-center gap-2 p-3 mb-6 bg-destructive/10 text-destructive rounded-xl border border-destructive/20">
               <AlertCircle className="w-5 h-5 flex-shrink-0" />
               <span className="font-body text-sm">{error}</span>
             </div>
@@ -114,7 +115,7 @@ const AdminLogin = () => {
 
             <Button
               type="submit"
-              className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-body uppercase tracking-wider"
+              className="w-full font-body uppercase tracking-wider"
               size="lg"
               disabled={isLoading}
             >
@@ -127,7 +128,7 @@ const AdminLogin = () => {
         <div className="text-center mt-6">
           <a
             href="/"
-            className="font-body text-sm text-cream/60 hover:text-gold transition-colors"
+            className="font-body text-sm text-muted-foreground hover:text-primary transition-colors"
           >
             ← Retour au site
           </a>

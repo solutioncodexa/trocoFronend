@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Eye, Search, Phone, MapPin } from 'lucide-react';
+import { Eye, Search, Phone, MapPin, ShoppingCart } from 'lucide-react';
 import AdminLayout from '@/components/admin/AdminLayout';
 import AdminPagination from '@/components/admin/AdminPagination';
 import { Button } from '@/components/ui/button';
@@ -9,11 +9,12 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
+import { EmptyState } from '@/components/ui/EmptyState';
 import { ordersApi, getImageUrl } from '@/services/api';
 import { OrderDTO, OrderListItemDTO } from '@/types/api';
 import { formatPrice } from '@/utils/formatPrice';
 import { toast } from 'sonner';
-import { toastError } from '@/utils/toastMessages';
+import { toastError, toastInfo } from '@/utils/toastMessages';
 import { cn } from '@/lib/utils';
 
 const AdminOrders = () => {
@@ -97,7 +98,17 @@ const AdminOrders = () => {
       const full = await ordersApi.getOrderById(orderId);
       setSelectedOrder(full);
     } catch (err) {
-      toastError(err, 'Impossible de charger la commande');
+      const fromList = orders.find((o) => o.id === orderId);
+      if (fromList) {
+        const statusLabel = getStatusLabel(fromList.status);
+        toastInfo(
+          fromList.status === 'delivered'
+            ? `Cette commande est déjà livrée (${statusLabel}). Détail indisponible pour le moment.`
+            : `Impossible de charger le détail (statut : ${statusLabel}). Réessayez.`,
+        );
+      } else {
+        toastError(err, 'Impossible de charger cette commande');
+      }
       setIsDetailOpen(false);
       setSelectedOrder(null);
     } finally {
@@ -240,9 +251,7 @@ const AdminOrders = () => {
           </div>
         ))}
         {orders.length === 0 && (
-          <div className="p-8 text-center">
-            <p className="font-body text-muted-foreground">Aucune commande trouvée</p>
-          </div>
+          <EmptyState icon={ShoppingCart} title="Aucune commande trouvée" />
         )}
       </div>
 
@@ -329,9 +338,7 @@ const AdminOrders = () => {
         </div>
 
         {orders.length === 0 && (
-          <div className="p-8 text-center">
-            <p className="font-body text-muted-foreground">Aucune commande trouvée</p>
-          </div>
+          <EmptyState icon={ShoppingCart} title="Aucune commande trouvée" />
         )}
       </div>
 

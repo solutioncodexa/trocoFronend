@@ -10,22 +10,19 @@ import ScrollToTop from "@/components/ui/ScrollToTop";
 import WhatsAppButton from "@/components/ui/WhatsAppButton";
 import { ProtectedAdminRoute } from "@/components/ProtectedAdminRoute";
 import PageLoader from "@/components/layout/PageLoader";
+import { PERMISSIONS } from "@/config/permissions";
 
 const Index = lazy(() => import("./pages/Index"));
 const Boutique = lazy(() => import("./pages/Boutique"));
 const ProductDetail = lazy(() => import("./pages/ProductDetail"));
 const Cart = lazy(() => import("./pages/Cart"));
 const Checkout = lazy(() => import("./pages/Checkout"));
-const CustomOrder = lazy(() => import("./pages/CustomOrder"));
 const Wishlist = lazy(() => import("./pages/Wishlist"));
 const SurMesure = lazy(() => import("./pages/SurMesure"));
+const Devis = lazy(() => import("./pages/Devis"));
 const Contact = lazy(() => import("./pages/Contact"));
 const LivraisonRetours = lazy(() => import("./pages/LivraisonRetours"));
 const FAQ = lazy(() => import("./pages/FAQ"));
-const GuideTailles = lazy(() => import("./pages/GuideTailles"));
-const CoursOr = lazy(() => import("./pages/CoursOr"));
-const MaMaison = lazy(() => import("./pages/MaMaison"));
-const NosAteliers = lazy(() => import("./pages/NosAteliers"));
 const PromoCodes = lazy(() => import("./pages/PromoCodes"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
@@ -36,12 +33,15 @@ const AdminOrders = lazy(() => import("./pages/admin/AdminOrders"));
 const AdminCustomRequests = lazy(() => import("./pages/admin/AdminCustomRequests"));
 const AdminCategories = lazy(() => import("./pages/admin/AdminCategories"));
 const AdminHeroCategories = lazy(() => import("./pages/admin/AdminHeroCategories"));
-const AdminProductTypes = lazy(() => import("./pages/admin/AdminProductTypes"));
-const AdminCollections = lazy(() => import("./pages/admin/AdminCollections"));
 const AdminFeaturedProducts = lazy(() => import("./pages/admin/AdminFeaturedProducts"));
 const AdminTopBarMessages = lazy(() => import("./pages/admin/AdminTopBarMessages"));
 const AdminPromoModals = lazy(() => import("./pages/admin/AdminPromoModals"));
 const AdminPromoCodes = lazy(() => import("./pages/admin/AdminPromoCodes"));
+const AdminStock = lazy(() => import("./pages/admin/AdminStock"));
+const AdminRevenue = lazy(() => import("./pages/admin/AdminRevenue"));
+const AdminSocialNetworks = lazy(() => import("./pages/admin/AdminSocialNetworks"));
+const AdminMembers = lazy(() => import("./pages/admin/AdminMembers"));
+const AdminAudit = lazy(() => import("./pages/admin/AdminAudit"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -77,29 +77,29 @@ const App = () => (
                   <Route path="/panier" element={<Cart />} />
                   <Route path="/checkout" element={<Checkout />} />
                   <Route path="/codes-promo" element={<PromoCodes />} />
-                  <Route path="/commande-personnalisee" element={<CustomOrder />} />
                   <Route path="/sur-mesure" element={<SurMesure />} />
+                  <Route path="/devis" element={<Devis />} />
+                  <Route path="/commande-personnalisee" element={<Navigate to="/sur-mesure" replace />} />
                   <Route path="/contact" element={<Contact />} />
                   <Route path="/livraison-retours" element={<LivraisonRetours />} />
                   <Route path="/faq" element={<FAQ />} />
-                  <Route path="/guide-tailles" element={<GuideTailles />} />
-                  <Route path="/prix-or-maroc" element={<CoursOr />} />
-                  <Route path="/ma-maison" element={<MaMaison />} />
-                  <Route path="/nos-ateliers" element={<NosAteliers />} />
                   <Route path="/favoris" element={<Wishlist />} />
                   <Route path="/admin" element={<AdminLogin />} />
                   <Route path="/admin/dashboard" element={<ProtectedAdminRoute><AdminDashboard /></ProtectedAdminRoute>} />
-                  <Route path="/admin/produits" element={<ProtectedAdminRoute><AdminProducts /></ProtectedAdminRoute>} />
-                  <Route path="/admin/commandes" element={<ProtectedAdminRoute><AdminOrders /></ProtectedAdminRoute>} />
-                  <Route path="/admin/personnalisations" element={<ProtectedAdminRoute><AdminCustomRequests /></ProtectedAdminRoute>} />
-                  <Route path="/admin/collections" element={<ProtectedAdminRoute><AdminCollections /></ProtectedAdminRoute>} />
-                  <Route path="/admin/categories" element={<ProtectedAdminRoute><AdminCategories /></ProtectedAdminRoute>} />
-                  <Route path="/admin/accueil-categories" element={<ProtectedAdminRoute><AdminHeroCategories /></ProtectedAdminRoute>} />
-                  <Route path="/admin/types" element={<ProtectedAdminRoute><AdminProductTypes /></ProtectedAdminRoute>} />
-                  <Route path="/admin/produits-selectionnes" element={<ProtectedAdminRoute><AdminFeaturedProducts /></ProtectedAdminRoute>} />
-                  <Route path="/admin/top-bar-messages" element={<ProtectedAdminRoute><AdminTopBarMessages /></ProtectedAdminRoute>} />
-                  <Route path="/admin/promo-modals" element={<ProtectedAdminRoute><AdminPromoModals /></ProtectedAdminRoute>} />
-                  <Route path="/admin/codes-promo" element={<ProtectedAdminRoute><AdminPromoCodes /></ProtectedAdminRoute>} />
+                  <Route path="/admin/produits" element={<ProtectedAdminRoute permission={PERMISSIONS.PRODUCTS_VIEW}><AdminProducts /></ProtectedAdminRoute>} />
+                  <Route path="/admin/commandes" element={<ProtectedAdminRoute permission={PERMISSIONS.ORDERS_VIEW}><AdminOrders /></ProtectedAdminRoute>} />
+                  <Route path="/admin/personnalisations" element={<ProtectedAdminRoute permission={PERMISSIONS.CUSTOM_ORDERS_VIEW}><AdminCustomRequests /></ProtectedAdminRoute>} />
+                  <Route path="/admin/categories" element={<ProtectedAdminRoute permission={PERMISSIONS.CATALOG_MANAGE}><AdminCategories /></ProtectedAdminRoute>} />
+                  <Route path="/admin/accueil-categories" element={<ProtectedAdminRoute permission={PERMISSIONS.CATALOG_MANAGE}><AdminHeroCategories /></ProtectedAdminRoute>} />
+                  <Route path="/admin/produits-selectionnes" element={<ProtectedAdminRoute permission={PERMISSIONS.CATALOG_MANAGE}><AdminFeaturedProducts /></ProtectedAdminRoute>} />
+                  <Route path="/admin/top-bar-messages" element={<ProtectedAdminRoute permission={PERMISSIONS.CONTENT_MANAGE}><AdminTopBarMessages /></ProtectedAdminRoute>} />
+                  <Route path="/admin/promo-modals" element={<ProtectedAdminRoute permission={PERMISSIONS.CONTENT_MANAGE}><AdminPromoModals /></ProtectedAdminRoute>} />
+                  <Route path="/admin/codes-promo" element={<ProtectedAdminRoute permission={PERMISSIONS.CONTENT_MANAGE}><AdminPromoCodes /></ProtectedAdminRoute>} />
+                  <Route path="/admin/stock" element={<ProtectedAdminRoute permission={PERMISSIONS.STOCK_VIEW}><AdminStock /></ProtectedAdminRoute>} />
+                  <Route path="/admin/revenus" element={<ProtectedAdminRoute permission={PERMISSIONS.STATS_VIEW}><AdminRevenue /></ProtectedAdminRoute>} />
+                  <Route path="/admin/reseaux-sociaux" element={<ProtectedAdminRoute permission={PERMISSIONS.CONTENT_MANAGE}><AdminSocialNetworks /></ProtectedAdminRoute>} />
+                  <Route path="/admin/membres" element={<ProtectedAdminRoute adminOnly><AdminMembers /></ProtectedAdminRoute>} />
+                  <Route path="/admin/audit" element={<ProtectedAdminRoute permission={PERMISSIONS.AUDIT_VIEW}><AdminAudit /></ProtectedAdminRoute>} />
                   <Route path="/admin/*" element={<Navigate to="/admin" replace />} />
                   <Route path="*" element={<NotFound />} />
                 </Routes>

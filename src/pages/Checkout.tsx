@@ -15,6 +15,7 @@ import { ordersApi } from '@/services/api';
 import { promoCodesApi } from '@/services/api/promoCodes';
 import { OrderDTO, CartItemDTO } from '@/types/api';
 import { DiscountType } from '@/types/promo-codes';
+import { FREE_SHIPPING_THRESHOLD_MAD } from '@/config/site';
 
 const Checkout = () => {
   const navigate = useNavigate();
@@ -135,11 +136,9 @@ const Checkout = () => {
         description: item.product.description,
         price: item.product.price,
         originalPrice: item.product.originalPrice,
-        weight: item.product.weight,
+        weight: item.product.weight ?? 0,
         images: item.product.images,
         category: item.product.category,
-        type: item.product.type,
-        collection: item.product.collection,
         availableSizes: item.product.availableSizes,
         inStock: item.product.inStock,
         stockQuantity: item.product.stockQuantity,
@@ -149,12 +148,13 @@ const Checkout = () => {
       quantity: item.quantity,
       selectedSize: item.selectedSize,
       selectedVariantId: item.selectedVariantId,
+      customLogoUrl: item.customLogoUrl,
     }));
 
     const subtotal = getTotal();
     const discount = calculateDiscount();
     const afterDiscount = subtotal - discount;
-    const shipping = afterDiscount >= 2000 ? 0 : 50;
+    const shipping = afterDiscount >= FREE_SHIPPING_THRESHOLD_MAD ? 0 : 50;
     const total = afterDiscount + shipping;
 
     const orderDTO: OrderDTO = {
@@ -186,7 +186,7 @@ const Checkout = () => {
 
   if (isSuccess) {
     return <Layout>
-        <div className="container mx-auto px-4 py-20 text-center max-w-lg">
+        <div className="container mx-auto px-4 py-20 text-center max-w-lg animate-fade-in">
           <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-green-100 flex items-center justify-center">
             <Check className="w-10 h-10 text-green-600" />
           </div>
@@ -195,7 +195,7 @@ const Checkout = () => {
             Merci pour votre commande, {formData.fullName}! 
             {` Nous vous contacterons au ${formData.phone} pour confirmer la livraison.`}
           </p>
-          <div className="bg-card rounded-lg p-6 mb-8 text-left">
+          <div className="bg-card border border-border rounded-2xl shadow-soft p-6 mb-8 text-left">
             <h3 className="font-display text-lg mb-4">Détails de livraison</h3>
             <div className="space-y-2 font-body text-sm">
               <p><span className="text-muted-foreground">Nom:</span> {formData.fullName}</p>
@@ -205,7 +205,7 @@ const Checkout = () => {
               <p><span className="text-muted-foreground">Paiement:</span> À la livraison</p>
             </div>
           </div>
-          <Button asChild size="lg" className="font-body uppercase tracking-wider">
+          <Button asChild size="lg" className="font-body uppercase tracking-wider rounded-2xl">
             <Link to="/">
               Retour à l'accueil
             </Link>
@@ -216,38 +216,38 @@ const Checkout = () => {
 
   const discount = calculateDiscount();
   const afterDiscount = subtotal - discount;
-  const shipping = afterDiscount >= 2000 ? 0 : 50;
+  const shipping = afterDiscount >= FREE_SHIPPING_THRESHOLD_MAD ? 0 : 50;
   const total = afterDiscount + shipping;
 
   return (
     <Layout>
-      <main className="max-w-[1280px] mx-auto px-6 py-12">
+      <main className="max-w-[1280px] mx-auto px-6 py-12 animate-fade-in">
         <div className="flex flex-col lg:flex-row gap-16">
           {/* Left Column - Form */}
           <div className="flex-1 max-w-2xl">
             <div className="mb-10 text-center lg:text-left">
-              <h2 className="text-3xl font-display text-secondary-dark dark:text-white mb-2">Validation de votre Commande</h2>
-              <p className="text-accent-beige font-script text-3xl">
+              <h2 className="text-3xl font-display text-foreground mb-2">Validation de votre Commande</h2>
+              <p className="text-primary font-display text-3xl">
                 Paiement à la livraison
               </p>
             </div>
 
-            <form onSubmit={handleSubmit} className="space-y-8 bg-paper dark:bg-[#2a2515] p-8 md:p-10 border border-accent-beige/20 shadow-sm">
+            <form onSubmit={handleSubmit} className="space-y-8 bg-card rounded-2xl border border-border shadow-card p-8 md:p-10">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="col-span-full md:col-span-1">
-                  <Label className="block text-xs uppercase tracking-widest text-accent-beige mb-2 font-bold" htmlFor="fullname">Nom Complet</Label>
+                  <Label className="block text-xs uppercase tracking-widest text-muted-foreground mb-2 font-bold" htmlFor="fullname">Nom Complet</Label>
                   <Input 
                     id="fullname"
                     name="fullName"
                     value={formData.fullName}
                     onChange={handleInputChange}
                     placeholder="Ex: Jean Dupont" 
-                    className="w-full bg-transparent border-0 border-b border-accent-beige/30 focus:ring-0 focus:border-primary px-0 py-3 text-secondary-dark dark:text-white placeholder:text-gray-300 font-display italic" 
+                    className="rounded-xl"
                     required 
                   />
                 </div>
                 <div className="col-span-full md:col-span-1">
-                  <Label className="block text-xs uppercase tracking-widest text-accent-beige mb-2 font-bold" htmlFor="phone">Téléphone</Label>
+                  <Label className="block text-xs uppercase tracking-widest text-muted-foreground mb-2 font-bold" htmlFor="phone">Téléphone</Label>
                   <Input 
                     id="phone"
                     name="phone"
@@ -255,36 +255,36 @@ const Checkout = () => {
                     value={formData.phone}
                     onChange={handleInputChange}
                     placeholder="+212 6..." 
-                    className="w-full bg-transparent border-0 border-b border-accent-beige/30 focus:ring-0 focus:border-primary px-0 py-3 text-secondary-dark dark:text-white placeholder:text-gray-300 font-display italic" 
+                    className="rounded-xl"
                     required 
                   />
                 </div>
                 <div className="col-span-full">
-                  <Label className="block text-xs uppercase tracking-widest text-accent-beige mb-2 font-bold" htmlFor="address">Adresse de livraison</Label>
+                  <Label className="block text-xs uppercase tracking-widest text-muted-foreground mb-2 font-bold" htmlFor="address">Adresse de livraison</Label>
                   <Input 
                     id="address"
                     name="address"
                     value={formData.address}
                     onChange={handleInputChange}
                     placeholder="Rue, n° d'appartement..." 
-                    className="w-full bg-transparent border-0 border-b border-accent-beige/30 focus:ring-0 focus:border-primary px-0 py-3 text-secondary-dark dark:text-white placeholder:text-gray-300 font-display italic" 
+                    className="rounded-xl"
                     required 
                   />
                 </div>
                 <div className="col-span-full">
-                  <Label className="block text-xs uppercase tracking-widest text-accent-beige mb-2 font-bold" htmlFor="city">Ville</Label>
+                  <Label className="block text-xs uppercase tracking-widest text-muted-foreground mb-2 font-bold" htmlFor="city">Ville</Label>
                   <Input 
                     id="city"
                     name="city"
                     value={formData.city}
                     onChange={handleInputChange}
                     placeholder="Ex: Casablanca" 
-                    className="w-full bg-transparent border-0 border-b border-accent-beige/30 focus:ring-0 focus:border-primary px-0 py-3 text-secondary-dark dark:text-white placeholder:text-gray-300 font-display italic" 
+                    className="rounded-xl"
                     required 
                   />
                 </div>
                 <div className="col-span-full">
-                  <Label className="block text-xs uppercase tracking-widest text-accent-beige mb-2 font-bold" htmlFor="notes">Notes de commande (Optionnel)</Label>
+                  <Label className="block text-xs uppercase tracking-widest text-muted-foreground mb-2 font-bold" htmlFor="notes">Notes de commande (Optionnel)</Label>
                   <textarea 
                     id="notes"
                     name="notes"
@@ -292,20 +292,20 @@ const Checkout = () => {
                     onChange={handleInputChange}
                     placeholder="Précisions pour le livreur..." 
                     rows={3}
-                    className="w-full bg-transparent border-0 border-b border-accent-beige/30 focus:ring-0 focus:border-primary px-0 py-3 text-secondary-dark dark:text-white placeholder:text-gray-300 font-display italic resize-none" 
+                    className="w-full rounded-xl border border-input bg-card px-3.5 py-2.5 text-sm text-foreground shadow-soft placeholder:text-muted-foreground/80 hover:border-primary/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:border-primary transition-colors resize-none" 
                   />
                 </div>
               </div>
 
               {/* Mode de paiement */}
               <div>
-                <Label className="block text-xs uppercase tracking-widest text-accent-beige mb-2 font-bold">Mode de paiement *</Label>
+                <Label className="block text-xs uppercase tracking-widest text-muted-foreground mb-2 font-bold">Mode de paiement *</Label>
                 <div className="space-y-3">
                   <div 
-                    className={`flex items-center space-x-3 p-4 rounded-lg border-2 cursor-pointer transition-colors ${paymentMethod === 'cash_on_delivery' ? 'border-primary bg-primary/5' : 'border-accent-beige/30 hover:border-primary/50'}`}
+                    className={`flex items-center space-x-3 p-4 rounded-xl border-2 cursor-pointer transition-colors ${paymentMethod === 'cash_on_delivery' ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50'}`}
                     onClick={() => setPaymentMethod('cash_on_delivery')}
                   >
-                    <div className={`w-4 h-4 rounded-full border-2 ${paymentMethod === 'cash_on_delivery' ? 'border-primary bg-primary' : 'border-accent-beige/30'} flex items-center justify-center`}>
+                    <div className={`w-4 h-4 rounded-full border-2 ${paymentMethod === 'cash_on_delivery' ? 'border-primary bg-primary' : 'border-border'} flex items-center justify-center`}>
                       {paymentMethod === 'cash_on_delivery' && <div className="w-2 h-2 rounded-full bg-white"></div>}
                     </div>
                     <Banknote className="w-5 h-5 text-primary" />
@@ -313,7 +313,7 @@ const Checkout = () => {
                       <span className="font-medium cursor-pointer">
                         Paiement à la livraison
                       </span>
-                      <p className="text-xs text-accent-beige leading-relaxed">Payez en espèces à la réception de votre commande</p>
+                      <p className="text-xs text-muted-foreground leading-relaxed">Payez en espèces à la réception de votre commande</p>
                     </div>
                   </div>
 
@@ -321,24 +321,24 @@ const Checkout = () => {
               </div>
 
               <div className="flex items-center justify-center py-4">
-                <div className="w-full h-px bg-accent-beige/20"></div>
-                <div className="mx-4 size-2 rotate-45 border border-accent-beige bg-paper"></div>
-                <div className="w-full h-px bg-accent-beige/20"></div>
+                <div className="w-full h-px bg-border"></div>
+                <div className="mx-4 size-2 rotate-45 border border-border bg-card"></div>
+                <div className="w-full h-px bg-border"></div>
               </div>
 
-              <div className="bg-accent-beige/5 p-4 border border-accent-beige/10 rounded-sm">
+              <div className="bg-muted/40 p-4 border border-border rounded-xl">
                 <div className="flex gap-4 items-start">
                   <Verified className="text-primary" />
                   <div>
-                    <h4 className="text-sm font-bold uppercase tracking-wide text-secondary-dark dark:text-white mb-1">Confirmation Immédiate</h4>
-                    <p className="text-xs text-accent-beige leading-relaxed">En cliquant sur confirmer, votre commande sera enregistrée. Notre service client vous contactera par téléphone pour confirmer les détails de livraison.</p>
+                    <h4 className="text-sm font-bold uppercase tracking-wide text-foreground mb-1">Confirmation Immédiate</h4>
+                    <p className="text-xs text-muted-foreground leading-relaxed">En cliquant sur confirmer, votre commande sera enregistrée. Notre service client vous contactera par téléphone pour confirmer les détails de livraison.</p>
                   </div>
                 </div>
               </div>
 
               <Button
                 type="submit"
-                className="w-full !h-auto min-h-[3.25rem] bg-primary px-4 py-3.5 hover:bg-[#d9a50b] text-primary-foreground text-xs sm:text-sm uppercase font-bold tracking-[0.12em] sm:tracking-[0.2em] transition-all shadow-xl grid grid-cols-[auto_1fr] items-center gap-2.5 sm:gap-3 sm:px-6 whitespace-normal leading-snug sm:min-h-[3.5rem] sm:py-4"
+                className="w-full !h-auto min-h-[3.25rem] bg-primary px-4 py-3.5 hover:bg-primary/90 text-primary-foreground text-xs sm:text-sm uppercase font-bold tracking-[0.12em] sm:tracking-[0.2em] transition-all shadow-card grid grid-cols-[auto_1fr] items-center gap-2.5 sm:gap-3 sm:px-6 whitespace-normal leading-snug sm:min-h-[3.5rem] sm:py-4"
                 disabled={isSubmitting}
               >
                 <CheckCircle className="size-5 shrink-0 justify-self-start sm:size-[1.35rem]" aria-hidden />
@@ -351,22 +351,26 @@ const Checkout = () => {
 
           {/* Right Column - Cart Summary */}
           <div className="w-full lg:w-[400px]">
-            <div className="sticky top-24 bg-white dark:bg-[#181611] border border-accent-beige/20 p-8 shadow-md">
-              <h3 className="text-xl font-display text-secondary-dark dark:text-white mb-6 border-b border-accent-beige/10 pb-4 uppercase tracking-widest text-sm font-bold">Résumé du Panier</h3>
+            <div className="sticky top-24 bg-card border border-border rounded-2xl shadow-card p-8">
+              <h3 className="text-xl font-display text-foreground mb-6 border-b border-border pb-4 uppercase tracking-widest text-sm font-bold">Résumé du Panier</h3>
               
               <div className="space-y-6 mb-8">
                 {items.map((item, index) => (
                   <div key={`${item.product.id}-${item.selectedSize ?? ''}-${index}`} className="flex gap-4">
-                    <div className="size-20 bg-background-light border border-accent-beige/10 overflow-hidden rounded-sm flex-shrink-0">
+                    <div className="size-20 bg-muted border border-border overflow-hidden rounded-xl flex-shrink-0">
                       <img src={item.product.images[0]} alt={item.product.name} className="w-full h-full object-cover" />
                     </div>
                     <div className="flex-1 flex flex-col justify-between py-1">
                       <div>
-                        <h4 className="text-sm font-bold font-display text-secondary-dark dark:text-white leading-tight">{item.product.name}</h4>
-                        <p className="text-[10px] text-accent-beige uppercase tracking-widest mt-1">Or 18 carats</p>
+                        <h4 className="text-sm font-bold font-display text-foreground leading-tight">{item.product.name}</h4>
+                        {item.product.category && (
+                          <p className="text-[10px] text-muted-foreground uppercase tracking-widest mt-1">
+                            {item.product.category}
+                          </p>
+                        )}
                       </div>
                       <div className="flex justify-between items-end">
-                        <span className="text-xs text-gray-400">Qté: {item.quantity}</span>
+                        <span className="text-xs text-muted-foreground">Qté: {item.quantity}</span>
                         <span className="text-sm font-bold text-primary">{formatPrice(item.product.price * item.quantity)}</span>
                       </div>
                     </div>
@@ -375,12 +379,12 @@ const Checkout = () => {
               </div>
 
               {/* Promo Code Input */}
-              <div className="border-t border-accent-beige/10 pt-6 mb-4">
-                <Label className="block text-xs uppercase tracking-widest text-accent-beige mb-2 font-bold">
+              <div className="border-t border-border pt-6 mb-4">
+                <Label className="block text-xs uppercase tracking-widest text-muted-foreground mb-2 font-bold">
                   Code Promo
                 </Label>
                 {appliedPromo ? (
-                  <div className="flex items-center justify-between bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg px-4 py-3">
+                  <div className="flex items-center justify-between bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl px-4 py-3">
                     <div className="flex items-center gap-2">
                       <Tag className="w-4 h-4 text-green-600" />
                       <span className="font-mono font-bold text-sm text-green-700 dark:text-green-400">
@@ -403,7 +407,7 @@ const Checkout = () => {
                         setPromoError('');
                       }}
                       placeholder="Entrez votre code"
-                      className="font-mono uppercase bg-transparent border-accent-beige/30 focus:border-primary"
+                      className="font-mono uppercase rounded-xl"
                       onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleApplyPromo())}
                     />
                     <Button
@@ -411,14 +415,14 @@ const Checkout = () => {
                       variant="outline"
                       onClick={() => handleApplyPromo()}
                       disabled={promoLoading || !promoCodeInput.trim()}
-                      className="border-accent-beige/30 hover:border-primary shrink-0"
+                      className="rounded-xl shrink-0"
                     >
                       {promoLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Appliquer'}
                     </Button>
                   </div>
                 )}
                 {promoError && (
-                  <p className="text-xs text-red-500 mt-1.5">{promoError}</p>
+                  <p className="text-xs text-destructive mt-1.5">{promoError}</p>
                 )}
               </div>
 
@@ -427,7 +431,7 @@ const Checkout = () => {
                 <div className="mb-4 space-y-2">
                   <div className="flex items-center gap-2 mb-2">
                     <Sparkles className="w-4 h-4 text-primary" />
-                    <span className="text-xs uppercase tracking-widest text-accent-beige font-bold">
+                    <span className="text-xs uppercase tracking-widest text-muted-foreground font-bold">
                       Offres disponibles
                     </span>
                   </div>
@@ -435,7 +439,7 @@ const Checkout = () => {
                     <Link
                       key={s.code}
                       to="/codes-promo"
-                      className={`block rounded-lg border px-3 py-2.5 transition-all hover:shadow-md ${
+                      className={`block rounded-xl border px-3 py-2.5 transition-all hover:shadow-card ${
                         s.qualified
                           ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800'
                           : 'bg-amber-50 dark:bg-amber-900/15 border-amber-200 dark:border-amber-800'
@@ -475,10 +479,10 @@ const Checkout = () => {
                 </div>
               )}
 
-              <div className="border-t border-accent-beige/10 pt-6 space-y-3">
+              <div className="border-t border-border pt-6 space-y-3">
                 <div className="flex justify-between text-sm">
-                  <span className="text-accent-beige uppercase tracking-wider">Sous-total</span>
-                  <span className="text-secondary-dark dark:text-white">{formatPrice(subtotal)}</span>
+                  <span className="text-muted-foreground uppercase tracking-wider">Sous-total</span>
+                  <span className="text-foreground">{formatPrice(subtotal)}</span>
                 </div>
                 {discount > 0 && (
                   <div className="flex justify-between text-sm">
@@ -487,20 +491,20 @@ const Checkout = () => {
                   </div>
                 )}
                 <div className="flex justify-between text-sm">
-                  <span className="text-accent-beige uppercase tracking-wider">Livraison</span>
-                  <span className={shipping === 0 ? 'text-green-600 font-medium' : 'text-secondary-dark dark:text-white'}>
+                  <span className="text-muted-foreground uppercase tracking-wider">Livraison</span>
+                  <span className={shipping === 0 ? 'text-green-600 font-medium' : 'text-foreground'}>
                     {shipping === 0 ? 'Offerte' : formatPrice(shipping)}
                   </span>
                 </div>
-                <div className="flex justify-between items-center pt-4 border-t border-accent-beige/10 mt-4">
+                <div className="flex justify-between items-center pt-4 border-t border-border mt-4">
                   <span className="text-base font-bold uppercase tracking-[0.2em]">Total</span>
                   <span className="text-2xl font-bold text-primary">{formatPrice(total)}</span>
                 </div>
               </div>
 
-              <div className="mt-8 flex items-center gap-3 py-4 border-y border-accent-beige/5">
+              <div className="mt-8 flex items-center gap-3 py-4 border-y border-border/60">
                 <Verified className="text-primary text-xl" />
-                <p className="text-[10px] uppercase tracking-widest text-accent-beige leading-relaxed">
+                <p className="text-[10px] uppercase tracking-widest text-muted-foreground leading-relaxed">
                   Certificat d'authenticité inclus & Garantie à vie
                 </p>
               </div>

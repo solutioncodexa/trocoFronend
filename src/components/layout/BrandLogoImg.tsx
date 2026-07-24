@@ -1,4 +1,4 @@
-import goldYaraLogo from '@/assets/GOLD_YARA_LOGO (2).png';
+import trocoLogo from '@/assets/troco-logo.png';
 import { cn } from '@/lib/utils';
 
 type BrandLogoImgProps = Omit<React.ComponentPropsWithoutRef<'img'>, 'src'> & {
@@ -6,10 +6,10 @@ type BrandLogoImgProps = Omit<React.ComponentPropsWithoutRef<'img'>, 'src'> & {
   className?: string;
 };
 
-export function BrandLogoImg({ className, alt = 'GOLD YaRa — YaraGold', ...props }: BrandLogoImgProps) {
+export function BrandLogoImg({ className, alt = 'Troco', ...props }: BrandLogoImgProps) {
   return (
     <img
-      src={goldYaraLogo}
+      src={trocoLogo}
       alt={alt}
       className={cn('h-auto w-auto max-w-full object-contain object-left', className)}
       {...props}

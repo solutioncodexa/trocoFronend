@@ -122,7 +122,7 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
             alt="Preview"
             loading="lazy"
             decoding="async"
-            className="w-full h-48 object-cover rounded-md border"
+            className="w-full h-48 object-cover rounded-xl border border-border"
             onError={(e) => {
               console.error('Error loading image:', previewUrl);
               e.currentTarget.src = '';
@@ -158,7 +158,7 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
           title={optimizing ? 'Optimisation…' : uploading ? 'Envoi…' : 'Importer une image'}
         >
           {uploading || optimizing ? (
-            <div className="w-4 h-4 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin" />
+            <div className="w-4 h-4 border-2 border-muted border-t-primary rounded-full animate-spin" />
           ) : (
             <Upload className="w-4 h-4" />
           )}

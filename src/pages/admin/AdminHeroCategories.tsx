@@ -1,17 +1,23 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { ImageIcon, Loader2, Upload } from 'lucide-react';
+import { ImageIcon, Loader2, Upload, Plus, RotateCcw, Trash2, ArrowUp, ArrowDown } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import AdminLayout from '@/components/admin/AdminLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { categoriesApi } from '@/services/api/categories';
-import { getImageUrl, uploadImage } from '@/services/api/upload';
+import { homeHeroApi } from '@/services/api/homeHero';
+import { getImageUrl, uploadImage, uploadImages } from '@/services/api/upload';
 import type { CategoryDTO, HeroCategoryPatchDTO } from '@/types/api';
 import { toast } from 'sonner';
 import { toastError } from '@/utils/toastMessages';
 import { staticCatalogQueryOptions } from '@/config/queryOptions';
+
+const DEFAULT_HOME_HERO =
+  'https://images.unsplash.com/photo-1616401784845-180882ba9ba8?w=2000&h=1400&fit=crop&q=85';
+const MAX_HOME_HERO_IMAGES = 8;
 
 type RowState = Record<
   number,
@@ -55,15 +61,30 @@ const rowFromDto = (u: CategoryDTO): RowState[number] => ({
 const AdminHeroCategories = () => {
   const queryClient = useQueryClient();
   const fileInputs = useRef<Record<number, HTMLInputElement | null>>({});
+  const homeHeroFileRef = useRef<HTMLInputElement | null>(null);
   const rowStateRef = useRef<RowState>({});
   const sortedRef = useRef<CategoryDTO[]>([]);
   const [saving, setSaving] = useState(false);
+  const [uploadingHomeHero, setUploadingHomeHero] = useState(false);
 
   const { data: categories = [], isLoading } = useQuery({
     queryKey: ['categories'],
     queryFn: () => categoriesApi.getAllCategories(),
     ...staticCatalogQueryOptions,
   });
+
+  const { data: homeHero } = useQuery({
+    queryKey: ['homeHero'],
+    queryFn: () => homeHeroApi.getPublic(),
+    ...staticCatalogQueryOptions,
+  });
+
+  const homeHeroUrls = useMemo(() => {
+    const list = homeHero?.imageUrls?.filter(Boolean) ?? [];
+    if (list.length > 0) return list;
+    if (homeHero?.imageUrl) return [homeHero.imageUrl];
+    return [DEFAULT_HOME_HERO];
+  }, [homeHero]);
 
   const sorted = useMemo(
     () => [...categories].sort((a, b) => a.name.localeCompare(b.name, 'fr')),
@@ -174,9 +195,77 @@ const AdminHeroCategories = () => {
     }
   };
 
+  const saveHomeHeroUrls = async (urls: string[], successMsg: string) => {
+    const next = urls.length > 0 ? urls : [DEFAULT_HOME_HERO];
+    await homeHeroApi.update({ imageUrls: next, imageUrl: next[0] });
+    await queryClient.invalidateQueries({ queryKey: ['homeHero'] });
+    toast.success(successMsg);
+  };
+
+  const onPickHomeHero = async (files: FileList | null) => {
+    if (!files?.length) return;
+    const remaining = MAX_HOME_HERO_IMAGES - homeHeroUrls.length;
+    if (remaining <= 0) {
+      toast.error(`Maximum ${MAX_HOME_HERO_IMAGES} images`);
+      return;
+    }
+    const selected = Array.from(files).slice(0, remaining);
+    setUploadingHomeHero(true);
+    try {
+      const urls =
+        selected.length === 1
+          ? [await uploadImage(selected[0])]
+          : await uploadImages(selected);
+      await saveHomeHeroUrls([...homeHeroUrls, ...urls], 'Photos du hero mises à jour');
+    } catch (e) {
+      toastError(e, 'Erreur lors de l\'upload des photos du hero');
+    } finally {
+      setUploadingHomeHero(false);
+      if (homeHeroFileRef.current) homeHeroFileRef.current.value = '';
+    }
+  };
+
+  const removeHomeHeroAt = async (index: number) => {
+    setUploadingHomeHero(true);
+    try {
+      const next = homeHeroUrls.filter((_, i) => i !== index);
+      await saveHomeHeroUrls(next, 'Image retirée');
+    } catch (e) {
+      toastError(e, 'Erreur lors de la suppression');
+    } finally {
+      setUploadingHomeHero(false);
+    }
+  };
+
+  const moveHomeHero = async (index: number, dir: -1 | 1) => {
+    const target = index + dir;
+    if (target < 0 || target >= homeHeroUrls.length) return;
+    const next = [...homeHeroUrls];
+    [next[index], next[target]] = [next[target], next[index]];
+    setUploadingHomeHero(true);
+    try {
+      await saveHomeHeroUrls(next, 'Ordre mis à jour');
+    } catch (e) {
+      toastError(e, 'Erreur lors du réordonnancement');
+    } finally {
+      setUploadingHomeHero(false);
+    }
+  };
+
+  const resetHomeHero = async () => {
+    setUploadingHomeHero(true);
+    try {
+      await saveHomeHeroUrls([DEFAULT_HOME_HERO], 'Photos du hero réinitialisées');
+    } catch (e) {
+      toastError(e, 'Erreur lors de la réinitialisation');
+    } finally {
+      setUploadingHomeHero(false);
+    }
+  };
+
   if (isLoading) {
     return (
-      <AdminLayout title="Accueil — catégories" breadcrumbs={[{ label: 'Accueil catégories' }]}>
+      <AdminLayout title="Catégories de l’accueil" breadcrumbs={[{ label: 'Catégories accueil' }]}>
         <div className="flex items-center justify-center py-12">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
         </div>
@@ -186,14 +275,121 @@ const AdminHeroCategories = () => {
 
   return (
     <AdminLayout
-      title="Bandeau d’accueil (catégories)"
-      breadcrumbs={[{ label: 'Accueil catégories' }]}
+      title="Catégories de l’accueil"
+      breadcrumbs={[{ label: 'Catégories accueil' }]}
     >
+      <div className="mb-4 rounded-lg border border-border bg-muted/30 p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <p className="text-sm text-muted-foreground max-w-2xl">
+          Configurez le hero de l&apos;accueil : <strong>photo de fond</strong>, catégories du{' '}
+          <strong>bandeau</strong> et section <strong>Nos catégories</strong>. Pour{' '}
+          <strong>créer</strong> une catégorie, allez dans Catalogue → Catégories.
+        </p>
+        <Button asChild className="shrink-0">
+          <Link to="/admin/categories?action=new">
+            <Plus className="w-4 h-4 mr-2" />
+            Créer une catégorie
+          </Link>
+        </Button>
+      </div>
+
+      <div className="mb-8 rounded-xl border border-border bg-card p-4 sm:p-5 space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+          <div>
+            <h2 className="font-display text-lg text-foreground">Photos du hero</h2>
+            <p className="text-sm text-muted-foreground mt-1 max-w-2xl">
+              Ajoutez jusqu&apos;à {MAX_HOME_HERO_IMAGES} images. Elles défilent en fondu sur
+              l&apos;accueil. Préférez des photos paysage avec de l&apos;espace à gauche pour le
+              texte.
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2 shrink-0">
+            <input
+              ref={homeHeroFileRef}
+              type="file"
+              accept="image/*"
+              multiple
+              className="hidden"
+              onChange={(e) => onPickHomeHero(e.target.files)}
+            />
+            <Button
+              type="button"
+              disabled={uploadingHomeHero || homeHeroUrls.length >= MAX_HOME_HERO_IMAGES}
+              onClick={() => homeHeroFileRef.current?.click()}
+            >
+              {uploadingHomeHero ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Upload className="h-4 w-4 mr-2" />
+              )}
+              Ajouter des photos
+            </Button>
+            <Button type="button" variant="outline" disabled={uploadingHomeHero} onClick={resetHomeHero}>
+              <RotateCcw className="h-4 w-4 mr-2" />
+              Réinitialiser
+            </Button>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+          {homeHeroUrls.map((url, index) => (
+            <div
+              key={`${url}-${index}`}
+              className="group relative aspect-[16/10] overflow-hidden rounded-lg border border-border bg-muted"
+            >
+              <img
+                src={getImageUrl(url)}
+                alt={`Hero ${index + 1}`}
+                className="h-full w-full object-cover"
+              />
+              <div className="absolute inset-x-0 bottom-0 flex items-center justify-between gap-1 bg-gradient-to-t from-foreground/70 to-transparent p-2">
+                <span className="text-[10px] font-medium text-primary-foreground tabular-nums">
+                  {index + 1}/{homeHeroUrls.length}
+                </span>
+                <div className="flex items-center gap-0.5">
+                  <Button
+                    type="button"
+                    size="icon"
+                    variant="secondary"
+                    className="h-7 w-7"
+                    disabled={uploadingHomeHero || index === 0}
+                    onClick={() => moveHomeHero(index, -1)}
+                    aria-label="Monter"
+                  >
+                    <ArrowUp className="h-3.5 w-3.5" />
+                  </Button>
+                  <Button
+                    type="button"
+                    size="icon"
+                    variant="secondary"
+                    className="h-7 w-7"
+                    disabled={uploadingHomeHero || index === homeHeroUrls.length - 1}
+                    onClick={() => moveHomeHero(index, 1)}
+                    aria-label="Descendre"
+                  >
+                    <ArrowDown className="h-3.5 w-3.5" />
+                  </Button>
+                  <Button
+                    type="button"
+                    size="icon"
+                    variant="destructive"
+                    className="h-7 w-7"
+                    disabled={uploadingHomeHero || homeHeroUrls.length <= 1}
+                    onClick={() => removeHomeHeroAt(index)}
+                    aria-label="Supprimer"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
       <p className="text-sm text-muted-foreground mb-4 max-w-2xl">
-        Les changements (affichage, ordre) sont enregistrés automatiquement après une courte pause. Ordre vide =
-        automatique : ces catégories sont mélangées aléatoirement sur l’accueil avec les autres sans ordre manuel. Ordre
-        numérique 0–9999 = position fixe (du plus petit au plus grand). Seules les catégories avec « Afficher » activé
-        et une image apparaissent sur l’accueil.
+        Les changements sont enregistrés automatiquement. Ordre vide = automatique (mélange
+        aléatoire). Ordre 0–9999 = position fixe. Activez « Afficher » et ajoutez une image pour
+        qu&apos;une catégorie apparaisse sur l&apos;accueil.
       </p>
       {saving ? (
         <p className="text-xs text-muted-foreground mb-4 flex items-center gap-2">

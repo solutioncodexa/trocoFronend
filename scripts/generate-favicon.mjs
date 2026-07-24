@@ -11,7 +11,7 @@ import path from 'path';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.join(__dirname, '..');
-const src = path.join(root, 'src', 'assets', 'GOLD_YARA_LOGO (2).png');
+const src = path.join(root, 'src', 'assets', 'troco-logo.png');
 
 /** Padding (en % de la taille finale) autour du logo après trim. 0 = collé aux bords. */
 const PADDING_RATIO = 0;

@@ -1,91 +1,65 @@
 import { useQuery } from '@tanstack/react-query';
-import { Package, ShoppingCart, Palette, DollarSign, TrendingUp } from 'lucide-react';
+import { Package, ShoppingCart, Palette, DollarSign, TrendingUp, AlertTriangle, PackageX, Star, FolderOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import AdminLayout from '@/components/admin/AdminLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { productsApi } from '@/services/api/products';
 import { ordersApi } from '@/services/api/orders';
 import { customOrdersApi } from '@/services/api/customOrders';
+import { statsApi } from '@/services/api/stats';
 import { formatPrice } from '@/utils/formatPrice';
 import { getImageUrl } from '@/services/api';
+import { EmptyState } from '@/components/ui/EmptyState';
 
 const AdminDashboard = () => {
-  const { data: productsPage } = useQuery({
-    queryKey: ['products', 'dashboard'],
-    queryFn: () => productsApi.getAllProducts({ page: 0, size: 1 }),
+  const { data: dash } = useQuery({
+    queryKey: ['stats', 'dashboard'],
+    queryFn: () => statsApi.getDashboard(),
   });
   const { data: ordersPage } = useQuery({
     queryKey: ['orders', 'dashboard'],
     queryFn: () => ordersApi.getAllOrders({ page: 0, size: 5 }),
   });
-  const { data: ordersStatsPage } = useQuery({
-    queryKey: ['orders', 'dashboard', 'stats'],
-    queryFn: () => ordersApi.getAllOrders({ page: 0, size: 1 }),
-  });
-  const { data: newOrdersPage } = useQuery({
-    queryKey: ['orders', 'dashboard', 'new'],
-    queryFn: () => ordersApi.getAllOrders({ page: 0, size: 1, status: 'new' }),
-  });
-  const { data: deliveredOrdersPage } = useQuery({
-    queryKey: ['orders', 'dashboard', 'delivered'],
-    queryFn: () => ordersApi.getAllOrders({ page: 0, size: 100, status: 'delivered' }),
-  });
   const { data: customOrdersPage } = useQuery({
     queryKey: ['customOrders', 'dashboard'],
     queryFn: () => customOrdersApi.getAllCustomOrders({ page: 0, size: 5, status: 'pending' }),
   });
-  const { data: customOrdersStatsPage } = useQuery({
-    queryKey: ['customOrders', 'dashboard', 'stats'],
-    queryFn: () => customOrdersApi.getAllCustomOrders({ page: 0, size: 1 }),
-  });
-  const { data: pendingCustomPage } = useQuery({
-    queryKey: ['customOrders', 'dashboard', 'pending'],
-    queryFn: () => customOrdersApi.getAllCustomOrders({ page: 0, size: 1, status: 'pending' }),
-  });
 
-  const productCount = productsPage?.totalElements ?? 0;
   const orders = ordersPage?.content ?? [];
   const customOrders = customOrdersPage?.content ?? [];
-  const newOrdersCount = newOrdersPage?.totalElements ?? 0;
-  const pendingCustomCount = pendingCustomPage?.totalElements ?? 0;
-  const totalRevenue = (deliveredOrdersPage?.content ?? [])
-    .reduce((sum, o) => sum + (o.total ?? 0), 0);
 
   const stats = [
     {
       title: 'Total Produits',
-      value: productCount,
+      value: dash?.productCount ?? 0,
       icon: Package,
       color: 'bg-blue-500',
       href: '/admin/produits',
     },
     {
       title: 'Commandes',
-      value: ordersStatsPage?.totalElements ?? 0,
-      subValue: `${newOrdersCount} nouvelles`,
+      value: dash?.orderCount ?? 0,
+      subValue: `${dash?.newOrderCount ?? 0} nouvelles`,
       icon: ShoppingCart,
       color: 'bg-green-500',
       href: '/admin/commandes',
     },
     {
       title: 'Personnalisations',
-      value: customOrdersStatsPage?.totalElements ?? 0,
-      subValue: `${pendingCustomCount} en attente`,
+      value: dash?.customOrderCount ?? 0,
+      subValue: `${dash?.pendingCustomOrderCount ?? 0} en attente`,
       icon: Palette,
       color: 'bg-purple-500',
       href: '/admin/personnalisations',
     },
     {
       title: "Chiffre d'affaires",
-      value: formatPrice(totalRevenue),
-      subValue: 'Livrées',
+      value: formatPrice(dash?.deliveredRevenue ?? 0),
+      subValue: 'Livrées (12 mois)',
       icon: DollarSign,
       color: 'bg-primary',
+      href: '/admin/revenus',
     },
   ];
-
-  const recentOrders = orders;
-  const pendingRequests = customOrders;
 
   const getStatusBadge = (status: string) => {
     const styles: Record<string, string> = {
@@ -107,7 +81,7 @@ const AdminDashboard = () => {
       completed: 'Terminée',
     };
     return (
-      <span className={`px-2 py-1 rounded-full text-xs font-body ${styles[status] ?? 'bg-gray-100 text-gray-800'}`}>
+      <span className={`px-2 py-1 rounded-full text-xs font-body ${styles[status] ?? 'bg-muted text-muted-foreground'}`}>
         {labels[status] ?? status}
       </span>
     );
@@ -117,7 +91,14 @@ const AdminDashboard = () => {
     <AdminLayout title="Tableau de bord" breadcrumbs={[{ label: 'Tableau de bord' }]}>
       <div className="mb-8">
         <h2 className="font-display text-lg mb-4">Actions rapides</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+          <Link
+            to="/admin/categories?action=new"
+            className="p-4 bg-card rounded-lg border border-border hover:border-primary transition-colors text-center"
+          >
+            <FolderOpen className="w-8 h-8 mx-auto text-primary mb-2" />
+            <p className="font-body font-medium">Créer une catégorie</p>
+          </Link>
           <Link
             to="/admin/produits?action=new"
             className="p-4 bg-card rounded-lg border border-border hover:border-primary transition-colors text-center"
@@ -133,42 +114,93 @@ const AdminDashboard = () => {
             <p className="font-body font-medium">Gérer les commandes</p>
           </Link>
           <Link
-            to="/admin/categories"
+            to="/admin/produits-selectionnes"
+            className="p-4 bg-card rounded-lg border border-border hover:border-primary transition-colors text-center"
+          >
+            <Star className="w-8 h-8 mx-auto text-primary mb-2" />
+            <p className="font-body font-medium">Produits sélectionnés</p>
+          </Link>
+          <Link
+            to="/admin/stock"
+            className="p-4 bg-card rounded-lg border border-border hover:border-primary transition-colors text-center"
+          >
+            <AlertTriangle className="w-8 h-8 mx-auto text-primary mb-2" />
+            <p className="font-body font-medium">Gérer le stock</p>
+          </Link>
+          <Link
+            to="/admin/revenus"
             className="p-4 bg-card rounded-lg border border-border hover:border-primary transition-colors text-center"
           >
             <TrendingUp className="w-8 h-8 mx-auto text-primary mb-2" />
-            <p className="font-body font-medium">Gérer les catégories</p>
+            <p className="font-body font-medium">Voir les revenus</p>
           </Link>
         </div>
       </div>
 
-      <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+      <div className="mb-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {stats.map((stat, index) => (
-          <Card key={index} className="hover:shadow-lg transition-shadow">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
+          <Card key={index} className="h-full transition-shadow hover:shadow-lg">
+            <div className="flex h-full flex-col justify-center gap-3 p-5 sm:p-6">
+              <div className="flex items-center justify-between gap-4">
+                <div className="min-w-0 flex-1">
                   <p className="font-body text-sm text-muted-foreground">{stat.title}</p>
-                  <p className="font-display text-2xl mt-1">{stat.value}</p>
-                  {stat.subValue && (
-                    <p className="font-body text-xs text-muted-foreground mt-1">{stat.subValue}</p>
-                  )}
+                  <p className="mt-1 font-display text-2xl font-semibold tracking-tight text-foreground">
+                    {stat.value}
+                  </p>
+                  {stat.subValue ? (
+                    <p className="mt-1 font-body text-xs text-muted-foreground">{stat.subValue}</p>
+                  ) : null}
                 </div>
-                <div className={`w-12 h-12 rounded-lg ${stat.color} flex items-center justify-center`}>
-                  <stat.icon className="w-6 h-6 text-primary-foreground" />
+                <div
+                  className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl ${stat.color}`}
+                >
+                  <stat.icon className="h-6 w-6 text-white" aria-hidden />
                 </div>
               </div>
-              {stat.href && (
+              {stat.href ? (
                 <Link
                   to={stat.href}
-                  className="block mt-4 font-body text-sm text-primary hover:underline"
+                  className="inline-flex font-body text-sm font-medium text-primary hover:underline"
                 >
                   Voir tout →
                 </Link>
-              )}
-            </CardContent>
+              ) : null}
+            </div>
           </Card>
         ))}
+      </div>
+
+      <div className="mb-8 grid gap-4 sm:grid-cols-2">
+        <Link to="/admin/stock?filter=low" className="block h-full">
+          <Card className="h-full transition-shadow hover:shadow-lg">
+            <div className="flex h-full items-center gap-4 p-5">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-amber-500">
+                <AlertTriangle className="h-5 w-5 text-white" aria-hidden />
+              </div>
+              <div className="min-w-0">
+                <p className="text-sm text-muted-foreground">Alertes stock bas</p>
+                <p className="font-display text-xl font-semibold tracking-tight">
+                  {dash?.lowStockCount ?? 0}
+                </p>
+              </div>
+            </div>
+          </Card>
+        </Link>
+        <Link to="/admin/stock?filter=out" className="block h-full">
+          <Card className="h-full transition-shadow hover:shadow-lg">
+            <div className="flex h-full items-center gap-4 p-5">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-red-500">
+                <PackageX className="h-5 w-5 text-white" aria-hidden />
+              </div>
+              <div className="min-w-0">
+                <p className="text-sm text-muted-foreground">Ruptures</p>
+                <p className="font-display text-xl font-semibold tracking-tight">
+                  {dash?.outOfStockCount ?? 0}
+                </p>
+              </div>
+            </div>
+          </Card>
+        </Link>
       </div>
 
       <div className="grid lg:grid-cols-2 gap-6">
@@ -181,7 +213,7 @@ const AdminDashboard = () => {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {recentOrders.map((order) => (
+              {orders.map((order) => (
                 <div
                   key={order.id}
                   className="flex items-center justify-between p-3 bg-muted/50 rounded-lg"
@@ -198,10 +230,8 @@ const AdminDashboard = () => {
                   </div>
                 </div>
               ))}
-              {recentOrders.length === 0 && (
-                <p className="font-body text-muted-foreground text-center py-4">
-                  Aucune commande
-                </p>
+              {orders.length === 0 && (
+                <EmptyState icon={ShoppingCart} title="Aucune commande" className="py-6" />
               )}
             </div>
           </CardContent>
@@ -216,8 +246,8 @@ const AdminDashboard = () => {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {pendingRequests.length > 0 ? (
-                pendingRequests.map((request) => (
+              {customOrders.length > 0 ? (
+                customOrders.map((request) => (
                   <div
                     key={request.id}
                     className="flex items-center gap-4 p-3 bg-muted/50 rounded-lg"
@@ -245,9 +275,7 @@ const AdminDashboard = () => {
                   </div>
                 ))
               ) : (
-                <p className="font-body text-muted-foreground text-center py-4">
-                  Aucune demande en attente
-                </p>
+                <EmptyState icon={Palette} title="Aucune demande en attente" className="py-6" />
               )}
             </div>
           </CardContent>

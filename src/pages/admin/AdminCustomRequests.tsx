@@ -17,6 +17,8 @@ import { toast } from 'sonner';
 import { toastError } from '@/utils/toastMessages';
 import { cn } from '@/lib/utils';
 import QuoteDialog, { QuoteData } from '@/components/admin/QuoteDialog';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { formatPrice } from '@/utils/formatPrice';
 
 const AdminCustomRequests = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -102,11 +104,19 @@ const AdminCustomRequests = () => {
 
   const getTypeLabel = (type: string) => {
     const labels: Record<string, string> = {
-      bracelet: 'Bracelet',
-      ring: 'Bague',
-      necklace: 'Collier',
-      earrings: "Boucles d'oreilles",
-      set: 'Parure',
+      'sur-mesure:personnalisation-logo': 'Sur mesure — logo',
+      'sur-mesure:produit-unique': 'Sur mesure — produit unique',
+      'sur-mesure:dimensions-specifiques': 'Sur mesure — dimensions',
+      'sur-mesure:autre-sur-mesure': 'Sur mesure — autre',
+      'devis:commande-gros': 'Devis — gros',
+      'devis:renouvellement-stock': 'Devis — stock',
+      'devis:devis-multi-produits': 'Devis — multi-produits',
+      'devis:autre-devis': 'Devis — autre',
+      sachet: 'Sachet',
+      carton: 'Carton',
+      protection: 'Protection',
+      decoration: 'Décoration',
+      materiel: 'Matériel',
       other: 'Autre',
     };
     return labels[type] || type;
@@ -211,15 +221,6 @@ const AdminCustomRequests = () => {
       hour: '2-digit',
       minute: '2-digit',
     });
-  };
-
-  const formatPrice = (price: number) => {
-    return new Intl.NumberFormat('fr-MA', {
-      style: 'currency',
-      currency: 'MAD',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(price);
   };
 
   if (isLoading && !requestsPage) {
@@ -328,7 +329,7 @@ const AdminCustomRequests = () => {
                 <div className="flex gap-2 text-xs text-muted-foreground">
                   <span className="capitalize">{request.style}</span>
                   <span>•</span>
-                  <span>{request.weight}g estimé</span>
+                  <span>{request.weight} unités estimées</span>
                 </div>
 
                 {quote && (
@@ -382,9 +383,11 @@ const AdminCustomRequests = () => {
       </div>
 
       {requests.length === 0 && (
-        <div className="bg-card rounded-lg p-8 text-center border border-border">
-          <p className="font-body text-muted-foreground">Aucune demande trouvée</p>
-        </div>
+        <EmptyState
+          icon={FileText}
+          title="Aucune demande trouvée"
+          description="Les nouvelles demandes de personnalisation apparaîtront ici."
+        />
       )}
 
       {requestsPage && requestsPage.totalElements > 0 && (
@@ -470,8 +473,8 @@ const AdminCustomRequests = () => {
                       
                       <div className="grid grid-cols-2 gap-1 text-[10px]">
                         <div>
-                          <p className="text-muted-foreground">Poids</p>
-                          <p className="font-medium">{quotes[selectedRequest.id].weight}g</p>
+                          <p className="text-muted-foreground">Quantité</p>
+                          <p className="font-medium">{quotes[selectedRequest.id].quantity}</p>
                         </div>
                         <div>
                           <p className="text-muted-foreground">Total</p>
@@ -506,7 +509,7 @@ const AdminCustomRequests = () => {
                   )}
 
                   {/* Customer Info */}
-                  <div className="bg-gray-50 dark:bg-gray-900/50 rounded-lg p-2 border">
+                  <div className="bg-muted/50 rounded-xl p-2 border border-border">
                     <h3 className="font-display text-xs sm:text-sm mb-1">Client</h3>
                     <div className="space-y-1 text-[10px] sm:text-xs">
                       <p className="font-medium truncate">{selectedRequest.customer?.fullName}</p>
@@ -563,7 +566,7 @@ const AdminCustomRequests = () => {
                   {/* Meta Info */}
                   <div className="text-[10px] text-muted-foreground border-t pt-1">
                     <p>Reçue le {formatDate(selectedRequest.createdAt)}</p>
-                    <p>~{selectedRequest.weight}g</p>
+                    <p>~{selectedRequest.weight} unités</p>
                   </div>
                 </div>
               </div>

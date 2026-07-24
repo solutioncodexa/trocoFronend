@@ -25,7 +25,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: goldyara-front-artifacts-${{ github.ref }}
+  group: troco-front-artifacts-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -61,7 +61,7 @@ jobs:
       - name: Upload dist artifact
         uses: actions/upload-artifact@v4
         with:
-          name: goldyara-frontend-dist
+          name: troco-frontend-dist
           path: dist/
           if-no-files-found: error
           retention-days: 7
@@ -92,10 +92,10 @@ jobs:
       - name: Download dist artifact
         uses: actions/download-artifact@v4
         with:
-          name: goldyara-frontend-dist
+          name: troco-frontend-dist
           path: deploy-download
 
-      - name: Prepare GoldYara frontend directory on VPS
+      - name: Prepare Troco frontend directory on VPS
         uses: appleboy/ssh-action@v1.2.0
         with:
           host: ${{ secrets.VPS_HOST || vars.VPS_HOST || vars.VPS_IP }}
@@ -105,8 +105,8 @@ jobs:
           script_stop: true
           script: |
             set -e
-            DEPLOY_PATH=/opt/goldyara/deployment
-            FRONT_ROOT=$DEPLOY_PATH/goldyara/frontend
+            DEPLOY_PATH=/opt/troco/deployment
+            FRONT_ROOT=$DEPLOY_PATH/troco/frontend
             DIST_DIR=$FRONT_ROOT/dist
             UPLOAD_DIR=$FRONT_ROOT/dist-upload
 
@@ -126,9 +126,9 @@ jobs:
           key: ${{ secrets.VPS_SSH_PRIVATE_KEY }}
           port: ${{ vars.VPS_SSH_PORT || '22' }}
           source: "deploy-download/*"
-          target: "/opt/goldyara/deployment/goldyara/frontend/dist-upload"
+          target: "/opt/troco/deployment/troco/frontend/dist-upload"
 
-      - name: Normalize GoldYara dist structure on VPS
+      - name: Normalize Troco dist structure on VPS
         uses: appleboy/ssh-action@v1.2.0
         with:
           host: ${{ secrets.VPS_HOST || vars.VPS_HOST || vars.VPS_IP }}
@@ -138,7 +138,7 @@ jobs:
           script_stop: true
           script: |
             set -e
-            FRONT_ROOT=/opt/goldyara/deployment/goldyara/frontend
+            FRONT_ROOT=/opt/troco/deployment/troco/frontend
             DIST_DIR="$FRONT_ROOT/dist"
             UPLOAD_DIR="$FRONT_ROOT/dist-upload"
 
@@ -159,7 +159,7 @@ jobs:
 
             [ -f "$DIST_DIR/index.html" ] || { echo "Frontend dist invalid: index.html missing"; exit 1; }
 
-      - name: Restart GoldYara frontend on VPS
+      - name: Restart Troco frontend on VPS
         uses: appleboy/ssh-action@v1.2.0
         with:
           host: ${{ secrets.VPS_HOST || vars.VPS_HOST || vars.VPS_IP }}
@@ -169,7 +169,7 @@ jobs:
           script_stop: true
           script: |
             set -e
-            cd /opt/goldyara/deployment
+            cd /opt/troco/deployment
             docker compose -f docker-compose.yml -f docker-compose.artifacts.yml up -d --force-recreate --no-deps frontend
 
       - name: Deploy summary
@@ -177,8 +177,8 @@ jobs:
           {
             echo "### Frontend artifact deployed"
             echo ""
-            echo "- Path: \`${{ vars.VPS_DEPLOY_PATH || '/opt/goldyara/deployment' }}/goldyara/frontend/dist\`"
+            echo "- Path: \`${{ vars.VPS_DEPLOY_PATH || '/opt/troco/deployment' }}/troco/frontend/dist\`"
             echo "- Service: \`frontend\`"
           } >> "$GITHUB_STEP_SUMMARY"
         env:
-          DEPLOY_PATH: ${{ vars.VPS_DEPLOY_PATH || '/opt/goldyara/deployment' }}
+          DEPLOY_PATH: ${{ vars.VPS_DEPLOY_PATH || '/opt/troco/deployment' }}

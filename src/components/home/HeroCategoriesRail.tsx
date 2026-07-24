@@ -12,17 +12,34 @@ const heroQueryOptions = {
   refetchOnWindowFocus: true,
 } as const;
 
-const HeroCategoriesRail = ({ className }: { className?: string }) => {
+const HeroCategoriesRail = ({
+  className,
+  tone = 'light',
+}: {
+  className?: string;
+  tone?: 'light' | 'dark';
+}) => {
   const { data: heroList = [], isLoading } = useQuery({
     queryKey: ['heroCategories'],
     queryFn: () => categoriesApi.getHeroCategories(),
     ...heroQueryOptions,
   });
 
+  const { data: allCategories = [] } = useQuery({
+    queryKey: ['categories'],
+    queryFn: () => categoriesApi.getAllCategories(),
+    ...heroQueryOptions,
+  });
+
   const visible = useMemo(() => {
     const withImg = heroList.filter((c) => (c.heroImageUrl ?? '').trim().length > 0);
-    return orderHeroCategoriesForDisplay(withImg);
-  }, [heroList]);
+    if (withImg.length > 0) return orderHeroCategoriesForDisplay(withImg);
+    // Fallback: catégories principales (sans image hero admin)
+    const roots = ['sachets-pochettes', 'carton-boites', 'protections', 'decorations', 'materiels'];
+    return roots
+      .map((slug) => allCategories.find((c) => c.slug === slug))
+      .filter(Boolean) as typeof heroList;
+  }, [heroList, allCategories]);
 
   if (isLoading || visible.length === 0) return null;
 
@@ -42,7 +59,14 @@ const HeroCategoriesRail = ({ className }: { className?: string }) => {
                 to={`/boutique?category=${encodeURIComponent(cat.slug)}`}
                 className="group flex w-[4.75rem] flex-col items-center gap-2 sm:w-20 md:w-24"
               >
-                <span className="relative block size-[4.75rem] overflow-hidden rounded-full bg-background-light ring-1 ring-accent-beige/30 shadow-md transition-transform duration-300 group-hover:scale-[1.03] group-active:scale-[0.98] sm:size-20 md:size-24">
+                <span
+                  className={cn(
+                    'relative block size-[4.75rem] overflow-hidden rounded-2xl transition-all duration-300 group-hover:scale-[1.03] group-active:scale-[0.98] sm:size-20 md:size-24',
+                    tone === 'light'
+                      ? 'bg-card shadow-soft ring-1 ring-border/80 group-hover:shadow-card group-hover:ring-primary/35'
+                      : 'bg-card/90 shadow-soft ring-1 ring-white/25 group-hover:ring-primary/50',
+                  )}
+                >
                   <img
                     src={src}
                     alt=""
@@ -51,7 +75,12 @@ const HeroCategoriesRail = ({ className }: { className?: string }) => {
                     decoding="async"
                   />
                 </span>
-                <span className="max-w-[5.5rem] text-center font-display text-[11px] leading-tight text-foreground sm:max-w-[6rem] sm:text-xs md:max-w-none md:text-sm">
+                <span
+                  className={cn(
+                    'max-w-[5.5rem] text-center font-display text-[11px] font-medium leading-tight sm:max-w-[6rem] sm:text-xs md:max-w-none md:text-sm',
+                    tone === 'light' ? 'text-foreground/90' : 'text-white/95',
+                  )}
+                >
                   {cat.name}
                 </span>
               </Link>

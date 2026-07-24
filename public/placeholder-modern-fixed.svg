@@ -6,6 +6,6 @@
   <circle cx="150" cy="170" r="15" fill="none" stroke="#f2b90d" stroke-width="2"/>
   <line x1="135" y1="155" x2="165" y2="155" stroke="#f2b90d" stroke-width="2"/>
   <line x1="135" y1="185" x2="165" y2="185" stroke="#f2b90d" stroke-width="2"/>
-  <text x="150" y="320" text-anchor="middle" font-family="serif" font-size="14" fill="#8a8060">YaraGold</text>
+  <text x="150" y="320" text-anchor="middle" font-family="serif" font-size="14" fill="#8a8060">Troco</text>
   <text x="150" y="340" text-anchor="middle" font-family="serif" font-size="12" fill="#8a8060">Modern Style</text>
 </svg>

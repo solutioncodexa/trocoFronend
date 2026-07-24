@@ -32,7 +32,7 @@ export async function uploadImage(
     notifyCompressionReports([report]);
   }
 
-  const token = localStorage.getItem('goldyara_admin_token');
+  const token = localStorage.getItem('troco_admin_token');
   const formData = new FormData();
   formData.append('file', finalFile);
 
@@ -71,7 +71,7 @@ export async function uploadImages(
     notifyCompressionReports(results.map((r) => r.report));
   }
 
-  const token = localStorage.getItem('goldyara_admin_token');
+  const token = localStorage.getItem('troco_admin_token');
   const formData = new FormData();
   finalFiles.forEach((f) => formData.append('files', f));
 

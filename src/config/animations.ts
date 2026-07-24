@@ -9,7 +9,7 @@ export const ANIMATIONS = {
   /** Hero : le bloc titre / texte / CTA apparaît en fondu (remplace le pulse sur le surtitre) */
   heroContentFadeIn: true,
 
-  /** Sections au scroll (accueil : Beldi, Heritage, Sur-Mesure, Moderne, témoignage) */
+  /** Sections au scroll (accueil : catégories, Heritage, Sur-Mesure, témoignage) */
   sectionRevealOnScroll: true,
 
   /** Reflet lumineux au survol sur les CTA principaux (hero + boutons type “Voir le produit”) */
@@ -21,7 +21,7 @@ export const ANIMATIONS = {
   /** Grille boutique : les cartes apparaissent en cascade */
   productGridStagger: true,
 
-  /** Home — grilles Beldi & Moderne : cascade sur les cartes */
+  /** Home — grilles produits : cascade sur les cartes */
   homeCollectionStagger: true,
 
   /** Liens du menu desktop : soulignement animé (classe `link-underline`) */

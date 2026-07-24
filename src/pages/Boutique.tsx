@@ -7,6 +7,7 @@ import ProductCard from '@/components/ui/ProductCard';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Slider } from '@/components/ui/slider';
 import { Button } from '@/components/ui/button';
+import { EmptyState } from '@/components/ui/EmptyState';
 import {
   Accordion,
   AccordionContent,
@@ -23,9 +24,8 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Product } from '@/types/product';
 import type { ProductListItemDTO } from '@/types/product-dtos';
-import { productsApi, categoriesApi, productTypesApi, collectionsApi } from '@/services/api';
+import { productsApi, categoriesApi } from '@/services/api';
 import { mapProductListItemListToProducts } from '@/utils/productMapper';
-import { sortProductTypesForDisplay } from '@/utils/productTypeSort';
 import { RevealOnScroll } from '@/components/animations';
 import { ANIMATIONS } from '@/config/animations';
 import { toast } from 'sonner';
@@ -34,6 +34,7 @@ import { staticCatalogQueryOptions } from '@/config/queryOptions';
 import { cn } from '@/lib/utils';
 
 const PRODUCTS_PER_PAGE = 12;
+const PRICE_MAX = 2000;
 
 type SortOption = 'newest' | 'price-asc' | 'price-desc' | 'popularity';
 
@@ -69,11 +70,8 @@ function buildVisiblePageNumbers(current: number, total: number): (number | 'gap
 const Boutique = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const categoryParam = searchParams.get('category');
-  const typeFromUrl = searchParams.get('type')?.toLowerCase() ?? null;
   const [selectedCategory, setSelectedCategory] = useState<string | null>(categoryParam);
-  const [selectedTypes, setSelectedTypes] = useState<string[]>(() => (typeFromUrl ? [typeFromUrl] : []));
-  const [selectedCollections, setSelectedCollections] = useState<string[]>([]);
-  const [priceRange, setPriceRange] = useState<[number, number]>([0, 50000]);
+  const [priceRange, setPriceRange] = useState<[number, number]>([0, PRICE_MAX]);
   const [inStockOnly, setInStockOnly] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState<SortOption>('newest');
@@ -99,14 +97,6 @@ const Boutique = () => {
   }, [categoryParam]);
 
   useEffect(() => {
-    if (typeFromUrl) {
-      setSelectedTypes((prev) => (prev.length === 1 && prev[0] === typeFromUrl ? prev : [typeFromUrl]));
-    } else {
-      setSelectedTypes((prev) => (prev.length === 1 ? [] : prev));
-    }
-  }, [typeFromUrl]);
-
-  useEffect(() => {
     if (searchParams.has('keyword')) {
       searchQuerySourceRef.current = 'other';
       setSearchQuery(searchParams.get('keyword') ?? '');
@@ -126,23 +116,28 @@ const Boutique = () => {
     retry: 1,
     ...staticCatalogQueryOptions,
   });
-  const { data: productTypes = [] } = useQuery({
-    queryKey: ['productTypes'],
-    queryFn: () => productTypesApi.getAllProductTypes(),
-    retry: 1,
-    ...staticCatalogQueryOptions,
-  });
-  const { data: collections = [] } = useQuery({
-    queryKey: ['collections'],
-    queryFn: () => collectionsApi.getActiveCollections(),
-    retry: 1,
-    ...staticCatalogQueryOptions,
-  });
 
-  const sortedProductTypes = useMemo(
-    () => sortProductTypesForDisplay(productTypes, selectedCategory),
-    [productTypes, selectedCategory]
-  );
+  const sortedCategories = useMemo(() => {
+    type CategoryWithParent = (typeof categories)[number] & {
+      parent?: unknown;
+      parentId?: number | null;
+    };
+    const hasParentField = categories.some(
+      (c) =>
+        (c as CategoryWithParent).parent != null ||
+        (c as CategoryWithParent).parentId != null
+    );
+    const isRoot = (c: CategoryWithParent) =>
+      c.parent == null && (c.parentId == null || c.parentId === undefined);
+    return [...categories].sort((a, b) => {
+      if (hasParentField) {
+        const aRoot = isRoot(a as CategoryWithParent);
+        const bRoot = isRoot(b as CategoryWithParent);
+        if (aRoot !== bRoot) return aRoot ? -1 : 1;
+      }
+      return a.name.localeCompare(b.name, 'fr');
+    });
+  }, [categories]);
 
   const sortApi = useMemo(() => {
     switch (sortBy) {
@@ -165,8 +160,6 @@ const Boutique = () => {
       sortApi.sortBy,
       sortApi.sortDir,
       selectedCategory,
-      [...selectedTypes].sort().join(','),
-      [...selectedCollections].sort().join(','),
       priceRange[0],
       priceRange[1],
       inStockOnly,
@@ -178,8 +171,6 @@ const Boutique = () => {
       sortApi.sortBy,
       sortApi.sortDir,
       selectedCategory,
-      selectedTypes,
-      selectedCollections,
       priceRange,
       inStockOnly,
       searchQuery,
@@ -188,24 +179,18 @@ const Boutique = () => {
 
   const { data: pageResponse, isLoading, isError, error } = useQuery({
     queryKey: browseQueryKey,
-    queryFn: async () => {
-      const typeParam = selectedTypes.length > 0 ? selectedTypes[0] : undefined;
-      const collectionParam = selectedCollections.length > 0 ? selectedCollections[0] : undefined;
-
-      return productsApi.getAllProducts({
+    queryFn: async () =>
+      productsApi.getAllProducts({
         page: currentPage - 1,
         size: PRODUCTS_PER_PAGE,
         sortBy: sortApi.sortBy,
         sortDir: sortApi.sortDir,
         category: selectedCategory ?? undefined,
-        type: typeParam,
-        collection: collectionParam,
         minPrice: priceRange[0] > 0 ? priceRange[0] : undefined,
-        maxPrice: priceRange[1] < 50000 ? priceRange[1] : undefined,
+        maxPrice: priceRange[1] < PRICE_MAX ? priceRange[1] : undefined,
         inStock: inStockOnly ? true : undefined,
         keyword: searchQuery.trim() || undefined,
-      });
-    },
+      }),
     retry: 1,
     placeholderData: keepPreviousData,
   });
@@ -224,22 +209,18 @@ const Boutique = () => {
   const hasActiveFilters = useMemo(
     () =>
       selectedCategory != null ||
-      selectedTypes.length > 0 ||
-      selectedCollections.length > 0 ||
       priceRange[0] > 0 ||
-      priceRange[1] < 50000 ||
+      priceRange[1] < PRICE_MAX ||
       inStockOnly ||
       searchQuery.trim().length > 0,
-    [selectedCategory, selectedTypes, selectedCollections, priceRange, inStockOnly, searchQuery]
+    [selectedCategory, priceRange, inStockOnly, searchQuery]
   );
 
   const resetBrowseFilters = useCallback(() => {
     searchQuerySourceRef.current = 'other';
     setSearchQuery('');
     setSelectedCategory(null);
-    setSelectedTypes([]);
-    setSelectedCollections([]);
-    setPriceRange([0, 50000]);
+    setPriceRange([0, PRICE_MAX]);
     setInStockOnly(false);
     setCurrentPage(1);
     setSearchParams({});
@@ -259,7 +240,7 @@ const Boutique = () => {
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [selectedCategory, selectedTypes, selectedCollections, priceRange, inStockOnly, sortBy]);
+  }, [selectedCategory, priceRange, inStockOnly, sortBy]);
 
   const handlePageChange = (page: number) => {
     if (page !== currentPage) {
@@ -282,30 +263,8 @@ const Boutique = () => {
     });
   };
 
-  const handleTypeToggle = (typeId: string) => {
-    clearKeywordSearch();
-    setSelectedTypes((prev) => {
-      const next = prev.includes(typeId) ? prev.filter((t) => t !== typeId) : [...prev, typeId];
-      setSearchParams((p) => {
-        const q = new URLSearchParams(p);
-        q.delete('keyword');
-        if (next.length === 1) q.set('type', next[0]);
-        else q.delete('type');
-        return q;
-      });
-      return next;
-    });
-  };
-
-  const handleCollectionToggle = (collectionId: string) => {
-    clearKeywordSearch();
-    setSelectedCollections((prev) =>
-      prev.includes(collectionId) ? prev.filter((t) => t !== collectionId) : [...prev, collectionId]
-    );
-  };
-
   const filterSectionTitleClass =
-    'text-xs uppercase tracking-[0.3em] font-bold text-secondary-dark dark:text-white';
+    'text-xs uppercase tracking-[0.3em] font-bold text-foreground';
   const accordionTriggerClass = cn(
     filterSectionTitleClass,
     'py-4 hover:no-underline [&[data-state=open]]:text-primary'
@@ -314,69 +273,28 @@ const Boutique = () => {
   const categoryFilterList = (
     <ul className="space-y-3">
       <li>
-        <label className="flex items-center gap-3 text-sm text-accent-beige hover:text-primary cursor-pointer transition-colors">
+        <label className="flex items-center gap-3 text-sm text-muted-foreground hover:text-primary cursor-pointer transition-colors">
           <Checkbox
             checked={selectedCategory === null}
             onCheckedChange={() => handleCategoryChange(null)}
-            className="rounded border-accent-beige/30 text-primary focus:ring-primary size-4"
+            className="rounded border-border text-primary focus:ring-primary size-4"
           />
           Toutes
         </label>
       </li>
-      {categories.map((cat) => (
+      {sortedCategories.map((cat) => (
         <li key={cat.id}>
-          <label className="flex items-center gap-3 text-sm text-accent-beige hover:text-primary cursor-pointer transition-colors">
+          <label className="flex items-center gap-3 text-sm text-muted-foreground hover:text-primary cursor-pointer transition-colors">
             <Checkbox
               checked={selectedCategory === cat.slug}
               onCheckedChange={() => handleCategoryChange(cat.slug)}
-              className="rounded border-accent-beige/30 text-primary focus:ring-primary size-4"
+              className="rounded border-border text-primary focus:ring-primary size-4"
             />
             {cat.name}
           </label>
         </li>
       ))}
     </ul>
-  );
-
-  const collectionFilterList = (
-    <ul className="space-y-3">
-      {collections.map((col) => (
-        <li key={col.id}>
-          <label className="flex items-center gap-3 text-sm text-accent-beige hover:text-primary cursor-pointer transition-colors">
-            <Checkbox
-              checked={selectedCollections.includes(col.slug)}
-              onCheckedChange={() => handleCollectionToggle(col.slug)}
-              className="rounded border-accent-beige/30 text-primary focus:ring-primary size-4"
-            />
-            {col.name}
-          </label>
-        </li>
-      ))}
-    </ul>
-  );
-
-  const typeFilterList = (
-    <>
-      {selectedCategory === 'ensemble' && (
-        <p className="text-[10px] text-muted-foreground mb-3 leading-snug">
-          Ordre d’affichage : bracelets & gourmettes, bagues, serties, puis colliers et autres.
-        </p>
-      )}
-      <ul className="space-y-3">
-        {sortedProductTypes.map((pt) => (
-          <li key={pt.id}>
-            <label className="flex items-center gap-3 text-sm text-accent-beige hover:text-primary cursor-pointer transition-colors">
-              <Checkbox
-                checked={selectedTypes.includes(pt.code.toLowerCase())}
-                onCheckedChange={() => handleTypeToggle(pt.code.toLowerCase())}
-                className="rounded border-accent-beige/30 text-primary focus:ring-primary size-4"
-              />
-              {pt.name}
-            </label>
-          </li>
-        ))}
-      </ul>
-    </>
   );
 
   const priceFilterBlock = (
@@ -386,20 +304,20 @@ const Boutique = () => {
         onValueChange={(value) => setPriceRange(value as [number, number])}
         onValueCommit={() => clearKeywordSearch()}
         min={0}
-        max={50000}
-        step={1000}
+        max={PRICE_MAX}
+        step={50}
         className="w-full accent-primary"
       />
-      <div className="flex justify-between text-[10px] text-accent-beige uppercase mt-2">
-        <span>0 MAD</span>
-        <span>50 000+ MAD</span>
+      <div className="flex justify-between text-[10px] text-muted-foreground uppercase mt-2">
+        <span>0 DH</span>
+        <span>{PRICE_MAX.toLocaleString('fr-FR')}+ DH</span>
       </div>
     </>
   );
 
   const searchFilterBlock = (
     <div className="flex w-full flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
-      <span className="text-xs text-accent-beige uppercase tracking-widest shrink-0">
+      <span className="text-xs text-muted-foreground uppercase tracking-widest shrink-0">
         Recherche :
       </span>
       <input
@@ -419,20 +337,20 @@ const Boutique = () => {
           });
         }}
         placeholder="Nom ou description…"
-        className="w-full min-w-0 flex-1 rounded-md border border-accent-beige/30 bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
+        className="w-full min-w-0 flex-1 rounded-xl border border-border bg-card px-3 py-2 text-sm text-foreground shadow-soft placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
       />
     </div>
   );
 
   const inStockFilterRow = (
-    <label className="flex items-center gap-3 text-sm font-bold uppercase tracking-widest text-secondary-dark cursor-pointer">
+    <label className="flex items-center gap-3 text-sm font-bold uppercase tracking-widest text-foreground cursor-pointer">
       <Checkbox
         checked={inStockOnly}
         onCheckedChange={(checked) => {
           clearKeywordSearch();
           setInStockOnly(checked as boolean);
         }}
-        className="rounded border-accent-beige/30 text-primary focus:ring-primary size-4"
+        className="rounded border-border text-primary focus:ring-primary size-4"
       />
       En stock uniquement
     </label>
@@ -441,12 +359,10 @@ const Boutique = () => {
   const activeFilterCount = useMemo(() => {
     let count = 0;
     if (selectedCategory) count++;
-    if (selectedTypes.length > 0) count++;
-    if (selectedCollections.length > 0) count++;
-    if (priceRange[0] > 0 || priceRange[1] < 50000) count++;
+    if (priceRange[0] > 0 || priceRange[1] < PRICE_MAX) count++;
     if (inStockOnly) count++;
     return count;
-  }, [selectedCategory, selectedTypes, selectedCollections, priceRange, inStockOnly]);
+  }, [selectedCategory, priceRange, inStockOnly]);
 
   const filterPanelContent = (
     <div className="flex flex-col gap-0">
@@ -455,24 +371,16 @@ const Boutique = () => {
         className="w-full"
         defaultValue={['category']}
       >
-        <AccordionItem value="category" className="border-accent-beige/15">
+        <AccordionItem value="category" className="border-border/60 border-b-0">
           <AccordionTrigger className={accordionTriggerClass}>Catégorie</AccordionTrigger>
           <AccordionContent>{categoryFilterList}</AccordionContent>
         </AccordionItem>
-        <AccordionItem value="collection" className="border-accent-beige/15">
-          <AccordionTrigger className={accordionTriggerClass}>Collection</AccordionTrigger>
-          <AccordionContent>{collectionFilterList}</AccordionContent>
-        </AccordionItem>
-        <AccordionItem value="type" className="border-accent-beige/15 border-b-0">
-          <AccordionTrigger className={accordionTriggerClass}>Type de bijou</AccordionTrigger>
-          <AccordionContent>{typeFilterList}</AccordionContent>
-        </AccordionItem>
       </Accordion>
 
-      <div className="border-t border-accent-beige/20 pt-6 px-0">
+      <div className="border-t border-border pt-6 px-0">
         <h3 className={`${filterSectionTitleClass} mb-6 flex items-center gap-2`}>
-          Prix (MAD)
-          <div className="h-px flex-grow bg-accent-beige/20" />
+          Prix (DH)
+          <div className="h-px flex-grow bg-border" />
         </h3>
         {priceFilterBlock}
       </div>
@@ -486,7 +394,7 @@ const Boutique = () => {
             resetBrowseFilters();
             setFiltersOpen(false);
           }}
-          className="mt-6 w-full inline-flex items-center justify-center rounded-sm border border-primary px-6 py-2.5 text-xs font-bold uppercase tracking-widest text-primary hover:bg-primary hover:text-primary-foreground transition-colors"
+          className="mt-6 w-full inline-flex items-center justify-center rounded-xl border border-primary px-6 py-2.5 text-xs font-bold uppercase tracking-widest text-primary hover:bg-primary hover:text-primary-foreground transition-colors"
         >
           Réinitialiser les filtres
         </button>
@@ -496,29 +404,32 @@ const Boutique = () => {
 
   return (
     <Layout>
-      <section className="relative bg-paper py-16 md:py-24 border-b border-accent-beige/10 bg-paper-pattern overflow-hidden">
-        <div className="max-w-[1400px] mx-auto px-6 relative z-10">
-          <div className="flex flex-col items-center text-center">
-            <div className="w-12 h-px bg-primary mb-6"></div>
-            <h2 className="font-script text-6xl md:text-8xl text-primary mb-4">Notre Collection</h2>
-            <p className="max-w-2xl text-accent-beige text-sm md:text-base leading-relaxed uppercase tracking-[0.2em] font-light">
-              Explorez l'alliance parfaite entre tradition Beldi et modernité raffinée.
+      <section className="relative overflow-hidden border-b border-border bg-gradient-to-br from-card via-card to-primary/5 animate-fade-in">
+        <div
+          className="pointer-events-none absolute inset-0 opacity-[0.12]"
+          style={{
+            backgroundImage:
+              "url('https://images.unsplash.com/photo-1605745341112-859dfc6dd42e?w=1600&h=600&fit=crop&q=80')",
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+          }}
+          aria-hidden
+        />
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-card via-card/90 to-primary/10" aria-hidden />
+        <div className="relative z-10 mx-auto max-w-[1400px] px-4 py-6 sm:px-6 sm:py-8 md:py-9">
+          <div className="flex flex-col items-start gap-2 sm:items-center sm:text-center">
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">Boutique Troco</p>
+            <h1 className="font-display text-2xl font-semibold tracking-tight text-foreground sm:text-3xl md:text-4xl">
+              Solutions d&apos;emballage
+            </h1>
+            <p className="max-w-xl text-sm leading-relaxed text-muted-foreground sm:text-base">
+              Sachets, cartons, protections et consommables pour vos envois e-commerce.
             </p>
-            <div className="w-12 h-px bg-primary mt-6"></div>
           </div>
-        </div>
-        <div className="absolute inset-0 opacity-10 pointer-events-none">
-          <div
-            className="w-full h-full bg-cover bg-center"
-            style={{
-              backgroundImage:
-                "url('https://lh3.googleusercontent.com/aida-public/AB6AXuAPwS7jO8A1t0pR7RdBRWLxuk5M-uQ2Pr5sW8bsJJcNxvG1WjyJVuf3Pw62lMnrvRlnI0OSSnOOmqkHjofPmZwy84ILuzFh3Bf9LPjbHlxKpPFJ44lZUsEi3Z5RqcFfOdBR0weUDXezHrCdJj5e0v_2LgVafALx3D7vMyIqOlMTAsp2URper5YYhweiF-d3AaD4a4RiPWcQEE1wIiivezdK0m1vlJ4uekuDFJ4ueIfuJdbF8j_roqacvNCt57ff2oW2UHxk6dcx6Hla')",
-            }}
-          ></div>
         </div>
       </section>
 
-      <main className="max-w-[1400px] mx-auto w-full min-w-0 px-0 sm:px-6 py-8 md:py-12 overflow-x-hidden">
+      <main className="mx-auto w-full min-w-0 max-w-[1400px] overflow-x-hidden px-0 py-5 sm:px-6 sm:py-6 md:py-8">
         <div className="flex flex-col lg:flex-row gap-8 lg:gap-12 min-w-0">
 
           {/* Desktop sidebar — hidden on mobile */}
@@ -528,7 +439,7 @@ const Boutique = () => {
 
           <div className="flex-grow min-w-0 px-4 sm:px-0">
             {/* Toolbar: Filter button (mobile) + Search + Sort */}
-            <div className="flex flex-col gap-4 mb-6 border-b border-accent-beige/10 pb-6">
+            <div className="flex flex-col gap-4 mb-6 border-b border-border pb-6">
               {/* Row 1: Filter button + Sort */}
               <div className="flex items-center gap-3">
                 {/* Mobile filter button */}
@@ -537,7 +448,7 @@ const Boutique = () => {
                     <Button
                       variant="outline"
                       size="sm"
-                      className="lg:hidden flex items-center gap-2 border-accent-beige/30 text-secondary-dark hover:border-primary hover:text-primary shrink-0"
+                      className="lg:hidden flex items-center gap-2 border-border text-foreground hover:border-primary hover:text-primary shrink-0"
                     >
                       <SlidersHorizontal className="w-4 h-4" />
                       <span className="text-xs font-bold uppercase tracking-widest">Filtres</span>
@@ -549,9 +460,9 @@ const Boutique = () => {
                     </Button>
                   </SheetTrigger>
                   <SheetContent side="left" className="w-[320px] sm:w-[360px] overflow-y-auto scrollbar-app p-0">
-                    <SheetHeader className="px-5 pt-5 pb-4 border-b border-accent-beige/15 sticky top-0 bg-background z-10">
+                    <SheetHeader className="px-5 pt-5 pb-4 border-b border-border sticky top-0 bg-background z-10">
                       <div className="flex items-center justify-between">
-                        <SheetTitle className="text-sm font-bold uppercase tracking-widest text-secondary-dark flex items-center gap-2">
+                        <SheetTitle className="text-sm font-bold uppercase tracking-widest text-foreground flex items-center gap-2">
                           <SlidersHorizontal className="w-4 h-4 text-primary" />
                           Filtres
                           {activeFilterCount > 0 && (
@@ -566,10 +477,10 @@ const Boutique = () => {
                       {filterPanelContent}
                     </div>
                     {/* Sticky apply button */}
-                    <div className="sticky bottom-0 bg-background border-t border-accent-beige/15 p-4">
+                    <div className="sticky bottom-0 bg-background border-t border-border p-4">
                       <Button
                         onClick={() => setFiltersOpen(false)}
-                        className="w-full bg-primary text-primary-foreground hover:bg-primary/90 text-xs font-bold uppercase tracking-widest"
+                        className="w-full bg-primary text-primary-foreground hover:bg-primary/90 text-xs font-bold uppercase tracking-widest rounded-xl"
                       >
                         Voir les résultats
                       </Button>
@@ -581,7 +492,7 @@ const Boutique = () => {
 
                 {/* Sort — always visible */}
                 <div className="flex items-center gap-2 shrink-0">
-                  <span className="text-xs text-accent-beige uppercase tracking-widest hidden sm:inline">Trier par :</span>
+                  <span className="text-xs text-muted-foreground uppercase tracking-widest hidden sm:inline">Trier par :</span>
                   <Select
                     value={sortBy}
                     onValueChange={(value) => {
@@ -589,7 +500,7 @@ const Boutique = () => {
                       setSortBy(value as SortOption);
                     }}
                   >
-                    <SelectTrigger className="bg-transparent border-none text-xs font-bold uppercase tracking-widest text-secondary-dark focus:ring-0 cursor-pointer w-auto max-w-[180px]">
+                    <SelectTrigger className="bg-transparent border-none text-xs font-bold uppercase tracking-widest text-foreground focus:ring-0 cursor-pointer w-auto max-w-[180px]">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -611,32 +522,14 @@ const Boutique = () => {
                 <div className="flex flex-wrap items-center gap-2 lg:hidden">
                   {selectedCategory && (
                     <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-primary/10 text-primary text-[11px] font-medium">
-                      {categories.find(c => c.slug === selectedCategory)?.name ?? selectedCategory}
+                      {sortedCategories.find(c => c.slug === selectedCategory)?.name ?? selectedCategory}
                       <button type="button" onClick={() => handleCategoryChange(null)} className="hover:text-primary/70"><X className="w-3 h-3" /></button>
                     </span>
                   )}
-                  {selectedTypes.map(t => {
-                    const pt = productTypes.find(p => p.code.toLowerCase() === t);
-                    return (
-                      <span key={t} className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-primary/10 text-primary text-[11px] font-medium">
-                        {pt?.name ?? t}
-                        <button type="button" onClick={() => handleTypeToggle(t)} className="hover:text-primary/70"><X className="w-3 h-3" /></button>
-                      </span>
-                    );
-                  })}
-                  {selectedCollections.map(c => {
-                    const col = collections.find(x => x.slug === c);
-                    return (
-                      <span key={c} className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-primary/10 text-primary text-[11px] font-medium">
-                        {col?.name ?? c}
-                        <button type="button" onClick={() => handleCollectionToggle(c)} className="hover:text-primary/70"><X className="w-3 h-3" /></button>
-                      </span>
-                    );
-                  })}
-                  {(priceRange[0] > 0 || priceRange[1] < 50000) && (
+                  {(priceRange[0] > 0 || priceRange[1] < PRICE_MAX) && (
                     <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-primary/10 text-primary text-[11px] font-medium">
-                      {priceRange[0]}–{priceRange[1]} MAD
-                      <button type="button" onClick={() => setPriceRange([0, 50000])} className="hover:text-primary/70"><X className="w-3 h-3" /></button>
+                      {priceRange[0]}–{priceRange[1]} DH
+                      <button type="button" onClick={() => setPriceRange([0, PRICE_MAX])} className="hover:text-primary/70"><X className="w-3 h-3" /></button>
                     </span>
                   )}
                   {inStockOnly && (
@@ -648,7 +541,7 @@ const Boutique = () => {
                   <button
                     type="button"
                     onClick={resetBrowseFilters}
-                    className="text-[11px] text-accent-beige hover:text-primary underline underline-offset-2 transition-colors"
+                    className="text-[11px] text-muted-foreground hover:text-primary underline underline-offset-2 transition-colors"
                   >
                     Tout effacer
                   </button>
@@ -661,28 +554,26 @@ const Boutique = () => {
                 <Loader2 className="w-8 h-8 animate-spin text-primary" />
               </div>
             ) : products.length === 0 ? (
-              <div className="text-center py-20 px-4 space-y-4">
-                <p className="text-accent-beige uppercase tracking-widest text-sm">
-                  {hasActiveFilters
-                    ? 'Aucun produit ne correspond à ces critères.'
-                    : 'Aucun produit pour le moment.'}
-                </p>
+              <EmptyState
+                icon={hasActiveFilters ? SlidersHorizontal : undefined}
+                title={hasActiveFilters ? 'Aucun produit ne correspond à ces critères' : 'Aucun produit pour le moment'}
+                description={
+                  hasActiveFilters
+                    ? 'Retirez une catégorie, élargissez la fourchette de prix ou videz la recherche.'
+                    : undefined
+                }
+                className="my-6"
+              >
                 {hasActiveFilters && (
-                  <p className="text-muted-foreground text-sm max-w-md mx-auto normal-case tracking-normal">
-                    Retirez une collection ou une catégorie, élargissez la fourchette de prix ou videz la
-                    recherche.
-                  </p>
-                )}
-                {hasActiveFilters && (
-                  <button
-                    type="button"
+                  <Button
+                    variant="outline"
                     onClick={resetBrowseFilters}
-                    className="inline-flex items-center justify-center rounded-sm border border-primary px-6 py-2 text-xs font-bold uppercase tracking-widest text-primary hover:bg-primary hover:text-primary-foreground transition-colors"
+                    className="mt-6 rounded-xl border-primary text-primary hover:bg-primary hover:text-primary-foreground"
                   >
                     Réinitialiser les filtres
-                  </button>
+                  </Button>
                 )}
-              </div>
+              </EmptyState>
             ) : (
               <div className="grid grid-cols-2 xl:grid-cols-3 gap-x-8 gap-y-12 items-stretch">
                 {products.map((product, index) => (
@@ -707,14 +598,14 @@ const Boutique = () => {
                   type="button"
                   onClick={() => handlePageChange(currentPage - 1)}
                   disabled={currentPage <= 1 || isLoading}
-                  className="size-10 border border-accent-beige/20 flex items-center justify-center text-accent-beige hover:border-primary hover:text-primary transition-colors disabled:opacity-40 disabled:pointer-events-none rounded-sm"
+                  className="size-10 border border-border flex items-center justify-center text-muted-foreground hover:border-primary hover:text-primary transition-colors disabled:opacity-40 disabled:pointer-events-none rounded-xl"
                   aria-label="Page précédente"
                 >
                   <ChevronLeft className="w-5 h-5" />
                 </button>
                 {visiblePages.map((item, idx) =>
                   item === 'gap' ? (
-                    <span key={`gap-${idx}`} className="px-1 text-accent-beige text-sm">
+                    <span key={`gap-${idx}`} className="px-1 text-muted-foreground text-sm">
                       …
                     </span>
                   ) : (
@@ -723,10 +614,10 @@ const Boutique = () => {
                       type="button"
                       onClick={() => handlePageChange(item)}
                       disabled={isLoading}
-                      className={`min-w-10 h-10 px-2 rounded-sm flex items-center justify-center text-xs font-bold transition-colors disabled:opacity-50 ${
+                      className={`min-w-10 h-10 px-2 rounded-xl flex items-center justify-center text-xs font-bold transition-colors disabled:opacity-50 ${
                         currentPage === item
                           ? 'bg-primary text-primary-foreground'
-                          : 'border border-accent-beige/20 text-accent-beige hover:border-primary hover:text-primary'
+                          : 'border border-border text-muted-foreground hover:border-primary hover:text-primary'
                       }`}
                     >
                       {item}
@@ -737,7 +628,7 @@ const Boutique = () => {
                   type="button"
                   onClick={() => handlePageChange(currentPage + 1)}
                   disabled={currentPage >= totalPages || isLoading}
-                  className="size-10 border border-accent-beige/20 flex items-center justify-center text-accent-beige hover:border-primary hover:text-primary transition-colors disabled:opacity-40 disabled:pointer-events-none rounded-sm"
+                  className="size-10 border border-border flex items-center justify-center text-muted-foreground hover:border-primary hover:text-primary transition-colors disabled:opacity-40 disabled:pointer-events-none rounded-xl"
                   aria-label="Page suivante"
                 >
                   <ChevronRight className="w-5 h-5" />

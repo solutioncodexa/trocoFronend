@@ -18,7 +18,6 @@ const TopBar = () => {
         setLoading(false);
       } catch (error) {
         console.error('❌ TopBar: Erreur lors de la récupération des messages de la top bar:', error);
-        // Ne pas afficher de messages par défaut - seulement les messages de la base de données
         setMessages([]);
         setLoading(false);
       }
@@ -49,22 +48,30 @@ const TopBar = () => {
     };
   }, [currentMessage, messages]);
 
-  if (loading) {
-    return null; // Ne rien afficher pendant le chargement
-  }
-
-  if (messages.length === 0) {
-    return null; // Ne pas afficher la top bar s'il n'y a pas de messages
+  if (loading || messages.length === 0) {
+    return null;
   }
 
   return (
-    <div className="bg-royal-bordeaux text-ivory-text py-2 px-3 sm:px-4 text-center text-xs sm:text-sm font-medium tracking-wide w-full max-w-full min-w-0 overflow-x-hidden">
-      <div className="relative min-h-[1.25rem] flex items-center justify-center px-1">
+    <div
+      className="relative w-full max-w-full min-w-0 overflow-x-hidden border-b border-primary/20 bg-gradient-to-r from-primary via-primary to-sky px-3 py-2.5 text-center text-xs font-medium tracking-wide text-primary-foreground sm:px-4 sm:text-sm"
+      role="status"
+      aria-live="polite"
+    >
+      <div
+        className="pointer-events-none absolute inset-0 opacity-30"
+        style={{
+          backgroundImage:
+            'radial-gradient(circle at 15% 50%, rgba(255,255,255,0.35), transparent 45%), radial-gradient(circle at 85% 50%, rgba(255,255,255,0.2), transparent 40%)',
+        }}
+        aria-hidden
+      />
+      <div className="relative flex min-h-[1.25rem] items-center justify-center px-1">
         <div
           className={cn(
             'transition-all duration-300 ease-in-out',
-            isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-2',
-            ANIMATIONS.topBarTextPulse && messages.length <= 1 && 'animate-soft-pulse'
+            isVisible ? 'translate-y-0 opacity-100' : '-translate-y-2 opacity-0',
+            ANIMATIONS.topBarTextPulse && messages.length <= 1 && 'animate-soft-pulse',
           )}
         >
           {messages[currentMessage]?.message}

@@ -4,7 +4,13 @@ import { toast } from 'sonner';
 
 interface CartContextType {
   items: CartItem[];
-  addToCart: (product: Product, quantity?: number, selectedSize?: string, selectedVariantId?: string) => void;
+  addToCart: (
+    product: Product,
+    quantity?: number,
+    selectedSize?: string,
+    selectedVariantId?: string,
+    customLogoUrl?: string
+  ) => void;
   removeFromCart: (productId: string, selectedSize?: string, selectedVariantId?: string) => void;
   updateQuantity: (productId: string, quantity: number, selectedSize?: string, selectedVariantId?: string) => void;
   clearCart: () => void;
@@ -45,41 +51,56 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     }
   }, []);
 
-  const addToCart = (product: Product, quantity = 1, selectedSize?: string, selectedVariantId?: string) => {
+  const sameLine = (
+    item: CartItem,
+    productId: string,
+    selectedSize?: string,
+    selectedVariantId?: string
+  ) =>
+    normalizeId(item.product.id) === normalizeId(productId) &&
+    normalizeVariant(item.selectedSize) === normalizeVariant(selectedSize) &&
+    normalizeVariant(item.selectedVariantId) === normalizeVariant(selectedVariantId);
+
+  const addToCart = (
+    product: Product,
+    quantity = 1,
+    selectedSize?: string,
+    selectedVariantId?: string,
+    customLogoUrl?: string
+  ) => {
     setItems((prev) => {
-      const existing = prev.find(
-        (item) =>
-          normalizeId(item.product.id) === normalizeId(product.id) &&
-          normalizeVariant(item.selectedSize) === normalizeVariant(selectedSize) &&
-          normalizeVariant(item.selectedVariantId) === normalizeVariant(selectedVariantId)
+      const existing = prev.find((item) =>
+        sameLine(item, product.id, selectedSize, selectedVariantId)
       );
       if (existing) {
         const newItems = prev.map((item) =>
-          normalizeId(item.product.id) === normalizeId(product.id) &&
-          normalizeVariant(item.selectedSize) === normalizeVariant(selectedSize) &&
-          normalizeVariant(item.selectedVariantId) === normalizeVariant(selectedVariantId)
-            ? { ...item, quantity: item.quantity + quantity }
+          sameLine(item, product.id, selectedSize, selectedVariantId)
+            ? {
+                ...item,
+                quantity: item.quantity + quantity,
+                customLogoUrl: customLogoUrl || item.customLogoUrl,
+                product,
+              }
             : item
         );
         localStorage.setItem('cart', JSON.stringify(newItems));
         toast.success('Quantité mise à jour dans le panier');
         return newItems;
       }
-      const newItems = [...prev, { product, quantity, selectedSize, selectedVariantId }];
+      const newItems = [
+        ...prev,
+        { product, quantity, selectedSize, selectedVariantId, customLogoUrl },
+      ];
       localStorage.setItem('cart', JSON.stringify(newItems));
       toast.success('Produit ajouté au panier');
       return newItems;
     });
   };
 
-  const removeFromCart = (productId: string, selectedSize?: string) => {
+  const removeFromCart = (productId: string, selectedSize?: string, selectedVariantId?: string) => {
     setItems((prev) => {
       const newItems = prev.filter(
-        (item) =>
-          !(
-            normalizeId(item.product.id) === normalizeId(productId) &&
-            normalizeVariant(item.selectedSize) === normalizeVariant(selectedSize)
-          )
+        (item) => !sameLine(item, productId, selectedSize, selectedVariantId)
       );
       localStorage.setItem('cart', JSON.stringify(newItems));
       toast.success('Produit supprimé du panier');
@@ -87,7 +108,12 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     });
   };
 
-  const updateQuantity = (productId: string, quantity: number, selectedSize?: string, selectedVariantId?: string) => {
+  const updateQuantity = (
+    productId: string,
+    quantity: number,
+    selectedSize?: string,
+    selectedVariantId?: string
+  ) => {
     if (quantity <= 0) {
       removeFromCart(productId, selectedSize, selectedVariantId);
       return;
@@ -95,9 +121,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
 
     setItems((prev) => {
       const newItems = prev.map((item) =>
-        normalizeId(item.product.id) === normalizeId(productId) &&
-        normalizeVariant(item.selectedSize) === normalizeVariant(selectedSize) &&
-        normalizeVariant(item.selectedVariantId) === normalizeVariant(selectedVariantId)
+        sameLine(item, productId, selectedSize, selectedVariantId)
           ? { ...item, quantity }
           : item
       );

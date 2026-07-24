@@ -43,10 +43,6 @@ const ProductCard = ({ product, className }: ProductCardProps) => {
     }
   };
 
-  const getBadgeClass = (badge: string) => {
-    return 'bg-secondary-dark text-white text-[10px] uppercase font-bold px-2 py-1';
-  };
-
   const getBadgeLabel = (badge: string) => {
     switch (badge) {
       case 'new':
@@ -60,8 +56,7 @@ const ProductCard = ({ product, className }: ProductCardProps) => {
     }
   };
 
-  // Calculate discount percentage
-  const discountPercentage = product.originalPrice 
+  const discountPercentage = product.originalPrice
     ? Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)
     : 0;
 
@@ -70,35 +65,28 @@ const ProductCard = ({ product, className }: ProductCardProps) => {
   return (
     <div
       className={cn(
-        'group bg-paper dark:bg-[#2a2515] p-4 border border-accent-beige/20 shadow-sm transition-all duration-500 h-full min-h-0 flex flex-col',
-        hover && 'hover:shadow-lg hover:-translate-y-1',
-        !hover && 'hover:shadow-md',
-        className
+        'group flex h-full min-h-0 flex-col rounded-2xl border border-border/70 bg-card p-3 shadow-soft transition-all duration-300 sm:p-4',
+        hover && 'hover:-translate-y-1 hover:shadow-elegant hover:border-primary/20',
+        !hover && 'hover:shadow-card',
+        className,
       )}
     >
       <Link
         to={`/produit/${product.id}`}
-        className="flex flex-col flex-1 min-h-0 outline-none focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:ring-offset-2"
+        className="flex min-h-0 flex-1 flex-col outline-none focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:ring-offset-2 rounded-xl"
         onMouseEnter={prefetchProductDetail}
         onFocus={prefetchProductDetail}
       >
-        {/* Image container */}
-        <div className="relative w-full shrink-0 overflow-hidden aspect-[4/5] mb-4 border border-accent-beige/10">
-          {/* Badges */}
-          <div className="absolute top-2 left-2 z-10 flex flex-col gap-2">
+        <div className="relative mb-4 aspect-[4/5] w-full shrink-0 overflow-hidden rounded-xl bg-muted">
+          <div className="absolute left-2.5 top-2.5 z-10 flex flex-col gap-1.5">
             {product.badges.map((badge) => (
               <span
                 key={badge}
-                className={getBadgeClass(badge)}
+                className="rounded-lg bg-secondary-dark px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-white shadow-soft"
               >
                 {getBadgeLabel(badge)}
               </span>
             ))}
-            {product.category === 'beldi' && (
-              <span className="bg-secondary-dark text-white text-[10px] uppercase font-bold px-2 py-1">
-                Beldi
-              </span>
-            )}
           </div>
 
           <img
@@ -108,74 +96,73 @@ const ProductCard = ({ product, className }: ProductCardProps) => {
             decoding="async"
             fetchPriority="low"
             className={cn(
-              'w-full h-full object-cover transition-transform duration-700',
-              hover && 'group-hover:scale-105'
+              'h-full w-full object-cover transition-transform duration-700 ease-premium',
+              hover && 'group-hover:scale-105',
             )}
             onError={(e) => {
-              // Fallback to generic placeholder if specific placeholder fails
-              const currentSrc = e.currentTarget.src;
-              if (currentSrc.includes('placeholder-beldi-fixed.svg') || currentSrc.includes('placeholder-modern-fixed.svg')) {
-                e.currentTarget.src = '/placeholder-jewelry.svg';
-              } else {
-                e.currentTarget.src = product.category === 'beldi' ? '/placeholder-beldi-fixed.svg' : '/placeholder-modern-fixed.svg';
-              }
+              e.currentTarget.src = '/placeholder-modern-fixed.svg';
             }}
           />
 
-          {/* Out of stock overlay */}
           {!product.inStock && (
-            <div className="absolute inset-0 bg-charcoal/60 flex items-center justify-center">
-              <span className="font-display text-lg text-white">Rupture de stock</span>
+            <div className="absolute inset-0 flex items-center justify-center bg-foreground/55 backdrop-blur-[2px]">
+              <span className="rounded-full bg-card/95 px-4 py-2 font-display text-sm font-semibold text-foreground">
+                Rupture de stock
+              </span>
             </div>
           )}
 
-          {/* Quick actions */}
-          <div className="absolute top-3 right-3 flex flex-col gap-2">
+          <div className="absolute right-2.5 top-2.5 flex flex-col gap-2">
             <button
+              type="button"
+              aria-label={isFavorite ? 'Retirer des favoris' : 'Ajouter aux favoris'}
               className={cn(
-                'w-10 h-10 rounded-full backdrop-blur-sm flex items-center justify-center transition-all shadow-md',
-                isFavorite 
-                  ? 'bg-primary text-primary-foreground' 
-                  : 'bg-white/90 hover:bg-primary hover:text-primary-foreground opacity-0 group-hover:opacity-100'
+                'flex h-10 w-10 items-center justify-center rounded-xl shadow-soft backdrop-blur-sm transition-all',
+                isFavorite
+                  ? 'bg-primary text-primary-foreground'
+                  : 'bg-card/90 text-foreground opacity-0 group-hover:opacity-100 hover:bg-primary hover:text-primary-foreground',
               )}
               style={isFavorite ? { opacity: 1 } : undefined}
               onClick={handleWishlistToggle}
             >
-              <Heart className={cn('w-5 h-5', isFavorite && 'fill-current')} />
+              <Heart className={cn('h-4 w-4', isFavorite && 'fill-current')} />
             </button>
           </div>
 
-          {/* View button */}
-          <div className="absolute bottom-4 left-0 right-0 flex justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-            <button className="bg-white/90 text-secondary-dark px-6 py-2 text-xs uppercase tracking-wider font-bold shadow-md hover:bg-primary hover:text-white transition-colors">
-              Aperçu
-            </button>
+          <div className="pointer-events-none absolute inset-x-0 bottom-3 flex justify-center opacity-0 transition-opacity duration-300 group-hover:opacity-100">
+            <span className="rounded-full bg-card/95 px-5 py-2 text-[11px] font-bold uppercase tracking-wider text-foreground shadow-soft">
+              Voir
+            </span>
           </div>
         </div>
 
-        {/* Product info — hauteur de titre fixe (2 lignes) + prix alignés en bas pour cartes homogènes */}
-        <div className="flex flex-1 flex-col min-h-0 text-center">
-          <h4 className="text-lg font-bold text-secondary-dark dark:text-white mb-1 font-display group-hover:text-primary transition-colors line-clamp-2 min-h-[3.25rem] leading-snug">
+        <div className="flex min-h-0 flex-1 flex-col text-center">
+          <h4 className="mb-1 line-clamp-2 min-h-[3.25rem] font-display text-base font-semibold leading-snug text-foreground transition-colors group-hover:text-primary sm:text-lg">
             {product.name}
           </h4>
           <div className="mt-auto flex flex-col items-center gap-1 pt-2">
             <div className="flex min-h-[1.5rem] flex-wrap items-center justify-center gap-x-2 gap-y-0.5">
-              <span className="text-primary font-medium text-lg tabular-nums">
-                {formatPrice(product.price)}
-              </span>
+              <span className="text-lg font-semibold tabular-nums text-primary">{formatPrice(product.price)}</span>
               {product.originalPrice && (
                 <span className="text-xs text-muted-foreground line-through">
                   {formatPrice(product.originalPrice)}
                 </span>
               )}
               {discountPercentage > 0 && (
-                <span className="text-xs bg-destructive text-destructive-foreground px-1.5 py-0.5 rounded">
+                <span className="rounded-md bg-destructive/10 px-1.5 py-0.5 text-xs font-semibold text-destructive">
                   -{discountPercentage}%
                 </span>
               )}
             </div>
-            {product.showWeight !== false && (
-              <span className="text-xs text-muted-foreground tabular-nums">{product.weight}g</span>
+            {product.category && (
+              <span className="text-xs capitalize text-muted-foreground">
+                {product.category.replace(/-/g, ' ')}
+              </span>
+            )}
+            {product.variants && product.variants.length > 1 && (
+              <span className="text-[11px] text-muted-foreground">
+                À partir de {formatPrice(product.price)} · {product.variants.length} options
+              </span>
             )}
           </div>
         </div>

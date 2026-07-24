@@ -2,7 +2,7 @@ import { API_BASE_URL } from '@/config/api';
 import { PromoModalDTO, CreatePromoModalRequest, UpdatePromoModalRequest } from '@/types/promo-modals';
 
 const getAuthHeaders = () => {
-  const token = localStorage.getItem('goldyara_admin_token');
+  const token = localStorage.getItem('troco_admin_token');
   return {
     'Content-Type': 'application/json',
     ...(token && { Authorization: `Bearer ${token}` }),

@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link, useNavigate } from 'react-router-dom';
-import { Bell, ShoppingCart, Palette, Check } from 'lucide-react';
+import { Bell, ShoppingCart, Palette, Check, Package, AlertTriangle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
   DropdownMenu,
@@ -44,11 +44,12 @@ const AdminNotification = () => {
   const handleNotificationClick = (n: NotificationDTO) => {
     markAsReadMutation.mutate(n.id);
     const refId = n.referenceId?.toString();
-    if (!refId) return;
-    if (n.type === 'ORDER') {
+    if (n.type === 'ORDER' && refId) {
       navigate(`/admin/commandes?order=${refId}`);
-    } else if (n.type === 'CUSTOM_ORDER') {
+    } else if (n.type === 'CUSTOM_ORDER' && refId) {
       navigate(`/admin/personnalisations?id=${refId}`);
+    } else if (n.type === 'LOW_STOCK' || n.type === 'OUT_OF_STOCK' || n.type === 'EXPIRING_SOON') {
+      navigate(refId ? `/admin/stock?variant=${refId}` : '/admin/stock');
     }
   };
 
@@ -66,6 +67,17 @@ const AdminNotification = () => {
       return (
         <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary/10 shrink-0">
           <ShoppingCart className="w-4 h-4 text-primary" />
+        </div>
+      );
+    }
+    if (type === 'LOW_STOCK' || type === 'OUT_OF_STOCK' || type === 'EXPIRING_SOON') {
+      return (
+        <div className="flex items-center justify-center w-8 h-8 rounded-full bg-amber-500/15 shrink-0">
+          {type === 'OUT_OF_STOCK' ? (
+            <Package className="w-4 h-4 text-amber-700" />
+          ) : (
+            <AlertTriangle className="w-4 h-4 text-amber-700" />
+          )}
         </div>
       );
     }

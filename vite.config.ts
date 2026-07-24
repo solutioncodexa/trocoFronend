@@ -7,6 +7,8 @@ export default defineConfig(() => ({
   server: {
     host: "::",
     port: 4200,
+    // Tunnels publics (Cloudflare / ngrok) pour démo temporaire
+    allowedHosts: true,
     hmr: {
       overlay: false,
     },

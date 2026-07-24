@@ -39,9 +39,9 @@ export function applyProductMeta({
 }: ProductMetaInput): void {
   const pageUrl = `${PUBLIC_SITE_URL}/produit/${id}`;
   const title = `${name} | ${PUBLIC_SITE_NAME}`;
-  const pricePart = price != null ? ` — ${price.toLocaleString('fr-FR')} MAD` : '';
+  const pricePart = price != null ? ` — ${price.toLocaleString('fr-FR')} DH` : '';
   const desc =
-    (description?.trim() || `Découvrez ce bijou en or 18 carats sur ${PUBLIC_SITE_NAME}.`) +
+    (description?.trim() || `Découvrez ce produit d'emballage sur ${PUBLIC_SITE_NAME}.`) +
     pricePart;
   const ogImage = imageUrl || `${PUBLIC_SITE_URL}/favicon.png`;
 
@@ -63,9 +63,9 @@ export function applyProductMeta({
   upsertMeta('name', 'twitter:image', ogImage);
 }
 
-const DEFAULT_TITLE = `${PUBLIC_SITE_NAME} | Bijouterie de Luxe`;
+const DEFAULT_TITLE = `${PUBLIC_SITE_NAME} | Emballage e-commerce`;
 const DEFAULT_DESC =
-  'Collection exclusive de bijoux en or 18 carats - Style beldi traditionnel et moderne.';
+  'Sachets, cartons, protections et décorations pour vos commandes e-commerce au Maroc.';
 
 export function resetProductMeta(): void {
   document.title = DEFAULT_TITLE;

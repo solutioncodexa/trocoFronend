@@ -27,7 +27,12 @@ export const categoriesApi = {
   },
 
   // Créer une catégorie (admin)
-  createCategory: async (category: Partial<CategoryDTO>): Promise<CategoryDTO> => {
+  createCategory: async (category: {
+    name: string;
+    slug: string;
+    description?: string;
+    parentId?: number | null;
+  }): Promise<CategoryDTO> => {
     const url = buildApiUrl('/categories');
     return apiRequest<CategoryDTO>(url, {
       method: 'POST',
@@ -36,7 +41,16 @@ export const categoriesApi = {
   },
 
   // Mettre à jour une catégorie (admin)
-  updateCategory: async (id: number, category: Partial<CategoryDTO>): Promise<CategoryDTO> => {
+  updateCategory: async (
+    id: number,
+    category: {
+      name: string;
+      slug: string;
+      description?: string;
+      parentId?: number | null;
+      clearParent?: boolean;
+    }
+  ): Promise<CategoryDTO> => {
     const url = buildApiUrl(`/categories/${id}`);
     return apiRequest<CategoryDTO>(url, {
       method: 'PUT',

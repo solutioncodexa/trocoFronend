@@ -1,6 +1,6 @@
-# GoldYara Frontend
+# Troco Frontend
 
-Frontend web de GoldYara (React + Vite + TypeScript).
+Frontend web de Troco (React + Vite + TypeScript).
 
 ## Prérequis
 
