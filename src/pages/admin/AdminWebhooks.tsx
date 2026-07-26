@@ -84,7 +84,7 @@ const AdminWebhooks = () => {
     setForm({
       name: w.name,
       targetUrl: w.targetUrl,
-      secret: w.secret ?? '',
+      secret: '',
       events: [...w.events],
       enabled: w.enabled,
     });
@@ -103,8 +103,12 @@ const AdminWebhooks = () => {
       if (editing) return storeWebhooksApi.update(editing.id, payload);
       return storeWebhooksApi.create(payload);
     },
-    onSuccess: () => {
-      toast.success(editing ? 'Webhook mis à jour' : 'Webhook créé');
+    onSuccess: (created) => {
+      if (!editing && created?.secret) {
+        toast.success('Webhook créé — copiez le secret maintenant (il ne sera plus renvoyé).');
+      } else {
+        toast.success(editing ? 'Webhook mis à jour' : 'Webhook créé');
+      }
       setDialogOpen(false);
       invalidate();
       queryClient.invalidateQueries({ queryKey: ['store-webhooks', 'deliveries'] });
@@ -181,6 +185,11 @@ const AdminWebhooks = () => {
                       <Badge variant={w.enabled ? 'default' : 'secondary'}>
                         {w.enabled ? 'Actif' : 'Inactif'}
                       </Badge>
+                      {w.hasSecret ? (
+                        <Badge variant="outline" className="text-[10px]">
+                          Secret configuré
+                        </Badge>
+                      ) : null}
                     </div>
                     <p className="mt-0.5 truncate font-mono text-xs text-muted-foreground">{w.targetUrl}</p>
                     <div className="mt-2 flex flex-wrap gap-1">
@@ -292,7 +301,11 @@ const AdminWebhooks = () => {
                 className="mt-1.5 font-mono text-sm"
                 type="password"
                 autoComplete="new-password"
-                placeholder="Pour signature HMAC"
+                placeholder={
+                  editing?.hasSecret
+                    ? 'Laisser vide pour conserver le secret actuel'
+                    : 'Pour signature HMAC'
+                }
                 value={form.secret}
                 onChange={(e) => setForm((f) => ({ ...f, secret: e.target.value }))}
               />

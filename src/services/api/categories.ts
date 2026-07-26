@@ -1,5 +1,11 @@
 import { buildApiUrl, apiRequest } from '@/config/api';
-import type { CategoryDTO, HeroCategoryPatchDTO } from '@/types/api';
+import type {
+  CategoryCardDTO,
+  CategoryDTO,
+  CategoryHeroDTO,
+  CategoryNavDTO,
+  HeroCategoryPatchDTO,
+} from '@/types/api';
 
 export const categoriesApi = {
   // Récupérer toutes les catégories
@@ -8,10 +14,22 @@ export const categoriesApi = {
     return apiRequest<CategoryDTO[]>(url);
   },
 
+  /** Footer / nav — sans description ni productCount. */
+  getNavCategories: async (): Promise<CategoryNavDTO[]> => {
+    const url = buildApiUrl('/categories/nav');
+    return apiRequest<CategoryNavDTO[]>(url);
+  },
+
+  /** Cartes vitrine (home / page builder). */
+  getCardCategories: async (): Promise<CategoryCardDTO[]> => {
+    const url = buildApiUrl('/categories/cards');
+    return apiRequest<CategoryCardDTO[]>(url);
+  },
+
   /** Catégories affichées sur le hero (ordre + image définis en admin). */
-  getHeroCategories: async (): Promise<CategoryDTO[]> => {
+  getHeroCategories: async (): Promise<CategoryHeroDTO[]> => {
     const url = buildApiUrl('/categories/hero');
-    return apiRequest<CategoryDTO[]>(url);
+    return apiRequest<CategoryHeroDTO[]>(url);
   },
 
   // Récupérer une catégorie par ID

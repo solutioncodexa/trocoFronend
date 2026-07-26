@@ -20,8 +20,12 @@ export const stockApi = {
 
   getOverview: () => apiRequest<StockOverviewDTO>(buildApiUrl('/stock/overview')),
 
-  listVariants: (filter = 'all') =>
-    apiRequest<StockVariantRowDTO[]>(buildApiUrl(`/stock/variants?filter=${encodeURIComponent(filter)}`)),
+  listVariants: (filter = 'all', page = 0, size = 50) =>
+    apiRequest<PageResponse<StockVariantRowDTO>>(
+      buildApiUrl(
+        `/stock/variants?filter=${encodeURIComponent(filter)}&page=${page}&size=${size}`,
+      ),
+    ),
 
   listMovements: (params: { page?: number; size?: number; variantId?: number; type?: string } = {}) => {
     const qs = new URLSearchParams();

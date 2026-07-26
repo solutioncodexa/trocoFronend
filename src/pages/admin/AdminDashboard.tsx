@@ -53,8 +53,8 @@ const AdminDashboard = () => {
     queryFn: () => statsApi.getDashboard(),
   });
   const { data: storeSettings } = useQuery({
-    queryKey: ['store-settings', 'me'],
-    queryFn: () => platformApi.getMyStoreSettings(),
+    queryKey: ['store-settings', 'me', 'summary'],
+    queryFn: () => platformApi.getMyStoreSummary(),
   });
   const { data: ordersPage } = useQuery({
     queryKey: ['orders', 'dashboard'],

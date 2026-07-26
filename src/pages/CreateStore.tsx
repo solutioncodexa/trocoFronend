@@ -142,9 +142,9 @@ const CreateStore = () => {
               {(plans.length > 0
                 ? plans
                 : [
-                    { code: 'basic', name: 'Starter', priceMad: 150 },
-                    { code: 'pro', name: 'Pro', priceMad: 299 },
-                    { code: 'business', name: 'Business', priceMad: 599 },
+                    { code: 'basic', name: 'Basic', priceMad: 79 },
+                    { code: 'pro', name: 'Pro', priceMad: 199 },
+                    { code: 'business', name: 'Business', priceMad: 399 },
                   ]
               ).map((p) => (
                 <option key={p.code} value={p.code}>

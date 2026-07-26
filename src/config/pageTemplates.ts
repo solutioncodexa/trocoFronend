@@ -177,6 +177,114 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
       },
     ],
   },
+  {
+    key: 'promo-flash',
+    label: 'Promo flash',
+    description: 'Compte à rebours, produits et FAQ — parfait pour une soldes.',
+    meta: {
+      title: 'Offre limitée',
+      slug: 'offre-limitee',
+      isHome: false,
+      showInNav: true,
+      published: true,
+    },
+    blocks: [
+      {
+        type: 'countdown',
+        sortOrder: 0,
+        config: {
+          title: 'Soldes privées',
+          subtitle: 'Plus que quelques heures…',
+          endsAt: new Date(Date.now() + 3 * 24 * 3600 * 1000).toISOString().slice(0, 16),
+          ctaLabel: 'J’en profite',
+          ctaHref: '/boutique',
+          bgColor: '#0F172A',
+          textColor: '#F8FAFC',
+          buttonColor: '#F59E0B',
+          align: 'center',
+        },
+      },
+      {
+        type: 'products',
+        sortOrder: 1,
+        config: { title: 'Pièces en promo', limit: 8, columns: 4, align: 'left' },
+      },
+      {
+        type: 'faq',
+        sortOrder: 2,
+        config: {
+          title: 'Avant de commander',
+          items: [
+            { q: 'Les stocks sont-ils limités ?', a: 'Oui, jusqu’à épuisement.' },
+            { q: 'Puis-je cumuler un code promo ?', a: 'Non pendant cette opération.' },
+          ],
+        },
+      },
+      {
+        type: 'cta',
+        sortOrder: 3,
+        config: {
+          title: 'Besoin d’aide pour choisir ?',
+          body: 'Notre équipe vous guide.',
+          ctaLabel: 'Nous écrire',
+          ctaHref: '/contact',
+          bgColor: '#0F766E',
+          textColor: '#FFFFFF',
+          buttonColor: '#FFFFFF',
+        },
+      },
+    ],
+  },
+  {
+    key: 'landing-leads',
+    label: 'Capture leads',
+    description: 'Hero + témoignages + formulaire — pour collecter des contacts.',
+    meta: {
+      title: 'Restons en contact',
+      slug: 'newsletter',
+      isHome: false,
+      showInNav: true,
+      published: true,
+    },
+    blocks: [
+      {
+        type: 'hero',
+        sortOrder: 0,
+        config: {
+          headline: 'Recevez nos nouveautés',
+          subtext: 'Conseils, coulisses et avant-premières — zéro spam.',
+          ctaLabel: 'S’inscrire',
+          ctaHref: '#contact',
+          align: 'center',
+          vAlign: 'center',
+          overlay: 'dark',
+          heroHeight: 'md',
+        },
+      },
+      {
+        type: 'testimonials',
+        sortOrder: 1,
+        config: {
+          title: 'Ils nous suivent déjà',
+          align: 'center',
+          items: [
+            { name: 'Nadia M.', text: 'Les newsletters sont vraiment utiles.', role: 'Marrakech' },
+            { name: 'Karim T.', text: 'J’ai découvert les soldes en premier.', role: 'Fès' },
+          ],
+        },
+      },
+      {
+        type: 'contact',
+        sortOrder: 2,
+        config: {
+          title: 'Votre e-mail',
+          body: 'Un mail de bienvenue et les prochaines sorties.',
+          leadType: 'newsletter',
+          align: 'center',
+        },
+      },
+    ],
+  },
 ];
 
 /** Slugs qui remplacent une entrée du menu système. */

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, type CSSProperties } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Search, ShoppingBag, Menu, X, Heart, ArrowRight, ChevronDown } from 'lucide-react';
 import { Input } from '@/components/ui/input';
@@ -12,6 +12,14 @@ import { useStorefrontPath } from '@/hooks/useStorefrontPath';
 import { useSystemNavReplacements } from '@/hooks/useSystemNavReplacements';
 import { useGlobalSections } from '@/hooks/useGlobalSections';
 import { useStoreLang } from '@/hooks/useStoreLang';
+import { useLocale } from '@/contexts/LocaleContext';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { SYSTEM_NAV_REPLACEMENTS } from '@/config/pageTemplates';
 import type { MegaMenuItem } from '@/types/store-global-sections';
 
@@ -27,14 +35,34 @@ const Header = () => {
   const location = useLocation();
   const { to, isDemo, demo } = useStorefrontPath();
   const { customNav, isReplaced, navHref } = useSystemNavReplacements();
-  const { megaMenuConfig, useMegaMenuNav } = useGlobalSections();
+  const { megaMenuConfig, useMegaMenuNav, appBarConfig } = useGlobalSections();
   const { lang, setLang, withLang } = useStoreLang();
+  const { locale, supportedLocales, setLocale, t } = useLocale();
   const itemCount = isDemo ? demo?.cartCount ?? 0 : getItemCount();
   const favCount = isDemo ? 3 : wishlistCount;
   const { siteName, store } = useStoreBrand();
   const surMesureOn = isDemo || store?.surMesureEnabled !== false;
   const boutiquePath = to('/boutique');
   const homePath = to('/');
+  const showSearch = appBarConfig?.showSearch !== false;
+  const showWishlist = appBarConfig?.showWishlist !== false;
+  const showCart = appBarConfig?.showCart !== false;
+  const logoClass =
+    appBarConfig?.logoHeight === 'sm'
+      ? 'h-10 w-auto sm:h-11 lg:h-12'
+      : appBarConfig?.logoHeight === 'lg'
+        ? 'h-14 w-auto sm:h-16 lg:h-[4.75rem]'
+        : 'h-12 w-auto sm:h-14 lg:h-[4.25rem]';
+  const headerStyle = appBarConfig
+    ? {
+        backgroundColor: appBarConfig.bgColor || undefined,
+        color: appBarConfig.textColor || undefined,
+        borderColor: appBarConfig.bgColor ? 'transparent' : undefined,
+      }
+    : undefined;
+  const iconTone: CSSProperties | undefined = appBarConfig?.textColor
+    ? { color: appBarConfig.textColor }
+    : undefined;
 
   useEffect(() => {
     if (!isSearchOpen) return;
@@ -228,12 +256,30 @@ const Header = () => {
     'flex min-h-[44px] min-w-[44px] touch-manipulation items-center justify-center rounded-xl text-foreground transition-colors hover:text-primary';
 
   return (
-    <header className="sticky top-0 z-50 w-full max-w-full min-w-0 overflow-x-clip border-b border-border bg-card shadow-soft">
+    <header
+      className={cn(
+        'z-50 w-full max-w-full min-w-0 overflow-x-clip border-b border-border bg-card shadow-soft',
+        appBarConfig?.sticky === false ? 'relative' : 'sticky top-0',
+      )}
+      style={headerStyle}
+    >
+      {appBarConfig?.topBarEnabled && appBarConfig.topBarText ? (
+        <div
+          className="px-3 py-1.5 text-center text-xs font-medium sm:px-4"
+          style={{
+            backgroundColor: appBarConfig.topBarBg || '#0F766E',
+            color: appBarConfig.topBarTextColor || '#FFFFFF',
+          }}
+        >
+          {appBarConfig.topBarText}
+        </div>
+      ) : null}
       <div className="container mx-auto w-full max-w-full min-w-0 px-3 sm:px-4 md:px-6">
         <div className="flex h-[4.25rem] w-full min-w-0 items-center justify-between gap-2 sm:h-[4.75rem] lg:h-20">
           <button
             type="button"
             className={cn(iconBtnClass, 'lg:hidden')}
+            style={iconTone}
             onClick={() => setIsMenuOpen(!isMenuOpen)}
             aria-label={isMenuOpen ? 'Fermer le menu' : 'Ouvrir le menu'}
             aria-expanded={isMenuOpen}
@@ -250,7 +296,7 @@ const Header = () => {
                 'transition-transform duration-300 ease-premium hover:scale-[1.03] active:scale-100',
             )}
           >
-            <BrandLogoImg className="h-12 w-auto sm:h-14 lg:h-[4.25rem]" draggable={false} />
+            <BrandLogoImg className={logoClass} draggable={false} />
           </Link>
 
           <nav
@@ -267,7 +313,8 @@ const Header = () => {
                 })}
           </nav>
 
-          <div className="flex shrink-0 items-center gap-0.5 sm:gap-1 md:gap-1.5">
+          <div className="flex shrink-0 items-center gap-0.5 sm:gap-1 md:gap-1.5" style={iconTone}>
+            {showSearch ? (
             <div className="relative" ref={searchRootRef}>
               {isSearchOpen ? (
                 <div className="fixed left-3 right-3 top-[4.75rem] z-[60] sm:absolute sm:left-auto sm:right-0 sm:top-1/2 sm:w-[min(100vw-2rem,24rem)] sm:-translate-y-1/2 md:w-[22rem]">
@@ -308,23 +355,52 @@ const Header = () => {
                   </form>
                 </div>
               ) : (
-                <button type="button" onClick={() => setIsSearchOpen(true)} className={iconBtnClass} aria-label="Rechercher">
+                <button type="button" onClick={() => setIsSearchOpen(true)} className={iconBtnClass} style={iconTone} aria-label="Rechercher">
                   <Search className="h-5 w-5 sm:h-[1.35rem] sm:w-[1.35rem]" />
                 </button>
               )}
             </div>
+            ) : null}
+
+            <Select
+              value={locale}
+              onValueChange={(v) => {
+                const next = v as 'fr' | 'ar' | 'en';
+                setLocale(next);
+                if (next === 'ar' || next === 'fr') setLang(next === 'ar' ? 'ar' : 'fr');
+              }}
+            >
+              <SelectTrigger
+                className="hidden h-9 w-[4.25rem] border-0 bg-transparent px-1 text-xs font-bold shadow-none sm:flex"
+                aria-label={t('language')}
+              >
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {supportedLocales.map((code) => (
+                  <SelectItem key={code} value={code}>
+                    {code.toUpperCase()}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
 
             <button
               type="button"
-              className={cn(iconBtnClass, 'px-1.5 text-xs font-bold')}
-              onClick={() => setLang(lang === 'ar' ? 'fr' : 'ar')}
-              aria-label="Changer de langue"
-              title={lang === 'ar' ? 'Français' : 'العربية'}
+              className={cn(iconBtnClass, 'px-1.5 text-xs font-bold sm:hidden')}
+              onClick={() => {
+                const idx = supportedLocales.indexOf(locale);
+                const next = supportedLocales[(idx + 1) % supportedLocales.length] ?? 'fr';
+                setLocale(next);
+                if (next === 'ar' || next === 'fr') setLang(next === 'ar' ? 'ar' : 'fr');
+              }}
+              aria-label={t('language')}
             >
-              {lang === 'ar' ? 'FR' : 'ع'}
+              {locale.toUpperCase()}
             </button>
 
-            <Link to={withLang(to('/favoris'))} className={cn(iconBtnClass, 'relative')} aria-label="Favoris">
+            {showWishlist ? (
+            <Link to={withLang(to('/favoris'))} className={cn(iconBtnClass, 'relative')} style={iconTone} aria-label="Favoris">
               <Heart className="h-5 w-5 sm:h-[1.35rem] sm:w-[1.35rem]" />
               {favCount > 0 && (
                 <span className="absolute -right-0.5 -top-0.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1 text-[11px] font-bold text-primary-foreground animate-scale-in">
@@ -332,8 +408,10 @@ const Header = () => {
                 </span>
               )}
             </Link>
+            ) : null}
 
-            <Link to={withLang(to('/panier'))} className={cn(iconBtnClass, 'relative')} aria-label="Panier">
+            {showCart ? (
+            <Link to={withLang(to('/panier'))} className={cn(iconBtnClass, 'relative')} style={iconTone} aria-label="Panier">
               <ShoppingBag className="h-5 w-5 sm:h-[1.35rem] sm:w-[1.35rem]" />
               {itemCount > 0 && (
                 <span className="absolute -right-0.5 -top-0.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1 text-[11px] font-bold text-primary-foreground animate-scale-in">
@@ -341,6 +419,7 @@ const Header = () => {
                 </span>
               )}
             </Link>
+            ) : null}
 
             <Link to="/admin" className="hidden">
               Admin

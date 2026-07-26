@@ -1,25 +1,52 @@
 import { buildApiUrl, apiRequest } from '@/config/api';
 import type {
+  AdminStoreSummaryDTO,
   BillingResultDTO,
   CmiCheckoutDTO,
   CreateFournisseurRequest,
   FournisseurDTO,
   PlanDTO,
+  PlanMarketingDTO,
   StoreSettingsDTO,
   StoreThemeDTO,
+  StorefrontBootstrapDTO,
+  StorefrontCheckoutDTO,
+  UpdatePlanRequest,
   UpdateStoreSettingsRequest,
 } from '@/types/api';
 
 export const platformApi = {
-  getPlans: (): Promise<PlanDTO[]> =>
-    apiRequest<PlanDTO[]>(buildApiUrl('/platform/plans')),
+  getPlans: (): Promise<PlanMarketingDTO[]> =>
+    apiRequest<PlanMarketingDTO[]>(buildApiUrl('/platform/plans')),
+
+  listPlansAdmin: (): Promise<PlanDTO[]> =>
+    apiRequest<PlanDTO[]>(buildApiUrl('/platform/plans/admin')),
+
+  createPlan: (payload: UpdatePlanRequest): Promise<PlanDTO> =>
+    apiRequest<PlanDTO>(buildApiUrl('/platform/plans'), {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+
+  updatePlan: (id: number, payload: UpdatePlanRequest): Promise<PlanDTO> =>
+    apiRequest<PlanDTO>(buildApiUrl(`/platform/plans/${id}`), {
+      method: 'PUT',
+      body: JSON.stringify(payload),
+    }),
 
   getThemes: (): Promise<StoreThemeDTO[]> =>
     apiRequest<StoreThemeDTO[]>(buildApiUrl('/platform/themes')),
 
-  getStore: (slug?: string): Promise<StoreSettingsDTO> => {
+  /** Bootstrap vitrine (léger). */
+  getStore: (slug?: string): Promise<StorefrontBootstrapDTO> => {
     const qs = slug ? `?slug=${encodeURIComponent(slug)}` : '';
-    return apiRequest<StoreSettingsDTO>(buildApiUrl(`/platform/store${qs}`));
+    return apiRequest<StorefrontBootstrapDTO>(buildApiUrl(`/platform/store${qs}`));
+  },
+
+  /** Checkout à la demande. */
+  getStoreCheckout: (slug?: string): Promise<StorefrontCheckoutDTO> => {
+    const qs = slug ? `?slug=${encodeURIComponent(slug)}` : '';
+    return apiRequest<StorefrontCheckoutDTO>(buildApiUrl(`/platform/store/checkout${qs}`));
   },
 
   listFournisseurs: (): Promise<FournisseurDTO[]> =>
@@ -53,6 +80,11 @@ export const platformApi = {
       body: JSON.stringify({ planCode }),
     }),
 
+  /** Shell admin — layout / dashboard / session. */
+  getMyStoreSummary: (): Promise<AdminStoreSummaryDTO> =>
+    apiRequest<AdminStoreSummaryDTO>(buildApiUrl('/store-settings/me/summary')),
+
+  /** Config complète — page Paramètres. */
   getMyStoreSettings: (): Promise<StoreSettingsDTO> =>
     apiRequest<StoreSettingsDTO>(buildApiUrl('/store-settings/me')),
 

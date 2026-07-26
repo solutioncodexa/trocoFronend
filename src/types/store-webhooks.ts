@@ -4,7 +4,9 @@ export type StoreWebhook = {
   id: number;
   name: string;
   targetUrl: string;
+  /** Présent uniquement juste après création. */
   secret?: string | null;
+  hasSecret?: boolean;
   events: StoreWebhookEvent[];
   enabled: boolean;
   createdAt?: string;

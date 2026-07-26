@@ -9,6 +9,7 @@ import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { storeGlobalSectionsApi } from '@/services/api/storeGlobalSections';
 import type {
+  AppBarConfig,
   FooterLinksColumn,
   FooterLinksConfig,
   GlobalSectionKey,
@@ -16,6 +17,8 @@ import type {
   MegaMenuItem,
   StickyCtaConfig,
 } from '@/types/store-global-sections';
+import { DEFAULT_APP_BAR, parseAppBarConfig } from '@/types/store-global-sections';
+import AppBarStylePanel from '@/components/admin/page-builder/AppBarStylePanel';
 import { toast } from 'sonner';
 import { toastError } from '@/utils/toastMessages';
 
@@ -23,6 +26,7 @@ const SECTION_LABELS: Record<GlobalSectionKey, string> = {
   mega_menu: 'Mega menu',
   footer_links: 'Liens pied de page',
   sticky_cta: 'Bandeau CTA fixe',
+  app_bar: 'App bar (en-tête)',
 };
 
 const emptyMegaMenu = (): MegaMenuConfig => ({
@@ -48,6 +52,7 @@ const TAB_HINTS: Record<GlobalSectionKey, string> = {
   mega_menu: 'Remplace la navigation principale quand activé. Ajoutez des sous-liens pour un vrai mega-menu.',
   footer_links: 'Colonnes de liens en bas de page (boutique, aide, légal…).',
   sticky_cta: 'Bandeau fixe en bas d’écran — idéal pour une promo ou un contact rapide.',
+  app_bar: 'Couleurs, bandeau promo, icônes et logo de l’en-tête boutique. Aussi éditable depuis le constructeur de pages.',
 };
 
 const AdminGlobalSections = () => {
@@ -56,10 +61,12 @@ const AdminGlobalSections = () => {
   const [megaMenu, setMegaMenu] = useState<MegaMenuConfig>(emptyMegaMenu());
   const [footerLinks, setFooterLinks] = useState<FooterLinksConfig>(emptyFooter());
   const [stickyCta, setStickyCta] = useState<StickyCtaConfig>(emptySticky());
+  const [appBar, setAppBar] = useState<AppBarConfig>(DEFAULT_APP_BAR);
   const [enabled, setEnabled] = useState<Record<GlobalSectionKey, boolean>>({
     mega_menu: false,
     footer_links: false,
     sticky_cta: false,
+    app_bar: false,
   });
 
   const { data: sections = [], isLoading, error } = useQuery({
@@ -72,11 +79,13 @@ const AdminGlobalSections = () => {
     const mega = sectionFromList(sections, 'mega_menu');
     const footer = sectionFromList(sections, 'footer_links');
     const sticky = sectionFromList(sections, 'sticky_cta');
+    const bar = sectionFromList(sections, 'app_bar');
 
     setEnabled({
       mega_menu: mega?.enabled ?? false,
       footer_links: footer?.enabled ?? false,
       sticky_cta: sticky?.enabled ?? false,
+      app_bar: bar?.enabled ?? false,
     });
 
     if (mega?.config) {
@@ -96,6 +105,9 @@ const AdminGlobalSections = () => {
         ctaHref: String(sticky.config.ctaHref ?? emptySticky().ctaHref),
         dismissible: sticky.config.dismissible !== false,
       });
+    }
+    if (bar?.config) {
+      setAppBar(parseAppBarConfig(bar.config));
     }
   }, [sections]);
 
@@ -129,13 +141,16 @@ const AdminGlobalSections = () => {
         })),
       };
     }
+    if (tab === 'app_bar') {
+      return { ...appBar };
+    }
     return {
       text: stickyCta.text,
       ctaLabel: stickyCta.ctaLabel,
       ctaHref: stickyCta.ctaHref,
       dismissible: stickyCta.dismissible !== false,
     };
-  }, [tab, megaMenu, footerLinks, stickyCta]);
+  }, [tab, megaMenu, footerLinks, stickyCta, appBar]);
 
   const save = () => {
     saveMutation.mutate({
@@ -450,6 +465,15 @@ const AdminGlobalSections = () => {
             />
             <Label htmlFor="sticky-dismiss">Le visiteur peut masquer (session)</Label>
           </div>
+        </TabsContent>
+
+        <TabsContent value="app_bar" className="mt-0 max-w-md">
+          <AppBarStylePanel
+            value={appBar}
+            onChange={(patch) => setAppBar((prev) => ({ ...prev, ...patch }))}
+            onSave={save}
+            saving={saveMutation.isPending}
+          />
         </TabsContent>
       </Tabs>
     </AdminLayout>

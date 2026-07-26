@@ -1,14 +1,14 @@
 import { apiRequest, buildApiUrl } from '@/config/api';
-import type { StoreBlogPost, UpsertBlogPostPayload } from '@/types/store-blog';
+import type { StoreBlogPost, StoreBlogPostListItem, UpsertBlogPostPayload } from '@/types/store-blog';
 
 export const storeBlogApi = {
   listPublic: (lang = 'fr') =>
-    apiRequest<StoreBlogPost[]>(buildApiUrl(`/store-blog/public?lang=${encodeURIComponent(lang)}`)),
+    apiRequest<StoreBlogPostListItem[]>(buildApiUrl(`/store-blog/public?lang=${encodeURIComponent(lang)}`)),
 
   getPublicBySlug: (slug: string) =>
     apiRequest<StoreBlogPost>(buildApiUrl(`/store-blog/public/${encodeURIComponent(slug)}`)),
 
-  list: () => apiRequest<StoreBlogPost[]>(buildApiUrl('/store-blog')),
+  list: () => apiRequest<StoreBlogPostListItem[]>(buildApiUrl('/store-blog')),
 
   get: (id: number) => apiRequest<StoreBlogPost>(buildApiUrl(`/store-blog/${id}`)),
 

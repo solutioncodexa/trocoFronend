@@ -108,7 +108,7 @@ export default function PackagingRequestForm({ variant }: PackagingRequestFormPr
 
   const { data: categories = [] } = useQuery({
     queryKey: ['categories'],
-    queryFn: () => categoriesApi.getAllCategories(),
+    queryFn: () => categoriesApi.getNavCategories(),
     ...staticCatalogQueryOptions,
   });
 

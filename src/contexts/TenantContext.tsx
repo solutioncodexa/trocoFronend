@@ -9,11 +9,11 @@ import {
 } from 'react';
 import { setStoredTenantSlug } from '@/config/api';
 import { platformApi } from '@/services/api/platform';
-import type { StoreSettingsDTO } from '@/types/api';
+import type { TenantStoreDTO } from '@/types/api';
 import { clearRootStoreTheme } from '@/utils/storeTheme';
 
 interface TenantContextType {
-  store: StoreSettingsDTO | null;
+  store: TenantStoreDTO | null;
   slug: string | null;
   isPlatformHost: boolean;
   isLoading: boolean;
@@ -59,7 +59,7 @@ export function resolveTenantSlug(): string | null {
 }
 
 export const TenantProvider = ({ children }: { children: ReactNode }) => {
-  const [store, setStore] = useState<StoreSettingsDTO | null>(null);
+  const [store, setStore] = useState<TenantStoreDTO | null>(null);
   const [slug, setSlug] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [storeUnavailableMessage, setStoreUnavailableMessage] = useState<string | null>(null);
@@ -106,9 +106,14 @@ export const TenantProvider = ({ children }: { children: ReactNode }) => {
 
   const loadFromAdminSession = useCallback(async () => {
     try {
-      const data = await platformApi.getMyStoreSettings();
-      // Met à jour le state admin uniquement — ne recolorie pas la plateforme.
-      setStore(data);
+      const data = await platformApi.getMyStoreSummary();
+      // Résumé léger — config complète uniquement sur /admin/parametres.
+      setStore({
+        ...data,
+        heroEnabled: true,
+        categoriesEnabled: true,
+        surMesureEnabled: true,
+      });
       clearRootStoreTheme();
       if (data.slug) {
         setSlug(data.slug);

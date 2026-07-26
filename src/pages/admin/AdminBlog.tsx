@@ -18,7 +18,7 @@ import {
 import ImageUpload from '@/components/admin/ImageUpload';
 import { storeBlogApi } from '@/services/api/storeBlog';
 import { uploadImage } from '@/services/api/upload';
-import type { StoreBlogPost, UpsertBlogPostPayload } from '@/types/store-blog';
+import type { StoreBlogPost, StoreBlogPostListItem, UpsertBlogPostPayload } from '@/types/store-blog';
 import { toast } from 'sonner';
 import { toastError } from '@/utils/toastMessages';
 import { useAdmin } from '@/contexts/AdminContext';
@@ -94,9 +94,14 @@ const AdminBlog = () => {
     setDialogOpen(true);
   };
 
-  const openEdit = (post: StoreBlogPost) => {
-    setEditing(post);
-    setDialogOpen(true);
+  const openEdit = async (post: StoreBlogPostListItem) => {
+    try {
+      const full = await storeBlogApi.get(post.id);
+      setEditing(full);
+      setDialogOpen(true);
+    } catch (err) {
+      toastError(err, 'Chargement de l’article impossible');
+    }
   };
 
   return (

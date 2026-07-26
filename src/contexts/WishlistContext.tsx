@@ -2,7 +2,7 @@ import { createContext, useContext, useState, ReactNode } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Product } from '@/types/product';
 import { productsApi } from '@/services/api';
-import { mapProductDetailToProduct } from '@/utils/productMapper';
+import { mapProductListItemListToProducts } from '@/utils/productMapper';
 
 const WISHLIST_STORAGE_KEY = 'wishlist';
 
@@ -39,14 +39,8 @@ export const WishlistProvider = ({ children }: { children: ReactNode }) => {
   const { data: wishlistProductsData = [] } = useQuery({
     queryKey: ['wishlist-products', wishlistQueryKey],
     queryFn: async () => {
-      const results = await Promise.all(
-        wishlist.map((id) =>
-          productsApi.getProductById(id).catch(() => null)
-        )
-      );
-      return results
-        .filter((dto): dto is NonNullable<typeof dto> => dto !== null)
-        .map(mapProductDetailToProduct);
+      const items = await productsApi.getProductsByIds(wishlist);
+      return mapProductListItemListToProducts(items);
     },
     enabled: wishlist.length > 0,
     staleTime: 60 * 1000,

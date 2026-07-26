@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { Check, Banknote, CheckCircle, Verified, Tag, X, Loader2, ArrowRight, Sparkles } from 'lucide-react';
+import { Check, Banknote, CheckCircle, Verified, Tag, X, Loader2, ArrowRight, Sparkles, CreditCard, Truck } from 'lucide-react';
 import Layout from '@/components/layout/Layout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -11,7 +11,8 @@ import { formatPrice } from '@/utils/formatPrice';
 import { toast } from 'sonner';
 import { toastError } from '@/utils/toastMessages';
 import { PaymentMethod } from '@/types/product';
-import { ordersApi, productsApi } from '@/services/api';
+import { ordersApi, productsApi, shippingApi, loyaltyApi } from '@/services/api';
+import { platformApi } from '@/services/api/platform';
 import { promoCodesApi } from '@/services/api/promoCodes';
 import { abandonedCartsApi } from '@/services/api/abandonedCarts';
 import { OrderDTO, CartItemDTO } from '@/types/api';
@@ -23,6 +24,17 @@ import { cartItemsToCapturePayload } from '@/utils/abandonedCartItems';
 import { trackPurchase } from '@/components/storefront/TrackingPixels';
 import { mapProductListItemListToProducts } from '@/utils/productMapper';
 import ProductCard from '@/components/ui/ProductCard';
+import { useLocale } from '@/contexts/LocaleContext';
+import type { ShippingCarrierDTO } from '@/types/api';
+
+function etaLabel(carrier: ShippingCarrierDTO): string | null {
+  const min = carrier.etaDaysMin;
+  const max = carrier.etaDaysMax;
+  if (min != null && max != null && min !== max) return `${min}–${max} jours ouvrés`;
+  if (min != null) return `${min} jour(s) ouvrés`;
+  if (max != null) return `${max} jour(s) ouvrés`;
+  return null;
+}
 
 const Checkout = () => {
   const navigate = useNavigate();
@@ -33,9 +45,21 @@ const Checkout = () => {
     updateQuantity,
     removeFromCart
   } = useCart();
-  const { freeShippingThreshold } = useStoreBrand();
+  const { freeShippingThreshold: brandFreeShipping } = useStoreBrand();
   const { store } = useTenant();
+  const { formatPrice: formatStorePrice, t } = useLocale();
   const subtotal = getTotal();
+
+  const { data: checkoutStore } = useQuery({
+    queryKey: ['store-checkout', store?.slug],
+    queryFn: () => platformApi.getStoreCheckout(store?.slug ?? undefined),
+    enabled: !!store?.slug,
+    staleTime: 60_000,
+  });
+  const freeShippingThreshold =
+    checkoutStore?.freeShippingThreshold != null && Number(checkoutStore.freeShippingThreshold) > 0
+      ? Number(checkoutStore.freeShippingThreshold)
+      : brandFreeShipping;
 
   const firstCartProductId = items[0]?.product.id;
   const { data: checkoutUpsell = [] } = useQuery({
@@ -58,6 +82,8 @@ const Checkout = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('cash_on_delivery');
+  const [selectedCarrierCode, setSelectedCarrierCode] = useState<string | null>(null);
+  const [loyaltyPointsToRedeem, setLoyaltyPointsToRedeem] = useState('');
   const [formData, setFormData] = useState({
     fullName: '',
     phone: '',
@@ -67,7 +93,6 @@ const Checkout = () => {
     notes: ''
   });
 
-  // ─── Promo code state ──────────────────────────────────
   const [promoCodeInput, setPromoCodeInput] = useState('');
   const [appliedPromo, setAppliedPromo] = useState<{
     code: string;
@@ -116,6 +141,65 @@ const Checkout = () => {
     return Math.min(appliedPromo.discountValue, subtotal);
   };
 
+  const discount = calculateDiscount();
+  const afterDiscount = subtotal - discount;
+
+  const { data: carriers = [] } = useQuery({
+    queryKey: ['shipping-carriers-public', afterDiscount],
+    queryFn: () => shippingApi.getPublic(afterDiscount),
+    enabled: afterDiscount >= 0,
+    staleTime: 60_000,
+  });
+
+  useEffect(() => {
+    if (!carriers.length) return;
+    setSelectedCarrierCode((prev) => {
+      if (prev && carriers.some((c) => c.code === prev)) return prev;
+      const def = checkoutStore?.shippingDefaultCarrier?.trim();
+      if (def && carriers.some((c) => c.code === def)) return def;
+      return carriers[0]?.code ?? null;
+    });
+  }, [carriers, checkoutStore?.shippingDefaultCarrier]);
+
+  const selectedCarrier = carriers.find((c) => c.code === selectedCarrierCode) ?? null;
+  const shippingFee =
+    selectedCarrier?.quotedFee != null
+      ? Number(selectedCarrier.quotedFee)
+      : afterDiscount >= freeShippingThreshold
+        ? 0
+        : 50;
+
+  const phoneForLoyalty = formData.phone.trim();
+  const { data: loyaltyBalance } = useQuery({
+    queryKey: ['loyalty-balance', phoneForLoyalty],
+    queryFn: () => loyaltyApi.getBalance(phoneForLoyalty),
+    enabled: !!checkoutStore?.loyaltyEnabled && phoneForLoyalty.length >= 8,
+    staleTime: 30_000,
+  });
+
+  const codEnabled = checkoutStore?.paymentCodEnabled !== false;
+  const cmiEnabled = !!checkoutStore?.paymentCmiEnabled;
+  const bnplEnabled = !!checkoutStore?.paymentBnplEnabled;
+
+  useEffect(() => {
+    const options: PaymentMethod[] = [];
+    if (codEnabled) options.push('cash_on_delivery');
+    if (cmiEnabled) options.push('card_cmi');
+    if (bnplEnabled) options.push('bnpl');
+    if (options.length && !options.includes(paymentMethod)) {
+      setPaymentMethod(options[0]);
+    }
+  }, [codEnabled, cmiEnabled, bnplEnabled, paymentMethod]);
+
+  const loyaltyRedeemNum = (() => {
+    const n = Number(loyaltyPointsToRedeem.trim());
+    if (!Number.isFinite(n) || n <= 0) return 0;
+    const maxPts = loyaltyBalance?.points ?? 0;
+    return Math.min(Math.floor(n), maxPts);
+  })();
+
+  const total = afterDiscount + shippingFee;
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({
@@ -125,7 +209,7 @@ const Checkout = () => {
   };
 
   useEffect(() => {
-    if (!store?.abandonedCartEnabled) return;
+    if (!checkoutStore?.abandonedCartEnabled) return;
     const email = formData.email.trim();
     const phone = formData.phone.trim();
     if (!email && !phone) return;
@@ -147,7 +231,7 @@ const Checkout = () => {
     }, 900);
     return () => window.clearTimeout(timer);
   }, [
-    store?.abandonedCartEnabled,
+    checkoutStore?.abandonedCartEnabled,
     formData.email,
     formData.phone,
     formData.fullName,
@@ -181,23 +265,17 @@ const Checkout = () => {
       return;
     }
     setIsSubmitting(true);
+    const discount = calculateDiscount();
+    const afterDiscountSubmit = getTotal() - discount;
 
-    // Convertir les items du panier en CartItemDTO
     const cartItems: CartItemDTO[] = items.map(item => ({
       product: {
         id: item.product.id,
         name: item.product.name,
-        description: item.product.description,
         price: item.product.price,
-        originalPrice: item.product.originalPrice,
         weight: item.product.weight ?? 0,
-        images: item.product.images,
-        category: item.product.category,
-        availableSizes: item.product.availableSizes,
-        inStock: item.product.inStock,
-        stockQuantity: item.product.stockQuantity,
-        badges: item.product.badges,
-        createdAt: item.product.createdAt,
+        images: item.product.images?.slice(0, 1),
+        sku: item.product.sku,
       },
       quantity: item.quantity,
       selectedSize: item.selectedSize,
@@ -205,11 +283,7 @@ const Checkout = () => {
       customLogoUrl: item.customLogoUrl,
     }));
 
-    const subtotal = getTotal();
-    const discount = calculateDiscount();
-    const afterDiscount = subtotal - discount;
-    const shipping = afterDiscount >= freeShippingThreshold ? 0 : 50;
-    const total = afterDiscount + shipping;
+    const orderTotal = afterDiscountSubmit + shippingFee;
 
     const orderDTO: OrderDTO = {
       id: '',
@@ -221,10 +295,15 @@ const Checkout = () => {
         address: formData.address,
         city: formData.city,
       },
-      total: total,
+      total: orderTotal,
       paymentMethod: paymentMethod,
       status: 'new',
       createdAt: new Date().toISOString(),
+      shippingFee,
+      carrierCode: selectedCarrierCode ?? undefined,
+      ...(loyaltyRedeemNum > 0 && checkoutStore?.loyaltyEnabled
+        ? { loyaltyPointsToRedeem: loyaltyRedeemNum }
+        : {}),
       ...(appliedPromo && {
         promoCode: appliedPromo.code,
         discount: discount,
@@ -269,10 +348,12 @@ const Checkout = () => {
       </Layout>;
   }
 
-  const discount = calculateDiscount();
-  const afterDiscount = subtotal - discount;
-  const shipping = afterDiscount >= freeShippingThreshold ? 0 : 50;
-  const total = afterDiscount + shipping;
+  const paymentLabel =
+    paymentMethod === 'card_cmi'
+      ? t('payCard')
+      : paymentMethod === 'bnpl'
+        ? t('payBnpl')
+        : t('payCod');
 
   return (
     <Layout>
@@ -283,7 +364,7 @@ const Checkout = () => {
             <div className="mb-10 text-center lg:text-left">
               <h2 className="text-3xl font-display text-foreground mb-2">Validation de votre Commande</h2>
               <p className="text-primary font-display text-3xl">
-                Paiement à la livraison
+                {paymentLabel}
               </p>
             </div>
 
@@ -364,10 +445,81 @@ const Checkout = () => {
                 </div>
               </div>
 
+              {carriers.length > 0 ? (
+                <div>
+                  <Label className="block text-xs uppercase tracking-widest text-muted-foreground mb-2 font-bold">
+                    {t('shipping')} *
+                  </Label>
+                  <div className="space-y-3">
+                    {carriers.map((carrier) => {
+                      const fee =
+                        carrier.quotedFee != null
+                          ? Number(carrier.quotedFee)
+                          : shippingFee;
+                      const eta = etaLabel(carrier);
+                      return (
+                        <div
+                          key={carrier.code}
+                          className={`flex items-start gap-3 p-4 rounded-xl border-2 cursor-pointer transition-colors ${selectedCarrierCode === carrier.code ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50'}`}
+                          onClick={() => setSelectedCarrierCode(carrier.code)}
+                        >
+                          <div
+                            className={`mt-1 w-4 h-4 rounded-full border-2 shrink-0 ${selectedCarrierCode === carrier.code ? 'border-primary bg-primary' : 'border-border'} flex items-center justify-center`}
+                          >
+                            {selectedCarrierCode === carrier.code && (
+                              <div className="w-2 h-2 rounded-full bg-white" />
+                            )}
+                          </div>
+                          <Truck className="w-5 h-5 text-primary shrink-0 mt-0.5" />
+                          <div className="flex-1 min-w-0">
+                            <span className="font-medium">{carrier.name}</span>
+                            <p className="text-xs text-muted-foreground mt-0.5">
+                              {fee === 0 ? t('freeShipping') : formatStorePrice(fee)}
+                              {eta ? ` · ${eta}` : ''}
+                            </p>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              ) : null}
+
+              {checkoutStore?.loyaltyEnabled ? (
+                <div>
+                  <Label className="block text-xs uppercase tracking-widest text-muted-foreground mb-2 font-bold">
+                    {t('loyaltyPoints')}
+                  </Label>
+                  {phoneForLoyalty.length >= 8 ? (
+                    <p className="text-xs text-muted-foreground mb-2">
+                      Solde :{' '}
+                      <span className="font-semibold text-foreground">
+                        {loyaltyBalance?.points ?? 0} pts
+                      </span>
+                    </p>
+                  ) : (
+                    <p className="text-xs text-muted-foreground mb-2">
+                      Saisissez votre téléphone pour consulter vos points.
+                    </p>
+                  )}
+                  <Input
+                    type="number"
+                    min={0}
+                    max={loyaltyBalance?.points ?? undefined}
+                    value={loyaltyPointsToRedeem}
+                    onChange={(e) => setLoyaltyPointsToRedeem(e.target.value)}
+                    placeholder="Points à utiliser (optionnel)"
+                    className="rounded-xl"
+                    disabled={!loyaltyBalance?.points}
+                  />
+                </div>
+              ) : null}
+
               {/* Mode de paiement */}
               <div>
                 <Label className="block text-xs uppercase tracking-widest text-muted-foreground mb-2 font-bold">Mode de paiement *</Label>
                 <div className="space-y-3">
+                  {codEnabled ? (
                   <div 
                     className={`flex items-center space-x-3 p-4 rounded-xl border-2 cursor-pointer transition-colors ${paymentMethod === 'cash_on_delivery' ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50'}`}
                     onClick={() => setPaymentMethod('cash_on_delivery')}
@@ -378,11 +530,46 @@ const Checkout = () => {
                     <Banknote className="w-5 h-5 text-primary" />
                     <div className="flex-1">
                       <span className="font-medium cursor-pointer">
-                        Paiement à la livraison
+                        {t('payCod')}
                       </span>
                       <p className="text-xs text-muted-foreground leading-relaxed">Payez en espèces à la réception de votre commande</p>
                     </div>
                   </div>
+                  ) : null}
+
+                  {cmiEnabled ? (
+                    <div
+                      className={`flex items-center space-x-3 p-4 rounded-xl border-2 cursor-pointer transition-colors ${paymentMethod === 'card_cmi' ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50'}`}
+                      onClick={() => setPaymentMethod('card_cmi')}
+                    >
+                      <div className={`w-4 h-4 rounded-full border-2 ${paymentMethod === 'card_cmi' ? 'border-primary bg-primary' : 'border-border'} flex items-center justify-center`}>
+                        {paymentMethod === 'card_cmi' && <div className="w-2 h-2 rounded-full bg-white"></div>}
+                      </div>
+                      <CreditCard className="w-5 h-5 text-primary" />
+                      <div className="flex-1">
+                        <span className="font-medium">{t('payCard')}</span>
+                        <p className="text-xs text-muted-foreground leading-relaxed">Paiement sécurisé via la passerelle CMI</p>
+                      </div>
+                    </div>
+                  ) : null}
+
+                  {bnplEnabled ? (
+                    <div
+                      className={`flex items-center space-x-3 p-4 rounded-xl border-2 cursor-pointer transition-colors ${paymentMethod === 'bnpl' ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50'}`}
+                      onClick={() => setPaymentMethod('bnpl')}
+                    >
+                      <div className={`w-4 h-4 rounded-full border-2 ${paymentMethod === 'bnpl' ? 'border-primary bg-primary' : 'border-border'} flex items-center justify-center`}>
+                        {paymentMethod === 'bnpl' && <div className="w-2 h-2 rounded-full bg-white"></div>}
+                      </div>
+                      <CreditCard className="w-5 h-5 text-primary" />
+                      <div className="flex-1">
+                        <span className="font-medium">{t('payBnpl')}</span>
+                        {checkoutStore?.bnplProvider ? (
+                          <p className="text-xs text-muted-foreground leading-relaxed">{checkoutStore.bnplProvider}</p>
+                        ) : null}
+                      </div>
+                    </div>
+                  ) : null}
 
                 </div>
               </div>
@@ -559,13 +746,13 @@ const Checkout = () => {
                 )}
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground uppercase tracking-wider">Livraison</span>
-                  <span className={shipping === 0 ? 'text-green-600 font-medium' : 'text-foreground'}>
-                    {shipping === 0 ? 'Offerte' : formatPrice(shipping)}
+                  <span className={shippingFee === 0 ? 'text-green-600 font-medium' : 'text-foreground'}>
+                    {shippingFee === 0 ? 'Offerte' : formatStorePrice(shippingFee)}
                   </span>
                 </div>
                 <div className="flex justify-between items-center pt-4 border-t border-border mt-4">
                   <span className="text-base font-bold uppercase tracking-[0.2em]">Total</span>
-                  <span className="text-2xl font-bold text-primary">{formatPrice(total)}</span>
+                  <span className="text-2xl font-bold text-primary">{formatStorePrice(total)}</span>
                 </div>
               </div>
 

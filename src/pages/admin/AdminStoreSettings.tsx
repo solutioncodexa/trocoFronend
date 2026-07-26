@@ -55,6 +55,22 @@ type FormState = {
   abandonedCartEnabled: boolean;
   abandonedCartDelayMinutes: string;
   whatsappOrderTemplate: string;
+  defaultLocale: string;
+  supportedLocales: string;
+  currency: string;
+  currencyRatesJson: string;
+  paymentCodEnabled: boolean;
+  paymentCmiEnabled: boolean;
+  paymentBnplEnabled: boolean;
+  bnplProvider: string;
+  loyaltyEnabled: boolean;
+  loyaltyPointsPerMad: string;
+  loyaltyMadPerPoint: string;
+  privacyPolicyUrl: string;
+  cookieConsentRequired: boolean;
+  dataRetentionDays: string;
+  cndpNoticeVersion: string;
+  shippingDefaultCarrier: string;
 };
 
 const emptyForm: FormState = {
@@ -85,6 +101,22 @@ const emptyForm: FormState = {
   abandonedCartEnabled: false,
   abandonedCartDelayMinutes: '60',
   whatsappOrderTemplate: '',
+  defaultLocale: 'fr',
+  supportedLocales: 'fr,ar,en',
+  currency: 'MAD',
+  currencyRatesJson: '',
+  paymentCodEnabled: true,
+  paymentCmiEnabled: false,
+  paymentBnplEnabled: false,
+  bnplProvider: '',
+  loyaltyEnabled: false,
+  loyaltyPointsPerMad: '1',
+  loyaltyMadPerPoint: '0.10',
+  privacyPolicyUrl: '',
+  cookieConsentRequired: true,
+  dataRetentionDays: '365',
+  cndpNoticeVersion: '1',
+  shippingDefaultCarrier: '',
 };
 
 const AdminStoreSettings = () => {
@@ -133,6 +165,25 @@ const AdminStoreSettings = () => {
       abandonedCartDelayMinutes:
         data.abandonedCartDelayMinutes != null ? String(data.abandonedCartDelayMinutes) : '60',
       whatsappOrderTemplate: data.whatsappOrderTemplate ?? '',
+      defaultLocale: data.defaultLocale ?? 'fr',
+      supportedLocales: data.supportedLocales ?? 'fr,ar,en',
+      currency: data.currency ?? 'MAD',
+      currencyRatesJson: data.currencyRatesJson ?? '',
+      paymentCodEnabled: data.paymentCodEnabled ?? true,
+      paymentCmiEnabled: data.paymentCmiEnabled ?? false,
+      paymentBnplEnabled: data.paymentBnplEnabled ?? false,
+      bnplProvider: data.bnplProvider ?? '',
+      loyaltyEnabled: data.loyaltyEnabled ?? false,
+      loyaltyPointsPerMad:
+        data.loyaltyPointsPerMad != null ? String(data.loyaltyPointsPerMad) : '1',
+      loyaltyMadPerPoint:
+        data.loyaltyMadPerPoint != null ? String(data.loyaltyMadPerPoint) : '0.10',
+      privacyPolicyUrl: data.privacyPolicyUrl ?? '',
+      cookieConsentRequired: data.cookieConsentRequired ?? true,
+      dataRetentionDays:
+        data.dataRetentionDays != null ? String(data.dataRetentionDays) : '365',
+      cndpNoticeVersion: data.cndpNoticeVersion ?? '1',
+      shippingDefaultCarrier: data.shippingDefaultCarrier ?? '',
     });
   }, [data]);
 
@@ -277,6 +328,37 @@ const AdminStoreSettings = () => {
         return Number.isFinite(n) ? Math.max(15, Math.min(n, 7 * 24 * 60)) : 60;
       })(),
       whatsappOrderTemplate: form.whatsappOrderTemplate.trim() || undefined,
+      defaultLocale: form.defaultLocale.trim() || undefined,
+      supportedLocales: form.supportedLocales.trim() || undefined,
+      currency: form.currency.trim() || undefined,
+      currencyRatesJson: form.currencyRatesJson.trim() || undefined,
+      paymentCodEnabled: form.paymentCodEnabled,
+      paymentCmiEnabled: form.paymentCmiEnabled,
+      paymentBnplEnabled: form.paymentBnplEnabled,
+      bnplProvider: form.bnplProvider.trim() || undefined,
+      loyaltyEnabled: form.loyaltyEnabled,
+      loyaltyPointsPerMad: (() => {
+        const raw = form.loyaltyPointsPerMad.trim();
+        if (!raw) return null;
+        const n = Number(raw);
+        return Number.isFinite(n) ? n : null;
+      })(),
+      loyaltyMadPerPoint: (() => {
+        const raw = form.loyaltyMadPerPoint.trim();
+        if (!raw) return null;
+        const n = Number(raw);
+        return Number.isFinite(n) ? n : null;
+      })(),
+      privacyPolicyUrl: form.privacyPolicyUrl.trim() || undefined,
+      cookieConsentRequired: form.cookieConsentRequired,
+      dataRetentionDays: (() => {
+        const raw = form.dataRetentionDays.trim();
+        if (!raw) return null;
+        const n = Number(raw);
+        return Number.isFinite(n) ? Math.max(1, Math.floor(n)) : null;
+      })(),
+      cndpNoticeVersion: form.cndpNoticeVersion.trim() || undefined,
+      shippingDefaultCarrier: form.shippingDefaultCarrier.trim() || undefined,
     });
   };
 
@@ -854,6 +936,181 @@ const AdminStoreSettings = () => {
                 value={form.abandonedCartDelayMinutes}
                 onChange={(e) => patch('abandonedCartDelayMinutes', e.target.value)}
                 disabled={!form.abandonedCartEnabled}
+              />
+            </div>
+          </div>
+        </section>
+
+        <section className="space-y-4 rounded-2xl border border-border bg-card p-5 sm:p-6">
+          <h2 className="font-display text-lg font-semibold">Langue &amp; devise</h2>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div>
+              <Label htmlFor="defaultLocale">Langue par défaut</Label>
+              <Input
+                id="defaultLocale"
+                className="mt-1.5"
+                value={form.defaultLocale}
+                onChange={(e) => patch('defaultLocale', e.target.value)}
+                placeholder="fr"
+              />
+            </div>
+            <div>
+              <Label htmlFor="supportedLocales">Langues supportées</Label>
+              <Input
+                id="supportedLocales"
+                className="mt-1.5"
+                value={form.supportedLocales}
+                onChange={(e) => patch('supportedLocales', e.target.value)}
+                placeholder="fr,ar,en"
+              />
+            </div>
+            <div>
+              <Label htmlFor="currency">Devise affichée</Label>
+              <Input
+                id="currency"
+                className="mt-1.5"
+                value={form.currency}
+                onChange={(e) => patch('currency', e.target.value)}
+                placeholder="MAD"
+              />
+            </div>
+            <div className="sm:col-span-2">
+              <Label htmlFor="currencyRatesJson">Taux de change (JSON, base MAD)</Label>
+              <Textarea
+                id="currencyRatesJson"
+                className="mt-1.5 min-h-[72px] font-mono text-xs"
+                value={form.currencyRatesJson}
+                onChange={(e) => patch('currencyRatesJson', e.target.value)}
+                placeholder='{"EUR":0.092,"USD":0.10}'
+              />
+            </div>
+          </div>
+        </section>
+
+        <section className="space-y-4 rounded-2xl border border-border bg-card p-5 sm:p-6">
+          <h2 className="font-display text-lg font-semibold">Paiements</h2>
+          <div className="space-y-4">
+            {(
+              [
+                ['paymentCodEnabled', 'Paiement à la livraison (COD)'] as const,
+                ['paymentCmiEnabled', 'Carte bancaire CMI'] as const,
+                ['paymentBnplEnabled', 'Paiement fractionné (BNPL)'] as const,
+              ] as const
+            ).map(([key, label]) => (
+              <div
+                key={key}
+                className="flex items-center justify-between gap-4 rounded-xl border border-border/60 px-4 py-3"
+              >
+                <Label htmlFor={key} className="cursor-pointer font-medium">
+                  {label}
+                </Label>
+                <Switch
+                  id={key}
+                  checked={form[key]}
+                  onCheckedChange={(checked) => patch(key, checked)}
+                />
+              </div>
+            ))}
+            <div>
+              <Label htmlFor="bnplProvider">Fournisseur BNPL (libellé)</Label>
+              <Input
+                id="bnplProvider"
+                className="mt-1.5"
+                value={form.bnplProvider}
+                onChange={(e) => patch('bnplProvider', e.target.value)}
+                disabled={!form.paymentBnplEnabled}
+              />
+            </div>
+            <div>
+              <Label htmlFor="shippingDefaultCarrier">Transporteur par défaut (code)</Label>
+              <Input
+                id="shippingDefaultCarrier"
+                className="mt-1.5 font-mono text-sm"
+                value={form.shippingDefaultCarrier}
+                onChange={(e) => patch('shippingDefaultCarrier', e.target.value)}
+                placeholder="standard"
+              />
+            </div>
+          </div>
+        </section>
+
+        <section className="space-y-4 rounded-2xl border border-border bg-card p-5 sm:p-6">
+          <h2 className="font-display text-lg font-semibold">Fidélité</h2>
+          <div className="flex items-center justify-between gap-4 rounded-xl border border-border/60 px-4 py-3">
+            <Label htmlFor="loyaltyEnabled" className="cursor-pointer font-medium">
+              Programme de fidélité actif
+            </Label>
+            <Switch
+              id="loyaltyEnabled"
+              checked={form.loyaltyEnabled}
+              onCheckedChange={(checked) => patch('loyaltyEnabled', checked)}
+            />
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div>
+              <Label htmlFor="loyaltyPointsPerMad">Points par MAD dépensé</Label>
+              <Input
+                id="loyaltyPointsPerMad"
+                className="mt-1.5"
+                value={form.loyaltyPointsPerMad}
+                onChange={(e) => patch('loyaltyPointsPerMad', e.target.value)}
+                disabled={!form.loyaltyEnabled}
+              />
+            </div>
+            <div>
+              <Label htmlFor="loyaltyMadPerPoint">MAD par point échangé</Label>
+              <Input
+                id="loyaltyMadPerPoint"
+                className="mt-1.5"
+                value={form.loyaltyMadPerPoint}
+                onChange={(e) => patch('loyaltyMadPerPoint', e.target.value)}
+                disabled={!form.loyaltyEnabled}
+              />
+            </div>
+          </div>
+        </section>
+
+        <section className="space-y-4 rounded-2xl border border-border bg-card p-5 sm:p-6">
+          <h2 className="font-display text-lg font-semibold">Conformité CNDP</h2>
+          <div className="flex items-center justify-between gap-4 rounded-xl border border-border/60 px-4 py-3">
+            <Label htmlFor="cookieConsentRequired" className="cursor-pointer font-medium">
+              Bandeau cookies obligatoire
+            </Label>
+            <Switch
+              id="cookieConsentRequired"
+              checked={form.cookieConsentRequired}
+              onCheckedChange={(checked) => patch('cookieConsentRequired', checked)}
+            />
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="sm:col-span-2">
+              <Label htmlFor="privacyPolicyUrl">URL politique de confidentialité</Label>
+              <Input
+                id="privacyPolicyUrl"
+                className="mt-1.5"
+                value={form.privacyPolicyUrl}
+                onChange={(e) => patch('privacyPolicyUrl', e.target.value)}
+                placeholder="https://…"
+              />
+            </div>
+            <div>
+              <Label htmlFor="dataRetentionDays">Conservation des données (jours)</Label>
+              <Input
+                id="dataRetentionDays"
+                type="number"
+                min={1}
+                className="mt-1.5"
+                value={form.dataRetentionDays}
+                onChange={(e) => patch('dataRetentionDays', e.target.value)}
+              />
+            </div>
+            <div>
+              <Label htmlFor="cndpNoticeVersion">Version notice CNDP</Label>
+              <Input
+                id="cndpNoticeVersion"
+                className="mt-1.5"
+                value={form.cndpNoticeVersion}
+                onChange={(e) => patch('cndpNoticeVersion', e.target.value)}
               />
             </div>
           </div>

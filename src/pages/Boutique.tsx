@@ -79,6 +79,7 @@ const Boutique = () => {
   const [sortBy, setSortBy] = useState<SortOption>('newest');
   const [currentPage, setCurrentPage] = useState(1);
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const [selectedFacetSize, setSelectedFacetSize] = useState<string | null>(null);
 
   /** 'user-typing' => changement de mot-clé depuis le champ : repasser à la page 1. Autres sources : ne pas forcer la page. */
   const searchQuerySourceRef = useRef<'user-typing' | 'other'>('other');
@@ -112,9 +113,16 @@ const Boutique = () => {
     setCurrentPage(1);
   }, [searchQuery]);
 
+  const { data: facets } = useQuery({
+    queryKey: ['products', 'facets'],
+    queryFn: () => productsApi.getFacets(),
+    retry: 1,
+    ...staticCatalogQueryOptions,
+  });
+
   const { data: categories = [] } = useQuery({
     queryKey: ['categories'],
-    queryFn: () => categoriesApi.getAllCategories(),
+    queryFn: () => categoriesApi.getNavCategories(),
     retry: 1,
     ...staticCatalogQueryOptions,
   });
@@ -166,6 +174,7 @@ const Boutique = () => {
       priceRange[1],
       inStockOnly,
       searchQuery.trim(),
+      selectedFacetSize,
       PRODUCTS_PER_PAGE,
     ],
     [
@@ -176,6 +185,7 @@ const Boutique = () => {
       priceRange,
       inStockOnly,
       searchQuery,
+      selectedFacetSize,
     ]
   );
 
@@ -192,6 +202,7 @@ const Boutique = () => {
         maxPrice: priceRange[1] < PRICE_MAX ? priceRange[1] : undefined,
         inStock: inStockOnly ? true : undefined,
         keyword: searchQuery.trim() || undefined,
+        facetSize: selectedFacetSize ?? undefined,
       }),
     retry: 1,
     placeholderData: keepPreviousData,
@@ -214,8 +225,9 @@ const Boutique = () => {
       priceRange[0] > 0 ||
       priceRange[1] < PRICE_MAX ||
       inStockOnly ||
-      searchQuery.trim().length > 0,
-    [selectedCategory, priceRange, inStockOnly, searchQuery]
+      searchQuery.trim().length > 0 ||
+      selectedFacetSize != null,
+    [selectedCategory, priceRange, inStockOnly, searchQuery, selectedFacetSize]
   );
 
   const resetBrowseFilters = useCallback(() => {
@@ -224,6 +236,7 @@ const Boutique = () => {
     setSelectedCategory(null);
     setPriceRange([0, PRICE_MAX]);
     setInStockOnly(false);
+    setSelectedFacetSize(null);
     setCurrentPage(1);
     setSearchParams({});
   }, [setSearchParams]);
@@ -242,7 +255,7 @@ const Boutique = () => {
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [selectedCategory, priceRange, inStockOnly, sortBy]);
+  }, [selectedCategory, priceRange, inStockOnly, sortBy, selectedFacetSize]);
 
   const handlePageChange = (page: number) => {
     if (page !== currentPage) {
@@ -358,13 +371,40 @@ const Boutique = () => {
     </label>
   );
 
+  const sizeFilterList =
+    facets?.sizes && facets.sizes.length > 0 ? (
+      <ul className="space-y-3">
+        {facets.sizes.map((bucket) => (
+          <li key={bucket.value}>
+            <label className="flex items-center gap-3 text-sm text-muted-foreground hover:text-primary cursor-pointer transition-colors">
+              <Checkbox
+                checked={selectedFacetSize === bucket.value}
+                onCheckedChange={(checked) => {
+                  clearKeywordSearch();
+                  setSelectedFacetSize(checked ? bucket.value : null);
+                }}
+                className="rounded border-border text-primary focus:ring-primary size-4"
+              />
+              <span>
+                {bucket.label || bucket.value}
+                <span className="text-muted-foreground/70"> ({bucket.count})</span>
+              </span>
+            </label>
+          </li>
+        ))}
+      </ul>
+    ) : (
+      <p className="text-xs text-muted-foreground">Aucune taille disponible</p>
+    );
+
   const activeFilterCount = useMemo(() => {
     let count = 0;
     if (selectedCategory) count++;
     if (priceRange[0] > 0 || priceRange[1] < PRICE_MAX) count++;
     if (inStockOnly) count++;
+    if (selectedFacetSize) count++;
     return count;
-  }, [selectedCategory, priceRange, inStockOnly]);
+  }, [selectedCategory, priceRange, inStockOnly, selectedFacetSize]);
 
   const filterPanelContent = (
     <div className="flex flex-col gap-0">
@@ -377,6 +417,12 @@ const Boutique = () => {
           <AccordionTrigger className={accordionTriggerClass}>Catégorie</AccordionTrigger>
           <AccordionContent>{categoryFilterList}</AccordionContent>
         </AccordionItem>
+        {facets?.sizes && facets.sizes.length > 0 ? (
+          <AccordionItem value="size" className="border-border/60 border-b-0">
+            <AccordionTrigger className={accordionTriggerClass}>Taille</AccordionTrigger>
+            <AccordionContent>{sizeFilterList}</AccordionContent>
+          </AccordionItem>
+        ) : null}
       </Accordion>
 
       <div className="border-t border-border pt-6 px-0">

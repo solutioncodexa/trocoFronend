@@ -1,6 +1,7 @@
 import { apiRequest, buildApiUrl } from '@/config/api';
 import type {
   StorePage,
+  StorePageListItem,
   StorePageNavItem,
   UpsertStorePagePayload,
   StorePageBlock,
@@ -11,7 +12,7 @@ import type {
 } from '@/types/store-pages';
 
 export const storePagesApi = {
-  list: () => apiRequest<StorePage[]>(buildApiUrl('/store-pages')),
+  list: () => apiRequest<StorePageListItem[]>(buildApiUrl('/store-pages')),
 
   get: (id: number) => apiRequest<StorePage>(buildApiUrl(`/store-pages/${id}`)),
 
@@ -65,8 +66,11 @@ export const storePagesApi = {
   publicNav: (lang = 'fr') =>
     apiRequest<StorePageNavItem[]>(buildApiUrl(`/store-pages/public/nav?lang=${lang}`)),
 
+  /** Variantes A/B sans blocs — contenu via publicHome. */
   publicHomes: (lang = 'fr') =>
-    apiRequest<StorePage[]>(buildApiUrl(`/store-pages/public/homes?lang=${encodeURIComponent(lang)}`)),
+    apiRequest<Array<{ id: number; abVariant?: string | null; currentlyLive?: boolean }>>(
+      buildApiUrl(`/store-pages/public/homes?lang=${encodeURIComponent(lang)}`),
+    ),
 
   publicHome: (lang = 'fr', variant?: string | null) => {
     const qs = new URLSearchParams({ lang });

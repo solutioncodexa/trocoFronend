@@ -17,6 +17,7 @@ import {
 } from '@/utils/storeTheme';
 import { cn } from '@/lib/utils';
 import TrackingPixels from '@/components/storefront/TrackingPixels';
+import CookieConsentBanner from '@/components/storefront/CookieConsentBanner';
 import StickyCta from '@/components/layout/StickyCta';
 
 interface LayoutProps {
@@ -125,6 +126,7 @@ const Layout = ({ children, forceThemeKey, forceBrand }: LayoutProps) => {
         <Footer />
         <StickyCta />
         <PromoModal />
+        <CookieConsentBanner />
       </div>
     </StorefrontBrandOverrideProvider>
   );

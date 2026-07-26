@@ -45,9 +45,9 @@ export const customOrdersApi = {
     return apiRequest<CustomOrderDTO>(url);
   },
 
-  getCustomOrdersByStatus: async (status: string): Promise<CustomOrderDTO[]> => {
+  getCustomOrdersByStatus: async (status: string): Promise<CustomOrderListItemDTO[]> => {
     const url = buildApiUrl(`/custom-orders/status/${status}`);
-    return apiRequest<CustomOrderDTO[]>(url);
+    return apiRequest<CustomOrderListItemDTO[]>(url);
   },
 
   createCustomOrder: async (customOrder: Partial<CustomOrderDTO>): Promise<CustomOrderDTO> => {

@@ -1,7 +1,88 @@
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
-import { ArrowRight, Store, Layers, Zap } from 'lucide-react';
+import { ArrowRight, Check, Minus, Store, Layers, Zap } from 'lucide-react';
 import { platformApi } from '@/services/api/platform';
+import type { PlanMarketingDTO } from '@/types/api';
+
+const FALLBACK_PLANS: PlanMarketingDTO[] = [
+  {
+    id: 1,
+    code: 'basic',
+    name: 'Basic',
+    priceMad: 79,
+    description: 'Idéal pour démarrer — jusqu\'à 50 produits',
+    maxProducts: 50,
+    maxStaff: 1,
+    maxOrdersPerMonth: 100,
+    maxPixels: 1,
+    storageMb: 1024,
+    customDomain: false,
+    features: { themes: 'basic', pageBuilder: 'simple', abTesting: false, abandonedCart: false, whatsappBusiness: false, webhooks: 'none', support: 'email' },
+  },
+  {
+    id: 2,
+    code: 'pro',
+    name: 'Pro',
+    priceMad: 199,
+    description: 'Pour croître — domaine, WhatsApp, panier abandonné',
+    maxProducts: 500,
+    maxStaff: 3,
+    maxOrdersPerMonth: 1000,
+    maxPixels: 3,
+    storageMb: 10240,
+    customDomain: true,
+    features: { themes: 'all', pageBuilder: 'full', abTesting: true, abandonedCart: true, whatsappBusiness: true, webhooks: 'order_created', support: 'email_chat' },
+  },
+  {
+    id: 3,
+    code: 'business',
+    name: 'Business',
+    priceMad: 399,
+    description: 'Pour scaler — illimité, webhooks complets, onboarding',
+    maxProducts: null,
+    maxStaff: 10,
+    maxOrdersPerMonth: null,
+    maxPixels: null,
+    storageMb: 51200,
+    customDomain: true,
+    features: { themes: 'all_early', pageBuilder: 'full_versions', abTesting: true, abandonedCart: true, abandonedCartAdvanced: true, whatsappBusiness: true, whatsappMultiTemplates: true, webhooks: 'all', support: 'priority' },
+  },
+];
+
+function fmtLimit(n: number | null | undefined, unit = ''): string {
+  if (n == null) return 'Illimité';
+  return `${n.toLocaleString('fr-MA')}${unit}`;
+}
+
+function planHighlights(plan: PlanMarketingDTO): string[] {
+  const f = plan.features ?? {};
+  return [
+    `Produits : ${fmtLimit(plan.maxProducts)}`,
+    `Comptes STAFF : ${plan.maxStaff === 1 ? '1 (propriétaire)' : fmtLimit(plan.maxStaff)}`,
+    `Commandes/mois : ${fmtLimit(plan.maxOrdersPerMonth)}`,
+    plan.customDomain ? 'Domaine personnalisé' : 'Sous-domaine uniquement',
+    f.abTesting ? 'Page builder + A/B' : 'Éditeur simple',
+    f.abandonedCart ? (f.abandonedCartAdvanced ? 'Panier abandonné avancé' : 'Panier abandonné') : 'Codes promo',
+    `Pixels : ${fmtLimit(plan.maxPixels)}`,
+    f.whatsappBusiness ? (f.whatsappMultiTemplates ? 'WhatsApp + modèles' : 'WhatsApp Business') : 'Sans WhatsApp Business',
+    f.webhooks === 'all' ? 'Webhooks (tous events)' : f.webhooks === 'order_created' ? 'Webhooks order.created' : 'Sans webhooks',
+    `Stockage : ${plan.storageMb != null ? `${Math.round(plan.storageMb / 1024)} Go` : '—'}`,
+  ];
+}
+
+const COMPARISON_ROWS: { label: string; values: (p: PlanMarketingDTO) => string | boolean }[] = [
+  { label: 'Produits', values: (p) => fmtLimit(p.maxProducts) },
+  { label: 'Comptes STAFF', values: (p) => (p.maxStaff === 1 ? '1 (propriétaire)' : fmtLimit(p.maxStaff)) },
+  { label: 'Commandes / mois', values: (p) => fmtLimit(p.maxOrdersPerMonth) },
+  { label: 'Domaine personnalisé', values: (p) => !!p.customDomain },
+  { label: 'Thèmes', values: (p) => (p.features?.themes === 'basic' ? '2 thèmes' : p.features?.themes === 'all_early' ? 'Tous + anticipé' : 'Tous') },
+  { label: 'Page builder / A-B', values: (p) => (p.features?.abTesting ? (p.features?.pageBuilder === 'full_versions' ? 'Complet + versions' : 'Complet + A/B') : 'Simple') },
+  { label: 'Panier abandonné', values: (p) => !!p.features?.abandonedCart },
+  { label: 'Pixels marketing', values: (p) => fmtLimit(p.maxPixels) },
+  { label: 'WhatsApp Business', values: (p) => !!p.features?.whatsappBusiness },
+  { label: 'Webhooks', values: (p) => (p.features?.webhooks === 'all' ? 'Tous' : p.features?.webhooks === 'order_created' ? 'order.created' : false) },
+  { label: 'Stockage médias', values: (p) => (p.storageMb != null ? `${Math.round(p.storageMb / 1024)} Go` : '—') },
+];
 
 const MatjaronaHome = () => {
   const { data: plans = [] } = useQuery({
@@ -10,7 +91,7 @@ const MatjaronaHome = () => {
     staleTime: 10 * 60 * 1000,
   });
 
-  const sortedPlans = [...plans].sort(
+  const sortedPlans = [...(plans.length > 0 ? plans : FALLBACK_PLANS)].sort(
     (a, b) => Number(a.priceMad ?? 0) - Number(b.priceMad ?? 0),
   );
 
@@ -134,17 +215,10 @@ const MatjaronaHome = () => {
         <div className="mx-auto max-w-6xl px-5 sm:px-8">
           <h2 className="font-mj text-3xl font-bold tracking-tight sm:text-4xl">Choisissez votre plan</h2>
           <p className="mt-3 max-w-lg text-[var(--mj-foam)]/65">
-            Starter, Pro ou Business — évoluez quand votre boutique grandit. Paiement CMI sécurisé.
+            Basic, Pro ou Business — évoluez quand votre boutique grandit. Paiement CMI sécurisé.
           </p>
           <div className="mt-12 grid gap-6 md:grid-cols-3">
-            {(sortedPlans.length > 0
-              ? sortedPlans
-              : [
-                  { code: 'basic', name: 'Starter', priceMad: 150, description: 'Pour démarrer' },
-                  { code: 'pro', name: 'Pro', priceMad: 299, description: 'Pour croître' },
-                  { code: 'business', name: 'Business', priceMad: 599, description: 'Pour scaler' },
-                ]
-            ).map((plan, index) => (
+            {sortedPlans.map((plan, index) => (
               <div
                 key={plan.code}
                 className={`rounded-2xl border p-6 ${
@@ -158,12 +232,20 @@ const MatjaronaHome = () => {
                 </p>
                 <p className="mt-3 font-mj text-4xl font-extrabold tracking-tight">
                   {Number(plan.priceMad)}{' '}
-                  <span className="text-xl font-bold">DHS</span>
+                  <span className="text-xl font-bold">DH</span>
                   <span className="ml-1 text-sm font-medium text-[var(--mj-foam)]/55">/mois</span>
                 </p>
-                <p className="mt-4 min-h-[3rem] text-sm text-[var(--mj-foam)]/65">
+                <p className="mt-4 text-sm text-[var(--mj-foam)]/65">
                   {plan.description || 'Boutique en ligne Matjarona'}
                 </p>
+                <ul className="mt-5 space-y-2 text-sm text-[var(--mj-foam)]/80">
+                  {planHighlights(plan).slice(0, 6).map((line) => (
+                    <li key={line} className="flex gap-2">
+                      <Check className="mt-0.5 h-4 w-4 shrink-0 text-[var(--mj-lagoon)]" aria-hidden />
+                      <span>{line}</span>
+                    </li>
+                  ))}
+                </ul>
                 <Link
                   to={`/creer-boutique?plan=${encodeURIComponent(plan.code)}`}
                   className="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-md bg-[var(--mj-lagoon)] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[var(--mj-lagoon-deep)]"
@@ -173,6 +255,47 @@ const MatjaronaHome = () => {
                 </Link>
               </div>
             ))}
+          </div>
+
+          <div className="mt-16 overflow-x-auto rounded-2xl border border-white/10 bg-black/25">
+            <table className="min-w-[720px] w-full text-left text-sm">
+              <thead>
+                <tr className="border-b border-white/10 text-[var(--mj-foam)]/70">
+                  <th className="px-4 py-3 font-medium">Fonctionnalité</th>
+                  {sortedPlans.map((p) => (
+                    <th key={p.code} className="px-4 py-3 font-mj font-semibold text-[var(--mj-foam)]">
+                      {p.name}
+                      <span className="mt-1 block text-xs font-normal text-[var(--mj-foam)]/55">
+                        ~{Number(p.priceMad)} DH/mois
+                      </span>
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {COMPARISON_ROWS.map((row) => (
+                  <tr key={row.label} className="border-b border-white/5">
+                    <td className="px-4 py-3 text-[var(--mj-foam)]/75">{row.label}</td>
+                    {sortedPlans.map((p) => {
+                      const v = row.values(p);
+                      return (
+                        <td key={p.code} className="px-4 py-3">
+                          {typeof v === 'boolean' ? (
+                            v ? (
+                              <Check className="h-4 w-4 text-[var(--mj-lagoon)]" aria-label="Oui" />
+                            ) : (
+                              <Minus className="h-4 w-4 text-[var(--mj-foam)]/35" aria-label="Non" />
+                            )
+                          ) : (
+                            <span>{v}</span>
+                          )}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </div>
       </section>

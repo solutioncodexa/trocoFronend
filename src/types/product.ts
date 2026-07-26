@@ -1,6 +1,6 @@
 import type { ProductVariant } from './product-variant';
 
-export type PaymentMethod = 'cash_on_delivery' | 'online';
+export type PaymentMethod = 'cash_on_delivery' | 'online' | 'card_cmi' | 'bnpl';
 
 export interface Product {
   id: string;

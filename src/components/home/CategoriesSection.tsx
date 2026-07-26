@@ -6,7 +6,7 @@ import { categoriesApi } from '@/services/api/categories';
 import { heroCategoryDisplaySrc } from '@/components/home/heroCategoryImage';
 import { orderHeroCategoriesForDisplay } from '@/components/home/heroCategoryOrder';
 import { Button } from '@/components/ui/button';
-import type { CategoryDTO } from '@/types/api';
+import type { CategoryHeroDTO } from '@/types/api';
 
 const FALLBACK_ROOT_SLUGS = [
   'sachets-pochettes',
@@ -33,10 +33,11 @@ const CategoriesSection = () => {
     ...categoriesQueryOptions,
   });
 
-  const { data: allCategories = [], isLoading: loadingAll } = useQuery({
-    queryKey: ['categories'],
-    queryFn: () => categoriesApi.getAllCategories(),
+  const { data: navCategories = [], isLoading: loadingNav } = useQuery({
+    queryKey: ['categories', 'nav'],
+    queryFn: () => categoriesApi.getNavCategories(),
     ...categoriesQueryOptions,
+    enabled: heroList.length === 0 || heroList.every((c) => !(c.heroImageUrl ?? '').trim()),
   });
 
   const visible = useMemo(() => {
@@ -44,12 +45,15 @@ const CategoriesSection = () => {
     if (withImg.length > 0) return orderHeroCategoriesForDisplay(withImg);
 
     // Fallback si rien n’est encore configuré en admin
-    return FALLBACK_ROOT_SLUGS.map((slug) => allCategories.find((c) => c.slug === slug)).filter(
-      Boolean,
-    ) as CategoryDTO[];
-  }, [heroList, allCategories]);
+    return FALLBACK_ROOT_SLUGS.map((slug) => {
+      const n = navCategories.find((c) => c.slug === slug);
+      return n
+        ? ({ id: n.id, name: n.name, slug: n.slug, heroImageUrl: null, heroSortOrder: null } satisfies CategoryHeroDTO)
+        : null;
+    }).filter(Boolean) as CategoryHeroDTO[];
+  }, [heroList, navCategories]);
 
-  if (loadingHero || loadingAll || visible.length === 0) return null;
+  if (loadingHero || loadingNav || visible.length === 0) return null;
 
   return (
     <section className="bg-background py-16 sm:py-20">

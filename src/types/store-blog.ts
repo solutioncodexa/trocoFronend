@@ -14,6 +14,20 @@ export type StoreBlogPost = {
   updatedAt?: string | null;
 };
 
+/** Liste blog — sans content HTML. */
+export type StoreBlogPostListItem = {
+  id: number;
+  title: string;
+  slug: string;
+  excerpt?: string | null;
+  coverUrl?: string | null;
+  lang?: string | null;
+  published: boolean;
+  publishAt?: string | null;
+  createdAt?: string | null;
+  updatedAt?: string | null;
+};
+
 export type UpsertBlogPostPayload = {
   title: string;
   slug?: string;

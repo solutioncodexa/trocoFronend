@@ -1,6 +1,6 @@
 import { buildApiUrl, apiRequest } from '@/config/api';
 import type { ProductDetailDTO, ProductListItemDTO, ProductVariant } from '@/types/product-dtos';
-import type { PageResponse } from '@/types/api';
+import type { PageResponse, CatalogFacetsDTO } from '@/types/api';
 
 export interface ProductFilters {
   category?: string;
@@ -21,6 +21,7 @@ export interface ProductQueryParams {
   maxPrice?: number;
   inStock?: boolean;
   keyword?: string;
+  facetSize?: string;
 }
 
 /** Données produit pour création/modification (sans images, envoyées séparément) */
@@ -57,6 +58,7 @@ function buildProductsQueryString(params: ProductQueryParams): string {
     maxPrice,
     inStock,
     keyword,
+    facetSize,
   } = params;
 
   const qs = new URLSearchParams();
@@ -70,6 +72,7 @@ function buildProductsQueryString(params: ProductQueryParams): string {
   if (maxPrice !== undefined) qs.set('maxPrice', String(maxPrice));
   if (inStock === true) qs.set('inStock', 'true');
   if (keyword !== undefined && keyword.trim() !== '') qs.set('keyword', keyword.trim());
+  if (facetSize?.trim()) qs.set('facetSize', facetSize.trim());
 
   return qs.toString();
 }
@@ -90,6 +93,13 @@ export const productsApi = {
   getProductById: async (id: string): Promise<ProductDetailDTO> => {
     const url = buildApiUrl(`/products/${id}`);
     return apiRequest<ProductDetailDTO>(url);
+  },
+
+  /** Wishlist / batch — ProductListItemDTO, max 50. */
+  getProductsByIds: async (ids: string[]): Promise<ProductListItemDTO[]> => {
+    if (!ids.length) return [];
+    const qs = ids.map((id) => `ids=${encodeURIComponent(id)}`).join('&');
+    return apiRequest<ProductListItemDTO[]>(buildApiUrl(`/products/by-ids?${qs}`));
   },
 
   filterProducts: async (filters: ProductFilters): Promise<ProductListItemDTO[]> => {
@@ -151,6 +161,16 @@ export const productsApi = {
     const qs = new URLSearchParams({ limit: String(limit) });
     return apiRequest<ProductListItemDTO[]>(
       buildApiUrl(`/products/${id}/frequently-bought?${qs.toString()}`),
+    );
+  },
+
+  getFacets: async (): Promise<CatalogFacetsDTO> =>
+    apiRequest<CatalogFacetsDTO>(buildApiUrl('/products/facets')),
+
+  recommendations: async (id: string, limit = 6): Promise<ProductListItemDTO[]> => {
+    const qs = new URLSearchParams({ limit: String(limit) });
+    return apiRequest<ProductListItemDTO[]>(
+      buildApiUrl(`/products/${id}/recommendations?${qs.toString()}`),
     );
   },
 };

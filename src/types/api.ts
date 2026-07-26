@@ -20,10 +20,18 @@ export interface PageResponse<T> {
 
 export type { ProductListItemDTO, ProductDetailDTO, ProductDTO } from './product-dtos';
 
-import type { ProductDetailDTO } from './product-dtos';
+/** Produit allégé sur les lignes de commande (réponse + create). */
+export interface OrderLineProductDTO {
+  id: string;
+  name: string;
+  price: number;
+  images?: string[];
+  weight?: number;
+  sku?: string;
+}
 
 export interface CartItemDTO {
-  product: ProductDetailDTO;
+  product: OrderLineProductDTO;
   quantity: number;
   selectedSize?: string;
   selectedVariantId?: string;
@@ -47,16 +55,33 @@ export interface CustomerSummaryDTO {
   city?: string;
 }
 
+export type CheckoutPaymentMethod = 'cash_on_delivery' | 'online' | 'card_cmi' | 'bnpl';
+
 export interface OrderDTO {
   id: string;
   items: CartItemDTO[];
   customer: CustomerDTO;
   total: number;
-  paymentMethod: string; // 'cash_on_delivery' or 'online'
+  paymentMethod: CheckoutPaymentMethod | string;
   status: string; // 'new', 'confirmed', 'delivered', 'cancelled'
   createdAt: string;
   promoCode?: string;
   discount?: number;
+  shippingFee?: number;
+  carrierCode?: string;
+  loyaltyPointsToRedeem?: number;
+  loyaltyPointsEarned?: number;
+  loyaltyPointsRedeemed?: number;
+}
+
+/** Accusé de création (POST /orders) — sans lignes. */
+export interface OrderCreatedDTO {
+  id: string;
+  orderNumber?: string | null;
+  total: number;
+  status: string;
+  paymentStatus?: string | null;
+  loyaltyPointsEarned?: number | null;
 }
 
 /** Liste paginée admin — sans articles ni produits complets */
@@ -164,20 +189,141 @@ export interface UserInfoDTO {
 }
 
 // Platform / multi-tenant
-export interface PlanDTO {
+export interface PlanFeaturesDTO {
+  themes?: string;
+  pageBuilder?: string;
+  abTesting?: boolean;
+  abandonedCart?: boolean;
+  abandonedCartAdvanced?: boolean;
+  whatsappBusiness?: boolean;
+  whatsappMultiTemplates?: boolean;
+  webhooks?: string;
+  blogSeo?: string;
+  support?: string;
+  apiHeadless?: boolean;
+  loyalty?: boolean;
+  multiCurrency?: boolean;
+}
+
+/** Landing / inscription (GET /platform/plans). */
+export interface PlanMarketingDTO {
   id: number;
   code: string;
   name: string;
   description?: string;
   priceMad: number;
   currency?: string;
-  billingPeriod?: string;
   maxProducts?: number | null;
   maxStaff?: number | null;
+  maxOrdersPerMonth?: number | null;
+  maxPixels?: number | null;
+  storageMb?: number | null;
   customDomain?: boolean;
+  features?: PlanFeaturesDTO;
+}
+
+/** Config Super Admin (GET /platform/plans/admin). */
+export interface PlanDTO extends PlanMarketingDTO {
+  billingPeriod?: string;
   active?: boolean;
 }
 
+export interface UpdatePlanRequest {
+  code?: string;
+  name?: string;
+  description?: string;
+  priceMad?: number;
+  currency?: string;
+  billingPeriod?: string;
+  maxProducts?: number | null;
+  maxStaff?: number | null;
+  maxOrdersPerMonth?: number | null;
+  maxPixels?: number | null;
+  storageMb?: number | null;
+  customDomain?: boolean;
+  active?: boolean;
+  features?: PlanFeaturesDTO;
+}
+
+/** Bootstrap vitrine publique (GET /platform/store) — sans paiement / plan. */
+export interface StorefrontBootstrapDTO {
+  fournisseurId: number;
+  slug: string;
+  status?: string | null;
+  siteName: string;
+  tagline?: string | null;
+  aboutText?: string | null;
+  logoUrl?: string | null;
+  faviconUrl?: string | null;
+  primaryColor?: string | null;
+  secondaryColor?: string | null;
+  themeKey?: string | null;
+  contactEmail?: string | null;
+  contactPhone?: string | null;
+  contactWhatsapp?: string | null;
+  contactCity?: string | null;
+  freeShippingThreshold?: number | null;
+  facebookUrl?: string | null;
+  instagramUrl?: string | null;
+  tiktokUrl?: string | null;
+  heroEnabled: boolean;
+  categoriesEnabled: boolean;
+  surMesureEnabled: boolean;
+  metaPixelId?: string | null;
+  tiktokPixelId?: string | null;
+  googleAdsId?: string | null;
+  googleAnalyticsId?: string | null;
+  cookieConsentRequired?: boolean;
+  privacyPolicyUrl?: string | null;
+  defaultLocale?: string | null;
+  supportedLocales?: string | null;
+  currency?: string | null;
+  currencyRatesJson?: string | null;
+  whatsappOrderTemplate?: string | null;
+}
+
+/** Checkout à la demande (GET /platform/store/checkout). */
+export interface StorefrontCheckoutDTO {
+  slug: string;
+  paymentCodEnabled: boolean;
+  paymentCmiEnabled: boolean;
+  paymentBnplEnabled: boolean;
+  bnplProvider?: string | null;
+  loyaltyEnabled: boolean;
+  loyaltyPointsPerMad?: number | null;
+  loyaltyMadPerPoint?: number | null;
+  shippingDefaultCarrier?: string | null;
+  abandonedCartEnabled: boolean;
+  freeShippingThreshold?: number | null;
+}
+
+/** Shell admin (GET /store-settings/me/summary). */
+export interface AdminStoreSummaryDTO {
+  fournisseurId: number;
+  slug: string;
+  status?: string | null;
+  siteName: string;
+  tagline?: string | null;
+  aboutText?: string | null;
+  logoUrl?: string | null;
+  faviconUrl?: string | null;
+  primaryColor?: string | null;
+  secondaryColor?: string | null;
+  themeKey?: string | null;
+  planCode?: string | null;
+  planName?: string | null;
+}
+
+/**
+ * Contexte tenant unifié.
+ * Vitrine → StorefrontBootstrapDTO ; admin shell → summary (+ plan) avec flags optionnels.
+ */
+export type TenantStoreDTO = StorefrontBootstrapDTO & {
+  planCode?: string | null;
+  planName?: string | null;
+};
+
+/** Config complète — page Paramètres admin uniquement. */
 export interface StoreSettingsDTO {
   fournisseurId: number;
   slug: string;
@@ -213,6 +359,22 @@ export interface StoreSettingsDTO {
   abandonedCartEnabled?: boolean;
   abandonedCartDelayMinutes?: number | null;
   whatsappOrderTemplate?: string | null;
+  defaultLocale?: string | null;
+  supportedLocales?: string | null;
+  currency?: string | null;
+  currencyRatesJson?: string | null;
+  paymentCodEnabled?: boolean;
+  paymentCmiEnabled?: boolean;
+  paymentBnplEnabled?: boolean;
+  bnplProvider?: string | null;
+  loyaltyEnabled?: boolean;
+  loyaltyPointsPerMad?: number | null;
+  loyaltyMadPerPoint?: number | null;
+  privacyPolicyUrl?: string | null;
+  cookieConsentRequired?: boolean;
+  dataRetentionDays?: number | null;
+  cndpNoticeVersion?: string | null;
+  shippingDefaultCarrier?: string | null;
 }
 
 export interface StoreThemeDTO {
@@ -295,6 +457,50 @@ export interface UpdateStoreSettingsRequest {
   abandonedCartEnabled?: boolean;
   abandonedCartDelayMinutes?: number | null;
   whatsappOrderTemplate?: string;
+  defaultLocale?: string;
+  supportedLocales?: string;
+  currency?: string;
+  currencyRatesJson?: string;
+  paymentCodEnabled?: boolean;
+  paymentCmiEnabled?: boolean;
+  paymentBnplEnabled?: boolean;
+  bnplProvider?: string;
+  loyaltyEnabled?: boolean;
+  loyaltyPointsPerMad?: number | null;
+  loyaltyMadPerPoint?: number | null;
+  privacyPolicyUrl?: string;
+  cookieConsentRequired?: boolean;
+  dataRetentionDays?: number | null;
+  cndpNoticeVersion?: string;
+  shippingDefaultCarrier?: string;
+}
+
+export interface CatalogFacetsDTO {
+  categories: CatalogFacetBucket[];
+  sizes: CatalogFacetBucket[];
+  priceMin: number;
+  priceMax: number;
+  totalProducts: number;
+}
+
+export interface CatalogFacetBucket {
+  value: string;
+  label: string;
+  count: number;
+}
+
+export interface ShippingCarrierDTO {
+  id?: number;
+  code: string;
+  name: string;
+  enabled?: boolean;
+  baseFee?: number;
+  freeAbove?: number | null;
+  trackingUrlTemplate?: string | null;
+  etaDaysMin?: number | null;
+  etaDaysMax?: number | null;
+  sortOrder?: number | null;
+  quotedFee?: number | null;
 }
 
 export interface ProductReviewDTO {
@@ -312,7 +518,43 @@ export interface ProductReviewSummaryDTO {
   productId: number;
   averageRating: number;
   reviewCount: number;
-  reviews: ProductReviewDTO[];
+}
+
+export interface CategoryNavDTO {
+  id: number;
+  name: string;
+  slug: string;
+  parentId?: number | null;
+}
+
+export interface CategoryCardDTO {
+  id: number;
+  name: string;
+  slug: string;
+  parentId?: number | null;
+  heroImageUrl?: string | null;
+}
+
+export interface CategoryHeroDTO {
+  id: number;
+  name: string;
+  slug: string;
+  heroImageUrl?: string | null;
+  heroSortOrder?: number | null;
+}
+
+export interface AbandonedCartListItemDTO {
+  id: number;
+  customerEmail?: string | null;
+  customerPhone?: string | null;
+  customerName?: string | null;
+  cartTotal?: number | null;
+  itemCount: number;
+  reminderSent: boolean;
+  recovered: boolean;
+  remindAt?: string | null;
+  lastActivityAt?: string | null;
+  createdAt?: string | null;
 }
 
 export interface CreateProductReviewRequest {

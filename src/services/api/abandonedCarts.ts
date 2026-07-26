@@ -1,5 +1,9 @@
 import { buildApiUrl, apiRequest } from '@/config/api';
-import type { AbandonedCartDTO, CaptureAbandonedCartRequest } from '@/types/api';
+import type {
+  AbandonedCartDTO,
+  AbandonedCartListItemDTO,
+  CaptureAbandonedCartRequest,
+} from '@/types/api';
 
 export const abandonedCartsApi = {
   capture: (payload: CaptureAbandonedCartRequest): Promise<AbandonedCartDTO> =>
@@ -17,6 +21,6 @@ export const abandonedCartsApi = {
       body: JSON.stringify({ sessionKey }),
     }),
 
-  listAdmin: (): Promise<AbandonedCartDTO[]> =>
-    apiRequest<AbandonedCartDTO[]>(buildApiUrl('/abandoned-carts')),
+  listAdmin: (): Promise<AbandonedCartListItemDTO[]> =>
+    apiRequest<AbandonedCartListItemDTO[]>(buildApiUrl('/abandoned-carts')),
 };

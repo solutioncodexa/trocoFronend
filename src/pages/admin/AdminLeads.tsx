@@ -88,8 +88,8 @@ const AdminLeads = () => {
                   <td className="px-3 py-2">{lead.phone || '—'}</td>
                   <td className="px-3 py-2 font-mono text-xs text-muted-foreground">
                     {lead.sourcePath || '—'}
-                    {lead.message ? (
-                      <p className="mt-1 max-w-xs font-sans text-foreground">{lead.message}</p>
+                    {lead.messagePreview ? (
+                      <p className="mt-1 max-w-xs font-sans text-foreground">{lead.messagePreview}</p>
                     ) : null}
                   </td>
                 </tr>

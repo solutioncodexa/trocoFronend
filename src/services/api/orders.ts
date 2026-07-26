@@ -1,5 +1,5 @@
 import { buildApiUrl, apiRequest } from '@/config/api';
-import { OrderDTO, OrderListItemDTO, PageResponse } from '@/types/api';
+import { OrderCreatedDTO, OrderDTO, OrderListItemDTO, PageResponse } from '@/types/api';
 
 export interface OrderQueryParams {
   page?: number;
@@ -51,9 +51,9 @@ export const ordersApi = {
     return apiRequest<OrderListItemDTO[]>(url);
   },
 
-  createOrder: async (order: OrderDTO): Promise<OrderDTO> => {
+  createOrder: async (order: OrderDTO): Promise<OrderCreatedDTO> => {
     const url = buildApiUrl('/orders');
-    return apiRequest<OrderDTO>(url, {
+    return apiRequest<OrderCreatedDTO>(url, {
       method: 'POST',
       body: JSON.stringify(order),
     }, true);

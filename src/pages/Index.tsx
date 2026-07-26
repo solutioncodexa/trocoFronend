@@ -52,8 +52,8 @@ const Index = () => {
   });
 
   const { data: categoriesDto = [] } = useQuery({
-    queryKey: ['categories', 'home', store?.slug],
-    queryFn: () => categoriesApi.getAllCategories(),
+    queryKey: ['categories', 'cards', 'home', store?.slug],
+    queryFn: () => categoriesApi.getCardCategories(),
     ...staticCatalogQueryOptions,
     enabled: !customHome,
   });
@@ -94,7 +94,7 @@ const Index = () => {
       name: c.name,
       slug: c.slug,
       image: c.heroImageUrl ? getImageUrl(c.heroImageUrl) : FALLBACK_HERO,
-      count: c.productCount ?? 0,
+      count: 0,
     }));
 
   const heroImage =

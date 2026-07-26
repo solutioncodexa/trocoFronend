@@ -9,7 +9,7 @@ import { useCart } from '@/contexts/CartContext';
 import { formatPrice } from '@/utils/formatPrice';
 import { productsApi } from '@/services/api';
 import { abandonedCartsApi } from '@/services/api/abandonedCarts';
-import { mapProductDetailToProduct, mapProductListItemListToProducts } from '@/utils/productMapper';
+import { mapProductListItemListToProducts } from '@/utils/productMapper';
 import { parseAbandonedCartJson } from '@/utils/abandonedCartItems';
 import ProductCard from '@/components/ui/ProductCard';
 import { useStoreBrand } from '@/hooks/useStoreBrand';
@@ -54,20 +54,20 @@ const Cart = () => {
           return;
         }
         clearCart();
+        const products = mapProductListItemListToProducts(
+          await productsApi.getProductsByIds(lines.map((l) => l.productId)),
+        );
+        const byId = new Map(products.map((p) => [p.id, p]));
         for (const line of lines) {
-          try {
-            const dto = await productsApi.getProductById(line.productId);
-            const product = mapProductDetailToProduct(dto);
-            addToCart(
-              product,
-              line.quantity,
-              line.selectedSize,
-              line.selectedVariantId,
-              line.customLogoUrl,
-            );
-          } catch {
-            /* produit indisponible */
-          }
+          const product = byId.get(line.productId);
+          if (!product) continue;
+          addToCart(
+            product,
+            line.quantity,
+            line.selectedSize,
+            line.selectedVariantId,
+            line.customLogoUrl,
+          );
         }
         toast.success('Votre panier a été restauré');
         const next = new URLSearchParams(searchParams);

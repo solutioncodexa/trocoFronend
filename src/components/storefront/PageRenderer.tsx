@@ -15,6 +15,26 @@ import { usePreloadImage } from '@/hooks/usePreloadImage';
 import type { StorePage, StorePageBlock } from '@/types/store-pages';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import {
+  alignClass,
+  buttonInlineStyle,
+  columnsClass,
+  heroHeightClass,
+  justifyClass,
+  maxWidthClass,
+  overlayClass,
+  paddingYClass,
+  readBlockStyle,
+  sectionInlineStyle,
+  vAlignClass,
+} from '@/components/admin/page-builder/blockAppearance';
+import {
+  MOCK_FAQ,
+  MOCK_INSTAGRAM,
+  MOCK_TESTIMONIALS,
+  mockCategories,
+  mockProducts,
+} from '@/components/admin/page-builder/previewMocks';
 
 function cfg(block: StorePageBlock) {
   return (block.config ?? {}) as Record<string, unknown>;
@@ -84,7 +104,7 @@ export function PageRenderer({ page }: { page: StorePage }) {
     <div className="store-page-builder">
       {blocks.map((block, i) => (
         <div key={block.id ?? `${block.type}-${i}`} className={visibilityClass(block)}>
-          <BlockView
+          <PageBlockView
             block={block}
             page={page}
             pageId={page.id}
@@ -101,16 +121,20 @@ export function PageRenderer({ page }: { page: StorePage }) {
   );
 }
 
-function BlockView({
+/** Rendu d’un seul bloc (vitrine + atelier de design). */
+export function PageBlockView({
   block,
   page,
   pageId,
   isLcpHero,
+  usePreviewMocks = false,
 }: {
   block: StorePageBlock;
   page: StorePage;
   pageId?: number;
   isLcpHero?: boolean;
+  /** Atelier : remplir produits / catégories / avis si catalogue vide. */
+  usePreviewMocks?: boolean;
 }) {
   switch (block.type) {
     case 'hero':
@@ -118,15 +142,15 @@ function BlockView({
     case 'rich_text':
       return <RichTextBlock block={block} />;
     case 'products':
-      return <ProductsBlock block={block} />;
+      return <ProductsBlock block={block} usePreviewMocks={usePreviewMocks} />;
     case 'categories':
-      return <CategoriesBlock block={block} />;
+      return <CategoriesBlock block={block} usePreviewMocks={usePreviewMocks} />;
     case 'cta':
       return <CtaBlock block={block} page={page} pageId={pageId} />;
     case 'image':
       return <ImageBlock block={block} />;
     case 'faq':
-      return <FaqBlock block={block} />;
+      return <FaqBlock block={block} usePreviewMocks={usePreviewMocks} />;
     case 'spacer':
       return <SpacerBlock block={block} />;
     case 'contact':
@@ -134,14 +158,23 @@ function BlockView({
     case 'video':
       return <VideoBlock block={block} />;
     case 'testimonials':
-      return <TestimonialsBlock block={block} />;
+      return <TestimonialsBlock block={block} usePreviewMocks={usePreviewMocks} />;
     case 'countdown':
       return <CountdownBlock block={block} page={page} pageId={pageId} />;
     case 'instagram':
-      return <InstagramBlock block={block} />;
+      return <InstagramBlock block={block} usePreviewMocks={usePreviewMocks} />;
     default:
       return null;
   }
+}
+
+function DemoBadge({ show }: { show?: boolean }) {
+  if (!show) return null;
+  return (
+    <span className="mb-3 inline-flex rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-800">
+      Exemple — ajoutez vos données
+    </span>
+  );
 }
 
 function HeroBlock({
@@ -157,11 +190,16 @@ function HeroBlock({
 }) {
   const { to } = useStorefrontPath();
   const c = cfg(block);
+  const style = readBlockStyle(c);
   const imageUrl = str(c.imageUrl);
   const href = str(c.ctaHref, '/boutique');
+  const btnStyle = buttonInlineStyle(style.buttonColor);
 
   return (
-    <section className="relative min-h-[min(70dvh,560px)] overflow-hidden">
+    <section
+      className={cn('relative overflow-hidden', heroHeightClass(style.heroHeight), paddingYClass(style.paddingY))}
+      style={sectionInlineStyle(style)}
+    >
       {imageUrl ? (
         <img
           src={getImageUrl(imageUrl)}
@@ -174,25 +212,55 @@ function HeroBlock({
       ) : (
         <div
           className="absolute inset-0"
-          style={{
-            backgroundImage:
-              'radial-gradient(ellipse 80% 60% at 20% 20%, hsl(var(--primary) / 0.28), transparent 55%), linear-gradient(165deg, hsl(var(--background)), hsl(var(--muted)))',
-          }}
+          style={
+            style.bgColor
+              ? { backgroundColor: style.bgColor }
+              : {
+                  backgroundImage:
+                    'radial-gradient(ellipse 80% 60% at 20% 20%, hsl(var(--primary) / 0.28), transparent 55%), linear-gradient(165deg, hsl(var(--background)), hsl(var(--muted)))',
+                }
+          }
         />
       )}
-      {imageUrl ? (
-        <div className="absolute inset-0 bg-gradient-to-r from-background via-background/80 to-transparent" />
+      {imageUrl && style.overlay !== 'none' ? (
+        <div className={cn('absolute inset-0', overlayClass(style.overlay))} />
       ) : null}
-      <div className="relative mx-auto flex min-h-[min(70dvh,560px)] max-w-6xl flex-col justify-center px-4 py-16 sm:px-6">
-        <h1 className="max-w-2xl font-display text-4xl font-bold tracking-tight sm:text-5xl">
+      <div
+        className={cn(
+          'relative mx-auto flex flex-col px-4 sm:px-6',
+          heroHeightClass(style.heroHeight),
+          maxWidthClass(style.maxWidth),
+          vAlignClass(style.vAlign),
+          alignClass(style.align),
+        )}
+      >
+        <h1
+          className={cn(
+            'max-w-2xl font-display text-4xl font-bold tracking-tight sm:text-5xl',
+            style.align === 'center' && 'mx-auto',
+            style.align === 'right' && 'ml-auto',
+          )}
+          style={style.textColor ? { color: style.textColor } : undefined}
+        >
           {str(c.headline, 'Bienvenue')}
         </h1>
-        <p className="mt-4 max-w-lg text-muted-foreground">{str(c.subtext)}</p>
+        <p
+          className={cn(
+            'mt-4 max-w-lg',
+            !style.textColor && 'text-muted-foreground',
+            style.align === 'center' && 'mx-auto',
+            style.align === 'right' && 'ml-auto',
+          )}
+          style={style.textColor ? { color: style.textColor, opacity: 0.85 } : undefined}
+        >
+          {str(c.subtext)}
+        </p>
         {str(c.ctaLabel) ? (
-          <div className="mt-8">
+          <div className={cn('mt-8 flex w-full', justifyClass(style.align))}>
             <Button
               size="lg"
               asChild
+              style={btnStyle}
               onClick={() => trackCta(pageId, str(c.ctaLabel), href, page)}
             >
               <Link to={to(href)}>{str(c.ctaLabel)}</Link>
@@ -206,17 +274,37 @@ function HeroBlock({
 
 function RichTextBlock({ block }: { block: StorePageBlock }) {
   const c = cfg(block);
+  const style = readBlockStyle(c);
   return (
-    <section className="mx-auto max-w-3xl px-4 py-14 sm:px-6">
+    <section
+      className={cn('mx-auto px-4 sm:px-6', maxWidthClass(style.maxWidth === 'lg' ? 'md' : style.maxWidth), paddingYClass(style.paddingY), alignClass(style.align))}
+      style={sectionInlineStyle(style)}
+    >
       {str(c.title) ? (
-        <h2 className="font-display text-2xl font-bold sm:text-3xl">{str(c.title)}</h2>
+        <h2
+          className="font-display text-2xl font-bold sm:text-3xl"
+          style={style.textColor ? { color: style.textColor } : undefined}
+        >
+          {str(c.title)}
+        </h2>
       ) : null}
-      <p className="mt-4 whitespace-pre-wrap leading-relaxed text-muted-foreground">{str(c.body)}</p>
+      <p
+        className={cn('mt-4 whitespace-pre-wrap leading-relaxed', !style.textColor && 'text-muted-foreground')}
+        style={style.textColor ? { color: style.textColor, opacity: 0.9 } : undefined}
+      >
+        {str(c.body)}
+      </p>
     </section>
   );
 }
 
-function ProductsBlock({ block }: { block: StorePageBlock }) {
+function ProductsBlock({
+  block,
+  usePreviewMocks = false,
+}: {
+  block: StorePageBlock;
+  usePreviewMocks?: boolean;
+}) {
   const { to } = useStorefrontPath();
   const c = cfg(block);
   const limit = num(c.limit, 8);
@@ -225,72 +313,114 @@ function ProductsBlock({ block }: { block: StorePageBlock }) {
     queryFn: () => productsApi.getAllProducts({ page: 0, size: limit }),
     ...staticCatalogQueryOptions,
   });
-  const products = mapProductListItemListToProducts(data?.content ?? []).slice(0, limit);
+  const real = mapProductListItemListToProducts(data?.content ?? []).slice(0, limit);
+  const usingMocks = usePreviewMocks && real.length === 0;
+  const products = usingMocks ? mockProducts(limit) : real;
+  const style = readBlockStyle(c);
 
   return (
-    <section className="mx-auto max-w-6xl px-4 py-14 sm:px-6">
-      <div className="mb-8 flex items-end justify-between gap-4">
-        <h2 className="font-display text-2xl font-bold sm:text-3xl">{str(c.title, 'Produits')}</h2>
-        <Link to={to('/boutique')} className="text-sm font-medium text-primary hover:underline">
-          Tout voir
-        </Link>
-      </div>
-      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-        {products.map((p) => (
-          <Link key={p.id} to={to(`/produit/${p.id}`)} className="group block">
-            <div className="aspect-[4/5] overflow-hidden rounded-2xl bg-muted">
-              <img
-                src={p.images[0]}
-                alt=""
-                loading="lazy"
-                decoding="async"
-                className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
-              />
-            </div>
-            <p className="mt-3 font-display font-semibold">{p.name}</p>
-            <p className="text-sm text-muted-foreground">{formatPrice(p.price)}</p>
+    <section
+      className={cn('mx-auto px-4 sm:px-6', maxWidthClass(style.maxWidth), paddingYClass(style.paddingY))}
+      style={sectionInlineStyle(style)}
+    >
+      <DemoBadge show={usingMocks} />
+      <div className={cn('mb-8 flex items-end gap-4', style.align === 'center' ? 'justify-center' : 'justify-between')}>
+        <h2
+          className={cn('font-display text-2xl font-bold sm:text-3xl', alignClass(style.align))}
+          style={style.textColor ? { color: style.textColor } : undefined}
+        >
+          {str(c.title, 'Produits')}
+        </h2>
+        {style.align !== 'center' ? (
+          <Link to={to('/boutique')} className="text-sm font-medium text-primary hover:underline">
+            Tout voir
           </Link>
-        ))}
+        ) : null}
+      </div>
+      <div className={cn('grid gap-6', columnsClass(style.columns))}>
+        {products.map((p) => {
+          const href = usingMocks ? to('/boutique') : to(`/produit/${p.id}`);
+          const img = p.images[0];
+          return (
+            <Link key={p.id} to={href} className="group block" onClick={usingMocks ? (e) => e.preventDefault() : undefined}>
+              <div className="aspect-[4/5] overflow-hidden rounded-2xl bg-muted">
+                {img ? (
+                  <img
+                    src={img.startsWith('data:') ? img : getImageUrl(img)}
+                    alt=""
+                    loading="lazy"
+                    decoding="async"
+                    className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
+                  />
+                ) : null}
+              </div>
+              <p className="mt-3 font-display font-semibold">{p.name}</p>
+              <p className="text-sm text-muted-foreground">{formatPrice(p.price)}</p>
+            </Link>
+          );
+        })}
       </div>
     </section>
   );
 }
 
-function CategoriesBlock({ block }: { block: StorePageBlock }) {
+function CategoriesBlock({
+  block,
+  usePreviewMocks = false,
+}: {
+  block: StorePageBlock;
+  usePreviewMocks?: boolean;
+}) {
   const { to } = useStorefrontPath();
   const c = cfg(block);
   const { data: categories = [] } = useQuery({
-    queryKey: ['categories', 'page-block'],
-    queryFn: () => categoriesApi.getAllCategories(),
+    queryKey: ['categories', 'cards', 'page-block'],
+    queryFn: () => categoriesApi.getCardCategories(),
     ...staticCatalogQueryOptions,
   });
-  const roots = categories.filter((x) => !x.parentId).slice(0, 8);
+  const real = categories.filter((x) => !x.parentId).slice(0, 8);
+  const usingMocks = usePreviewMocks && real.length === 0;
+  const roots = usingMocks ? mockCategories(4) : real;
+  const style = readBlockStyle(c);
 
   return (
-    <section className="mx-auto max-w-6xl px-4 py-14 sm:px-6">
-      <h2 className="mb-8 font-display text-2xl font-bold sm:text-3xl">{str(c.title, 'Catégories')}</h2>
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {roots.map((cat) => (
-          <Link
-            key={cat.id}
-            to={to(`/boutique?category=${encodeURIComponent(cat.slug)}`)}
-            className="group relative aspect-[4/5] overflow-hidden rounded-2xl bg-muted"
-          >
-            {cat.heroImageUrl ? (
-              <img
-                src={getImageUrl(cat.heroImageUrl)}
-                alt=""
-                loading="lazy"
-                decoding="async"
-                className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
-              />
-            ) : null}
-            <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
-            <div className="absolute inset-x-0 bottom-0 p-4 text-white">
-              <p className="font-display text-lg font-semibold">{cat.name}</p>
-            </div>
-          </Link>
-        ))}
+    <section
+      className={cn('mx-auto px-4 sm:px-6', maxWidthClass(style.maxWidth), paddingYClass(style.paddingY))}
+      style={sectionInlineStyle(style)}
+    >
+      <DemoBadge show={usingMocks} />
+      <h2
+        className={cn('mb-8 font-display text-2xl font-bold sm:text-3xl', alignClass(style.align))}
+        style={style.textColor ? { color: style.textColor } : undefined}
+      >
+        {str(c.title, 'Catégories')}
+      </h2>
+      <div className={cn('grid gap-4', columnsClass(style.columns))}>
+        {roots.map((cat) => {
+          const img = cat.heroImageUrl;
+          return (
+            <Link
+              key={cat.id}
+              to={to(`/boutique?category=${encodeURIComponent(cat.slug)}`)}
+              className="group relative aspect-[4/5] overflow-hidden rounded-2xl bg-muted"
+              onClick={usingMocks ? (e) => e.preventDefault() : undefined}
+            >
+              {img ? (
+                <img
+                  src={img.startsWith('data:') ? img : getImageUrl(img)}
+                  alt=""
+                  loading="lazy"
+                  decoding="async"
+                  className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
+                />
+              ) : null}
+              <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
+              <div className="absolute inset-x-0 bottom-0 p-4 text-white">
+                <p className="font-display text-lg font-semibold">{cat.name}</p>
+              </div>
+            </Link>
+          );
+        })}
       </div>
     </section>
   );
@@ -307,19 +437,45 @@ function CtaBlock({
 }) {
   const { to } = useStorefrontPath();
   const c = cfg(block);
+  const style = readBlockStyle(c);
   const href = str(c.ctaHref, '/contact');
+  const btnStyle = buttonInlineStyle(style.buttonColor);
   return (
-    <section className="bg-primary px-4 py-14 text-primary-foreground sm:px-6">
-      <div className="mx-auto flex max-w-4xl flex-col items-start justify-between gap-6 sm:flex-row sm:items-center">
+    <section
+      className={cn(
+        'px-4 sm:px-6',
+        paddingYClass(style.paddingY),
+        !style.bgColor && 'bg-primary text-primary-foreground',
+      )}
+      style={sectionInlineStyle(style)}
+    >
+      <div
+        className={cn(
+          'mx-auto flex flex-col gap-6 sm:flex-row sm:items-center',
+          maxWidthClass(style.maxWidth === 'lg' ? 'md' : style.maxWidth),
+          style.align === 'center' ? 'items-center text-center sm:flex-col' : 'items-start justify-between',
+        )}
+      >
         <div>
-          <h2 className="font-display text-2xl font-bold sm:text-3xl">{str(c.title)}</h2>
-          <p className="mt-2 text-primary-foreground/85">{str(c.body)}</p>
+          <h2
+            className="font-display text-2xl font-bold sm:text-3xl"
+            style={style.textColor ? { color: style.textColor } : undefined}
+          >
+            {str(c.title)}
+          </h2>
+          <p
+            className={cn('mt-2', !style.textColor && !style.bgColor && 'text-primary-foreground/85')}
+            style={style.textColor ? { color: style.textColor, opacity: 0.9 } : undefined}
+          >
+            {str(c.body)}
+          </p>
         </div>
         {str(c.ctaLabel) ? (
           <Button
             size="lg"
-            variant="secondary"
+            variant={style.buttonColor || style.bgColor ? 'default' : 'secondary'}
             asChild
+            style={btnStyle}
             onClick={() => trackCta(pageId, str(c.ctaLabel), href, page)}
           >
             <Link to={to(href)}>{str(c.ctaLabel)}</Link>
@@ -332,10 +488,14 @@ function CtaBlock({
 
 function ImageBlock({ block }: { block: StorePageBlock }) {
   const c = cfg(block);
+  const style = readBlockStyle(c);
   const imageUrl = str(c.imageUrl);
   if (!imageUrl) return null;
   return (
-    <section className="mx-auto max-w-5xl px-4 py-10 sm:px-6">
+    <section
+      className={cn('mx-auto px-4 sm:px-6', maxWidthClass(style.maxWidth === 'lg' ? 'md' : style.maxWidth), paddingYClass(style.paddingY), alignClass(style.align))}
+      style={sectionInlineStyle(style)}
+    >
       <img
         src={getImageUrl(imageUrl)}
         alt={str(c.alt)}
@@ -344,18 +504,41 @@ function ImageBlock({ block }: { block: StorePageBlock }) {
         className="w-full rounded-2xl object-cover"
       />
       {str(c.caption) ? (
-        <p className="mt-3 text-center text-sm text-muted-foreground">{str(c.caption)}</p>
+        <p
+          className={cn('mt-3 text-sm', !style.textColor && 'text-muted-foreground')}
+          style={style.textColor ? { color: style.textColor } : undefined}
+        >
+          {str(c.caption)}
+        </p>
       ) : null}
     </section>
   );
 }
 
-function FaqBlock({ block }: { block: StorePageBlock }) {
+function FaqBlock({
+  block,
+  usePreviewMocks = false,
+}: {
+  block: StorePageBlock;
+  usePreviewMocks?: boolean;
+}) {
   const c = cfg(block);
-  const items = Array.isArray(c.items) ? (c.items as { q?: string; a?: string }[]) : [];
+  const style = readBlockStyle(c);
+  const raw = Array.isArray(c.items) ? (c.items as { q?: string; a?: string }[]) : [];
+  const usingMocks = usePreviewMocks && raw.length === 0;
+  const items = usingMocks ? MOCK_FAQ : raw;
   return (
-    <section className="mx-auto max-w-2xl px-4 py-14 sm:px-6">
-      <h2 className="mb-6 font-display text-2xl font-bold">{str(c.title, 'FAQ')}</h2>
+    <section
+      className={cn('mx-auto px-4 sm:px-6', maxWidthClass(style.maxWidth === 'lg' ? 'sm' : style.maxWidth), paddingYClass(style.paddingY), alignClass(style.align))}
+      style={sectionInlineStyle(style)}
+    >
+      <DemoBadge show={usingMocks} />
+      <h2
+        className="mb-6 font-display text-2xl font-bold"
+        style={style.textColor ? { color: style.textColor } : undefined}
+      >
+        {str(c.title, 'FAQ')}
+      </h2>
       <div className="space-y-3">
         {items.map((item, i) => (
           <details key={i} className="rounded-xl border border-border p-4">
@@ -389,11 +572,25 @@ function ContactBlock({ block }: { block: StorePageBlock }) {
   const isNewsletter = leadType === 'newsletter';
   const isDevis = leadType === 'devis';
   const [submitting, setSubmitting] = useState(false);
+  const style = readBlockStyle(c);
 
   return (
-    <section className="mx-auto max-w-xl px-4 py-14 sm:px-6">
-      <h2 className="font-display text-2xl font-bold">{str(c.title, 'Contact')}</h2>
-      <p className="mt-2 text-muted-foreground">{str(c.body)}</p>
+    <section
+      className={cn('mx-auto px-4 sm:px-6', maxWidthClass(style.maxWidth === 'lg' ? 'sm' : style.maxWidth), paddingYClass(style.paddingY), alignClass(style.align))}
+      style={sectionInlineStyle(style)}
+    >
+      <h2
+        className="font-display text-2xl font-bold"
+        style={style.textColor ? { color: style.textColor } : undefined}
+      >
+        {str(c.title, 'Contact')}
+      </h2>
+      <p
+        className={cn('mt-2', !style.textColor && 'text-muted-foreground')}
+        style={style.textColor ? { color: style.textColor, opacity: 0.9 } : undefined}
+      >
+        {str(c.body)}
+      </p>
       <form
         className="mt-6 space-y-3"
         onSubmit={(e) => {
@@ -503,12 +700,21 @@ function embedUrl(raw: string): string | null {
 
 function VideoBlock({ block }: { block: StorePageBlock }) {
   const c = cfg(block);
+  const style = readBlockStyle(c);
   const url = str(c.url);
   const embed = embedUrl(url);
   return (
-    <section className="mx-auto max-w-4xl px-4 py-14 sm:px-6">
+    <section
+      className={cn('mx-auto px-4 sm:px-6', maxWidthClass(style.maxWidth === 'lg' ? 'md' : style.maxWidth), paddingYClass(style.paddingY))}
+      style={sectionInlineStyle(style)}
+    >
       {str(c.title) ? (
-        <h2 className="mb-6 text-center font-display text-2xl font-bold">{str(c.title)}</h2>
+        <h2
+          className={cn('mb-6 font-display text-2xl font-bold', alignClass(style.align))}
+          style={style.textColor ? { color: style.textColor } : undefined}
+        >
+          {str(c.title)}
+        </h2>
       ) : null}
       {embed && embed.includes('embed') ? (
         <div className="aspect-video overflow-hidden rounded-2xl bg-black">
@@ -523,15 +729,33 @@ function VideoBlock({ block }: { block: StorePageBlock }) {
   );
 }
 
-function TestimonialsBlock({ block }: { block: StorePageBlock }) {
+function TestimonialsBlock({
+  block,
+  usePreviewMocks = false,
+}: {
+  block: StorePageBlock;
+  usePreviewMocks?: boolean;
+}) {
   const c = cfg(block);
-  const items = Array.isArray(c.items)
+  const style = readBlockStyle(c);
+  const raw = Array.isArray(c.items)
     ? (c.items as { name?: string; text?: string; role?: string }[])
     : [];
+  const usingMocks = usePreviewMocks && raw.length === 0;
+  const items = usingMocks ? MOCK_TESTIMONIALS : raw;
   return (
-    <section className="bg-muted/30 px-4 py-14 sm:px-6">
-      <div className="mx-auto max-w-5xl">
-        <h2 className="mb-8 text-center font-display text-2xl font-bold">{str(c.title, 'Témoignages')}</h2>
+    <section
+      className={cn('px-4 sm:px-6', paddingYClass(style.paddingY), !style.bgColor && 'bg-muted/30')}
+      style={sectionInlineStyle(style)}
+    >
+      <div className={cn('mx-auto', maxWidthClass(style.maxWidth === 'lg' ? 'md' : style.maxWidth))}>
+        <DemoBadge show={usingMocks} />
+        <h2
+          className={cn('mb-8 font-display text-2xl font-bold', alignClass(style.align))}
+          style={style.textColor ? { color: style.textColor } : undefined}
+        >
+          {str(c.title, 'Témoignages')}
+        </h2>
         <div className="grid gap-4 md:grid-cols-2">
           {items.map((item, i) => (
             <blockquote key={i} className="rounded-2xl border border-border bg-card p-5">
@@ -587,12 +811,27 @@ function CountdownBlock({
   }, [endsAt]);
 
   const href = str(c.ctaHref, '/boutique');
+  const style = readBlockStyle(c);
+  const btnStyle = buttonInlineStyle(style.buttonColor);
   return (
-    <section className="border-y border-border bg-card px-4 py-12 sm:px-6">
-      <div className="mx-auto max-w-3xl text-center">
-        <h2 className="font-display text-2xl font-bold">{str(c.title, 'Offre limitée')}</h2>
-        <p className="mt-2 text-muted-foreground">{str(c.subtitle)}</p>
-        <div className="mt-6 flex justify-center gap-3 font-display text-2xl font-bold sm:gap-4 sm:text-3xl">
+    <section
+      className={cn('border-y border-border px-4 sm:px-6', paddingYClass(style.paddingY), !style.bgColor && 'bg-card')}
+      style={sectionInlineStyle(style)}
+    >
+      <div className={cn('mx-auto', maxWidthClass(style.maxWidth === 'lg' ? 'md' : style.maxWidth), alignClass(style.align))}>
+        <h2
+          className="font-display text-2xl font-bold"
+          style={style.textColor ? { color: style.textColor } : undefined}
+        >
+          {str(c.title, 'Offre limitée')}
+        </h2>
+        <p
+          className={cn('mt-2', !style.textColor && 'text-muted-foreground')}
+          style={style.textColor ? { color: style.textColor, opacity: 0.85 } : undefined}
+        >
+          {str(c.subtitle)}
+        </p>
+        <div className={cn('mt-6 flex gap-3 font-display text-2xl font-bold sm:gap-4 sm:text-3xl', justifyClass(style.align))}>
           {[
             ['J', left.d],
             ['H', left.h],
@@ -610,34 +849,65 @@ function CountdownBlock({
         {left.done ? (
           <p className="mt-4 text-sm text-muted-foreground">Offre terminée</p>
         ) : str(c.ctaLabel) ? (
-          <Button
-            className="mt-6"
-            asChild
-            onClick={() => trackCta(pageId, str(c.ctaLabel), href, page)}
-          >
-            <Link to={to(href)}>{str(c.ctaLabel)}</Link>
-          </Button>
+          <div className={cn('mt-6 flex', justifyClass(style.align))}>
+            <Button
+              asChild
+              style={btnStyle}
+              onClick={() => trackCta(pageId, str(c.ctaLabel), href, page)}
+            >
+              <Link to={to(href)}>{str(c.ctaLabel)}</Link>
+            </Button>
+          </div>
         ) : null}
       </div>
     </section>
   );
 }
 
-function InstagramBlock({ block }: { block: StorePageBlock }) {
+function InstagramBlock({
+  block,
+  usePreviewMocks = false,
+}: {
+  block: StorePageBlock;
+  usePreviewMocks?: boolean;
+}) {
   const c = cfg(block);
-  const images = Array.isArray(c.images) ? (c.images as string[]).filter(Boolean) : [];
+  const style = readBlockStyle(c);
+  const raw = Array.isArray(c.images) ? (c.images as string[]).filter(Boolean) : [];
+  const usingMocks = usePreviewMocks && raw.length === 0;
+  const images = usingMocks ? MOCK_INSTAGRAM : raw;
   return (
-    <section className="mx-auto max-w-5xl px-4 py-14 sm:px-6">
-      <div className="mb-6 text-center">
-        <h2 className="font-display text-2xl font-bold">{str(c.title, 'Instagram')}</h2>
-        {str(c.handle) ? (
-          <p className="mt-1 text-sm text-muted-foreground">@{str(c.handle)}</p>
+    <section
+      className={cn('mx-auto px-4 sm:px-6', maxWidthClass(style.maxWidth === 'lg' ? 'md' : style.maxWidth), paddingYClass(style.paddingY))}
+      style={sectionInlineStyle(style)}
+    >
+      <DemoBadge show={usingMocks} />
+      <div className={cn('mb-6', alignClass(style.align))}>
+        <h2
+          className="font-display text-2xl font-bold"
+          style={style.textColor ? { color: style.textColor } : undefined}
+        >
+          {str(c.title, 'Instagram')}
+        </h2>
+        {str(c.handle) || usingMocks ? (
+          <p
+            className={cn('mt-1 text-sm', !style.textColor && 'text-muted-foreground')}
+            style={style.textColor ? { color: style.textColor, opacity: 0.8 } : undefined}
+          >
+            @{str(c.handle, 'votre_boutique')}
+          </p>
         ) : null}
       </div>
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
         {images.map((src, i) => (
           <div key={i} className="aspect-square overflow-hidden rounded-xl bg-muted">
-            <img src={getImageUrl(src)} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover" />
+            <img
+              src={src.startsWith('data:') ? src : getImageUrl(src)}
+              alt=""
+              loading="lazy"
+              decoding="async"
+              className="h-full w-full object-cover"
+            />
           </div>
         ))}
       </div>

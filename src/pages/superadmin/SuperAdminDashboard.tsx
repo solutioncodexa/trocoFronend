@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Building2, ExternalLink, LogOut, Plus, Power } from 'lucide-react';
+import { Building2, ExternalLink, LogOut, Package, Plus, Power } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -133,6 +133,12 @@ const SuperAdminDashboard = () => {
             </div>
           </div>
           <div className="flex items-center gap-2">
+            <Button variant="ghost" size="sm" asChild>
+              <Link to="/super-admin/packs" className="gap-1">
+                <Package className="h-4 w-4" />
+                Packs
+              </Link>
+            </Button>
             <Button variant="ghost" size="sm" asChild>
               <Link to="/matjarona">Landing</Link>
             </Button>

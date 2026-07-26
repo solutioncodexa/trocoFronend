@@ -3,18 +3,13 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   ArrowLeft,
-  Eye,
-  GripVertical,
   History,
   Link2,
   Loader2,
-  Monitor,
-  Plus,
   RefreshCw,
   Save,
-  Smartphone,
+  Settings2,
   Sparkles,
-  Trash2,
 } from 'lucide-react';
 import AdminLayout from '@/components/admin/AdminLayout';
 import { Button } from '@/components/ui/button';
@@ -29,32 +24,39 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from '@/components/ui/sheet';
 import ImageUpload from '@/components/admin/ImageUpload';
-import { PageRenderer } from '@/components/storefront/PageRenderer';
+import PageBlockBuilder, {
+  newBlockClientKey,
+  type EditorBlock,
+} from '@/components/admin/page-builder/PageBlockBuilder';
+import BlockStylePanel from '@/components/admin/page-builder/BlockStylePanel';
 import { storePagesApi } from '@/services/api/storePages';
+import { storeGlobalSectionsApi } from '@/services/api/storeGlobalSections';
+import {
+  DEFAULT_APP_BAR,
+  parseAppBarConfig,
+  type AppBarConfig,
+} from '@/types/store-global-sections';
 import { uploadImage } from '@/services/api/upload';
 import {
-  BLOCK_CATALOG,
   type StorePage,
   type StorePageBlock,
-  type StorePageBlockType,
+  type StorePageAbVariant,
 } from '@/types/store-pages';
 import { SYSTEM_NAV_REPLACEMENTS } from '@/config/pageTemplates';
 import { toast } from 'sonner';
 import { toastError } from '@/utils/toastMessages';
-import { cn } from '@/lib/utils';
 import { useAdmin } from '@/contexts/AdminContext';
 import { useTenant } from '@/contexts/TenantContext';
 import { useStoreBrand } from '@/hooks/useStoreBrand';
 import { aiCopyApi } from '@/services/api/aiCopy';
 import { PERMISSIONS } from '@/config/permissions';
-import type { StorePageAbVariant } from '@/types/store-pages';
-
-type EditorBlock = StorePageBlock & { clientKey: string };
-
-function newClientKey() {
-  return `b-${Math.random().toString(36).slice(2, 10)}`;
-}
 
 function toLocalInput(iso?: string | null) {
   if (!iso) return '';
@@ -73,10 +75,35 @@ const AdminPageEditor = () => {
   const pageId = Number(id);
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const dragFrom = useRef<number | null>(null);
-  const [dragOver, setDragOver] = useState<number | null>(null);
-  const [showPreview, setShowPreview] = useState(true);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const [editLang, setEditLang] = useState<'fr' | 'ar'>('fr');
+  const [adminSidebarOpen, setAdminSidebarOpen] = useState(() => window.innerWidth >= 1024);
+  const sidebarBeforeExpandRef = useRef(true);
+  const [appBar, setAppBar] = useState<AppBarConfig>(DEFAULT_APP_BAR);
+
+  const { data: globalSections = [] } = useQuery({
+    queryKey: ['store-global-sections', 'admin'],
+    queryFn: () => storeGlobalSectionsApi.listAdmin(),
+  });
+
+  useEffect(() => {
+    const section = globalSections.find((s) => s.sectionKey === 'app_bar');
+    if (section?.config) setAppBar(parseAppBarConfig(section.config));
+  }, [globalSections]);
+
+  const appBarMutation = useMutation({
+    mutationFn: () =>
+      storeGlobalSectionsApi.upsert({
+        sectionKey: 'app_bar',
+        enabled: true,
+        config: { ...appBar },
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['store-global-sections'] });
+      toast.success('App bar enregistrée');
+    },
+    onError: (err: unknown) => toastError(err, 'Impossible d’enregistrer l’app bar'),
+  });
 
   const { data, isLoading, error } = useQuery({
     queryKey: ['store-pages', pageId],
@@ -105,7 +132,6 @@ const AdminPageEditor = () => {
   const [unpublishAt, setUnpublishAt] = useState('');
   const [abVariant, setAbVariant] = useState<StorePageAbVariant>(null);
   const [blocks, setBlocks] = useState<EditorBlock[]>([]);
-  const [addType, setAddType] = useState<StorePageBlockType>('hero');
   const [aiLoading, setAiLoading] = useState<string | null>(null);
 
   const aiTopic = useMemo(() => title.trim() || slug.trim() || 'notre boutique', [title, slug]);
@@ -196,7 +222,7 @@ const AdminPageEditor = () => {
         configAr: { ...(b.configAr ?? {}) },
         visibleMobile: b.visibleMobile !== false,
         visibleDesktop: b.visibleDesktop !== false,
-        clientKey: b.id != null ? `id-${b.id}` : newClientKey(),
+        clientKey: b.id != null ? `id-${b.id}` : newBlockClientKey(),
       })),
     );
   }, [data]);
@@ -332,11 +358,6 @@ const AdminPageEditor = () => {
     onError: (err) => toastError(err, 'Impossible de régénérer le lien'),
   });
 
-  const catalogByType = useMemo(
-    () => Object.fromEntries(BLOCK_CATALOG.map((b) => [b.type, b])),
-    [],
-  );
-
   const patchBlockConfig = (index: number, key: string, value: unknown) => {
     setBlocks((prev) =>
       prev.map((b, i) => {
@@ -349,39 +370,11 @@ const AdminPageEditor = () => {
     );
   };
 
-  const patchBlockMeta = (index: number, patch: Partial<EditorBlock>) => {
-    setBlocks((prev) => prev.map((b, i) => (i === index ? { ...b, ...patch } : b)));
-  };
-
-  const removeBlock = (index: number) => {
-    setBlocks((prev) => prev.filter((_, i) => i !== index).map((b, i) => ({ ...b, sortOrder: i })));
-  };
-
-  const addBlock = () => {
-    const def = catalogByType[addType];
-    if (!def) return;
-    setBlocks((prev) => [
-      ...prev,
-      {
-        type: def.type,
-        sortOrder: prev.length,
-        config: { ...def.defaults },
-        configAr: {},
-        visibleMobile: true,
-        visibleDesktop: true,
-        clientKey: newClientKey(),
-      },
-    ]);
-  };
-
-  const reorder = (from: number, to: number) => {
-    if (from === to || from < 0 || to < 0) return;
-    setBlocks((prev) => {
-      const next = [...prev];
-      const [item] = next.splice(from, 1);
-      next.splice(to, 0, item);
-      return next.map((b, i) => ({ ...b, sortOrder: i }));
-    });
+  /** Style / position / couleurs : toujours sur config FR (partagé). */
+  const patchBlockStyle = (index: number, key: string, value: unknown) => {
+    setBlocks((prev) =>
+      prev.map((b, i) => (i !== index ? b : { ...b, config: { ...b.config, [key]: value } })),
+    );
   };
 
   const replacesSystem = (SYSTEM_NAV_REPLACEMENTS as readonly string[]).includes(
@@ -419,69 +412,16 @@ const AdminPageEditor = () => {
 
   return (
     <AdminLayout
-      title={`Éditer — ${data.title}`}
+      workspace
+      title={`Constructeur — ${data.title}`}
       breadcrumbs={[
         { label: 'Pages & design', href: '/admin/pages' },
         { label: data.title },
       ]}
+      sidebarOpen={adminSidebarOpen}
+      onSidebarOpenChange={setAdminSidebarOpen}
       actions={
         <div className="flex gap-2">
-          <div className="flex rounded-lg border border-border p-0.5">
-            <Button
-              size="sm"
-              variant={editLang === 'fr' ? 'default' : 'ghost'}
-              className="h-8"
-              onClick={() => setEditLang('fr')}
-            >
-              FR
-            </Button>
-            <Button
-              size="sm"
-              variant={editLang === 'ar' ? 'default' : 'ghost'}
-              className="h-8"
-              onClick={() => setEditLang('ar')}
-            >
-              AR
-            </Button>
-          </div>
-          <Button
-            variant="outline"
-            size="sm"
-            className="gap-1.5"
-            disabled={previewLinkMutation.isPending}
-            onClick={() => previewLinkMutation.mutate()}
-          >
-            {previewLinkMutation.isPending ? (
-              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-            ) : (
-              <Link2 className="h-3.5 w-3.5" />
-            )}
-            Lien d’aperçu
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="gap-1.5"
-            title="Régénérer le token d’aperçu"
-            disabled={rotatePreviewMutation.isPending}
-            onClick={() => rotatePreviewMutation.mutate()}
-          >
-            {rotatePreviewMutation.isPending ? (
-              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-            ) : (
-              <RefreshCw className="h-3.5 w-3.5" />
-            )}
-            <span className="sr-only sm:not-sr-only">Régénérer</span>
-          </Button>
-          <Button
-            variant={showPreview ? 'default' : 'outline'}
-            size="sm"
-            className="gap-1.5"
-            onClick={() => setShowPreview((v) => !v)}
-          >
-            <Eye className="h-3.5 w-3.5" />
-            Aperçu
-          </Button>
           <Button variant="outline" size="sm" asChild className="gap-1.5">
             <Link to="/admin/pages">
               <ArrowLeft className="h-3.5 w-3.5" />
@@ -491,16 +431,113 @@ const AdminPageEditor = () => {
         </div>
       }
     >
-      <div
-        className={cn(
-          'mx-auto grid gap-6',
-          showPreview
-            ? 'max-w-[1400px] xl:grid-cols-[280px_1fr_minmax(300px,1fr)]'
-            : 'max-w-5xl lg:grid-cols-[280px_1fr]',
-        )}
-      >
-        <aside className="space-y-4 rounded-2xl border border-border bg-card p-5 h-fit lg:sticky lg:top-24">
-          <h2 className="font-display font-semibold">Paramètres</h2>
+      <>
+        <PageBlockBuilder
+          blocks={blocks}
+          onChange={setBlocks}
+          onSave={() => blocksMutation.mutate()}
+          saving={blocksMutation.isPending}
+          editLang={editLang}
+          previewPage={previewPage}
+          appBar={appBar}
+          onAppBarChange={(patch) => setAppBar((prev) => ({ ...prev, ...patch }))}
+          onAppBarSave={() => appBarMutation.mutate()}
+          appBarSaving={appBarMutation.isPending}
+          onExpandedChange={(expanded) => {
+            if (expanded) {
+              sidebarBeforeExpandRef.current = adminSidebarOpen;
+              setAdminSidebarOpen(false);
+            } else {
+              setAdminSidebarOpen(sidebarBeforeExpandRef.current);
+            }
+          }}
+          toolbarExtra={
+            <>
+              <div className="flex rounded-lg border border-border p-0.5">
+                <Button
+                  size="sm"
+                  variant={editLang === 'fr' ? 'default' : 'ghost'}
+                  className="h-8 px-2"
+                  onClick={() => setEditLang('fr')}
+                >
+                  FR
+                </Button>
+                <Button
+                  size="sm"
+                  variant={editLang === 'ar' ? 'default' : 'ghost'}
+                  className="h-8 px-2"
+                  onClick={() => setEditLang('ar')}
+                >
+                  AR
+                </Button>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 gap-1.5"
+                disabled={previewLinkMutation.isPending}
+                onClick={() => previewLinkMutation.mutate()}
+              >
+                {previewLinkMutation.isPending ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <Link2 className="h-3.5 w-3.5" />
+                )}
+                <span className="hidden sm:inline">Aperçu</span>
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 gap-1.5"
+                title="Régénérer le lien d’aperçu"
+                disabled={rotatePreviewMutation.isPending}
+                onClick={() => rotatePreviewMutation.mutate()}
+              >
+                {rotatePreviewMutation.isPending ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <RefreshCw className="h-3.5 w-3.5" />
+                )}
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 gap-1.5"
+                onClick={() => setSettingsOpen(true)}
+              >
+                <Settings2 className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">Réglages</span>
+              </Button>
+            </>
+          }
+          renderFields={(block, index) => (
+            <div className="space-y-4">
+              <BlockStylePanel
+                blockType={String(block.type)}
+                config={block.config ?? {}}
+                onChange={(key, value) => patchBlockStyle(index, key, value)}
+              />
+              <div className="space-y-3 border-t border-border pt-3">
+                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  Contenu
+                </p>
+                <BlockFields
+                  block={block}
+                  lang={editLang}
+                  onChange={(key, value) => patchBlockConfig(index, key, value)}
+                />
+              </div>
+            </div>
+          )}
+        />
+
+        <Sheet open={settingsOpen} onOpenChange={setSettingsOpen}>
+          <SheetContent className="w-full overflow-y-auto sm:max-w-md">
+            <SheetHeader>
+              <SheetTitle className="font-display">Réglages de la page</SheetTitle>
+            </SheetHeader>
+            <div className="mt-6 space-y-4">
+          <h2 className="sr-only">Paramètres</h2>
           <div>
             <Label>Titre {editLang === 'ar' ? '(AR)' : ''}</Label>
             {editLang === 'ar' ? (
@@ -721,156 +758,10 @@ const AdminPageEditor = () => {
               ) : null}
             </ul>
           </div>
-        </aside>
-
-        <div className="min-w-0 space-y-4">
-          <div className="flex flex-wrap items-end justify-between gap-3 rounded-2xl border border-border bg-card p-4">
-            <div>
-              <h2 className="font-display font-semibold">Composants</h2>
-              <p className="text-xs text-muted-foreground">
-                Drag & drop · visibilité mobile/desktop · contenu {editLang.toUpperCase()}
-              </p>
             </div>
-            <div className="flex flex-wrap items-center gap-2">
-              <Select value={addType} onValueChange={(v) => setAddType(v as StorePageBlockType)}>
-                <SelectTrigger className="w-[200px]">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {BLOCK_CATALOG.map((b) => (
-                    <SelectItem key={b.type} value={b.type}>
-                      {b.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Button type="button" variant="secondary" className="gap-1.5" onClick={addBlock}>
-                <Plus className="h-4 w-4" />
-                Ajouter
-              </Button>
-              <Button className="gap-1.5" disabled={blocksMutation.isPending} onClick={() => blocksMutation.mutate()}>
-                {blocksMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-                Sauver
-              </Button>
-            </div>
-          </div>
-
-          {blocks.length === 0 ? (
-            <p className="rounded-xl border border-dashed border-border p-10 text-center text-sm text-muted-foreground">
-              Aucun composant.
-            </p>
-          ) : (
-            <ul className="space-y-3">
-              {blocks.map((block, index) => {
-                const meta = catalogByType[block.type as StorePageBlockType];
-                return (
-                  <li
-                    key={block.clientKey}
-                    draggable
-                    onDragStart={() => {
-                      dragFrom.current = index;
-                    }}
-                    onDragEnd={() => {
-                      dragFrom.current = null;
-                      setDragOver(null);
-                    }}
-                    onDragOver={(e) => {
-                      e.preventDefault();
-                      setDragOver(index);
-                    }}
-                    onDrop={(e) => {
-                      e.preventDefault();
-                      if (dragFrom.current != null) reorder(dragFrom.current, index);
-                      dragFrom.current = null;
-                      setDragOver(null);
-                    }}
-                    className={cn(
-                      'rounded-2xl border bg-card p-4 transition',
-                      dragOver === index ? 'border-primary ring-2 ring-primary/30' : 'border-border',
-                    )}
-                  >
-                    <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-                      <div className="flex items-center gap-2">
-                        <span className="flex h-8 w-8 cursor-grab items-center justify-center rounded-lg border border-border text-muted-foreground">
-                          <GripVertical className="h-4 w-4" />
-                        </span>
-                        <p className="font-display font-semibold">
-                          {meta?.label || block.type}
-                          <span className="ml-2 font-mono text-xs font-normal text-muted-foreground">
-                            #{index + 1}
-                          </span>
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <Button
-                          type="button"
-                          size="icon"
-                          variant={block.visibleMobile !== false ? 'secondary' : 'outline'}
-                          className="h-8 w-8"
-                          title="Visible mobile"
-                          onClick={() =>
-                            patchBlockMeta(index, { visibleMobile: !(block.visibleMobile !== false) })
-                          }
-                        >
-                          <Smartphone className="h-3.5 w-3.5" />
-                        </Button>
-                        <Button
-                          type="button"
-                          size="icon"
-                          variant={block.visibleDesktop !== false ? 'secondary' : 'outline'}
-                          className="h-8 w-8"
-                          title="Visible desktop"
-                          onClick={() =>
-                            patchBlockMeta(index, {
-                              visibleDesktop: !(block.visibleDesktop !== false),
-                            })
-                          }
-                        >
-                          <Monitor className="h-3.5 w-3.5" />
-                        </Button>
-                        <Button
-                          type="button"
-                          size="icon"
-                          variant="ghost"
-                          className="h-8 w-8 text-destructive"
-                          onClick={() => removeBlock(index)}
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
-                      </div>
-                    </div>
-                    <BlockFields
-                      block={block}
-                      lang={editLang}
-                      onChange={(key, value) => patchBlockConfig(index, key, value)}
-                    />
-                  </li>
-                );
-              })}
-            </ul>
-          )}
-        </div>
-
-        {showPreview ? (
-          <aside className="min-w-0 xl:sticky xl:top-24 xl:self-start">
-            <div className="mb-2 flex items-center justify-between gap-2">
-              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                Aperçu live ({editLang.toUpperCase()})
-              </p>
-            </div>
-            <div
-              className="overflow-hidden rounded-2xl border border-border bg-background shadow-soft"
-              dir={editLang === 'ar' ? 'rtl' : 'ltr'}
-            >
-              <div className="max-h-[min(75vh,820px)] overflow-y-auto">
-                <div className="origin-top scale-[0.72] sm:scale-[0.78]" style={{ width: '128%' }}>
-                  <PageRenderer page={previewPage} />
-                </div>
-              </div>
-            </div>
-          </aside>
-        ) : null}
-      </div>
+          </SheetContent>
+        </Sheet>
+      </>
     </AdminLayout>
   );
 };
@@ -925,27 +816,27 @@ function BlockFields({
   switch (block.type) {
     case 'hero':
       return (
-        <div className="grid gap-3 sm:grid-cols-2">
-          {field('headline', 'Titre')}
-          {field('subtext', 'Sous-titre', true)}
-          {field('ctaLabel', 'Bouton')}
-          {field('ctaHref', 'Lien')}
-          {imageField('imageUrl', 'Image')}
+        <div className="grid gap-3">
+          {field('headline', 'Grand titre')}
+          {field('subtext', 'Phrase sous le titre', true)}
+          {field('ctaLabel', 'Texte du bouton')}
+          {field('ctaHref', 'Lien du bouton (ex. /boutique)')}
+          {imageField('imageUrl', 'Photo de fond')}
         </div>
       );
     case 'rich_text':
       return (
         <div className="grid gap-3">
-          {field('title', 'Titre')}
-          {field('body', 'Texte', true)}
+          {field('title', 'Titre de la section')}
+          {field('body', 'Votre texte', true)}
         </div>
       );
     case 'products':
       return (
-        <div className="grid gap-3 sm:grid-cols-2">
-          {field('title', 'Titre')}
+        <div className="grid gap-3">
+          {field('title', 'Titre de la section')}
           <div>
-            <Label>Nombre</Label>
+            <Label>Combien de produits afficher ?</Label>
             <Input
               className="mt-1.5"
               type="number"
@@ -958,66 +849,141 @@ function BlockFields({
         </div>
       );
     case 'categories':
-      return <div className="grid gap-3">{field('title', 'Titre')}</div>;
+      return <div className="grid gap-3">{field('title', 'Titre de la section')}</div>;
     case 'cta':
     case 'countdown':
       return (
-        <div className="grid gap-3 sm:grid-cols-2">
+        <div className="grid gap-3">
           {field('title', 'Titre')}
-          {field(block.type === 'countdown' ? 'subtitle' : 'body', 'Texte', true)}
-          {block.type === 'countdown' ? field('endsAt', 'Fin (datetime)') : null}
-          {field('ctaLabel', 'Bouton')}
-          {field('ctaHref', 'Lien')}
+          {field(
+            block.type === 'countdown' ? 'subtitle' : 'body',
+            block.type === 'countdown' ? 'Sous-titre' : 'Message',
+            true,
+          )}
+          {block.type === 'countdown' ? field('endsAt', 'Date et heure de fin') : null}
+          {field('ctaLabel', 'Texte du bouton')}
+          {field('ctaHref', 'Lien du bouton')}
         </div>
       );
     case 'image':
       return (
-        <div className="grid gap-3 sm:grid-cols-2">
-          {imageField('imageUrl', 'Image')}
-          {field('alt', 'Alt')}
-          {field('caption', 'Légende')}
+        <div className="grid gap-3">
+          {imageField('imageUrl', 'Votre image')}
+          {field('alt', 'Description courte (accessibilité)')}
+          {field('caption', 'Légende sous l’image')}
         </div>
       );
     case 'video':
       return (
         <div className="grid gap-3">
           {field('title', 'Titre')}
-          {field('url', 'URL YouTube / Vimeo / MP4')}
+          {field('url', 'Lien de la vidéo (YouTube, Vimeo…)')}
         </div>
       );
     case 'faq':
-    case 'testimonials':
+    case 'testimonials': {
+      const items = Array.isArray(c.items) ? (c.items as Record<string, string>[]) : [];
+      const isFaq = block.type === 'faq';
       return (
         <div className="space-y-3">
-          {field('title', 'Titre')}
-          <div>
-            <Label>Items JSON</Label>
-            <Textarea
-              className="mt-1.5 font-mono text-xs"
-              rows={6}
-              value={JSON.stringify(c.items ?? [], null, 2)}
-              onChange={(e) => {
-                try {
-                  const parsed = JSON.parse(e.target.value);
-                  if (Array.isArray(parsed)) onChange('items', parsed);
-                } catch {
-                  /* ignore */
-                }
-              }}
-            />
+          {field('title', 'Titre de la section')}
+          <div className="space-y-3">
+            {items.map((item, i) => (
+              <div key={i} className="rounded-lg border border-border p-3 space-y-2">
+                <p className="text-[11px] font-semibold text-muted-foreground">
+                  {isFaq ? `Question ${i + 1}` : `Avis ${i + 1}`}
+                </p>
+                {isFaq ? (
+                  <>
+                    <Input
+                      placeholder="Question"
+                      value={String(item.q ?? '')}
+                      onChange={(e) => {
+                        const next = items.map((it, j) =>
+                          j === i ? { ...it, q: e.target.value } : it,
+                        );
+                        onChange('items', next);
+                      }}
+                    />
+                    <Textarea
+                      placeholder="Réponse"
+                      rows={2}
+                      value={String(item.a ?? '')}
+                      onChange={(e) => {
+                        const next = items.map((it, j) =>
+                          j === i ? { ...it, a: e.target.value } : it,
+                        );
+                        onChange('items', next);
+                      }}
+                    />
+                  </>
+                ) : (
+                  <>
+                    <Input
+                      placeholder="Nom du client"
+                      value={String(item.name ?? '')}
+                      onChange={(e) => {
+                        const next = items.map((it, j) =>
+                          j === i ? { ...it, name: e.target.value } : it,
+                        );
+                        onChange('items', next);
+                      }}
+                    />
+                    <Textarea
+                      placeholder="Son avis"
+                      rows={2}
+                      value={String(item.text ?? '')}
+                      onChange={(e) => {
+                        const next = items.map((it, j) =>
+                          j === i ? { ...it, text: e.target.value } : it,
+                        );
+                        onChange('items', next);
+                      }}
+                    />
+                    <Input
+                      placeholder="Ville ou rôle (optionnel)"
+                      value={String(item.role ?? '')}
+                      onChange={(e) => {
+                        const next = items.map((it, j) =>
+                          j === i ? { ...it, role: e.target.value } : it,
+                        );
+                        onChange('items', next);
+                      }}
+                    />
+                  </>
+                )}
+              </div>
+            ))}
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={() =>
+                onChange(
+                  'items',
+                  isFaq
+                    ? [...items, { q: '', a: '' }]
+                    : [...items, { name: '', text: '', role: '' }],
+                )
+              }
+            >
+              {isFaq ? 'Ajouter une question' : 'Ajouter un avis'}
+            </Button>
           </div>
         </div>
       );
+    }
     case 'instagram':
       return (
         <div className="space-y-3">
           {field('title', 'Titre')}
-          {field('handle', 'Handle')}
+          {field('handle', 'Compte Instagram (sans @)')}
           <div>
-            <Label>Images (URLs, une par ligne)</Label>
+            <Label>Liens des photos (une par ligne)</Label>
             <Textarea
-              className="mt-1.5 font-mono text-xs"
+              className="mt-1.5 text-xs"
               rows={5}
+              placeholder="https://…"
               value={(Array.isArray(c.images) ? (c.images as string[]) : []).join('\n')}
               onChange={(e) =>
                 onChange(
@@ -1035,9 +1001,9 @@ function BlockFields({
     case 'spacer':
       return (
         <div>
-          <Label>Taille</Label>
+          <Label>Taille de l’espace</Label>
           <Select value={String(c.size ?? 'md')} onValueChange={(v) => onChange('size', v)}>
-            <SelectTrigger className="mt-1.5 w-40">
+            <SelectTrigger className="mt-1.5 w-full">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -1052,9 +1018,9 @@ function BlockFields({
       return (
         <div className="grid gap-3">
           {field('title', 'Titre')}
-          {field('body', 'Texte', true)}
+          {field('body', 'Message d’introduction', true)}
           <div>
-            <Label>Type de formulaire</Label>
+            <Label>À quoi sert ce formulaire ?</Label>
             <Select
               value={String(c.leadType ?? 'lead')}
               onValueChange={(v) => onChange('leadType', v)}
@@ -1063,16 +1029,20 @@ function BlockFields({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="lead">Contact</SelectItem>
-                <SelectItem value="newsletter">Newsletter (email)</SelectItem>
-                <SelectItem value="devis">Devis</SelectItem>
+                <SelectItem value="lead">Demande de contact</SelectItem>
+                <SelectItem value="newsletter">Inscription e-mail</SelectItem>
+                <SelectItem value="devis">Demande de devis</SelectItem>
               </SelectContent>
             </Select>
           </div>
         </div>
       );
     default:
-      return <p className="text-sm text-muted-foreground">Type inconnu</p>;
+      return (
+        <p className="text-sm text-muted-foreground">
+          Cette section n’a pas encore de réglages simples.
+        </p>
+      );
   }
 }
 

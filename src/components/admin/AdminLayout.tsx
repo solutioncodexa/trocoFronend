@@ -27,7 +27,11 @@ import {
   Inbox,
   TimerReset,
   LayoutPanelLeft,
+  PanelLeftClose,
+  PanelLeftOpen,
   Webhook,
+  Key,
+  Truck,
 } from 'lucide-react';
 import AdminNotification from './AdminNotification';
 import StockAlertDialog from './StockAlertDialog';
@@ -49,6 +53,14 @@ interface AdminLayoutProps {
   description?: string;
   /** Actions à droite du header de page */
   actions?: ReactNode;
+  /**
+   * Atelier plein écran (ex. page builder) :
+   * contenu sans max-width / padding, hauteur utile pour 3 panneaux.
+   */
+  workspace?: boolean;
+  /** Contrôle externe de la sidebar admin (masquer / afficher). */
+  sidebarOpen?: boolean;
+  onSidebarOpenChange?: (open: boolean) => void;
 }
 
 type NavItem = {
@@ -111,6 +123,14 @@ const ALL_NAV: NavSection[] = [
     label: 'Intégrations',
     items: [
       { href: '/admin/webhooks', label: 'Webhooks', icon: Webhook, permission: PERMISSIONS.WEBHOOKS_MANAGE },
+      { href: '/admin/api-keys', label: 'Clés API', icon: Key, permission: PERMISSIONS.API_KEYS_MANAGE },
+    ],
+  },
+  {
+    label: 'Conformité',
+    items: [
+      { href: '/admin/conformite', label: 'Données personnelles', icon: Shield, permission: PERMISSIONS.PRIVACY_MANAGE },
+      { href: '/admin/livraison', label: 'Livraison', icon: Truck, permission: PERMISSIONS.ORDERS_VIEW },
     ],
   },
   {
@@ -140,14 +160,28 @@ function statusBadge(status?: string | null) {
   return s ? <Badge variant="secondary" className="text-[10px]">{s}</Badge> : null;
 }
 
-const AdminLayout = ({ children, title, breadcrumbs, description, actions }: AdminLayoutProps) => {
+const AdminLayout = ({
+  children,
+  title,
+  breadcrumbs,
+  description,
+  actions,
+  workspace = false,
+  sidebarOpen: sidebarOpenProp,
+  onSidebarOpenChange,
+}: AdminLayoutProps) => {
   const location = useLocation();
   const navigate = useNavigate();
   const { logout, isAuthenticated, isAdmin, isSuperAdmin, hasPermission, user } = useAdmin();
   const { store } = useTenant();
   const { siteName, logoUrl, slug } = useStoreBrand();
   const storefrontUrl = buildStorefrontUrl(slug);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(() => window.innerWidth >= 1024);
+  const [sidebarOpenInternal, setSidebarOpenInternal] = useState(() => window.innerWidth >= 1024);
+  const isSidebarOpen = sidebarOpenProp ?? sidebarOpenInternal;
+  const setIsSidebarOpen = (open: boolean) => {
+    if (sidebarOpenProp === undefined) setSidebarOpenInternal(open);
+    onSidebarOpenChange?.(open);
+  };
 
   const navSections = useMemo(() => {
     return ALL_NAV.map((section) => ({
@@ -208,11 +242,13 @@ const AdminLayout = ({ children, title, breadcrumbs, description, actions }: Adm
           </Link>
           <button
             type="button"
-            className="rounded-lg p-2 text-white/70 transition-colors hover:bg-white/10 hover:text-white lg:hidden"
+            className="rounded-lg p-2 text-white/70 transition-colors hover:bg-white/10 hover:text-white"
             onClick={() => setIsSidebarOpen(false)}
-            aria-label="Fermer le menu"
+            aria-label="Masquer le menu"
+            title="Masquer le menu"
           >
-            <X className="h-5 w-5" />
+            <PanelLeftClose className="hidden h-5 w-5 lg:block" />
+            <X className="h-5 w-5 lg:hidden" />
           </button>
         </div>
 
@@ -294,17 +330,38 @@ const AdminLayout = ({ children, title, breadcrumbs, description, actions }: Adm
         </div>
       </aside>
 
-      <div className="flex min-w-0 flex-1 flex-col lg:pl-[17.5rem]">
+      <div
+        className={cn(
+          'flex min-w-0 flex-1 flex-col transition-[padding] duration-300 ease-premium',
+          isSidebarOpen && 'lg:pl-[17.5rem]',
+        )}
+      >
         <header className="flex h-[4.25rem] shrink-0 items-center justify-between gap-3 border-b border-border/80 bg-white/90 px-4 backdrop-blur-md sm:px-6">
           <div className="flex min-w-0 items-center gap-3">
             <button
               type="button"
-              className="rounded-lg p-2 text-muted-foreground hover:bg-muted lg:hidden"
+              className={cn(
+                'rounded-lg p-2 text-muted-foreground hover:bg-muted',
+                isSidebarOpen && 'lg:hidden',
+              )}
               onClick={() => setIsSidebarOpen(true)}
-              aria-label="Ouvrir le menu"
+              aria-label="Afficher le menu"
+              title="Afficher le menu"
             >
-              <Menu className="h-5 w-5" />
+              <PanelLeftOpen className="hidden h-5 w-5 lg:block" />
+              <Menu className="h-5 w-5 lg:hidden" />
             </button>
+            {isSidebarOpen ? (
+              <button
+                type="button"
+                className="hidden rounded-lg p-2 text-muted-foreground hover:bg-muted lg:inline-flex"
+                onClick={() => setIsSidebarOpen(false)}
+                aria-label="Masquer le menu"
+                title="Masquer le menu"
+              >
+                <PanelLeftClose className="h-5 w-5" />
+              </button>
+            ) : null}
             <div className="min-w-0">
               {breadcrumbs && breadcrumbs.length > 0 && (
                 <div className="mb-0.5 flex items-center gap-1 text-xs text-muted-foreground">
@@ -333,8 +390,22 @@ const AdminLayout = ({ children, title, breadcrumbs, description, actions }: Adm
             <AdminNotification />
           </div>
         </header>
-        <main className="min-h-0 flex-1 overflow-y-auto">
-          <div className="mx-auto w-full max-w-6xl p-4 sm:p-6 lg:p-8">{children}</div>
+        <main
+          className={cn(
+            'min-h-0 flex-1',
+            workspace ? 'flex flex-col overflow-hidden' : 'overflow-y-auto',
+          )}
+        >
+          <div
+            className={cn(
+              'w-full',
+              workspace
+                ? 'flex min-h-0 flex-1 flex-col overflow-hidden'
+                : 'mx-auto max-w-6xl p-4 sm:p-6 lg:p-8',
+            )}
+          >
+            {children}
+          </div>
         </main>
       </div>
     </div>

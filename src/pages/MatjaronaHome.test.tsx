@@ -9,8 +9,11 @@ vi.mock('@/services/api/platform', () => ({
       {
         code: 'basic',
         name: 'Basic',
-        priceMad: 150,
+        priceMad: 79,
         description: 'Plan Basic',
+        maxProducts: 50,
+        maxStaff: 1,
+        features: { themes: 'basic' },
       },
     ]),
   },
@@ -28,7 +31,7 @@ describe('MatjaronaHome', () => {
     expect(screen.getAllByRole('link', { name: /Créer ma boutique/i }).length).toBeGreaterThan(0);
 
     await waitFor(() => {
-      expect(screen.getByText(/150/)).toBeInTheDocument();
+      expect(screen.getAllByText(/79/).length).toBeGreaterThan(0);
     });
   });
 });

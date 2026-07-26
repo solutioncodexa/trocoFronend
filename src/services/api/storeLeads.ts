@@ -1,5 +1,5 @@
 import { apiRequest, buildApiUrl, TENANT_SLUG_STORAGE_KEY } from '@/config/api';
-import type { CreateStoreLeadPayload, StoreLead } from '@/types/store-leads';
+import type { CreateStoreLeadPayload, StoreLead, StoreLeadListItem } from '@/types/store-leads';
 
 export const storeLeadsApi = {
   submitPublic: (payload: CreateStoreLeadPayload) =>
@@ -8,7 +8,9 @@ export const storeLeadsApi = {
       body: JSON.stringify(payload),
     }),
 
-  list: () => apiRequest<StoreLead[]>(buildApiUrl('/store-leads')),
+  list: () => apiRequest<StoreLeadListItem[]>(buildApiUrl('/store-leads')),
+
+  get: (id: number) => apiRequest<StoreLead>(buildApiUrl(`/store-leads/${id}`)),
 
   exportCsv: async (filename?: string) => {
     const token = localStorage.getItem('troco_admin_token');

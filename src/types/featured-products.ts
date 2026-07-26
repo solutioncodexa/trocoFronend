@@ -26,7 +26,8 @@ export interface FeaturedProductDTO {
   product?: {
     id: string;
     name: string;
-    description: string;
+    /** Absente côté API (alléger payload) — utiliser title/description du featured. */
+    description?: string | null;
     price: number;
     imageUrl: string;
     category: string;

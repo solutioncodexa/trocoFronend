@@ -1,6 +1,7 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useTenant } from '@/contexts/TenantContext';
+import { hasMarketingConsent } from '@/utils/cookieConsent';
 
 declare global {
   interface Window {
@@ -124,6 +125,17 @@ const TrackingPixels = () => {
   const { store } = useTenant();
   const configRef = useRef<PixelConfig>({});
   const isAdmin = pathname.startsWith('/admin') || pathname.startsWith('/super-admin');
+  const [marketingOk, setMarketingOk] = useState(() =>
+    hasMarketingConsent(store?.slug, store?.cookieConsentRequired),
+  );
+
+  useEffect(() => {
+    const sync = () =>
+      setMarketingOk(hasMarketingConsent(store?.slug, store?.cookieConsentRequired));
+    sync();
+    window.addEventListener('matjarona:consent-updated', sync);
+    return () => window.removeEventListener('matjarona:consent-updated', sync);
+  }, [store?.slug, store?.cookieConsentRequired]);
 
   const config: PixelConfig = {
     metaPixelId: store?.metaPixelId,
@@ -133,10 +145,11 @@ const TrackingPixels = () => {
   };
 
   const hasAny =
-    !!config.metaPixelId?.trim() ||
-    !!config.tiktokPixelId?.trim() ||
-    !!config.googleAdsId?.trim() ||
-    !!config.googleAnalyticsId?.trim();
+    marketingOk &&
+    (!!config.metaPixelId?.trim() ||
+      !!config.tiktokPixelId?.trim() ||
+      !!config.googleAdsId?.trim() ||
+      !!config.googleAnalyticsId?.trim());
 
   useEffect(() => {
     if (isAdmin || !hasAny) return;

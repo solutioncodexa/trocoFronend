@@ -210,7 +210,7 @@ const ProductDetail = () => {
   const relatedProducts = relatedProductsData || [];
 
   const { data: reviewSummary } = useQuery({
-    queryKey: ['product-reviews', id],
+    queryKey: ['product-reviews', 'summary', id],
     queryFn: () => productReviewsApi.getPublicSummary(Number(id)),
     enabled: !!id && Number.isFinite(Number(id)),
     staleTime: 60_000,

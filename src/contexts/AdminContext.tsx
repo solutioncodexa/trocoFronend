@@ -4,8 +4,6 @@ import type { UserInfoDTO } from '@/types/api';
 import type { PermissionCode } from '@/config/permissions';
 import { hasEffectivePermission } from '@/config/permissions';
 import { clearStockAlertPending } from '@/utils/stockAlertSession';
-import { setStoredTenantSlug } from '@/config/api';
-import { platformApi } from '@/services/api/platform';
 import { useTenant } from '@/contexts/TenantContext';
 
 interface AdminContextType {
@@ -64,14 +62,7 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
         opts?.force === true ||
         window.location.pathname.startsWith('/admin');
       if (!onAdminSurface) return;
-      try {
-        const data = await platformApi.getMyStoreSettings();
-        if (data.slug) {
-          setStoredTenantSlug(data.slug);
-        }
-      } catch {
-        /* ignore — pas de boutique liée */
-      }
+      // Un seul appel summary (évite le double fetch getMyStoreSettings).
       await loadFromAdminSession();
     },
     [loadFromAdminSession],

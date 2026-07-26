@@ -4,9 +4,11 @@ import { storeGlobalSectionsApi } from '@/services/api/storeGlobalSections';
 import { resolveTenantSlug } from '@/contexts/TenantContext';
 import { staticCatalogQueryOptions } from '@/config/queryOptions';
 import {
+  parseAppBarConfig,
   parseFooterLinksConfig,
   parseMegaMenuConfig,
   parseStickyCtaConfig,
+  type AppBarConfig,
   type FooterLinksConfig,
   type GlobalSectionKey,
   type MegaMenuConfig,
@@ -39,6 +41,7 @@ export function useGlobalSections() {
   const megaMenuSection = byKey.get('mega_menu');
   const footerLinksSection = byKey.get('footer_links');
   const stickyCtaSection = byKey.get('sticky_cta');
+  const appBarSection = byKey.get('app_bar');
 
   const megaMenuConfig = useMemo(
     (): MegaMenuConfig | null =>
@@ -57,6 +60,11 @@ export function useGlobalSections() {
     return parseStickyCtaConfig(stickyCtaSection.config);
   }, [stickyCtaSection]);
 
+  const appBarConfig = useMemo((): AppBarConfig | null => {
+    if (!appBarSection?.enabled) return null;
+    return parseAppBarConfig(appBarSection.config);
+  }, [appBarSection]);
+
   const useMegaMenuNav =
     !!megaMenuConfig && megaMenuConfig.items.length > 0;
 
@@ -66,6 +74,7 @@ export function useGlobalSections() {
     megaMenuConfig,
     footerLinksConfig,
     stickyCtaConfig,
+    appBarConfig,
     useMegaMenuNav,
   };
 }

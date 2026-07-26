@@ -7,6 +7,7 @@ import { CartProvider } from "@/contexts/CartContext";
 import { AdminProvider } from "@/contexts/AdminContext";
 import { WishlistProvider } from "@/contexts/WishlistContext";
 import { TenantProvider } from "@/contexts/TenantContext";
+import { LocaleProvider } from "@/contexts/LocaleContext";
 import ScrollToTop from "@/components/ui/ScrollToTop";
 import WhatsAppButton from "@/components/ui/WhatsAppButton";
 import { ProtectedAdminRoute } from "@/components/ProtectedAdminRoute";
@@ -55,6 +56,9 @@ const AdminBlog = lazy(() => import("./pages/admin/AdminBlog"));
 const AdminReviews = lazy(() => import("./pages/admin/AdminReviews"));
 const AdminAbandonedCarts = lazy(() => import("./pages/admin/AdminAbandonedCarts"));
 const AdminWebhooks = lazy(() => import("./pages/admin/AdminWebhooks"));
+const AdminPrivacy = lazy(() => import("./pages/admin/AdminPrivacy"));
+const AdminApiKeys = lazy(() => import("./pages/admin/AdminApiKeys"));
+const AdminShipping = lazy(() => import("./pages/admin/AdminShipping"));
 const BlogList = lazy(() => import("./pages/BlogList"));
 const BlogPost = lazy(() => import("./pages/BlogPost"));
 const CustomStorePage = lazy(() => import("./pages/CustomStorePage"));
@@ -91,6 +95,7 @@ const DemoWishlistPage = lazy(() =>
 const SuperAdminLogin = lazy(() => import("./pages/superadmin/SuperAdminLogin"));
 const SuperAdminDashboard = lazy(() => import("./pages/superadmin/SuperAdminDashboard"));
 const SuperAdminFournisseurs = lazy(() => import("./pages/superadmin/SuperAdminFournisseurs"));
+const SuperAdminPlans = lazy(() => import("./pages/superadmin/SuperAdminPlans"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -117,6 +122,7 @@ const App = () => (
                   v7_relativeSplatPath: true,
                 }}
               >
+                <LocaleProvider>
                 <ScrollToTop />
                 <WhatsAppButton />
                 <Suspense fallback={<PageLoader />}>
@@ -172,6 +178,14 @@ const App = () => (
                         </ProtectedAdminRoute>
                       }
                     />
+                    <Route
+                      path="/super-admin/packs"
+                      element={
+                        <ProtectedAdminRoute superAdminOnly>
+                          <SuperAdminPlans />
+                        </ProtectedAdminRoute>
+                      }
+                    />
 
                     <Route path="/admin" element={<AdminLogin />} />
                     <Route path="/admin/dashboard" element={<ProtectedAdminRoute><AdminDashboard /></ProtectedAdminRoute>} />
@@ -198,10 +212,14 @@ const App = () => (
                     <Route path="/admin/avis" element={<ProtectedAdminRoute permission={PERMISSIONS.CONTENT_MANAGE}><AdminReviews /></ProtectedAdminRoute>} />
                     <Route path="/admin/paniers-abandonnes" element={<ProtectedAdminRoute permission={PERMISSIONS.ORDERS_VIEW}><AdminAbandonedCarts /></ProtectedAdminRoute>} />
                     <Route path="/admin/webhooks" element={<ProtectedAdminRoute permission={PERMISSIONS.WEBHOOKS_MANAGE}><AdminWebhooks /></ProtectedAdminRoute>} />
+                    <Route path="/admin/conformite" element={<ProtectedAdminRoute permission={PERMISSIONS.PRIVACY_MANAGE}><AdminPrivacy /></ProtectedAdminRoute>} />
+                    <Route path="/admin/api-keys" element={<ProtectedAdminRoute permission={PERMISSIONS.API_KEYS_MANAGE}><AdminApiKeys /></ProtectedAdminRoute>} />
+                    <Route path="/admin/livraison" element={<ProtectedAdminRoute permission={PERMISSIONS.ORDERS_VIEW}><AdminShipping /></ProtectedAdminRoute>} />
                     <Route path="/admin/*" element={<Navigate to="/admin" replace />} />
                     <Route path="*" element={<NotFound />} />
                   </Routes>
                 </Suspense>
+                </LocaleProvider>
               </BrowserRouter>
             </WishlistProvider>
           </CartProvider>

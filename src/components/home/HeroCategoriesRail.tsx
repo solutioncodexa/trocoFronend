@@ -25,10 +25,11 @@ const HeroCategoriesRail = ({
     ...heroQueryOptions,
   });
 
-  const { data: allCategories = [] } = useQuery({
-    queryKey: ['categories'],
-    queryFn: () => categoriesApi.getAllCategories(),
+  const { data: navCategories = [] } = useQuery({
+    queryKey: ['categories', 'nav'],
+    queryFn: () => categoriesApi.getNavCategories(),
     ...heroQueryOptions,
+    enabled: heroList.length === 0 || heroList.every((c) => !(c.heroImageUrl ?? '').trim()),
   });
 
   const visible = useMemo(() => {
@@ -37,9 +38,14 @@ const HeroCategoriesRail = ({
     // Fallback: catégories principales (sans image hero admin)
     const roots = ['sachets-pochettes', 'carton-boites', 'protections', 'decorations', 'materiels'];
     return roots
-      .map((slug) => allCategories.find((c) => c.slug === slug))
+      .map((slug) => {
+        const n = navCategories.find((c) => c.slug === slug);
+        return n
+          ? { id: n.id, name: n.name, slug: n.slug, heroImageUrl: null, heroSortOrder: null }
+          : null;
+      })
       .filter(Boolean) as typeof heroList;
-  }, [heroList, allCategories]);
+  }, [heroList, navCategories]);
 
   if (isLoading || visible.length === 0) return null;
 

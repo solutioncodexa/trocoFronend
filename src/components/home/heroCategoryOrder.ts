@@ -1,4 +1,10 @@
-import type { CategoryDTO } from '@/types/api';
+type HeroLike = {
+  id: number;
+  name: string;
+  slug: string;
+  heroImageUrl?: string | null;
+  heroSortOrder?: number | null;
+};
 
 /** Mélange Fisher–Yates (copie). */
 function shuffle<T>(items: T[]): T[] {
@@ -14,12 +20,12 @@ function shuffle<T>(items: T[]): T[] {
  * Catégories hero : ordre explicite (heroSortOrder défini) d’abord, puis celles en « ordre auto »
  * (heroSortOrder null) dans un ordre aléatoire à chaque calcul.
  */
-export function orderHeroCategoriesForDisplay(categories: CategoryDTO[]): CategoryDTO[] {
+export function orderHeroCategoriesForDisplay<T extends HeroLike>(categories: T[]): T[] {
   const explicit = categories
     .filter((c) => c.heroSortOrder != null)
     .sort(
       (a, b) =>
-        (a.heroSortOrder! - b.heroSortOrder!) || a.name.localeCompare(b.name, 'fr')
+        (a.heroSortOrder! - b.heroSortOrder!) || a.name.localeCompare(b.name, 'fr'),
     );
   const auto = shuffle(categories.filter((c) => c.heroSortOrder == null));
   return [...explicit, ...auto];

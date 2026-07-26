@@ -175,16 +175,20 @@ const AdminStock = () => {
     }
   }, [settings]);
 
-  const { data: variants = [], isLoading: loadingVariants } = useQuery({
-    queryKey: ['stock', 'variants', filter],
-    queryFn: () => stockApi.listVariants(filter),
-  });
+  const [variantsPage, setVariantsPage] = useState(0);
 
-  const { data: allVariants = [] } = useQuery({
-    queryKey: ['stock', 'variants', 'all'],
-    queryFn: () => stockApi.listVariants('all'),
+  const { data: variantsData, isLoading: loadingVariants } = useQuery({
+    queryKey: ['stock', 'variants', filter, variantsPage],
+    queryFn: () => stockApi.listVariants(filter, variantsPage, 50),
+  });
+  const variants = variantsData?.content ?? [];
+
+  const { data: allVariantsData } = useQuery({
+    queryKey: ['stock', 'variants', 'all-options'],
+    queryFn: () => stockApi.listVariants('all', 0, 200),
     enabled: tab === 'movements',
   });
+  const allVariants = allVariantsData?.content ?? [];
 
   const movVariantId =
     movVariantFilter !== 'all' ? Number(movVariantFilter) : undefined;
@@ -483,7 +487,13 @@ const AdminStock = () => {
               className="max-w-xs"
             />
             {tab === 'list' && (
-              <Select value={filter} onValueChange={setFilter}>
+              <Select
+                value={filter}
+                onValueChange={(v) => {
+                  setFilter(v);
+                  setVariantsPage(0);
+                }}
+              >
                 <SelectTrigger className="w-[180px]">
                   <SelectValue />
                 </SelectTrigger>
@@ -579,6 +589,15 @@ const AdminStock = () => {
               {(tab === 'alerts' ? filtered.filter((v) => v.status !== 'OK') : filtered).length === 0 && (
                 <EmptyState icon={Warehouse} title="Aucune ligne à afficher" />
               )}
+              {tab !== 'alerts' && variantsData && variantsData.totalPages > 1 ? (
+                <AdminPagination
+                  page={variantsPage}
+                  totalPages={variantsData.totalPages}
+                  totalElements={variantsData.totalElements}
+                  size={50}
+                  onPageChange={setVariantsPage}
+                />
+              ) : null}
             </div>
           )}
         </div>

@@ -47,6 +47,23 @@ export type StorePage = {
   previewToken?: string | null;
 };
 
+/** Liste admin — sans blocs (GET /store-pages). */
+export type StorePageListItem = {
+  id: number;
+  title: string;
+  titleAr?: string | null;
+  slug: string;
+  isHome: boolean;
+  showInNav: boolean;
+  published: boolean;
+  abVariant?: StorePageAbVariant;
+  sortOrder: number;
+  currentlyLive?: boolean;
+  publishAt?: string | null;
+  unpublishAt?: string | null;
+  blockCount: number;
+};
+
 export type StorePagePreviewLink = {
   token: string;
   path: string;
@@ -104,63 +121,85 @@ export type UpsertStorePagePayload = {
 
 export const BLOCK_CATALOG: {
   type: StorePageBlockType;
+  /** Libellé vendeur (sans jargon technique). */
   label: string;
   description: string;
   defaults: Record<string, unknown>;
 }[] = [
   {
     type: 'hero',
-    label: 'Hero / Bannière',
-    description: 'Grande bannière avec titre et bouton',
+    label: 'Grande bannière',
+    description: 'Photo pleine largeur avec titre et bouton',
     defaults: {
       headline: 'Bienvenue',
       subtext: 'Votre accroche ici',
       ctaLabel: 'Voir la boutique',
       ctaHref: '/boutique',
       imageUrl: '',
+      align: 'left',
+      vAlign: 'center',
+      paddingY: 'lg',
+      maxWidth: 'lg',
+      overlay: 'medium',
+      heroHeight: 'lg',
+      bgColor: '',
+      textColor: '',
+      buttonColor: '',
     },
   },
   {
     type: 'rich_text',
     label: 'Texte',
-    description: 'Titre + paragraphe',
-    defaults: { title: 'À propos', body: 'Racontez votre histoire…' },
+    description: 'Titre et paragraphe pour raconter votre histoire',
+    defaults: {
+      title: 'À propos',
+      body: 'Racontez votre histoire…',
+      align: 'left',
+      paddingY: 'md',
+      maxWidth: 'md',
+    },
   },
   {
     type: 'products',
-    label: 'Grille produits',
-    description: 'Affiche des produits de la boutique',
-    defaults: { title: 'Nos produits', limit: 8 },
+    label: 'Vos produits',
+    description: 'Affiche automatiquement les produits de la boutique',
+    defaults: { title: 'Nos produits', limit: 8, columns: 4, align: 'left', paddingY: 'md', maxWidth: 'lg' },
   },
   {
     type: 'categories',
-    label: 'Catégories',
-    description: 'Grille des catégories',
-    defaults: { title: 'Catégories' },
+    label: 'Vos catégories',
+    description: 'Grille des catégories de la boutique',
+    defaults: { title: 'Catégories', columns: 4, align: 'left', paddingY: 'md', maxWidth: 'lg' },
   },
   {
     type: 'cta',
-    label: 'Appel à l’action',
-    description: 'Bandeau avec bouton',
+    label: 'Bandeau bouton',
+    description: 'Message fort avec un bouton d’action',
     defaults: {
       title: 'Envie d’un projet sur-mesure ?',
       body: 'Contactez-nous, réponse sous 24 h.',
       ctaLabel: 'Nous écrire',
       ctaHref: '/contact',
+      align: 'left',
+      paddingY: 'md',
+      maxWidth: 'md',
+      bgColor: '',
+      textColor: '',
+      buttonColor: '',
     },
   },
   {
     type: 'image',
-    label: 'Image',
-    description: 'Image pleine largeur',
+    label: 'Grande image',
+    description: 'Une image mise en avant',
     defaults: { imageUrl: '', alt: '', caption: '' },
   },
   {
     type: 'faq',
-    label: 'FAQ',
-    description: 'Questions / réponses',
+    label: 'Questions fréquentes',
+    description: 'Liste de questions / réponses',
     defaults: {
-      title: 'FAQ',
+      title: 'Questions fréquentes',
       items: [
         { q: 'Quels délais de livraison ?', a: '24–48 h à Casablanca, 2–4 jours ailleurs.' },
         { q: 'Puis-je retourner un article ?', a: 'Oui, sous 14 jours.' },
@@ -169,20 +208,20 @@ export const BLOCK_CATALOG: {
   },
   {
     type: 'spacer',
-    label: 'Espace',
-    description: 'Marge verticale',
+    label: 'Espace vide',
+    description: 'Ajoute de l’air entre deux sections',
     defaults: { size: 'md' },
   },
   {
     type: 'contact',
-    label: 'Contact',
-    description: 'Formulaire de contact simplifié',
+    label: 'Formulaire contact',
+    description: 'Les visiteurs peuvent vous écrire',
     defaults: { title: 'Contactez-nous', body: 'Une question ? Écrivez-nous.', leadType: 'lead' },
   },
   {
     type: 'video',
     label: 'Vidéo',
-    description: 'Vidéo YouTube / Vimeo / MP4',
+    description: 'Intégrez une vidéo YouTube, Vimeo ou MP4',
     defaults: {
       title: 'En vidéo',
       url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
@@ -190,8 +229,8 @@ export const BLOCK_CATALOG: {
   },
   {
     type: 'testimonials',
-    label: 'Témoignages',
-    description: 'Avis clients',
+    label: 'Avis clients',
+    description: 'Mettez en avant les retours de vos clients',
     defaults: {
       title: 'Ils nous font confiance',
       items: [
@@ -202,8 +241,8 @@ export const BLOCK_CATALOG: {
   },
   {
     type: 'countdown',
-    label: 'Compteur promo',
-    description: 'Compte à rebours jusqu’à une date',
+    label: 'Offre limitée',
+    description: 'Compte à rebours jusqu’à la fin de la promo',
     defaults: {
       title: 'Offre limitée',
       subtitle: 'Plus que…',
@@ -214,8 +253,8 @@ export const BLOCK_CATALOG: {
   },
   {
     type: 'instagram',
-    label: 'Grille Instagram',
-    description: 'Grille d’images style Instagram',
+    label: 'Photos Instagram',
+    description: 'Grille de photos style Instagram',
     defaults: {
       title: '@votre_boutique',
       handle: 'matjarona',

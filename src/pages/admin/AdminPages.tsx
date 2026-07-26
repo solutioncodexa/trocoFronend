@@ -1,6 +1,19 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { BarChart3, Copy, Download, FilePlus2, Home, LayoutTemplate, Loader2, Pencil, Trash2, Upload } from 'lucide-react';
+import {
+  BarChart3,
+  Copy,
+  Download,
+  FilePlus2,
+  GripVertical,
+  Home,
+  LayoutTemplate,
+  Loader2,
+  Pencil,
+  Trash2,
+  Upload,
+  Trophy,
+} from 'lucide-react';
 import AdminLayout from '@/components/admin/AdminLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -14,9 +27,14 @@ import { useRef, useState, useMemo } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { useAdmin } from '@/contexts/AdminContext';
 import { PERMISSIONS } from '@/config/permissions';
-import type { StorePageExportPayload } from '@/types/store-pages';
-import { Trophy } from 'lucide-react';
+import {
+  BLOCK_CATALOG,
+  type StorePageBlockType,
+  type StorePageExportPayload,
+} from '@/types/store-pages';
 import { EmptyState } from '@/components/ui/EmptyState';
+import BlockPalettePreview from '@/components/admin/page-builder/BlockPalettePreview';
+import { cn } from '@/lib/utils';
 
 const AdminPages = () => {
   const { isAdmin, hasPermission } = useAdmin();
@@ -27,6 +45,8 @@ const AdminPages = () => {
   const [title, setTitle] = useState('');
   const [asHome, setAsHome] = useState(false);
   const [applyingTemplate, setApplyingTemplate] = useState<string | null>(null);
+  const [starterTypes, setStarterTypes] = useState<StorePageBlockType[]>([]);
+  const starterDragFrom = useRef<number | null>(null);
 
   const { data: pages = [], isLoading } = useQuery({
     queryKey: ['store-pages'],
@@ -39,18 +59,38 @@ const AdminPages = () => {
   });
 
   const createMutation = useMutation({
-    mutationFn: () =>
-      storePagesApi.create({
+    mutationFn: async () => {
+      const page = await storePagesApi.create({
         title: title.trim(),
         isHome: asHome,
         showInNav: !asHome,
         published: false,
-      }),
+      });
+      if (starterTypes.length > 0) {
+        const blocks = starterTypes.map((type, i) => {
+          const def = BLOCK_CATALOG.find((b) => b.type === type)!;
+          return {
+            type: def.type,
+            sortOrder: i,
+            config: { ...def.defaults },
+            visibleMobile: true,
+            visibleDesktop: true,
+          };
+        });
+        await storePagesApi.replaceBlocks(page.id, blocks, 'Démarrage');
+      }
+      return page;
+    },
     onSuccess: (page) => {
       queryClient.invalidateQueries({ queryKey: ['store-pages'] });
-      toast.success('Page créée');
+      toast.success(
+        starterTypes.length
+          ? `Page créée avec ${starterTypes.length} composant${starterTypes.length > 1 ? 's' : ''}`
+          : 'Page créée',
+      );
       setTitle('');
       setAsHome(false);
+      setStarterTypes([]);
       navigate(`/admin/pages/${page.id}`);
     },
     onError: (err) => toastError(err, 'Création impossible'),
@@ -188,7 +228,7 @@ const AdminPages = () => {
     <AdminLayout
       title="Pages & design"
       breadcrumbs={[{ label: 'Pages & design' }]}
-      description="Créez des pages, ajoutez des composants, publiez ou supprimez."
+      description="Templates, starters, puis édition drag & drop des composants."
     >
       <div className="mx-auto max-w-4xl space-y-8">
         {!canPublish ? (
@@ -260,8 +300,11 @@ const AdminPages = () => {
         <section className="rounded-2xl border border-border bg-card p-5 sm:p-6">
           <h2 className="flex items-center gap-2 font-display text-lg font-semibold">
             <FilePlus2 className="h-5 w-5 text-primary" />
-            Nouvelle page vide
+            Nouvelle page
           </h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Choisissez des composants de démarrage (clic ou glisser pour réordonner), puis créez.
+          </p>
           <div className="mt-4 grid gap-4 sm:grid-cols-[1fr_auto] sm:items-end">
             <div>
               <Label htmlFor="page-title">Titre</Label>
@@ -279,9 +322,87 @@ const AdminPages = () => {
               className="gap-2"
             >
               {createMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-              Créer
+              Créer & éditer
             </Button>
           </div>
+
+          <div className="mt-5">
+            <Label className="mb-2 block">Composants de démarrage (optionnel)</Label>
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4">
+              {BLOCK_CATALOG.map((item) => {
+                const selected = starterTypes.includes(item.type);
+                return (
+                  <button
+                    key={item.type}
+                    type="button"
+                    onClick={() =>
+                      setStarterTypes((prev) =>
+                        prev.includes(item.type)
+                          ? prev.filter((t) => t !== item.type)
+                          : [...prev, item.type],
+                      )
+                    }
+                    className={cn(
+                      'rounded-xl border p-2 text-left transition',
+                      selected
+                        ? 'border-primary bg-primary/10 ring-1 ring-primary/40'
+                        : 'border-border bg-background hover:border-primary/40',
+                    )}
+                  >
+                    <BlockPalettePreview type={item.type} />
+                    <p className="mt-1.5 text-xs font-medium leading-tight">{item.label}</p>
+                  </button>
+                );
+              })}
+            </div>
+            {starterTypes.length > 0 ? (
+              <ul className="mt-3 space-y-1.5">
+                {starterTypes.map((type, index) => {
+                  const label = BLOCK_CATALOG.find((b) => b.type === type)?.label ?? type;
+                  return (
+                    <li
+                      key={`${type}-${index}`}
+                      draggable
+                      onDragStart={() => {
+                        starterDragFrom.current = index;
+                      }}
+                      onDragOver={(e) => e.preventDefault()}
+                      onDrop={() => {
+                        const from = starterDragFrom.current;
+                        starterDragFrom.current = null;
+                        if (from == null || from === index) return;
+                        setStarterTypes((prev) => {
+                          const next = [...prev];
+                          const [item] = next.splice(from, 1);
+                          next.splice(index, 0, item);
+                          return next;
+                        });
+                      }}
+                      className="flex items-center gap-2 rounded-lg border border-border bg-background px-2.5 py-1.5 text-sm"
+                    >
+                      <GripVertical className="h-3.5 w-3.5 shrink-0 cursor-grab text-muted-foreground" />
+                      <span className="font-mono text-[11px] text-muted-foreground">#{index + 1}</span>
+                      <span className="flex-1">{label}</span>
+                      <button
+                        type="button"
+                        className="text-xs text-destructive"
+                        onClick={() =>
+                          setStarterTypes((prev) => prev.filter((_, i) => i !== index))
+                        }
+                      >
+                        Retirer
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            ) : (
+              <p className="mt-2 text-xs text-muted-foreground">
+                Sans sélection : page vide — vous pourrez glisser-déposer les blocs dans l’éditeur.
+              </p>
+            )}
+          </div>
+
           <label className="mt-4 flex items-center gap-3 text-sm">
             <Switch checked={asHome} onCheckedChange={setAsHome} />
             Utiliser comme page d’accueil (remplace le design thème)
@@ -399,8 +520,8 @@ const AdminPages = () => {
                       {page.isHome ? ' · remplace /' : ''}
                       {page.currentlyLive === false && page.published ? ' · planifié' : ''}
                       {' · '}
-                      {page.blocks?.length ?? 0} composant
-                      {(page.blocks?.length ?? 0) > 1 ? 's' : ''}
+                      {page.blockCount ?? 0} composant
+                      {(page.blockCount ?? 0) > 1 ? 's' : ''}
                     </p>
                   </div>
                   <div className="flex flex-wrap gap-2">

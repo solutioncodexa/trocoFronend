@@ -28,8 +28,8 @@ const Footer = () => {
   const surMesureOn = isDemo || store?.surMesureEnabled !== false;
 
   const { data: categories = [] } = useQuery({
-    queryKey: ['categories', 'footer'],
-    queryFn: () => categoriesApi.getAllCategories(),
+    queryKey: ['categories', 'nav', 'footer'],
+    queryFn: () => categoriesApi.getNavCategories(),
     ...staticCatalogQueryOptions,
     enabled: !isDemo,
   });

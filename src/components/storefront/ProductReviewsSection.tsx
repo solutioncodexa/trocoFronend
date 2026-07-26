@@ -53,8 +53,15 @@ export function ProductReviewsSection({ productId, productName }: Props) {
   const enabled = Number.isFinite(numericId);
 
   const { data, isLoading } = useQuery({
-    queryKey: ['product-reviews', productId],
+    queryKey: ['product-reviews', 'summary', productId],
     queryFn: () => productReviewsApi.getPublicSummary(numericId),
+    enabled,
+    staleTime: 60_000,
+  });
+
+  const { data: reviewsPage } = useQuery({
+    queryKey: ['product-reviews', 'list', productId],
+    queryFn: () => productReviewsApi.getPublicReviews(numericId, 0, 10),
     enabled,
     staleTime: 60_000,
   });
@@ -83,6 +90,8 @@ export function ProductReviewsSection({ productId, productName }: Props) {
       setBody('');
       setRating(5);
       queryClient.invalidateQueries({ queryKey: ['product-reviews', productId] });
+      queryClient.invalidateQueries({ queryKey: ['product-reviews', 'summary', productId] });
+      queryClient.invalidateQueries({ queryKey: ['product-reviews', 'list', productId] });
     },
     onError: (err: unknown) => toastError(err, 'Envoi impossible'),
   });
@@ -91,7 +100,7 @@ export function ProductReviewsSection({ productId, productName }: Props) {
 
   const avg = data?.averageRating ?? 0;
   const count = data?.reviewCount ?? 0;
-  const reviews = data?.reviews ?? [];
+  const reviews = reviewsPage?.content ?? [];
 
   return (
     <section className="mt-10 sm:mt-14 border-t border-border pt-10 px-3 sm:px-6 max-w-[1280px] mx-auto w-full">
@@ -208,7 +217,7 @@ export function useProductReviewJsonLd(
 ) {
   const numericId = Number(productId);
   const { data } = useQuery({
-    queryKey: ['product-reviews', productId],
+    queryKey: ['product-reviews', 'summary', productId],
     queryFn: () => productReviewsApi.getPublicSummary(numericId),
     enabled: enabled && Number.isFinite(numericId),
     staleTime: 60_000,

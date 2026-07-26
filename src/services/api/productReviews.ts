@@ -1,6 +1,7 @@
 import { buildApiUrl, apiRequest } from '@/config/api';
 import type {
   CreateProductReviewRequest,
+  PageResponse,
   ProductReviewDTO,
   ProductReviewSummaryDTO,
 } from '@/types/api';
@@ -8,6 +9,15 @@ import type {
 export const productReviewsApi = {
   getPublicSummary: (productId: number | string): Promise<ProductReviewSummaryDTO> =>
     apiRequest<ProductReviewSummaryDTO>(buildApiUrl(`/product-reviews/public/${productId}`)),
+
+  getPublicReviews: (
+    productId: number | string,
+    page = 0,
+    size = 10,
+  ): Promise<PageResponse<ProductReviewDTO>> =>
+    apiRequest<PageResponse<ProductReviewDTO>>(
+      buildApiUrl(`/product-reviews/public/${productId}/reviews?page=${page}&size=${size}`),
+    ),
 
   submitPublic: (payload: CreateProductReviewRequest): Promise<ProductReviewDTO> =>
     apiRequest<ProductReviewDTO>(buildApiUrl('/product-reviews/public'), {

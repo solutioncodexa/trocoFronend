@@ -11,6 +11,18 @@ export type StoreLead = {
   createdAt: string;
 };
 
+export type StoreLeadListItem = {
+  id: number;
+  leadType: StoreLeadType | string;
+  fullName?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  messagePreview?: string | null;
+  hasMessage?: boolean;
+  sourcePath?: string | null;
+  createdAt: string;
+};
+
 export type CreateStoreLeadPayload = {
   leadType: StoreLeadType;
   fullName?: string;

@@ -1,4 +1,34 @@
-export type GlobalSectionKey = 'mega_menu' | 'footer_links' | 'sticky_cta';
+export type GlobalSectionKey = 'mega_menu' | 'footer_links' | 'sticky_cta' | 'app_bar';
+
+export type AppBarConfig = {
+  bgColor: string;
+  textColor: string;
+  topBarEnabled: boolean;
+  topBarText: string;
+  topBarBg: string;
+  topBarTextColor: string;
+  showSearch: boolean;
+  showWishlist: boolean;
+  showCart: boolean;
+  navLabels: string[];
+  logoHeight: 'sm' | 'md' | 'lg';
+  sticky: boolean;
+};
+
+export const DEFAULT_APP_BAR: AppBarConfig = {
+  bgColor: '',
+  textColor: '',
+  topBarEnabled: false,
+  topBarText: 'Livraison gratuite dès 500 DH',
+  topBarBg: '#0F766E',
+  topBarTextColor: '#FFFFFF',
+  showSearch: true,
+  showWishlist: true,
+  showCart: true,
+  navLabels: ['Boutique', 'Sur-mesure', 'Contact'],
+  logoHeight: 'md',
+  sticky: true,
+};
 
 export type MegaMenuChildLink = {
   label: string;
@@ -111,5 +141,29 @@ export function parseStickyCtaConfig(config: Record<string, unknown> | undefined
     ctaLabel,
     ctaHref,
     dismissible: config.dismissible !== false,
+  };
+}
+
+export function parseAppBarConfig(config: Record<string, unknown> | undefined): AppBarConfig {
+  const base = { ...DEFAULT_APP_BAR };
+  if (!config) return base;
+  const navRaw = config.navLabels;
+  const navLabels = Array.isArray(navRaw)
+    ? navRaw.map((x) => String(x ?? '').trim()).filter(Boolean).slice(0, 6)
+    : base.navLabels;
+  const logo = String(config.logoHeight ?? base.logoHeight);
+  return {
+    bgColor: String(config.bgColor ?? ''),
+    textColor: String(config.textColor ?? ''),
+    topBarEnabled: config.topBarEnabled === true,
+    topBarText: String(config.topBarText ?? base.topBarText),
+    topBarBg: String(config.topBarBg ?? base.topBarBg),
+    topBarTextColor: String(config.topBarTextColor ?? base.topBarTextColor),
+    showSearch: config.showSearch !== false,
+    showWishlist: config.showWishlist !== false,
+    showCart: config.showCart !== false,
+    navLabels: navLabels.length ? navLabels : base.navLabels,
+    logoHeight: (['sm', 'md', 'lg'].includes(logo) ? logo : 'md') as AppBarConfig['logoHeight'],
+    sticky: config.sticky !== false,
   };
 }
