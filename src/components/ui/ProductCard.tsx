@@ -11,6 +11,7 @@ import { cn } from '@/lib/utils';
 import { useWishlist } from '@/contexts/WishlistContext';
 import { ANIMATIONS } from '@/config/animations';
 import { toast } from 'sonner';
+import { useStorefrontPath } from '@/hooks/useStorefrontPath';
 
 interface ProductCardProps {
   product: Product;
@@ -20,9 +21,11 @@ interface ProductCardProps {
 const ProductCard = ({ product, className }: ProductCardProps) => {
   const queryClient = useQueryClient();
   const { isInWishlist, toggleWishlist } = useWishlist();
+  const { to, isDemo } = useStorefrontPath();
   const isFavorite = isInWishlist(product.id);
 
   const prefetchProductDetail = useCallback(() => {
+    if (isDemo) return;
     queryClient.prefetchQuery({
       queryKey: ['product', product.id],
       queryFn: async () => {
@@ -30,7 +33,7 @@ const ProductCard = ({ product, className }: ProductCardProps) => {
         return mapProductDetailToProduct(dto);
       },
     });
-  }, [queryClient, product.id]);
+  }, [queryClient, product.id, isDemo]);
 
   const handleWishlistToggle = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -72,7 +75,7 @@ const ProductCard = ({ product, className }: ProductCardProps) => {
       )}
     >
       <Link
-        to={`/produit/${product.id}`}
+        to={to(`/produit/${product.id}`)}
         className="flex min-h-0 flex-1 flex-col outline-none focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:ring-offset-2 rounded-xl"
         onMouseEnter={prefetchProductDetail}
         onFocus={prefetchProductDetail}

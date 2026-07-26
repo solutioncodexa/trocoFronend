@@ -24,7 +24,35 @@ import { toast } from 'sonner';
 import { toastError } from '@/utils/toastMessages';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { useAdmin } from '@/contexts/AdminContext';
-import { togglePermissionSet } from '@/config/permissions';
+import { togglePermissionSet, expandPermissions, PERMISSIONS } from '@/config/permissions';
+
+const ROLE_PRESETS: { key: string; label: string; permissions: string[] }[] = [
+  {
+    key: 'editor',
+    label: 'Éditeur',
+    permissions: [PERMISSIONS.PAGES_EDIT, PERMISSIONS.CONTENT_MANAGE],
+  },
+  {
+    key: 'marketer',
+    label: 'Marketer',
+    permissions: [
+      PERMISSIONS.CONTENT_MANAGE,
+      PERMISSIONS.PAGES_EDIT,
+      PERMISSIONS.STATS_VIEW,
+      PERMISSIONS.WEBHOOKS_MANAGE,
+    ],
+  },
+  {
+    key: 'stock',
+    label: 'Stock',
+    permissions: [
+      PERMISSIONS.STOCK_VIEW,
+      PERMISSIONS.STOCK_ADJUST,
+      PERMISSIONS.PRODUCTS_VIEW,
+      PERMISSIONS.ORDERS_VIEW,
+    ],
+  },
+];
 
 const AdminMembers = () => {
   const queryClient = useQueryClient();
@@ -145,6 +173,35 @@ const AdminMembers = () => {
     }));
   };
 
+  const applyPresetToSelected = (permissions: string[]) => {
+    if (!selected || selected.role !== 'STAFF') return;
+    setSelected({ ...selected, permissions: expandPermissions(permissions) });
+  };
+
+  const applyPresetToCreate = (permissions: string[]) => {
+    setForm((f) => ({ ...f, permissions: expandPermissions(permissions) }));
+  };
+
+  const PresetButtons = ({
+    onApply,
+  }: {
+    onApply: (permissions: string[]) => void;
+  }) => (
+    <div className="flex flex-wrap gap-2">
+      {ROLE_PRESETS.map((preset) => (
+        <Button
+          key={preset.key}
+          type="button"
+          size="sm"
+          variant="outline"
+          onClick={() => onApply(preset.permissions)}
+        >
+          {preset.label}
+        </Button>
+      ))}
+    </div>
+  );
+
   return (
     <AdminLayout title="Membres" breadcrumbs={[{ label: 'Équipe' }, { label: 'Membres' }]}>
       <div className="flex flex-col lg:flex-row gap-6">
@@ -251,6 +308,10 @@ const AdminMembers = () => {
                     <p className="text-xs text-muted-foreground mt-1">
                       Cocher « ajuster / gérer » ajoute automatiquement « voir » (ex. vente directe stock → accès au menu Stock).
                     </p>
+                    <div className="mt-3">
+                      <p className="text-xs text-muted-foreground mb-1.5">Profils rapides</p>
+                      <PresetButtons onApply={applyPresetToSelected} />
+                    </div>
                   </div>
                   {byCategory.map(([cat, perms]) => (
                     <div key={cat} className="space-y-2">
@@ -322,6 +383,10 @@ const AdminMembers = () => {
             <div className="flex items-center justify-between">
               <Label>Compte actif</Label>
               <Switch checked={form.active} onCheckedChange={(v) => setForm((f) => ({ ...f, active: v }))} />
+            </div>
+            <div className="space-y-2">
+              <p className="text-xs text-muted-foreground">Profils rapides</p>
+              <PresetButtons onApply={applyPresetToCreate} />
             </div>
             <div className="space-y-3 max-h-56 overflow-y-auto border rounded-md p-3">
               {byCategory.map(([cat, perms]) => (

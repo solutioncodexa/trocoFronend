@@ -5,6 +5,11 @@ import { promoModalsApi } from '@/services/api/promoModals';
 import { PromoModalDTO } from '@/types/promo-modals';
 import { getImageUrl } from '@/services/api/upload';
 import { Button } from '@/components/ui/button';
+import { getActiveStoreBrand } from '@/lib/activeStoreBrand';
+
+function promoSeenKey(modalId: number, path: string) {
+  return `promo_modal_seen_${modalId}_${path}`;
+}
 
 const PromoModal = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -13,48 +18,9 @@ const PromoModal = () => {
   const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const navigate = useNavigate();
   const location = useLocation();
-
-  useEffect(() => {
-    if (location.pathname !== '/') return;
-
-    const hasSeenModal = sessionStorage.getItem('hasSeenPromoModal');
-    if (!hasSeenModal) {
-      const fetchPromoData = async () => {
-        try {
-          const data = await promoModalsApi.getActivePromoModal();
-
-          if (data && data.isActive) {
-            setPromoData(data);
-            setCountdown(data.autoCloseSeconds || 5);
-
-            const timer = setTimeout(() => {
-              setIsOpen(true);
-              startCountdown(data.autoCloseSeconds || 5);
-            }, 1500);
-            return () => clearTimeout(timer);
-          }
-        } catch (error) {
-          console.error('❌ PromoModal: Erreur lors de la récupération des données:', error);
-        }
-      };
-
-      fetchPromoData();
-    }
-  }, [location.pathname]);
-
-  const startCountdown = (seconds: number) => {
-    let remainingSeconds = seconds;
-    setCountdown(remainingSeconds);
-
-    countdownRef.current = setInterval(() => {
-      remainingSeconds -= 1;
-      setCountdown(remainingSeconds);
-
-      if (remainingSeconds <= 0) {
-        handleClose();
-      }
-    }, 1000);
-  };
+  const brandSiteName = getActiveStoreBrand()?.siteName?.trim();
+  const offerLabel = brandSiteName ? `Offre ${brandSiteName}` : 'Offre spéciale';
+  const path = location.pathname;
 
   const stopCountdown = () => {
     if (countdownRef.current) {
@@ -63,11 +29,63 @@ const PromoModal = () => {
     }
   };
 
-  const handleClose = () => {
+  const markSeen = (modal: PromoModalDTO) => {
+    sessionStorage.setItem(promoSeenKey(modal.id, path), 'true');
+  };
+
+  const handleClose = (modal?: PromoModalDTO | null) => {
     stopCountdown();
     setIsOpen(false);
-    sessionStorage.setItem('hasSeenPromoModal', 'true');
+    if (modal) markSeen(modal);
+    else if (promoData) markSeen(promoData);
   };
+
+  const startCountdown = (seconds: number, modal: PromoModalDTO) => {
+    let remainingSeconds = seconds;
+    setCountdown(remainingSeconds);
+
+    countdownRef.current = setInterval(() => {
+      remainingSeconds -= 1;
+      setCountdown(remainingSeconds);
+
+      if (remainingSeconds <= 0) {
+        handleClose(modal);
+      }
+    }, 1000);
+  };
+
+  useEffect(() => {
+    if (path.includes('/design-demo/')) return;
+
+    let openTimer: ReturnType<typeof setTimeout> | undefined;
+    let cancelled = false;
+
+    const fetchPromoData = async () => {
+      try {
+        const data = await promoModalsApi.getActivePromoModal(path);
+        if (cancelled || !data?.isActive) return;
+        if (sessionStorage.getItem(promoSeenKey(data.id, path))) return;
+
+        setPromoData(data);
+        setCountdown(data.autoCloseSeconds || 5);
+
+        openTimer = setTimeout(() => {
+          setIsOpen(true);
+          startCountdown(data.autoCloseSeconds || 5, data);
+        }, 1500);
+      } catch (error) {
+        console.error('❌ PromoModal: Erreur lors de la récupération des données:', error);
+      }
+    };
+
+    void fetchPromoData();
+    return () => {
+      cancelled = true;
+      if (openTimer) clearTimeout(openTimer);
+      stopCountdown();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- path drives fetch; handlers stable enough
+  }, [path]);
 
   const handleViewCollection = () => {
     handleClose();
@@ -133,7 +151,7 @@ const PromoModal = () => {
             </h2>
 
             <p className="mb-2 text-xs font-medium uppercase tracking-[0.18em] text-primary">
-              Offre Troco · fermeture dans {countdown}s
+              {offerLabel} · fermeture dans {countdown}s
             </p>
 
             <div className="mx-auto mb-6 h-px w-12 bg-primary/40" />

@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { ChevronLeft, ChevronRight, ShoppingBag, Heart, Truck, Verified, Loader2, X, ZoomIn, Share2, Link as LinkIcon, Mail, MessageCircle, Instagram, Check, CloudUpload } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ShoppingBag, Heart, Truck, Verified, Loader2, X, ZoomIn, Share2, Link as LinkIcon, Mail, MessageCircle, Instagram, Check, CloudUpload, Star } from 'lucide-react';
 import Layout from '@/components/layout/Layout';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -42,6 +42,18 @@ import { applyProductMeta, resetProductMeta } from '@/utils/productMeta';
 import { resolvePublicImageUrl } from '@/utils/resolvePublicImageUrl';
 import { buildApiUrl } from '@/config/api';
 import { useSocialNetworks } from '@/hooks/useSocialNetworks';
+import { useStoreBrand } from '@/hooks/useStoreBrand';
+import { productReviewsApi } from '@/services/api/productReviews';
+import {
+  ProductReviewsSection,
+  useProductReviewJsonLd,
+} from '@/components/storefront/ProductReviewsSection';
+import ProductCard from '@/components/ui/ProductCard';
+import {
+  buildProductWhatsAppMessage,
+  buildWhatsAppMessageUrl,
+  resolveStoreWhatsAppNumber,
+} from '@/utils/whatsappOrder';
 
 function isPersonalizedProduct(p: {
   customizable?: boolean;
@@ -146,6 +158,7 @@ const ProductDetail = () => {
   const { addToCart } = useCart();
   const { toggleWishlist, isInWishlist } = useWishlist();
   const { isEnabled } = useSocialNetworks();
+  const { whatsappOrderTemplate, contactWhatsapp, contactPhone } = useStoreBrand();
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [quantity, setQuantity] = useState(1);
   /** `undefined` = aucune taille (requis pour Radix Select + validation explicite) */
@@ -195,6 +208,38 @@ const ProductDetail = () => {
   });
 
   const relatedProducts = relatedProductsData || [];
+
+  const { data: reviewSummary } = useQuery({
+    queryKey: ['product-reviews', id],
+    queryFn: () => productReviewsApi.getPublicSummary(Number(id)),
+    enabled: !!id && Number.isFinite(Number(id)),
+    staleTime: 60_000,
+  });
+
+  const { data: frequentlyBoughtDto = [] } = useQuery({
+    queryKey: ['frequently-bought', id],
+    queryFn: () => productsApi.frequentlyBought(id!),
+    enabled: !!id,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const frequentlyBought = mapProductListItemListToProducts(frequentlyBoughtDto)
+    .filter((p) => p.id !== id)
+    .slice(0, 4);
+
+  const reviewJsonLd = useProductReviewJsonLd(id ?? '', product?.name ?? '', !!product);
+
+  useEffect(() => {
+    if (!reviewJsonLd) return;
+    const el = document.createElement('script');
+    el.type = 'application/ld+json';
+    el.id = 'troco-product-review-jsonld';
+    el.text = JSON.stringify(reviewJsonLd);
+    document.head.appendChild(el);
+    return () => {
+      document.getElementById('troco-product-review-jsonld')?.remove();
+    };
+  }, [reviewJsonLd]);
 
   /** Réinitialise les choix quand on change de produit */
   useEffect(() => {
@@ -281,6 +326,14 @@ const ProductDetail = () => {
     .join(' · ') || selectedVariant.label || '';
   const hasPackQtyAxis = attributeAxes.some((a) => /quantit/i.test(a));
   const packStepperLabel = hasPackQtyAxis ? 'Nombre de packs' : 'Quantité';
+
+  const waPhone = resolveStoreWhatsAppNumber(contactWhatsapp, contactPhone);
+  const whatsappOrderHref = waPhone
+    ? buildWhatsAppMessageUrl(
+        waPhone,
+        buildProductWhatsAppMessage(product.name, window.location.href, whatsappOrderTemplate),
+      )
+    : null;
 
   const handleAttrChange = (axis: string, value: string) => {
     const next = { ...selectedAttrs, [axis]: value };
@@ -610,6 +663,26 @@ const ProductDetail = () => {
               <h1 className="text-xl sm:text-2xl lg:text-3xl font-display text-foreground leading-tight">
                 {product.name}
               </h1>
+              {reviewSummary && reviewSummary.reviewCount > 0 ? (
+                <div className="flex items-center gap-2 mt-1.5">
+                  <div className="flex items-center gap-0.5">
+                    {[1, 2, 3, 4, 5].map((n) => (
+                      <Star
+                        key={n}
+                        className={cn(
+                          'h-3.5 w-3.5',
+                          n <= Math.round(reviewSummary.averageRating)
+                            ? 'fill-amber-400 text-amber-400'
+                            : 'text-muted-foreground/40',
+                        )}
+                      />
+                    ))}
+                  </div>
+                  <span className="text-xs text-muted-foreground">
+                    {reviewSummary.averageRating.toFixed(1)} ({reviewSummary.reviewCount} avis)
+                  </span>
+                </div>
+              ) : null}
               <p className="font-display text-base sm:text-lg text-primary mt-0.5">
                 {product.category}
               </p>
@@ -833,6 +906,20 @@ const ProductDetail = () => {
                   Commander
                 </Button>
 
+                {whatsappOrderHref ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full h-11 rounded-2xl border-[#25D366]/40 text-[#128C7E] hover:bg-[#25D366]/10 gap-2 text-xs sm:text-sm uppercase tracking-wider font-bold"
+                    asChild
+                  >
+                    <a href={whatsappOrderHref} target="_blank" rel="noopener noreferrer">
+                      <MessageCircle className="w-4 h-4" />
+                      Commander sur WhatsApp
+                    </a>
+                  </Button>
+                ) : null}
+
                 {/* Secondary CTAs */}
                 <div className="grid grid-cols-3 gap-2">
                   <Button
@@ -955,6 +1042,26 @@ const ProductDetail = () => {
           </div>
         </div>
       </section>
+
+      {frequentlyBought.length > 0 && (
+        <section className="mt-10 sm:mt-16 lg:mt-20 mb-6">
+          <div className="flex flex-col items-center mb-6 sm:mb-8 text-center px-3">
+            <h3 className="font-display text-xl sm:text-2xl text-foreground mb-1">Souvent achetés ensemble</h3>
+            <p className="text-muted-foreground uppercase tracking-widest text-[10px] sm:text-xs">
+              Complétez votre commande
+            </p>
+          </div>
+          <div className="max-w-[1280px] mx-auto px-3 sm:px-6">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
+              {frequentlyBought.map((p) => (
+                <ProductCard key={p.id} product={p} />
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {id ? <ProductReviewsSection productId={id} productName={product.name} /> : null}
 
       {/* ============ RELATED PRODUCTS ============ */}
       {relatedProducts.length > 0 && (

@@ -96,7 +96,7 @@ const HeritageSection = () => {
                     </h2>
                   )}
                   <p className="text-muted-foreground leading-relaxed mb-6 sm:mb-8 font-light text-[0.9375rem] sm:text-base md:text-lg max-w-full break-words px-0.5 sm:px-0">
-                    {displayProducts[0].description || 'Une sélection d\'emballages mis en avant pour les e-commerçants et boutiques au Maroc — qualité, formats et finitions soignées.'}
+                    {displayProducts[0].description || 'Une sélection mise en avant pour nos clients — qualité et soin du détail.'}
                   </p>
                 </>
               ) : (
@@ -106,7 +106,7 @@ const HeritageSection = () => {
                     <span className="font-display text-primary text-3xl sm:text-4xl md:text-5xl lg:text-6xl">Sélectionnés</span>
                   </h2>
                   <p className="text-muted-foreground leading-relaxed mb-6 sm:mb-8 font-light text-[0.9375rem] sm:text-base md:text-lg max-w-full break-words px-0.5 sm:px-0">
-                    Une sélection d&apos;emballages mis en avant pour les e-commerçants et boutiques au Maroc — qualité, formats et finitions soignées.
+                    Une sélection mise en avant pour nos clients — qualité et soin du détail.
                   </p>
                 </>
               )}

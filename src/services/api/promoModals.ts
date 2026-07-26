@@ -10,8 +10,9 @@ const getAuthHeaders = () => {
 };
 
 class PromoModalsApi {
-  async getActivePromoModal(): Promise<PromoModalDTO | null> {
-    const response = await fetch(`${API_BASE_URL}/promo-modals/public`, {
+  async getActivePromoModal(path?: string): Promise<PromoModalDTO | null> {
+    const qs = path ? `?path=${encodeURIComponent(path)}` : '';
+    const response = await fetch(`${API_BASE_URL}/promo-modals/public${qs}`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',

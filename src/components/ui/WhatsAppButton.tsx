@@ -1,21 +1,24 @@
 import { useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { useSocialNetworks } from '@/hooks/useSocialNetworks';
+import { useStoreBrand } from '@/hooks/useStoreBrand';
 
 const WhatsAppButton = () => {
   const { pathname } = useLocation();
   const { isEnabled, getUrl } = useSocialNetworks();
+  const { siteName, whatsappUrl: brandWhatsappUrl } = useStoreBrand();
   const isAdminRoute = pathname.startsWith('/admin');
-  const whatsappUrl = getUrl('whatsapp');
+  const socialWhatsappUrl = isEnabled('whatsapp') ? getUrl('whatsapp') : undefined;
+  const whatsappUrl = socialWhatsappUrl || brandWhatsappUrl || undefined;
 
-  if (isAdminRoute || !isEnabled('whatsapp') || !whatsappUrl) return null;
+  if (isAdminRoute || !whatsappUrl) return null;
 
   return (
     <a
       href={whatsappUrl}
       target="_blank"
       rel="noopener noreferrer"
-      aria-label="Contacter Troco sur WhatsApp"
+      aria-label={`Contacter ${siteName}`}
       className={cn(
         'group fixed z-40 flex h-14 w-14 items-center justify-center overflow-hidden rounded-full',
         'bg-[#25D366] text-white shadow-elegant ring-2 ring-white/90',

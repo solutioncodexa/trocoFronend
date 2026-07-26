@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Share2, Save } from 'lucide-react';
 import AdminLayout from '@/components/admin/AdminLayout';
@@ -96,6 +97,13 @@ const AdminSocialNetworks = () => {
             <p className="mt-1 text-sm text-muted-foreground sm:mt-2">
               Activez ou désactivez chaque réseau et modifiez son URL. Un réseau désactivé disparaît
               partout sur le site (footer, contact, accueil, WhatsApp flottant, partage produit).
+            </p>
+            <p className="mt-2 text-xs text-muted-foreground">
+              Astuce : en renseignant Facebook / Instagram / TikTok / WhatsApp dans{' '}
+              <Link to="/admin/parametres" className="text-primary underline-offset-2 hover:underline">
+                Paramètres boutique
+              </Link>
+              , ces réseaux sont synchronisés automatiquement (activés + URL).
             </p>
           </div>
           <Button

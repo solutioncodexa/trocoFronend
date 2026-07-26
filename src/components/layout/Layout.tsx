@@ -1,4 +1,4 @@
-import { ReactNode, useEffect, useRef } from 'react';
+import { ReactNode, useEffect, useMemo, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import Header from './Header';
 import Footer from './Footer';
@@ -6,24 +6,75 @@ import TopBar from './TopBar';
 import PromoModal from '../ui/PromoModal';
 import { ANIMATIONS } from '@/config/animations';
 import { useProtectSiteImages } from '@/hooks/useProtectSiteImages';
+import { resolveTenantSlug, useTenant } from '@/contexts/TenantContext';
+import { StorefrontBrandOverrideProvider } from '@/contexts/StorefrontBrandOverride';
+import { useDesignDemo } from '@/demo/DesignDemoContext';
+import { normalizeThemeKey } from '@/config/storeThemes';
+import {
+  applyDocumentBrand,
+  clearRootStoreTheme,
+  storeThemeStyleVars,
+} from '@/utils/storeTheme';
+import { cn } from '@/lib/utils';
+import TrackingPixels from '@/components/storefront/TrackingPixels';
+import StickyCta from '@/components/layout/StickyCta';
 
 interface LayoutProps {
   children: ReactNode;
+  /** Force un thème (ex. page démo design). */
+  forceThemeKey?: string;
+  /** Branding forcé (démo) — sinon store du tenant. */
+  forceBrand?: {
+    siteName?: string | null;
+    tagline?: string | null;
+    logoUrl?: string | null;
+    primaryColor?: string | null;
+    secondaryColor?: string | null;
+    aboutText?: string | null;
+  };
 }
 
-const Layout = ({ children }: LayoutProps) => {
+const Layout = ({ children, forceThemeKey, forceBrand }: LayoutProps) => {
   const { pathname } = useLocation();
+  const { store } = useTenant();
+  const demo = useDesignDemo();
   const pageFade = ANIMATIONS.pageFadeOnRouteChange;
   const shellRef = useRef<HTMLDivElement>(null);
   const siteContentRef = useRef<HTMLDivElement>(null);
   useProtectSiteImages(siteContentRef);
+  /** Barre outils démo design au-dessus du header vitrine (~2 rows) */
+  const demoChromePx = demo ? 96 : 0;
+
+  // Couleurs / thème : uniquement sur une vitrine tenant (sous-domaine / ?tenant= / démo).
+  // Jamais depuis la session admin sur le host Matjarona (localhost).
+  const onTenantStorefront = !!forceBrand || !!resolveTenantSlug();
+  const brand = forceBrand ?? (onTenantStorefront ? store : null);
+  const themeKey = normalizeThemeKey(
+    forceThemeKey ?? (onTenantStorefront ? store?.themeKey : null),
+  );
+  const themeVars = useMemo(() => storeThemeStyleVars(brand), [brand]);
+
+  useEffect(() => {
+    // Les couleurs restent sur le wrapper — jamais sur :root (admin / Matjarona).
+    clearRootStoreTheme();
+    if (brand) {
+      applyDocumentBrand(brand);
+    }
+    return () => {
+      clearRootStoreTheme();
+      applyDocumentBrand(null);
+    };
+  }, [brand]);
 
   useEffect(() => {
     const el = shellRef.current;
     if (!el) return;
 
     const setOffset = () => {
-      document.documentElement.style.setProperty('--layout-top-offset', `${el.offsetHeight}px`);
+      document.documentElement.style.setProperty(
+        '--layout-top-offset',
+        `${el.offsetHeight + demoChromePx}px`,
+      );
     };
     setOffset();
 
@@ -33,35 +84,49 @@ const Layout = ({ children }: LayoutProps) => {
       ro.disconnect();
       document.documentElement.style.removeProperty('--layout-top-offset');
     };
-  }, []);
+  }, [demoChromePx]);
 
   return (
-    <div
-      ref={siteContentRef}
-      className="site-protected-media flex flex-col min-h-screen w-full min-w-0 max-w-full overflow-x-hidden"
-    >
+    <StorefrontBrandOverrideProvider value={forceBrand ?? null}>
       <div
-        ref={shellRef}
-        className="fixed inset-x-0 top-0 z-50 flex flex-col supports-[padding:max(0px)]:pt-[env(safe-area-inset-top)]"
-      >
-        <TopBar />
-        <Header />
-      </div>
-      <main
-        className="flex-grow min-w-0 w-full overflow-x-hidden"
-        style={{ paddingTop: 'var(--layout-top-offset, 4rem)' }}
-      >
-        {pageFade ? (
-          <div key={pathname} className="animate-fade-in motion-reduce:animate-none" style={{ animationDuration: '0.35s' }}>
-            {children}
-          </div>
-        ) : (
-          children
+        ref={siteContentRef}
+        className={cn(
+          'site-protected-media storefront-skin flex min-h-screen w-full min-w-0 max-w-full flex-col overflow-x-hidden',
+          `store-theme store-theme--${themeKey}`,
         )}
-      </main>
-      <Footer />
-      <PromoModal />
-    </div>
+        data-store-theme={themeKey}
+        style={themeVars}
+      >
+        <TrackingPixels />
+        <div
+          ref={shellRef}
+          className="fixed inset-x-0 z-50 flex flex-col supports-[padding:max(0px)]:pt-[env(safe-area-inset-top)]"
+          style={{ top: demoChromePx }}
+        >
+          <TopBar />
+          <Header />
+        </div>
+        <main
+          className="w-full min-w-0 flex-grow overflow-x-hidden"
+          style={{ paddingTop: 'var(--layout-top-offset, 4rem)' }}
+        >
+          {pageFade ? (
+            <div
+              key={pathname}
+              className="animate-fade-in motion-reduce:animate-none"
+              style={{ animationDuration: '0.35s' }}
+            >
+              {children}
+            </div>
+          ) : (
+            children
+          )}
+        </main>
+        <Footer />
+        <StickyCta />
+        <PromoModal />
+      </div>
+    </StorefrontBrandOverrideProvider>
   );
 };
 

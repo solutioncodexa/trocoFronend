@@ -1,4 +1,4 @@
-import { PUBLIC_SITE_NAME } from '@/config/site';
+import { getActiveSiteName } from '@/lib/activeStoreBrand';
 import type { ProductCategory } from '@/types/product';
 import { formatPrice } from '@/utils/formatPrice';
 
@@ -70,13 +70,13 @@ export function buildProductShareMessage(params: ProductShareParams): string {
   }
 
   lines.push('');
-  lines.push(`${PUBLIC_SITE_NAME} : ${url}`);
+  lines.push(`${getActiveSiteName()} : ${url}`);
 
   return lines.join('\n');
 }
 
 export function buildProductShareTitle(name: string): string {
-  return `${name} — ${PUBLIC_SITE_NAME}`;
+  return `${name} — ${getActiveSiteName()}`;
 }
 
 /** Ouvre toujours dans un nouvel onglet. */

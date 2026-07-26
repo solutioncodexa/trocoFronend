@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { Check, Banknote, CheckCircle, Verified, Tag, X, Loader2, ArrowRight, Sparkles } from 'lucide-react';
@@ -11,11 +11,18 @@ import { formatPrice } from '@/utils/formatPrice';
 import { toast } from 'sonner';
 import { toastError } from '@/utils/toastMessages';
 import { PaymentMethod } from '@/types/product';
-import { ordersApi } from '@/services/api';
+import { ordersApi, productsApi } from '@/services/api';
 import { promoCodesApi } from '@/services/api/promoCodes';
+import { abandonedCartsApi } from '@/services/api/abandonedCarts';
 import { OrderDTO, CartItemDTO } from '@/types/api';
 import { DiscountType } from '@/types/promo-codes';
-import { FREE_SHIPPING_THRESHOLD_MAD } from '@/config/site';
+import { useStoreBrand } from '@/hooks/useStoreBrand';
+import { useTenant } from '@/contexts/TenantContext';
+import { getOrCreateCartSessionKey } from '@/utils/cartSession';
+import { cartItemsToCapturePayload } from '@/utils/abandonedCartItems';
+import { trackPurchase } from '@/components/storefront/TrackingPixels';
+import { mapProductListItemListToProducts } from '@/utils/productMapper';
+import ProductCard from '@/components/ui/ProductCard';
 
 const Checkout = () => {
   const navigate = useNavigate();
@@ -26,7 +33,20 @@ const Checkout = () => {
     updateQuantity,
     removeFromCart
   } = useCart();
+  const { freeShippingThreshold } = useStoreBrand();
+  const { store } = useTenant();
   const subtotal = getTotal();
+
+  const firstCartProductId = items[0]?.product.id;
+  const { data: checkoutUpsell = [] } = useQuery({
+    queryKey: ['frequently-bought-checkout', firstCartProductId],
+    queryFn: () => productsApi.frequentlyBought(firstCartProductId!, 4),
+    enabled: !!firstCartProductId,
+    staleTime: 5 * 60 * 1000,
+  });
+  const upsellProducts = mapProductListItemListToProducts(checkoutUpsell)
+    .filter((p) => !items.some((i) => i.product.id === p.id))
+    .slice(0, 3);
 
   const { data: promoSuggestions = [] } = useQuery({
     queryKey: ['promo-suggestions', subtotal],
@@ -41,6 +61,7 @@ const Checkout = () => {
   const [formData, setFormData] = useState({
     fullName: '',
     phone: '',
+    email: '',
     address: '',
     city: '',
     notes: ''
@@ -103,16 +124,49 @@ const Checkout = () => {
     }));
   };
 
+  useEffect(() => {
+    if (!store?.abandonedCartEnabled) return;
+    const email = formData.email.trim();
+    const phone = formData.phone.trim();
+    if (!email && !phone) return;
+    if (items.length === 0) return;
+
+    const timer = window.setTimeout(() => {
+      void abandonedCartsApi
+        .capture({
+          sessionKey: getOrCreateCartSessionKey(),
+          customerEmail: email || undefined,
+          customerPhone: phone || undefined,
+          customerName: formData.fullName.trim() || undefined,
+          items: cartItemsToCapturePayload(items),
+          cartTotal: getTotal(),
+        })
+        .catch(() => {
+          /* silencieux — relance optionnelle */
+        });
+    }, 900);
+    return () => window.clearTimeout(timer);
+  }, [
+    store?.abandonedCartEnabled,
+    formData.email,
+    formData.phone,
+    formData.fullName,
+    items,
+    getTotal,
+  ]);
+
   // Mutation pour créer une commande
   const createOrderMutation = useMutation({
     mutationFn: async (orderData: OrderDTO) => {
       return await ordersApi.createOrder(orderData);
     },
-    onSuccess: () => {
+    onSuccess: (_data, orderData) => {
       setIsSubmitting(false);
       setIsSuccess(true);
       clearCart();
       toast.success('Commande créée avec succès!');
+      void abandonedCartsApi.markRecovered(getOrCreateCartSessionKey()).catch(() => {});
+      trackPurchase({ value: orderData.total, currency: 'MAD' });
     },
     onError: (error: Error) => {
       setIsSubmitting(false);
@@ -154,7 +208,7 @@ const Checkout = () => {
     const subtotal = getTotal();
     const discount = calculateDiscount();
     const afterDiscount = subtotal - discount;
-    const shipping = afterDiscount >= FREE_SHIPPING_THRESHOLD_MAD ? 0 : 50;
+    const shipping = afterDiscount >= freeShippingThreshold ? 0 : 50;
     const total = afterDiscount + shipping;
 
     const orderDTO: OrderDTO = {
@@ -163,6 +217,7 @@ const Checkout = () => {
       customer: {
         fullName: formData.fullName,
         phone: formData.phone,
+        email: formData.email.trim() || undefined,
         address: formData.address,
         city: formData.city,
       },
@@ -216,7 +271,7 @@ const Checkout = () => {
 
   const discount = calculateDiscount();
   const afterDiscount = subtotal - discount;
-  const shipping = afterDiscount >= FREE_SHIPPING_THRESHOLD_MAD ? 0 : 50;
+  const shipping = afterDiscount >= freeShippingThreshold ? 0 : 50;
   const total = afterDiscount + shipping;
 
   return (
@@ -257,6 +312,18 @@ const Checkout = () => {
                     placeholder="+212 6..." 
                     className="rounded-xl"
                     required 
+                  />
+                </div>
+                <div className="col-span-full md:col-span-1">
+                  <Label className="block text-xs uppercase tracking-widest text-muted-foreground mb-2 font-bold" htmlFor="email">Email (optionnel)</Label>
+                  <Input 
+                    id="email"
+                    name="email"
+                    type="email"
+                    value={formData.email}
+                    onChange={handleInputChange}
+                    placeholder="vous@exemple.ma" 
+                    className="rounded-xl"
                   />
                 </div>
                 <div className="col-span-full">
@@ -508,6 +575,19 @@ const Checkout = () => {
                   Certificat d'authenticité inclus & Garantie à vie
                 </p>
               </div>
+
+              {upsellProducts.length > 0 && (
+                <div className="mt-6 pt-2 border-t border-border">
+                  <p className="text-xs uppercase tracking-widest text-muted-foreground font-bold mb-3">
+                    Souvent achetés ensemble
+                  </p>
+                  <div className="grid grid-cols-1 gap-3">
+                    {upsellProducts.map((p) => (
+                      <ProductCard key={p.id} product={p} />
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>

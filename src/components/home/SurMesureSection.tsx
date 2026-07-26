@@ -7,8 +7,10 @@ import { ANIMATIONS } from '@/config/animations';
 import { cn } from '@/lib/utils';
 import { staticCatalogQueryOptions } from '@/config/queryOptions';
 import { getImageUrl } from '@/services/api/upload';
+import { useStoreBrand } from '@/hooks/useStoreBrand';
 
 const SurMesureSection = () => {
+  const { siteName } = useStoreBrand();
   const { data: featuredProducts = [], isLoading, error } = useQuery({
     queryKey: ['featured-products', 'sur-mesure'],
     queryFn: () => featuredProductsApi.getAllFeaturedProducts(),
@@ -80,7 +82,7 @@ const SurMesureSection = () => {
                     </span>
                   </h2>
                   <p className="text-muted-foreground leading-relaxed mb-6 sm:mb-8 font-light text-[0.9375rem] sm:text-base md:text-lg max-w-full break-words px-0.5 sm:px-0">
-                    {activeProducts[0].description || '"Votre marque, votre emballage — formats et finitions sur mesure."'}
+                    {activeProducts[0].description || `"Personnalisez avec ${siteName} — formats et finitions sur mesure."`}
                   </p>
                 </>
               ) : (
@@ -90,10 +92,10 @@ const SurMesureSection = () => {
                     <span className="font-display text-primary text-3xl sm:text-4xl md:text-5xl lg:text-6xl">Sur-Mesure</span>
                   </h2>
                   <p className="text-muted-foreground leading-relaxed mb-4 sm:mb-6 font-light text-[0.9375rem] sm:text-base md:text-lg max-w-full break-words px-0.5 sm:px-0">
-                    &quot;Votre marque, votre emballage — formats et finitions sur mesure.&quot;
+                    &quot;Votre marque, votre style — formats et finitions sur mesure.&quot;
                   </p>
                   <p className="text-muted-foreground leading-relaxed mb-6 sm:mb-8 font-light text-[0.9375rem] sm:text-base md:text-lg max-w-full break-words px-0.5 sm:px-0">
-                    Besoin d&apos;un format spécifique, d&apos;un logo ou d&apos;une série personnalisée ? Troco conçoit des emballages adaptés à votre activité.
+                    Besoin d&apos;un format spécifique, d&apos;un logo ou d&apos;une série personnalisée ? {siteName} vous accompagne.
                   </p>
                 </>
               )}

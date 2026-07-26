@@ -17,6 +17,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { topBarMessagesApi } from '@/services/api/topBarMessages';
 import { TopBarMessageDTO, CreateTopBarMessageRequest, UpdateTopBarMessageRequest } from '@/types/top-bar-messages';
 import { toast } from 'sonner';
@@ -142,6 +143,7 @@ const AdminTopBarMessages = () => {
             displayOrder: newMessages[index].displayOrder,
             isActive: newMessages[index].isActive,
             displayDurationSeconds: newMessages[index].displayDurationSeconds ?? 7,
+            targetPaths: newMessages[index].targetPaths ?? '',
           } 
         }),
         updateMutation.mutateAsync({ 
@@ -151,6 +153,7 @@ const AdminTopBarMessages = () => {
             displayOrder: newMessages[targetIndex].displayOrder,
             isActive: newMessages[targetIndex].isActive,
             displayDurationSeconds: newMessages[targetIndex].displayDurationSeconds ?? 7,
+            targetPaths: newMessages[targetIndex].targetPaths ?? '',
           } 
         })
       ]).then(() => {
@@ -339,6 +342,7 @@ const CreateMessageDialog = ({
     displayOrder: 1,
     isActive: true,
     displayDurationSeconds: 7,
+    targetPaths: '',
   });
 
   useEffect(() => {
@@ -419,6 +423,20 @@ const CreateMessageDialog = ({
             </p>
           </div>
 
+          <div>
+            <Label htmlFor="create-targetPaths">Pages cibles</Label>
+            <Textarea
+              id="create-targetPaths"
+              value={formData.targetPaths ?? ''}
+              onChange={(e) => setFormData({ ...formData, targetPaths: e.target.value })}
+              placeholder={'/\n/boutique'}
+              rows={3}
+            />
+            <p className="text-xs text-muted-foreground mt-1">
+              Une URL par ligne. Vide = toutes les pages.
+            </p>
+          </div>
+
           <div className="flex items-center space-x-2">
             <Switch
               id="isActive"
@@ -457,6 +475,7 @@ const EditMessageDialog = ({
     displayOrder: message?.displayOrder || 1,
     isActive: message?.isActive,
     displayDurationSeconds: message?.displayDurationSeconds ?? 7,
+    targetPaths: message?.targetPaths ?? '',
   });
 
   useEffect(() => {
@@ -466,6 +485,7 @@ const EditMessageDialog = ({
         displayOrder: message.displayOrder,
         isActive: message.isActive,
         displayDurationSeconds: message.displayDurationSeconds ?? 7,
+        targetPaths: message.targetPaths ?? '',
       });
     }
   }, [message]);
@@ -523,6 +543,20 @@ const EditMessageDialog = ({
             />
             <p className="text-xs text-muted-foreground mt-1">
               Avant passage au message suivant lorsque plusieurs messages sont actifs.
+            </p>
+          </div>
+
+          <div>
+            <Label htmlFor="edit-targetPaths">Pages cibles</Label>
+            <Textarea
+              id="edit-targetPaths"
+              value={formData.targetPaths ?? ''}
+              onChange={(e) => setFormData({ ...formData, targetPaths: e.target.value })}
+              placeholder={'/\n/boutique'}
+              rows={3}
+            />
+            <p className="text-xs text-muted-foreground mt-1">
+              Une URL par ligne. Vide = toutes les pages.
             </p>
           </div>
 

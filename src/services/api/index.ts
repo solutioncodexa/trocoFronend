@@ -16,3 +16,6 @@ export * from './socialNetworks';
 export * from './members';
 export * from './audit';
 export * from './homeHero';
+export * from './platform';
+export * from './productReviews';
+export * from './abandonedCarts';

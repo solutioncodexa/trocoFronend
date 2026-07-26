@@ -5,6 +5,7 @@ export interface TopBarMessageDTO {
   isActive: boolean;
   /** Secondes avant le message suivant quand plusieurs messages tournent */
   displayDurationSeconds: number;
+  targetPaths?: string | null;
 }
 
 export interface CreateTopBarMessageRequest {
@@ -12,6 +13,7 @@ export interface CreateTopBarMessageRequest {
   displayOrder: number;
   isActive?: boolean;
   displayDurationSeconds?: number;
+  targetPaths?: string | null;
 }
 
 export interface UpdateTopBarMessageRequest {
@@ -19,4 +21,5 @@ export interface UpdateTopBarMessageRequest {
   displayOrder: number;
   isActive?: boolean;
   displayDurationSeconds?: number;
+  targetPaths?: string | null;
 }

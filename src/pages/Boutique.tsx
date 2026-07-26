@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
-import { ChevronLeft, ChevronRight, Loader2, SlidersHorizontal, X } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Loader2, Package, SlidersHorizontal, X } from 'lucide-react';
 import Layout from '@/components/layout/Layout';
 import ProductCard from '@/components/ui/ProductCard';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -32,6 +32,7 @@ import { toast } from 'sonner';
 import { sanitizeErrorMessage } from '@/utils/toastMessages';
 import { staticCatalogQueryOptions } from '@/config/queryOptions';
 import { cn } from '@/lib/utils';
+import { useStoreBrand } from '@/hooks/useStoreBrand';
 
 const PRODUCTS_PER_PAGE = 12;
 const PRICE_MAX = 2000;
@@ -68,6 +69,7 @@ function buildVisiblePageNumbers(current: number, total: number): (number | 'gap
 }
 
 const Boutique = () => {
+  const { siteName } = useStoreBrand();
   const [searchParams, setSearchParams] = useSearchParams();
   const categoryParam = searchParams.get('category');
   const [selectedCategory, setSelectedCategory] = useState<string | null>(categoryParam);
@@ -418,7 +420,7 @@ const Boutique = () => {
         <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-card via-card/90 to-primary/10" aria-hidden />
         <div className="relative z-10 mx-auto max-w-[1400px] px-4 py-6 sm:px-6 sm:py-8 md:py-9">
           <div className="flex flex-col items-start gap-2 sm:items-center sm:text-center">
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">Boutique Troco</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">Boutique {siteName}</p>
             <h1 className="font-display text-2xl font-semibold tracking-tight text-foreground sm:text-3xl md:text-4xl">
               Solutions d&apos;emballage
             </h1>
@@ -555,22 +557,30 @@ const Boutique = () => {
               </div>
             ) : products.length === 0 ? (
               <EmptyState
-                icon={hasActiveFilters ? SlidersHorizontal : undefined}
-                title={hasActiveFilters ? 'Aucun produit ne correspond à ces critères' : 'Aucun produit pour le moment'}
+                icon={hasActiveFilters ? SlidersHorizontal : Package}
+                title={
+                  hasActiveFilters
+                    ? 'Aucun produit ne correspond à ces critères'
+                    : 'Catalogue en préparation'
+                }
                 description={
                   hasActiveFilters
                     ? 'Retirez une catégorie, élargissez la fourchette de prix ou videz la recherche.'
-                    : undefined
+                    : 'Les produits de cette boutique seront bientôt disponibles.'
                 }
                 className="my-6"
               >
-                {hasActiveFilters && (
+                {hasActiveFilters ? (
                   <Button
                     variant="outline"
                     onClick={resetBrowseFilters}
                     className="mt-6 rounded-xl border-primary text-primary hover:bg-primary hover:text-primary-foreground"
                   >
                     Réinitialiser les filtres
+                  </Button>
+                ) : (
+                  <Button variant="outline" className="mt-6 rounded-xl" asChild>
+                    <Link to="/contact">Nous contacter</Link>
                   </Button>
                 )}
               </EmptyState>

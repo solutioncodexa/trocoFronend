@@ -1,4 +1,5 @@
-import { PUBLIC_SITE_NAME, PUBLIC_SITE_URL } from '@/config/site';
+import { PUBLIC_SITE_URL } from '@/config/site';
+import { getActiveSiteName } from '@/lib/activeStoreBrand';
 
 export interface ProductMetaInput {
   id: string;
@@ -37,11 +38,12 @@ export function applyProductMeta({
   price,
   imageUrl,
 }: ProductMetaInput): void {
+  const siteName = getActiveSiteName();
   const pageUrl = `${PUBLIC_SITE_URL}/produit/${id}`;
-  const title = `${name} | ${PUBLIC_SITE_NAME}`;
+  const title = `${name} | ${siteName}`;
   const pricePart = price != null ? ` — ${price.toLocaleString('fr-FR')} DH` : '';
   const desc =
-    (description?.trim() || `Découvrez ce produit d'emballage sur ${PUBLIC_SITE_NAME}.`) +
+    (description?.trim() || `Découvrez ce produit sur ${siteName}.`) +
     pricePart;
   const ogImage = imageUrl || `${PUBLIC_SITE_URL}/favicon.png`;
 
@@ -50,7 +52,7 @@ export function applyProductMeta({
   upsertCanonical(pageUrl);
 
   upsertMeta('property', 'og:type', 'product');
-  upsertMeta('property', 'og:site_name', PUBLIC_SITE_NAME);
+  upsertMeta('property', 'og:site_name', siteName);
   upsertMeta('property', 'og:title', title);
   upsertMeta('property', 'og:description', desc);
   upsertMeta('property', 'og:url', pageUrl);
@@ -63,14 +65,15 @@ export function applyProductMeta({
   upsertMeta('name', 'twitter:image', ogImage);
 }
 
-const DEFAULT_TITLE = `${PUBLIC_SITE_NAME} | Emballage e-commerce`;
 const DEFAULT_DESC =
-  'Sachets, cartons, protections et décorations pour vos commandes e-commerce au Maroc.';
+  'Découvrez nos produits et passez commande en ligne.';
 
 export function resetProductMeta(): void {
-  document.title = DEFAULT_TITLE;
+  const siteName = getActiveSiteName();
+  const defaultTitle = `${siteName} | Boutique en ligne`;
+  document.title = defaultTitle;
   upsertMeta('name', 'description', DEFAULT_DESC);
-  upsertMeta('property', 'og:title', DEFAULT_TITLE);
+  upsertMeta('property', 'og:title', defaultTitle);
   upsertMeta('property', 'og:description', DEFAULT_DESC);
   upsertMeta('property', 'og:url', PUBLIC_SITE_URL);
 }

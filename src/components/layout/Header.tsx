@@ -1,15 +1,23 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Search, ShoppingBag, Menu, X, Heart, ArrowRight } from 'lucide-react';
+import { Search, ShoppingBag, Menu, X, Heart, ArrowRight, ChevronDown } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { useCart } from '@/contexts/CartContext';
 import { useWishlist } from '@/contexts/WishlistContext';
 import { cn } from '@/lib/utils';
 import { ANIMATIONS } from '@/config/animations';
 import { BrandLogoImg } from '@/components/layout/BrandLogoImg';
+import { useStoreBrand } from '@/hooks/useStoreBrand';
+import { useStorefrontPath } from '@/hooks/useStorefrontPath';
+import { useSystemNavReplacements } from '@/hooks/useSystemNavReplacements';
+import { useGlobalSections } from '@/hooks/useGlobalSections';
+import { useStoreLang } from '@/hooks/useStoreLang';
+import { SYSTEM_NAV_REPLACEMENTS } from '@/config/pageTemplates';
+import type { MegaMenuItem } from '@/types/store-global-sections';
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [mobileExpanded, setMobileExpanded] = useState<number | null>(null);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchDraft, setSearchDraft] = useState('');
   const searchRootRef = useRef<HTMLDivElement>(null);
@@ -17,7 +25,16 @@ const Header = () => {
   const { getItemCount } = useCart();
   const { wishlistCount } = useWishlist();
   const location = useLocation();
-  const itemCount = getItemCount();
+  const { to, isDemo, demo } = useStorefrontPath();
+  const { customNav, isReplaced, navHref } = useSystemNavReplacements();
+  const { megaMenuConfig, useMegaMenuNav } = useGlobalSections();
+  const { lang, setLang, withLang } = useStoreLang();
+  const itemCount = isDemo ? demo?.cartCount ?? 0 : getItemCount();
+  const favCount = isDemo ? 3 : wishlistCount;
+  const { siteName, store } = useStoreBrand();
+  const surMesureOn = isDemo || store?.surMesureEnabled !== false;
+  const boutiquePath = to('/boutique');
+  const homePath = to('/');
 
   useEffect(() => {
     if (!isSearchOpen) return;
@@ -56,36 +73,153 @@ const Header = () => {
       setIsSearchOpen(false);
       return;
     }
-    const params =
-      location.pathname === '/boutique'
-        ? new URLSearchParams(location.search)
-        : new URLSearchParams();
+    const onBoutique =
+      location.pathname === boutiquePath || location.pathname.endsWith('/boutique');
+    const params = onBoutique ? new URLSearchParams(location.search) : new URLSearchParams();
     params.set('keyword', q);
-    navigate({ pathname: '/boutique', search: params.toString() });
+    navigate({ pathname: boutiquePath, search: params.toString() });
     setIsSearchOpen(false);
   };
 
-  const navLinks = [
-    { href: '/', label: 'Accueil' },
-    { href: '/boutique', label: 'Boutique' },
-    { href: '/sur-mesure', label: 'Sur-mesure' },
-    { href: '/devis', label: 'Devis' },
-    { href: '/contact', label: 'Contact' },
-  ];
+  const resolveStoreHref = (href: string) => {
+    if (/^https?:\/\//i.test(href)) return href;
+    const path = href.startsWith('/') ? href : `/${href}`;
+    return withLang(to(path));
+  };
+
+  const customExtra = customNav.filter(
+    (p) => !(SYSTEM_NAV_REPLACEMENTS as readonly string[]).includes(p.slug.toLowerCase()),
+  );
+
+  const defaultNavLinks = [
+    { href: withLang(homePath), label: lang === 'ar' ? 'الرئيسية' : 'Accueil' },
+    { href: withLang(boutiquePath), label: lang === 'ar' ? 'المتجر' : 'Boutique' },
+    ...customExtra.map((p) => ({
+      href: withLang(to(`/page/${p.slug}`)),
+      label: p.title,
+    })),
+    ...(surMesureOn && !isReplaced('/sur-mesure')
+      ? [{ href: withLang(to('/sur-mesure')), label: lang === 'ar' ? 'حسب الطلب' : 'Sur-mesure' }]
+      : isReplaced('/sur-mesure')
+        ? [{ href: navHref('/sur-mesure'), label: lang === 'ar' ? 'حسب الطلب' : 'Sur-mesure' }]
+        : []),
+    ...(surMesureOn && !isReplaced('/devis')
+      ? [{ href: withLang(to('/devis')), label: lang === 'ar' ? 'عرض سعر' : 'Devis' }]
+      : isReplaced('/devis')
+        ? [{ href: navHref('/devis'), label: lang === 'ar' ? 'عرض سعر' : 'Devis' }]
+        : []),
+    {
+      href: navHref('/contact'),
+      label: lang === 'ar' ? 'اتصل بنا' : 'Contact',
+    },
+  ].filter((link, i, arr) => arr.findIndex((x) => x.href === link.href) === i);
+
+  const megaMenuItems: MegaMenuItem[] | null =
+    useMegaMenuNav && megaMenuConfig?.items.length ? megaMenuConfig.items : null;
+
+  const navLinks = defaultNavLinks;
+
+  const navLinkClass = (active: boolean) =>
+    cn(
+      'relative px-3.5 py-2.5 font-display text-[15px] font-semibold tracking-tight transition-colors xl:px-4 xl:text-base',
+      ANIMATIONS.navLinkUnderline && !active && 'link-underline',
+      active ? 'text-primary' : 'text-foreground/80 hover:text-primary',
+    );
+
+  const renderNavAnchor = (href: string, label: string, active: boolean, external?: boolean) => {
+    const className = navLinkClass(active);
+    const activeBar = active ? (
+      <span
+        className="absolute inset-x-3.5 -bottom-0.5 h-0.5 rounded-full bg-primary xl:inset-x-4"
+        aria-hidden
+      />
+    ) : null;
+    if (external) {
+      return (
+        <a href={href} className={className} rel="noopener noreferrer">
+          {label}
+          {activeBar}
+        </a>
+      );
+    }
+    return (
+      <Link to={href} className={className}>
+        {label}
+        {activeBar}
+      </Link>
+    );
+  };
+
+  const renderDesktopMegaItem = (item: MegaMenuItem, index: number) => {
+    const href = resolveStoreHref(item.href);
+    const external = /^https?:\/\//i.test(item.href);
+    const active = isActive(href);
+    const children = item.children ?? [];
+    if (!children.length) {
+      return (
+        <div key={`${item.href}-${index}`}>{renderNavAnchor(href, item.label, active, external)}</div>
+      );
+    }
+    return (
+      <div key={`${item.href}-${index}`} className="group relative">
+        <span
+          className={cn(
+            navLinkClass(active),
+            'inline-flex cursor-default items-center gap-1',
+          )}
+        >
+          {item.label}
+          <ChevronDown className="h-3.5 w-3.5 opacity-70 transition-transform group-hover:rotate-180" />
+        </span>
+        <div className="invisible absolute left-0 top-full z-[60] min-w-[12rem] pt-1 opacity-0 transition-all group-hover:visible group-hover:opacity-100 group-focus-within:visible group-focus-within:opacity-100">
+          <div className="rounded-xl border border-border bg-card py-1 shadow-elegant">
+            <Link
+              to={href}
+              className="block px-4 py-2 text-sm font-medium text-foreground hover:bg-muted hover:text-primary"
+            >
+              {item.label}
+            </Link>
+            {children.map((child, ci) => {
+              const childHref = resolveStoreHref(child.href);
+              const childExternal = /^https?:\/\//i.test(child.href);
+              if (childExternal) {
+                return (
+                  <a
+                    key={`${child.href}-${ci}`}
+                    href={childHref}
+                    className="block px-4 py-2 text-sm text-muted-foreground hover:bg-muted hover:text-primary"
+                    rel="noopener noreferrer"
+                  >
+                    {child.label}
+                  </a>
+                );
+              }
+              return (
+                <Link
+                  key={`${child.href}-${ci}`}
+                  to={childHref}
+                  className="block px-4 py-2 text-sm text-muted-foreground hover:bg-muted hover:text-primary"
+                >
+                  {child.label}
+                </Link>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+    );
+  };
 
   const isActive = (href: string) => {
-    if (href === '/') return location.pathname === '/';
-    const [path, query] = href.split('?');
+    const [path] = href.split('?');
+    if (path === homePath || path === '/') {
+      return location.pathname === homePath || location.pathname === '/' || location.pathname === `${demo?.basePath}`;
+    }
     if (location.pathname !== path && !location.pathname.startsWith(`${path}/`)) {
       return false;
     }
-    if (query) {
-      const wanted = new URLSearchParams(query);
-      const current = new URLSearchParams(location.search);
-      return [...wanted.entries()].every(([k, v]) => current.get(k) === v);
-    }
-    if (path === '/boutique') {
-      return location.pathname === '/boutique' && !new URLSearchParams(location.search).get('category');
+    if (path === boutiquePath) {
+      return location.pathname === boutiquePath && !new URLSearchParams(location.search).get('category');
     }
     return location.pathname === path || location.pathname.startsWith(`${path}/`);
   };
@@ -108,8 +242,8 @@ const Header = () => {
           </button>
 
           <Link
-            to="/"
-            aria-label="Troco — accueil"
+            to={homePath}
+            aria-label={`${siteName} — accueil`}
             className={cn(
               'flex min-w-0 max-lg:max-w-[56%] shrink items-center overflow-visible py-0.5',
               ANIMATIONS.headerLogoHover &&
@@ -123,28 +257,14 @@ const Header = () => {
             className="ml-6 hidden shrink-0 items-center gap-0.5 xl:ml-10 lg:flex xl:gap-1"
             aria-label="Navigation principale"
           >
-            {navLinks.map((link) => {
-              const active = isActive(link.href);
-              return (
-                <Link
-                  key={link.href}
-                  to={link.href}
-                  className={cn(
-                    'relative px-3.5 py-2.5 font-display text-[15px] font-semibold tracking-tight transition-colors xl:px-4 xl:text-base',
-                    ANIMATIONS.navLinkUnderline && !active && 'link-underline',
-                    active ? 'text-primary' : 'text-foreground/80 hover:text-primary',
-                  )}
-                >
-                  {link.label}
-                  {active ? (
-                    <span
-                      className="absolute inset-x-3.5 -bottom-0.5 h-0.5 rounded-full bg-primary xl:inset-x-4"
-                      aria-hidden
-                    />
-                  ) : null}
-                </Link>
-              );
-            })}
+            {megaMenuItems
+              ? megaMenuItems.map((item, index) => renderDesktopMegaItem(item, index))
+              : navLinks.map((link) => {
+                  const active = isActive(link.href);
+                  return (
+                    <div key={link.href}>{renderNavAnchor(link.href, link.label, active)}</div>
+                  );
+                })}
           </nav>
 
           <div className="flex shrink-0 items-center gap-0.5 sm:gap-1 md:gap-1.5">
@@ -194,16 +314,26 @@ const Header = () => {
               )}
             </div>
 
-            <Link to="/favoris" className={cn(iconBtnClass, 'relative')} aria-label="Favoris">
+            <button
+              type="button"
+              className={cn(iconBtnClass, 'px-1.5 text-xs font-bold')}
+              onClick={() => setLang(lang === 'ar' ? 'fr' : 'ar')}
+              aria-label="Changer de langue"
+              title={lang === 'ar' ? 'Français' : 'العربية'}
+            >
+              {lang === 'ar' ? 'FR' : 'ع'}
+            </button>
+
+            <Link to={withLang(to('/favoris'))} className={cn(iconBtnClass, 'relative')} aria-label="Favoris">
               <Heart className="h-5 w-5 sm:h-[1.35rem] sm:w-[1.35rem]" />
-              {wishlistCount > 0 && (
+              {favCount > 0 && (
                 <span className="absolute -right-0.5 -top-0.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1 text-[11px] font-bold text-primary-foreground animate-scale-in">
-                  {wishlistCount}
+                  {favCount}
                 </span>
               )}
             </Link>
 
-            <Link to="/panier" className={cn(iconBtnClass, 'relative')} aria-label="Panier">
+            <Link to={withLang(to('/panier'))} className={cn(iconBtnClass, 'relative')} aria-label="Panier">
               <ShoppingBag className="h-5 w-5 sm:h-[1.35rem] sm:w-[1.35rem]" />
               {itemCount > 0 && (
                 <span className="absolute -right-0.5 -top-0.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1 text-[11px] font-bold text-primary-foreground animate-scale-in">
@@ -228,24 +358,101 @@ const Header = () => {
           aria-label="Navigation mobile"
         >
           <div className="container mx-auto space-y-0.5 px-4 py-3 pb-[max(1rem,env(safe-area-inset-bottom))]">
-            {navLinks.map((link) => {
-              const active = isActive(link.href);
-              return (
-                <Link
-                  key={link.href}
-                  to={link.href}
-                  className={cn(
-                    'flex min-h-[48px] touch-manipulation items-center border-l-2 px-4 py-3 font-display text-base font-semibold tracking-tight transition-colors',
-                    active
-                      ? 'border-primary text-primary'
-                      : 'border-transparent text-foreground/85 hover:border-primary/40 hover:text-primary',
-                  )}
-                  onClick={() => setIsMenuOpen(false)}
-                >
-                  {link.label}
-                </Link>
-              );
-            })}
+            {megaMenuItems
+              ? megaMenuItems.map((item, index) => {
+                  const href = resolveStoreHref(item.href);
+                  const external = /^https?:\/\//i.test(item.href);
+                  const active = isActive(href);
+                  const children = item.children ?? [];
+                  const expanded = mobileExpanded === index;
+                  return (
+                    <div key={`${item.href}-${index}`} className="border-b border-border/60 last:border-0">
+                      <div className="flex items-center">
+                        {external ? (
+                          <a
+                            href={href}
+                            className={cn(
+                              'flex min-h-[48px] flex-1 touch-manipulation items-center border-l-2 px-4 py-3 font-display text-base font-semibold',
+                              active ? 'border-primary text-primary' : 'border-transparent text-foreground/85',
+                            )}
+                            onClick={() => setIsMenuOpen(false)}
+                          >
+                            {item.label}
+                          </a>
+                        ) : (
+                          <Link
+                            to={href}
+                            className={cn(
+                              'flex min-h-[48px] flex-1 touch-manipulation items-center border-l-2 px-4 py-3 font-display text-base font-semibold',
+                              active ? 'border-primary text-primary' : 'border-transparent text-foreground/85',
+                            )}
+                            onClick={() => setIsMenuOpen(false)}
+                          >
+                            {item.label}
+                          </Link>
+                        )}
+                        {children.length > 0 ? (
+                          <button
+                            type="button"
+                            className="flex h-12 w-12 items-center justify-center text-muted-foreground"
+                            aria-expanded={expanded}
+                            onClick={() => setMobileExpanded(expanded ? null : index)}
+                          >
+                            <ChevronDown className={cn('h-5 w-5 transition-transform', expanded && 'rotate-180')} />
+                          </button>
+                        ) : null}
+                      </div>
+                      {expanded && children.length > 0 ? (
+                        <div className="pb-2 pl-6">
+                          {children.map((child, ci) => {
+                            const childHref = resolveStoreHref(child.href);
+                            const childExternal = /^https?:\/\//i.test(child.href);
+                            if (childExternal) {
+                              return (
+                                <a
+                                  key={`${child.href}-${ci}`}
+                                  href={childHref}
+                                  className="block py-2 text-sm text-muted-foreground hover:text-primary"
+                                  onClick={() => setIsMenuOpen(false)}
+                                >
+                                  {child.label}
+                                </a>
+                              );
+                            }
+                            return (
+                              <Link
+                                key={`${child.href}-${ci}`}
+                                to={childHref}
+                                className="block py-2 text-sm text-muted-foreground hover:text-primary"
+                                onClick={() => setIsMenuOpen(false)}
+                              >
+                                {child.label}
+                              </Link>
+                            );
+                          })}
+                        </div>
+                      ) : null}
+                    </div>
+                  );
+                })
+              : navLinks.map((link) => {
+                  const active = isActive(link.href);
+                  return (
+                    <Link
+                      key={link.href}
+                      to={link.href}
+                      className={cn(
+                        'flex min-h-[48px] touch-manipulation items-center border-l-2 px-4 py-3 font-display text-base font-semibold tracking-tight transition-colors',
+                        active
+                          ? 'border-primary text-primary'
+                          : 'border-transparent text-foreground/85 hover:border-primary/40 hover:text-primary',
+                      )}
+                      onClick={() => setIsMenuOpen(false)}
+                    >
+                      {link.label}
+                    </Link>
+                  );
+                })}
           </div>
         </nav>
       )}

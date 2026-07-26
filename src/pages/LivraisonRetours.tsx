@@ -1,8 +1,10 @@
 import Layout from '@/components/layout/Layout';
-import { FREE_SHIPPING_THRESHOLD_MAD, CONTACT_EMAIL, CONTACT_PHONE_DISPLAY } from '@/config/site';
+import { useStoreBrand } from '@/hooks/useStoreBrand';
 import { Link } from 'react-router-dom';
 
 const LivraisonRetours = () => {
+  const { freeShippingThreshold, contactEmail, contactPhone } = useStoreBrand();
+
   return (
     <Layout>
       <div className="bg-background min-h-screen">
@@ -27,7 +29,7 @@ const LivraisonRetours = () => {
               <ul className="list-disc pl-5 space-y-2 text-muted-foreground">
                 <li>
                   Livraison gratuite à partir de{' '}
-                  <strong className="text-foreground">{FREE_SHIPPING_THRESHOLD_MAD} DH</strong>.
+                  <strong className="text-foreground">{freeShippingThreshold} DH</strong>.
                 </li>
                 <li>Expédition sous 24–72 h ouvrées selon stock et destination.</li>
                 <li>Suivi de colis communiqué dès l&apos;expédition.</li>
@@ -47,13 +49,22 @@ const LivraisonRetours = () => {
                 Les produits non utilisés, dans leur emballage d&apos;origine, peuvent faire l&apos;objet
                 d&apos;un retour sous 7 jours après réception (sous réserve de validation).
               </p>
-              <p className="text-muted-foreground">
-                Contactez-nous à{' '}
-                <a className="text-primary underline" href={`mailto:${CONTACT_EMAIL}`}>
-                  {CONTACT_EMAIL}
-                </a>{' '}
-                ou au {CONTACT_PHONE_DISPLAY}.
-              </p>
+              {(contactEmail || contactPhone) && (
+                <p className="text-muted-foreground">
+                  Contactez-nous
+                  {contactEmail ? (
+                    <>
+                      {' '}
+                      à{' '}
+                      <a className="text-primary underline" href={`mailto:${contactEmail}`}>
+                        {contactEmail}
+                      </a>
+                    </>
+                  ) : null}
+                  {contactEmail && contactPhone ? ' ou' : null}
+                  {contactPhone ? <> au {contactPhone}</> : null}.
+                </p>
+              )}
             </div>
 
             <p>

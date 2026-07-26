@@ -1,24 +1,89 @@
-import { Link } from 'react-router-dom';
-import { ShoppingBag, ArrowRight, ArrowLeft, X } from 'lucide-react';
+import { Link, useSearchParams } from 'react-router-dom';
+import { ShoppingBag, ArrowRight, ArrowLeft, X, MessageCircle, Loader2 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
+import { useEffect, useRef } from 'react';
 import Layout from '@/components/layout/Layout';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { useCart } from '@/contexts/CartContext';
 import { formatPrice } from '@/utils/formatPrice';
 import { productsApi } from '@/services/api';
-import { mapProductListItemListToProducts } from '@/utils/productMapper';
+import { abandonedCartsApi } from '@/services/api/abandonedCarts';
+import { mapProductDetailToProduct, mapProductListItemListToProducts } from '@/utils/productMapper';
+import { parseAbandonedCartJson } from '@/utils/abandonedCartItems';
 import ProductCard from '@/components/ui/ProductCard';
-import { FREE_SHIPPING_THRESHOLD_MAD } from '@/config/site';
+import { useStoreBrand } from '@/hooks/useStoreBrand';
+import {
+  buildCartWhatsAppMessage,
+  buildWhatsAppMessageUrl,
+  resolveStoreWhatsAppNumber,
+} from '@/utils/whatsappOrder';
+import { toast } from 'sonner';
 
 const Cart = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const recoverToken = searchParams.get('recover');
+  const recoverStarted = useRef(false);
+
   const {
     items,
     updateQuantity,
     removeFromCart,
     getTotal,
-    clearCart
+    clearCart,
+    addToCart,
   } = useCart();
+  const { freeShippingThreshold, contactWhatsapp, contactPhone } = useStoreBrand();
+
+  const { data: recoveredCart, isLoading: recovering } = useQuery({
+    queryKey: ['abandoned-cart-recover', recoverToken],
+    queryFn: () => abandonedCartsApi.recover(recoverToken!),
+    enabled: !!recoverToken?.trim(),
+    retry: false,
+  });
+
+  useEffect(() => {
+    if (!recoverToken || !recoveredCart || recoverStarted.current) return;
+    recoverStarted.current = true;
+
+    void (async () => {
+      try {
+        const lines = parseAbandonedCartJson(recoveredCart.cartJson);
+        if (lines.length === 0) {
+          toast.error('Panier de récupération vide ou invalide');
+          return;
+        }
+        clearCart();
+        for (const line of lines) {
+          try {
+            const dto = await productsApi.getProductById(line.productId);
+            const product = mapProductDetailToProduct(dto);
+            addToCart(
+              product,
+              line.quantity,
+              line.selectedSize,
+              line.selectedVariantId,
+              line.customLogoUrl,
+            );
+          } catch {
+            /* produit indisponible */
+          }
+        }
+        toast.success('Votre panier a été restauré');
+        const next = new URLSearchParams(searchParams);
+        next.delete('recover');
+        setSearchParams(next, { replace: true });
+      } catch {
+        toast.error('Lien de récupération invalide');
+      }
+    })();
+  }, [recoverToken, recoveredCart, addToCart, clearCart, searchParams, setSearchParams]);
+
+  const waPhone = resolveStoreWhatsAppNumber(contactWhatsapp, contactPhone);
+  const cartWhatsAppHref =
+    waPhone && items.length > 0
+      ? buildWhatsAppMessageUrl(waPhone, buildCartWhatsAppMessage(items, getTotal()))
+      : null;
 
   const cartCategories = [...new Set(items.map(i => i.product.category))];
   const cartProductIds = new Set(items.map(i => i.product.id));
@@ -42,6 +107,17 @@ const Cart = () => {
     staleTime: 5 * 60 * 1000,
   });
 
+  if (recoverToken && recovering) {
+    return (
+      <Layout>
+        <div className="container mx-auto px-4 py-20 text-center">
+          <Loader2 className="mx-auto mb-4 h-8 w-8 animate-spin text-primary" />
+          <p className="text-muted-foreground">Restauration de votre panier…</p>
+        </div>
+      </Layout>
+    );
+  }
+
   if (items.length === 0) {
     return (
       <Layout>
@@ -63,7 +139,7 @@ const Cart = () => {
     );
   }
 
-  const shipping = getTotal() >= FREE_SHIPPING_THRESHOLD_MAD ? 0 : 50;
+  const shipping = getTotal() >= freeShippingThreshold ? 0 : 50;
   const total = getTotal() + shipping;
 
   return (
@@ -178,7 +254,7 @@ const Cart = () => {
                   </div>
                   {shipping > 0 && (
                     <p className="text-xs text-muted-foreground">
-                      Plus que {formatPrice(FREE_SHIPPING_THRESHOLD_MAD - getTotal())} pour la livraison gratuite
+                      Plus que {formatPrice(freeShippingThreshold - getTotal())} pour la livraison gratuite
                     </p>
                   )}
                 </div>
@@ -195,6 +271,20 @@ const Cart = () => {
                     Passer la commande
                   </Link>
                 </Button>
+
+                {cartWhatsAppHref ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full mt-3 rounded-2xl border-[#25D366]/40 text-[#128C7E] hover:bg-[#25D366]/10 gap-2 text-xs uppercase tracking-wider font-bold"
+                    asChild
+                  >
+                    <a href={cartWhatsAppHref} target="_blank" rel="noopener noreferrer">
+                      <MessageCircle className="h-4 w-4" />
+                      Commander le panier sur WhatsApp
+                    </a>
+                  </Button>
+                ) : null}
               </div>
             </div>
           </div>

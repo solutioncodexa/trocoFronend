@@ -166,6 +166,87 @@
   }
 }
 
+/* ─── Thèmes vitrine (choix vendeur) — très différenciés ─── */
+.store-theme--classic {
+  --theme-radius: 1rem;
+}
+
+.store-theme--minimal {
+  letter-spacing: -0.01em;
+  background: hsl(0 0% 99%);
+  color: hsl(0 0% 10%);
+}
+.store-theme--minimal .font-display {
+  letter-spacing: -0.04em;
+  font-weight: 500;
+}
+.store-theme--minimal header,
+.store-theme--minimal footer {
+  background: hsl(0 0% 99%) !important;
+  border-color: hsl(0 0% 90%) !important;
+  box-shadow: none !important;
+}
+.store-theme--minimal header .rounded-xl,
+.store-theme--minimal header .rounded-2xl {
+  border-radius: 0 !important;
+}
+
+.store-theme--bold {
+  background: hsl(350 40% 8%);
+  color: hsl(0 0% 98%);
+}
+.store-theme--bold header,
+.store-theme--bold footer {
+  background: hsl(350 40% 7%) !important;
+  border-color: hsl(0 0% 100% / 0.12) !important;
+  color: hsl(0 0% 98%);
+}
+.store-theme--bold header a,
+.store-theme--bold footer a,
+.store-theme--bold .text-foreground,
+.store-theme--bold .text-foreground\/80,
+.store-theme--bold .text-foreground\/85 {
+  color: hsl(0 0% 96%);
+}
+.store-theme--bold .text-muted-foreground {
+  color: hsl(0 0% 100% / 0.65) !important;
+}
+.store-theme--bold .bg-card,
+.store-theme--bold .bg-muted\/50 {
+  background: hsl(350 30% 12%) !important;
+}
+.store-theme--bold header .rounded-xl,
+.store-theme--bold header .rounded-2xl,
+.store-theme--bold .rounded-2xl {
+  border-radius: 0 !important;
+}
+.store-theme--bold .bg-primary {
+  box-shadow: 0 12px 32px -8px hsl(var(--primary) / 0.55);
+}
+
+.store-theme--elegant {
+  letter-spacing: 0.02em;
+  background: hsl(40 30% 97%);
+  color: hsl(280 20% 18%);
+}
+.store-theme--elegant .font-display {
+  font-weight: 400;
+  font-style: italic;
+}
+.store-theme--elegant header,
+.store-theme--elegant footer {
+  background: hsl(40 30% 98% / 0.92) !important;
+  border-color: hsl(280 15% 85%) !important;
+  box-shadow: none !important;
+}
+.store-theme--elegant header a {
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-size: 0.72rem !important;
+  font-style: normal !important;
+  font-weight: 600 !important;
+}
+
 @layer base {
   * {
     @apply border-border;

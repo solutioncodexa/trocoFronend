@@ -10,8 +10,9 @@ const getAuthHeaders = () => {
 };
 
 class TopBarMessagesApi {
-  async getActiveMessages(): Promise<TopBarMessageDTO[]> {
-    const response = await fetch(`${API_BASE_URL}/top-bar-messages/public`, {
+  async getActiveMessages(path?: string): Promise<TopBarMessageDTO[]> {
+    const qs = path ? `?path=${encodeURIComponent(path)}` : '';
+    const response = await fetch(`${API_BASE_URL}/top-bar-messages/public${qs}`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
@@ -50,6 +51,7 @@ class TopBarMessagesApi {
       displayDurationSeconds: Number.isFinite(Number(message.displayDurationSeconds))
         ? Number(message.displayDurationSeconds)
         : 7,
+      targetPaths: message.targetPaths ?? '',
     };
     const response = await fetch(`${API_BASE_URL}/top-bar-messages`, {
       method: 'POST',
@@ -75,6 +77,7 @@ class TopBarMessagesApi {
       displayDurationSeconds: Number.isFinite(Number(message.displayDurationSeconds))
         ? Number(message.displayDurationSeconds)
         : 7,
+      targetPaths: message.targetPaths ?? '',
     };
     const response = await fetch(`${API_BASE_URL}/top-bar-messages/${id}`, {
       method: 'PUT',

@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { compressImageWithReport } from '@/utils/compressImage';
 import { notifyCompressionReports } from '@/utils/notifyCompression';
+import { getImageUrl } from '@/services/api/upload';
 
 const MAX_INPUT_SIZE_MB = 20;
 const COMPRESSION_OPTS = {
@@ -118,7 +119,7 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
       {previewUrl && (
         <div className="relative group">
           <img
-            src={previewUrl.startsWith('data:') ? previewUrl : `http://localhost:8080${previewUrl.startsWith('/') ? previewUrl : '/' + previewUrl}`}
+            src={previewUrl.startsWith('data:') ? previewUrl : getImageUrl(previewUrl)}
             alt="Preview"
             loading="lazy"
             decoding="async"

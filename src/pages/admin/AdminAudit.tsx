@@ -32,6 +32,14 @@ const ACTION_LABELS: Record<string, string> = {
   MEMBER_DELETE: 'Suppression membre',
   ADMIN_LOGIN: 'Connexion admin',
   LOGIN: 'Connexion',
+  PAGE_CREATE: 'Création page',
+  PAGE_UPDATE: 'Modification page',
+  PAGE_PUBLISH: 'Publication page',
+  PAGE_UNPUBLISH: 'Dépublier page',
+  PAGE_DELETE: 'Suppression page',
+  PAGE_BLOCKS_UPDATE: 'Composants page',
+  PAGE_AB_PROMOTE: 'Promotion A/B accueil',
+  WEBHOOK_UPDATE: 'Webhook',
 };
 
 const AdminAudit = () => {
@@ -64,7 +72,7 @@ const AdminAudit = () => {
   return (
     <AdminLayout title="Audit" breadcrumbs={[{ label: 'Équipe' }, { label: 'Audit' }]}>
       <p className="text-sm text-muted-foreground mb-4">
-        Historique des actions : produits, stock (achat / vente directe), commandes, membres…
+        Historique des actions : produits, stock, commandes, pages boutique, webhooks, membres…
       </p>
 
       <div className="flex flex-wrap gap-3 mb-4">
@@ -130,6 +138,7 @@ const AdminAudit = () => {
             <SelectItem value="STOCK">Stock</SelectItem>
             <SelectItem value="ORDER">Commande</SelectItem>
             <SelectItem value="USER">Membre</SelectItem>
+            <SelectItem value="STORE_PAGE">Page boutique</SelectItem>
             <SelectItem value="AUTH">Auth</SelectItem>
           </SelectContent>
         </Select>

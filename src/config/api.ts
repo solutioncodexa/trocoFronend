@@ -2,9 +2,31 @@
 // Override build : VITE_API_BASE_URL (ex. URL absolue seulement si besoin exceptionnel).
 export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api';
 
+export const TENANT_SLUG_STORAGE_KEY = 'troco_tenant_slug';
+
 // Récupération du token pour les requêtes authentifiées (évite import circulaire)
 const getAuthToken = (): string | null => {
   return localStorage.getItem('troco_admin_token');
+};
+
+const getTenantSlug = (): string | null => {
+  try {
+    return localStorage.getItem(TENANT_SLUG_STORAGE_KEY);
+  } catch {
+    return null;
+  }
+};
+
+export const setStoredTenantSlug = (slug: string | null): void => {
+  try {
+    if (slug) {
+      localStorage.setItem(TENANT_SLUG_STORAGE_KEY, slug);
+    } else {
+      localStorage.removeItem(TENANT_SLUG_STORAGE_KEY);
+    }
+  } catch {
+    /* ignore quota / private mode */
+  }
 };
 
 // Helper pour construire les URLs
@@ -24,6 +46,10 @@ export const apiRequest = async <T>(
   }
   if (token) {
     headers['Authorization'] = `Bearer ${token}`;
+  }
+  const tenantSlug = getTenantSlug();
+  if (tenantSlug && !headers['X-Fournisseur-Slug']) {
+    headers['X-Fournisseur-Slug'] = tenantSlug;
   }
 
   const response = await fetch(url, {

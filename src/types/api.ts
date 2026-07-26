@@ -146,6 +146,10 @@ export interface AuthResponse {
   role: string;
   fullName?: string;
   permissions?: string[];
+  /** Snake_case from backend AuthResponse */
+  fournisseur_id?: number | null;
+  /** CamelCase fallback */
+  fournisseurId?: number | null;
   expires_in: number;
 }
 
@@ -155,7 +159,195 @@ export interface UserInfoDTO {
   role: string;
   fullName?: string;
   active?: boolean;
+  fournisseurId?: number | null;
   permissions?: string[];
+}
+
+// Platform / multi-tenant
+export interface PlanDTO {
+  id: number;
+  code: string;
+  name: string;
+  description?: string;
+  priceMad: number;
+  currency?: string;
+  billingPeriod?: string;
+  maxProducts?: number | null;
+  maxStaff?: number | null;
+  customDomain?: boolean;
+  active?: boolean;
+}
+
+export interface StoreSettingsDTO {
+  fournisseurId: number;
+  slug: string;
+  siteName: string;
+  tagline?: string | null;
+  aboutText?: string | null;
+  logoUrl?: string | null;
+  primaryColor?: string | null;
+  secondaryColor?: string | null;
+  customDomain?: string | null;
+  domainVerified?: boolean;
+  contactEmail?: string | null;
+  contactPhone?: string | null;
+  contactWhatsapp?: string | null;
+  contactCity?: string | null;
+  freeShippingThreshold?: number | null;
+  facebookUrl?: string | null;
+  instagramUrl?: string | null;
+  tiktokUrl?: string | null;
+  faviconUrl?: string | null;
+  heroEnabled: boolean;
+  categoriesEnabled: boolean;
+  surMesureEnabled: boolean;
+  themeKey?: string | null;
+  status?: string | null;
+  planCode?: string | null;
+  planName?: string | null;
+  planPriceMad?: number | null;
+  metaPixelId?: string | null;
+  tiktokPixelId?: string | null;
+  googleAdsId?: string | null;
+  googleAnalyticsId?: string | null;
+  abandonedCartEnabled?: boolean;
+  abandonedCartDelayMinutes?: number | null;
+  whatsappOrderTemplate?: string | null;
+}
+
+export interface StoreThemeDTO {
+  key: string;
+  label: string;
+  description: string;
+}
+
+export interface CmiCheckoutDTO {
+  gatewayUrl: string;
+  oid: string;
+  fields: Record<string, string>;
+}
+
+export interface BillingResultDTO {
+  mode: string;
+  oid: string;
+  status: string;
+  planCode?: string | null;
+  planName?: string | null;
+  amountMad?: number | null;
+  subscriptionEndsAt?: string | null;
+}
+
+export interface FournisseurDTO {
+  id: number;
+  name: string;
+  slug: string;
+  email?: string | null;
+  phone?: string | null;
+  logoUrl?: string | null;
+  primaryColor?: string | null;
+  secondaryColor?: string | null;
+  customDomain?: string | null;
+  domainVerified?: boolean;
+  status: string;
+  planCode?: string | null;
+  planName?: string | null;
+  planPriceMad?: number | null;
+  createdAt?: string | null;
+  subscriptionEndsAt?: string | null;
+}
+
+export interface CreateFournisseurRequest {
+  name: string;
+  slug: string;
+  adminEmail: string;
+  adminPassword: string;
+  adminFullName?: string;
+  email?: string;
+  phone?: string;
+  planCode?: string;
+}
+
+export interface UpdateStoreSettingsRequest {
+  siteName?: string;
+  tagline?: string;
+  aboutText?: string;
+  logoUrl?: string;
+  primaryColor?: string;
+  secondaryColor?: string;
+  customDomain?: string;
+  contactEmail?: string;
+  contactPhone?: string;
+  contactWhatsapp?: string;
+  contactCity?: string;
+  freeShippingThreshold?: number | null;
+  facebookUrl?: string;
+  instagramUrl?: string;
+  tiktokUrl?: string;
+  faviconUrl?: string;
+  heroEnabled?: boolean;
+  categoriesEnabled?: boolean;
+  surMesureEnabled?: boolean;
+  themeKey?: string;
+  metaPixelId?: string;
+  tiktokPixelId?: string;
+  googleAdsId?: string;
+  googleAnalyticsId?: string;
+  abandonedCartEnabled?: boolean;
+  abandonedCartDelayMinutes?: number | null;
+  whatsappOrderTemplate?: string;
+}
+
+export interface ProductReviewDTO {
+  id: number;
+  productId: number;
+  authorName: string;
+  rating: number;
+  title?: string | null;
+  body: string;
+  approved: boolean;
+  createdAt: string;
+}
+
+export interface ProductReviewSummaryDTO {
+  productId: number;
+  averageRating: number;
+  reviewCount: number;
+  reviews: ProductReviewDTO[];
+}
+
+export interface CreateProductReviewRequest {
+  productId: number;
+  authorName: string;
+  authorEmail?: string;
+  rating: number;
+  title?: string;
+  body: string;
+}
+
+export interface AbandonedCartDTO {
+  id: number;
+  sessionKey: string;
+  recoveryToken?: string | null;
+  customerEmail?: string | null;
+  customerPhone?: string | null;
+  customerName?: string | null;
+  cartJson?: string | null;
+  cartTotal?: number | null;
+  itemCount: number;
+  reminderSent: boolean;
+  recovered: boolean;
+  remindAt?: string | null;
+  lastActivityAt?: string | null;
+  createdAt?: string | null;
+}
+
+export interface CaptureAbandonedCartRequest {
+  sessionKey: string;
+  customerEmail?: string;
+  customerPhone?: string;
+  customerName?: string;
+  items: Record<string, unknown>[];
+  cartTotal?: number;
 }
 
 export interface PermissionDTO {

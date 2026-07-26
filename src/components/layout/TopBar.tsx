@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { topBarMessagesApi } from '@/services/api/topBarMessages';
 import { TopBarMessageDTO } from '@/types/top-bar-messages';
 import { cn } from '@/lib/utils';
 import { ANIMATIONS } from '@/config/animations';
 
 const TopBar = () => {
+  const location = useLocation();
   const [currentMessage, setCurrentMessage] = useState(0);
   const [isVisible, setIsVisible] = useState(true);
   const [messages, setMessages] = useState<TopBarMessageDTO[]>([]);
@@ -13,8 +15,9 @@ const TopBar = () => {
   useEffect(() => {
     const fetchMessages = async () => {
       try {
-        const fetchedMessages = await topBarMessagesApi.getActiveMessages();
+        const fetchedMessages = await topBarMessagesApi.getActiveMessages(location.pathname);
         setMessages(fetchedMessages);
+        setCurrentMessage(0);
         setLoading(false);
       } catch (error) {
         console.error('❌ TopBar: Erreur lors de la récupération des messages de la top bar:', error);
@@ -23,8 +26,9 @@ const TopBar = () => {
       }
     };
 
+    setLoading(true);
     fetchMessages();
-  }, []);
+  }, [location.pathname]);
 
   useEffect(() => {
     if (messages.length <= 1) return;

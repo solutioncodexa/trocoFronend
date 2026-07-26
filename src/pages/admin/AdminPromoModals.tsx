@@ -375,6 +375,7 @@ const CreatePromoModalDialog = ({
     autoCloseSeconds: 5,
     isActive: true,
     displayOrder: 1,
+    targetPaths: '',
   });
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -469,6 +470,20 @@ const CreatePromoModalDialog = ({
           </div>
 
           <div>
+            <Label htmlFor="create-targetPaths">Pages cibles</Label>
+            <Textarea
+              id="create-targetPaths"
+              value={formData.targetPaths ?? ''}
+              onChange={(e) => setFormData({ ...formData, targetPaths: e.target.value })}
+              placeholder={'/\n/boutique\n/page/promo'}
+              rows={3}
+            />
+            <p className="mt-1 text-xs text-muted-foreground">
+              Une URL par ligne. Laissez vide pour toutes les pages.
+            </p>
+          </div>
+
+          <div>
             <Label htmlFor="autoCloseSeconds">Fermeture automatique (secondes)</Label>
             <Input
               id="autoCloseSeconds"
@@ -540,6 +555,7 @@ const EditPromoModalDialog = ({
     autoCloseSeconds: modal?.autoCloseSeconds || 5,
     isActive: modal?.isActive || true,
     displayOrder: modal?.displayOrder || 1,
+    targetPaths: modal?.targetPaths ?? '',
   });
 
   // Mettre à jour formData quand le modal change
@@ -554,6 +570,7 @@ const EditPromoModalDialog = ({
         autoCloseSeconds: modal.autoCloseSeconds || 5,
         isActive: modal.isActive || true,
         displayOrder: modal.displayOrder || 1,
+        targetPaths: modal.targetPaths ?? '',
       });
     }
   }, [modal]);
@@ -647,6 +664,20 @@ const EditPromoModalDialog = ({
               placeholder="URL du bouton"
               required
             />
+          </div>
+
+          <div>
+            <Label htmlFor="edit-targetPaths">Pages cibles</Label>
+            <Textarea
+              id="edit-targetPaths"
+              value={formData.targetPaths ?? ''}
+              onChange={(e) => setFormData({ ...formData, targetPaths: e.target.value })}
+              placeholder={'/\n/boutique\n/page/promo'}
+              rows={3}
+            />
+            <p className="mt-1 text-xs text-muted-foreground">
+              Une URL par ligne. Laissez vide pour toutes les pages.
+            </p>
           </div>
 
           <div>

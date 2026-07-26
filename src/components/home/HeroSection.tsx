@@ -9,6 +9,7 @@ import HeroCategoriesRail from '@/components/home/HeroCategoriesRail';
 import { homeHeroApi } from '@/services/api/homeHero';
 import { getImageUrl } from '@/services/api/upload';
 import { staticCatalogQueryOptions } from '@/config/queryOptions';
+import { useStoreBrand } from '@/hooks/useStoreBrand';
 
 /**
  * Photo packaging claire (atelier / kraft) — fond edge-to-edge,
@@ -23,6 +24,10 @@ const HeroSection = () => {
   const fade = ANIMATIONS.heroContentFadeIn;
   const ken = ANIMATIONS.heroKenBurns;
   const shine = ANIMATIONS.ctaShineOnHover;
+  const { siteName: brandName, store } = useStoreBrand();
+  const headline = store?.tagline?.trim() || 'Bienvenue dans notre boutique';
+  const subtext = store?.aboutText?.trim() || 'Découvrez nos produits.';
+  const surMesureOn = store?.surMesureEnabled !== false;
 
   const { data: homeHero } = useQuery({
     queryKey: ['homeHero'],
@@ -56,18 +61,18 @@ const HeroSection = () => {
   return (
     <section
       className="hero-surface relative flex min-h-[min(100dvh,760px)] w-full items-end overflow-hidden max-md:min-h-[560px] md:items-center"
-      aria-label="Accueil Troco"
+      aria-label={`Accueil ${brandName}`}
     >
-      {/* Couche 1 — atmosphère marque rose / bleu ciel */}
-      <div className="absolute inset-0 bg-[hsl(340_40%_98%)]" />
+      {/* Couche 1 — atmosphère pilotée par les couleurs boutique */}
+      <div className="absolute inset-0 bg-[hsl(var(--background))]" />
       <div
         className="absolute inset-0 opacity-90"
         style={{
           backgroundImage: `
-            radial-gradient(ellipse 80% 60% at 12% 20%, hsl(344 70% 90% / 0.95) 0%, transparent 55%),
-            radial-gradient(ellipse 70% 50% at 88% 10%, hsl(203 60% 90% / 0.85) 0%, transparent 50%),
-            radial-gradient(ellipse 60% 45% at 70% 85%, hsl(344 55% 94% / 0.7) 0%, transparent 55%),
-            linear-gradient(165deg, hsl(340 40% 99%) 0%, hsl(203 35% 97%) 50%, hsl(340 30% 96%) 100%)
+            radial-gradient(ellipse 80% 60% at 12% 20%, hsl(var(--primary) / 0.28) 0%, transparent 55%),
+            radial-gradient(ellipse 70% 50% at 88% 10%, hsl(var(--sky) / 0.32) 0%, transparent 50%),
+            radial-gradient(ellipse 60% 45% at 70% 85%, hsl(var(--primary) / 0.18) 0%, transparent 55%),
+            linear-gradient(165deg, hsl(var(--background)) 0%, hsl(var(--sky-light) / 0.55) 50%, hsl(var(--muted)) 100%)
           `,
         }}
       />
@@ -88,13 +93,26 @@ const HeroSection = () => {
               style={{ backgroundImage: `url('${photo}')` }}
               role="img"
               aria-hidden={!isActive}
-              aria-label={isActive ? 'Emballages kraft et cartons Troco' : undefined}
+              aria-label={isActive ? `Boutique ${brandName}` : undefined}
             />
           );
         })}
         {/* Wash clair : texte lisible sans assombrir la marque */}
-        <div className="absolute inset-0 bg-[linear-gradient(105deg,hsl(340_45%_99%/0.97)_0%,hsl(340_40%_98%/0.88)_28%,hsl(203_40%_97%/0.45)_52%,hsl(203_30%_96%/0.12)_72%,transparent_88%)] max-md:bg-[linear-gradient(180deg,hsl(340_45%_99%/0.92)_0%,hsl(340_40%_98%/0.78)_38%,hsl(203_35%_97%/0.35)_62%,transparent_100%)]" />
-        <div className="absolute inset-0 bg-gradient-to-t from-[hsl(340_40%_99%)] via-transparent to-transparent opacity-80 md:opacity-60" />
+        <div
+          className="absolute inset-0 max-md:hidden"
+          style={{
+            backgroundImage:
+              'linear-gradient(105deg, hsl(var(--background) / 0.97) 0%, hsl(var(--background) / 0.88) 28%, hsl(var(--sky-light) / 0.45) 52%, hsl(var(--sky-light) / 0.12) 72%, transparent 88%)',
+          }}
+        />
+        <div
+          className="absolute inset-0 md:hidden"
+          style={{
+            backgroundImage:
+              'linear-gradient(180deg, hsl(var(--background) / 0.92) 0%, hsl(var(--background) / 0.78) 38%, hsl(var(--sky-light) / 0.35) 62%, transparent 100%)',
+          }}
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-[hsl(var(--background))] via-transparent to-transparent opacity-80 md:opacity-60" />
       </div>
 
       {/* Grain papier subtil */}
@@ -112,18 +130,18 @@ const HeroSection = () => {
               )}
               style={fade ? { animationDelay: '0ms' } : undefined}
             >
-              Troco
+              {brandName}
             </p>
 
             <h1
               className={cn(
-                'mb-4 max-w-[14ch] font-display text-[2.35rem] font-extrabold leading-[1.02] tracking-tight text-foreground xs:text-5xl sm:mb-5 sm:text-6xl md:text-[3.75rem] lg:text-7xl',
+                'mb-4 max-w-[18ch] font-display text-[2.35rem] font-extrabold leading-[1.02] tracking-tight text-foreground xs:text-5xl sm:mb-5 sm:text-6xl md:text-[3.75rem] lg:text-7xl',
                 fade &&
                   'motion-safe:animate-fade-in-up motion-reduce:opacity-100 [animation-fill-mode:forwards]',
               )}
               style={fade ? { animationDelay: '80ms' } : undefined}
             >
-              L&apos;emballage qui valorise vos produits
+              {headline}
             </h1>
 
             <p
@@ -134,7 +152,7 @@ const HeroSection = () => {
               )}
               style={fade ? { animationDelay: '160ms' } : undefined}
             >
-              Sachets, cartons et protections — conçus pour un e-commerce net, rapide et soigné.
+              {subtext}
             </p>
 
             <div
@@ -158,16 +176,29 @@ const HeroSection = () => {
                   <ArrowRight className="h-4 w-4 shrink-0" aria-hidden />
                 </Link>
               </Button>
-              <Button
-                asChild
-                variant="outline"
-                size="lg"
-                className="h-12 min-w-[10.5rem] rounded-2xl border-border/80 bg-card/70 px-7 backdrop-blur-sm hover:border-primary/35 hover:bg-card sm:h-14 sm:min-w-[12rem] sm:px-8"
-              >
-                <Link to="/sur-mesure" className="inline-flex items-center justify-center">
-                  <span className="text-sm font-semibold tracking-wide">Sur-mesure</span>
-                </Link>
-              </Button>
+              {surMesureOn ? (
+                <Button
+                  asChild
+                  variant="outline"
+                  size="lg"
+                  className="h-12 min-w-[10.5rem] rounded-2xl border-border/80 bg-card/70 px-7 backdrop-blur-sm hover:border-primary/35 hover:bg-card sm:h-14 sm:min-w-[12rem] sm:px-8"
+                >
+                  <Link to="/sur-mesure" className="inline-flex items-center justify-center">
+                    <span className="text-sm font-semibold tracking-wide">Sur-mesure</span>
+                  </Link>
+                </Button>
+              ) : (
+                <Button
+                  asChild
+                  variant="outline"
+                  size="lg"
+                  className="h-12 min-w-[10.5rem] rounded-2xl border-border/80 bg-card/70 px-7 backdrop-blur-sm hover:border-primary/35 hover:bg-card sm:h-14 sm:min-w-[12rem] sm:px-8"
+                >
+                  <Link to="/contact" className="inline-flex items-center justify-center">
+                    <span className="text-sm font-semibold tracking-wide">Nous contacter</span>
+                  </Link>
+                </Button>
+              )}
             </div>
           </div>
 

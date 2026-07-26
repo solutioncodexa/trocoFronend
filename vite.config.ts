@@ -2,6 +2,25 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
 
+function configureSeoProxy(proxy: { on: (event: string, listener: (...args: unknown[]) => void) => void }) {
+  proxy.on("proxyReq", (proxyReq, req) => {
+    proxyReq.removeHeader("forwarded");
+    proxyReq.removeHeader("x-forwarded-proto");
+    proxyReq.removeHeader("x-forwarded-host");
+    proxyReq.removeHeader("x-forwarded-port");
+    try {
+      const raw = req.url ?? "";
+      const q = raw.includes("?") ? raw.slice(raw.indexOf("?")) : "";
+      const tenant = new URLSearchParams(q).get("tenant")?.trim();
+      if (tenant) {
+        proxyReq.setHeader("X-Fournisseur-Slug", tenant);
+      }
+    } catch {
+      /* ignore malformed URL */
+    }
+  });
+}
+
 // https://vitejs.dev/config/
 export default defineConfig(() => ({
   server: {
@@ -12,7 +31,11 @@ export default defineConfig(() => ({
     hmr: {
       overlay: false,
     },
-    /** Même origine pour `<img src="/api/uploads/...">` en dev (Spring `context-path=/api`). */
+    /**
+     * Même origine pour `<img src="/api/uploads/...">` en dev (Spring `context-path=/api`).
+     * SEO : `/sitemap.xml` et `/robots.txt` → backend tenant-aware.
+     * En local sans sous-domaine, ajoutez `?tenant=<slug>` (TenantResolutionFilter).
+     */
     proxy: {
       "/api": {
         target: "http://127.0.0.1:8080",
@@ -26,6 +49,26 @@ export default defineConfig(() => ({
             proxyReq.removeHeader("x-forwarded-host");
             proxyReq.removeHeader("x-forwarded-port");
           });
+        },
+      },
+      "/sitemap.xml": {
+        target: "http://127.0.0.1:8080",
+        changeOrigin: true,
+        secure: false,
+        xfwd: false,
+        rewrite: () => "/api/sitemap.xml",
+        configure(proxy) {
+          configureSeoProxy(proxy);
+        },
+      },
+      "/robots.txt": {
+        target: "http://127.0.0.1:8080",
+        changeOrigin: true,
+        secure: false,
+        xfwd: false,
+        rewrite: () => "/api/robots.txt",
+        configure(proxy) {
+          configureSeoProxy(proxy);
         },
       },
     },

@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Link } from 'react-router-dom';
-import { Plus, Pencil, Trash2, Search, Upload, X, ArrowLeft, ArrowRight, Star } from 'lucide-react';
+import { Link, useSearchParams } from 'react-router-dom';
+import { Package, Plus, Pencil, Trash2, Search, Upload, X, ArrowLeft, ArrowRight, Star } from 'lucide-react';
 import { createEmptyVariantRow, type ProductVariantFormRow } from '@/types/product-variant';
 import { ProductVariantEditor } from '@/components/admin/ProductVariantEditor';
 import AdminLayout from '@/components/admin/AdminLayout';
@@ -29,6 +29,7 @@ import { compressImageWithReport } from '@/utils/compressImage';
 import { notifyCompressionReports } from '@/utils/notifyCompression';
 import { useAdmin } from '@/contexts/AdminContext';
 import { PERMISSIONS } from '@/config/permissions';
+import { EmptyState } from '@/components/ui/EmptyState';
 
 type AdminFormData = {
   name: string;
@@ -47,6 +48,7 @@ const PLACEHOLDER_IMAGE = '/placeholder-modern-fixed.svg';
 
 const AdminProducts = () => {
   const queryClient = useQueryClient();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { hasPermission } = useAdmin();
   const canCreate = hasPermission(PERMISSIONS.PRODUCTS_CREATE);
   const canUpdate = hasPermission(PERMISSIONS.PRODUCTS_UPDATE);
@@ -216,6 +218,25 @@ const AdminProducts = () => {
     setEditingProduct(null);
     resetForm();
     setIsModalOpen(true);
+  };
+
+  useEffect(() => {
+    if (searchParams.get('action') !== 'new') return;
+    if (canCreate) {
+      void handleOpenModal();
+    }
+    searchParams.delete('action');
+    setSearchParams(searchParams, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const hasActiveFilters = Boolean(debouncedSearch.trim()) || filterCategory !== 'all';
+
+  const clearProductFilters = () => {
+    setSearchTerm('');
+    setDebouncedSearch('');
+    setFilterCategory('all');
+    setPage(0);
   };
 
   const handleCloseModal = () => {
@@ -544,9 +565,26 @@ const AdminProducts = () => {
           </div>
         ))}
         {products.length === 0 && (
-          <div className="p-8 text-center">
-            <p className="font-body text-muted-foreground">Aucun produit trouvé</p>
-          </div>
+          <EmptyState
+            icon={Package}
+            title={hasActiveFilters ? 'Aucun produit ne correspond' : 'Aucun produit pour le moment'}
+            description={
+              hasActiveFilters
+                ? 'Modifiez la recherche ou la catégorie.'
+                : 'Ajoutez votre premier produit pour démarrer la boutique.'
+            }
+            actionLabel={
+              hasActiveFilters ? 'Réinitialiser les filtres' : canCreate ? 'Ajouter un produit' : undefined
+            }
+            onAction={
+              hasActiveFilters
+                ? clearProductFilters
+                : canCreate
+                  ? () => void handleOpenModal()
+                  : undefined
+            }
+            className="my-4 border border-border bg-card"
+          />
         )}
       </div>
 
@@ -649,9 +687,26 @@ const AdminProducts = () => {
         </div>
 
         {products.length === 0 && (
-          <div className="p-8 text-center">
-            <p className="font-body text-muted-foreground">Aucun produit trouvé</p>
-          </div>
+          <EmptyState
+            icon={Package}
+            title={hasActiveFilters ? 'Aucun produit ne correspond' : 'Catalogue vide'}
+            description={
+              hasActiveFilters
+                ? 'Modifiez la recherche ou la catégorie.'
+                : 'Créez un produit pour le voir apparaître ici et sur votre boutique.'
+            }
+            actionLabel={
+              hasActiveFilters ? 'Réinitialiser les filtres' : canCreate ? 'Ajouter un produit' : undefined
+            }
+            onAction={
+              hasActiveFilters
+                ? clearProductFilters
+                : canCreate
+                  ? () => void handleOpenModal()
+                  : undefined
+            }
+            className="my-6 border-0"
+          />
         )}
       </div>
 

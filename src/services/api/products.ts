@@ -146,4 +146,11 @@ export const productsApi = {
       method: 'DELETE',
     });
   },
+
+  frequentlyBought: async (id: string, limit = 4): Promise<ProductListItemDTO[]> => {
+    const qs = new URLSearchParams({ limit: String(limit) });
+    return apiRequest<ProductListItemDTO[]>(
+      buildApiUrl(`/products/${id}/frequently-bought?${qs.toString()}`),
+    );
+  },
 };

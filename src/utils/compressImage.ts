@@ -23,10 +23,10 @@ export interface CompressionReport {
 const DEFAULTS: Required<Omit<CompressImageOptions, 'outputType' | 'log'>> & {
   outputType: NonNullable<CompressImageOptions['outputType']>;
 } = {
-  maxSizeMB: 2.5,
-  maxWidthOrHeight: 3000,
+  maxSizeMB: 1.5,
+  maxWidthOrHeight: 1920,
   outputType: 'image/webp',
-  initialQuality: 0.92,
+  initialQuality: 0.85,
   preservePngTransparency: false,
 };
 

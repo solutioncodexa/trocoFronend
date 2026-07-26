@@ -2,15 +2,11 @@ import { useState } from 'react';
 import { Facebook, Instagram, Sparkles } from 'lucide-react';
 import Layout from '@/components/layout/Layout';
 import { useSocialNetworks } from '@/hooks/useSocialNetworks';
-
-import {
-  CONTACT_EMAIL,
-  CONTACT_PHONE_DISPLAY,
-  CONTACT_PHONE_E164,
-} from '@/config/site';
+import { useStoreBrand } from '@/hooks/useStoreBrand';
 
 const Contact = () => {
   const { isEnabled, getUrl } = useSocialNetworks();
+  const { contactEmail, contactPhone, contactPhoneHref } = useStoreBrand();
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -132,31 +128,35 @@ const Contact = () => {
                 </header>
 
                 <div className="flex flex-1 flex-col gap-9">
-                  <div className="space-y-3">
-                    <h4 className="text-xs uppercase tracking-[0.3em] text-primary font-bold">Téléphone</h4>
-                    <a
-                      className="inline-flex w-fit max-w-full items-center gap-3 rounded-xl border border-border bg-muted/30 px-4 py-3 text-foreground transition-colors hover:border-primary/40 hover:bg-primary/[0.06]"
-                      href={`tel:${CONTACT_PHONE_E164}`}
-                    >
-                      <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-primary/10">
-                        <span className="material-symbols-outlined text-primary text-xl">phone_iphone</span>
-                      </span>
-                      <span className="font-medium tracking-wide">{CONTACT_PHONE_DISPLAY}</span>
-                    </a>
-                  </div>
+                  {contactPhone && contactPhoneHref ? (
+                    <div className="space-y-3">
+                      <h4 className="text-xs uppercase tracking-[0.3em] text-primary font-bold">Téléphone</h4>
+                      <a
+                        className="inline-flex w-fit max-w-full items-center gap-3 rounded-xl border border-border bg-muted/30 px-4 py-3 text-foreground transition-colors hover:border-primary/40 hover:bg-primary/[0.06]"
+                        href={contactPhoneHref}
+                      >
+                        <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-primary/10">
+                          <span className="material-symbols-outlined text-primary text-xl">phone_iphone</span>
+                        </span>
+                        <span className="font-medium tracking-wide">{contactPhone}</span>
+                      </a>
+                    </div>
+                  ) : null}
 
-                  <div className="space-y-3">
-                    <h4 className="text-xs uppercase tracking-[0.3em] text-primary font-bold">Email</h4>
-                    <a
-                      className="inline-flex w-fit max-w-full items-center gap-3 rounded-xl border border-border bg-muted/30 px-4 py-3 text-foreground transition-colors hover:border-primary/40 hover:bg-primary/[0.06]"
-                      href={`mailto:${CONTACT_EMAIL}`}
-                    >
-                      <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-primary/10">
-                        <span className="material-symbols-outlined text-primary text-xl">mail</span>
-                      </span>
-                      <span className="break-all font-medium">{CONTACT_EMAIL}</span>
-                    </a>
-                  </div>
+                  {contactEmail ? (
+                    <div className="space-y-3">
+                      <h4 className="text-xs uppercase tracking-[0.3em] text-primary font-bold">Email</h4>
+                      <a
+                        className="inline-flex w-fit max-w-full items-center gap-3 rounded-xl border border-border bg-muted/30 px-4 py-3 text-foreground transition-colors hover:border-primary/40 hover:bg-primary/[0.06]"
+                        href={`mailto:${contactEmail}`}
+                      >
+                        <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-primary/10">
+                          <span className="material-symbols-outlined text-primary text-xl">mail</span>
+                        </span>
+                        <span className="break-all font-medium">{contactEmail}</span>
+                      </a>
+                    </div>
+                  ) : null}
 
                   <div className="space-y-3">
                     <h4 className="text-xs uppercase tracking-[0.3em] text-primary font-bold">Messagerie</h4>

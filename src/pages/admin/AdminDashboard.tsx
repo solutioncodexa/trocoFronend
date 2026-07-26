@@ -1,19 +1,60 @@
 import { useQuery } from '@tanstack/react-query';
-import { Package, ShoppingCart, Palette, DollarSign, TrendingUp, AlertTriangle, PackageX, Star, FolderOpen } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import {
+  Package,
+  ShoppingCart,
+  Palette,
+  DollarSign,
+  TrendingUp,
+  AlertTriangle,
+  PackageX,
+  FolderOpen,
+  CheckCircle2,
+  Circle,
+  ExternalLink,
+  Settings2,
+  ImagePlus,
+} from 'lucide-react';
+import { useEffect } from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import AdminLayout from '@/components/admin/AdminLayout';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ordersApi } from '@/services/api/orders';
 import { customOrdersApi } from '@/services/api/customOrders';
 import { statsApi } from '@/services/api/stats';
+import { platformApi } from '@/services/api/platform';
 import { formatPrice } from '@/utils/formatPrice';
 import { getImageUrl } from '@/services/api';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { useStoreBrand } from '@/hooks/useStoreBrand';
+import { buildStorefrontUrl } from '@/utils/storefrontUrl';
+import { toast } from 'sonner';
 
 const AdminDashboard = () => {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const { siteName, logoUrl, slug } = useStoreBrand();
+  const storefrontUrl = buildStorefrontUrl(slug);
+
+  useEffect(() => {
+    const state = location.state as { onboarding?: boolean; pendingActivation?: boolean } | null;
+    if (state?.onboarding) {
+      toast.success(
+        state.pendingActivation
+          ? 'Boutique créée — en attente d’activation par Matjarona.'
+          : 'Bienvenue ! Suivez la checklist pour lancer votre boutique.',
+      );
+      navigate(location.pathname, { replace: true, state: {} });
+    }
+  }, [location.pathname, location.state, navigate]);
+
   const { data: dash } = useQuery({
     queryKey: ['stats', 'dashboard'],
     queryFn: () => statsApi.getDashboard(),
+  });
+  const { data: storeSettings } = useQuery({
+    queryKey: ['store-settings', 'me'],
+    queryFn: () => platformApi.getMyStoreSettings(),
   });
   const { data: ordersPage } = useQuery({
     queryKey: ['orders', 'dashboard'],
@@ -87,80 +128,167 @@ const AdminDashboard = () => {
     );
   };
 
+  const productCount = dash?.productCount ?? 0;
+  const hasLogo = !!(logoUrl || storeSettings?.logoUrl);
+  const hasBranding =
+    !!(storeSettings?.tagline?.trim() ||
+      storeSettings?.primaryColor?.trim() ||
+      storeSettings?.aboutText?.trim());
+  const setupSteps = [
+    {
+      done: hasLogo,
+      label: 'Ajouter un logo',
+      href: '/admin/parametres',
+      icon: ImagePlus,
+    },
+    {
+      done: hasBranding,
+      label: 'Personnaliser la boutique',
+      href: '/admin/parametres',
+      icon: Settings2,
+    },
+    {
+      done: productCount > 0,
+      label: 'Ajouter un premier produit',
+      href: '/admin/produits?action=new',
+      icon: Package,
+    },
+    {
+      done: productCount > 0 && hasLogo,
+      label: 'Voir ma boutique en ligne',
+      href: storefrontUrl,
+      icon: ExternalLink,
+      external: true,
+    },
+  ];
+  const pendingSteps = setupSteps.filter((s) => !s.done).length;
+  const showOnboarding = pendingSteps > 0;
+
+  const storeStatus = (storeSettings?.status || '').toUpperCase();
+  const pendingActivation = storeStatus === 'PENDING';
+
+  const quickActions = [
+    { href: '/admin/produits?action=new', label: 'Nouveau produit', icon: Package },
+    { href: '/admin/commandes', label: 'Commandes', icon: ShoppingCart },
+    { href: '/admin/categories?action=new', label: 'Catégorie', icon: FolderOpen },
+    { href: '/admin/parametres', label: 'Identité & design', icon: Settings2 },
+    { href: '/admin/stock', label: 'Stock', icon: AlertTriangle },
+    { href: '/admin/revenus', label: 'Revenus', icon: TrendingUp },
+  ];
+
   return (
-    <AdminLayout title="Tableau de bord" breadcrumbs={[{ label: 'Tableau de bord' }]}>
+    <AdminLayout
+      title="Tableau de bord"
+      description={siteName ? `Bienvenue sur ${siteName}` : 'Pilot d’ensemble de votre boutique'}
+      breadcrumbs={[{ label: 'Tableau de bord' }]}
+      actions={
+        <Button variant="outline" size="sm" className="hidden gap-1.5 sm:inline-flex" asChild>
+          <a href={storefrontUrl} target="_blank" rel="noopener noreferrer">
+            <ExternalLink className="h-3.5 w-3.5" />
+            Voir la boutique
+          </a>
+        </Button>
+      }
+    >
+      {pendingActivation ? (
+        <div className="mb-6 rounded-2xl border border-amber-500/40 bg-amber-50 p-4 sm:p-5">
+          <p className="font-display text-base font-semibold text-amber-950">
+            Compte en attente d’activation
+          </p>
+          <p className="mt-1 text-sm text-amber-900/80">
+            Un Super Admin Matjarona doit activer votre boutique avant qu’elle soit visible en ligne.
+            Vous pouvez déjà préparer logo, design et produits.
+          </p>
+        </div>
+      ) : null}
+      {showOnboarding ? (
+        <div className="mb-8 rounded-2xl border border-primary/20 bg-white p-5 shadow-soft sm:p-6">
+          <h2 className="font-display text-lg font-semibold">
+            Démarrez votre boutique
+          </h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {pendingSteps} étape{pendingSteps > 1 ? 's' : ''} restante{pendingSteps > 1 ? 's' : ''} pour être prêt.
+          </p>
+          <ul className="mt-5 grid gap-3 sm:grid-cols-2">
+            {setupSteps.map((step) => (
+              <li key={step.label}>
+                {step.external ? (
+                  <a
+                    href={step.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-3 rounded-xl border border-border bg-[hsl(220_20%_98%)] px-4 py-3 transition hover:border-primary"
+                  >
+                    {step.done ? (
+                      <CheckCircle2 className="h-5 w-5 shrink-0 text-emerald-600" />
+                    ) : (
+                      <Circle className="h-5 w-5 shrink-0 text-muted-foreground" />
+                    )}
+                    <step.icon className="h-4 w-4 shrink-0 text-primary" />
+                    <span className="text-sm font-medium">{step.label}</span>
+                  </a>
+                ) : (
+                  <Link
+                    to={step.href}
+                    className="flex items-center gap-3 rounded-xl border border-border bg-[hsl(220_20%_98%)] px-4 py-3 transition hover:border-primary"
+                  >
+                    {step.done ? (
+                      <CheckCircle2 className="h-5 w-5 shrink-0 text-emerald-600" />
+                    ) : (
+                      <Circle className="h-5 w-5 shrink-0 text-muted-foreground" />
+                    )}
+                    <step.icon className="h-4 w-4 shrink-0 text-primary" />
+                    <span className="text-sm font-medium">{step.label}</span>
+                  </Link>
+                )}
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+
       <div className="mb-8">
-        <h2 className="font-display text-lg mb-4">Actions rapides</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
-          <Link
-            to="/admin/categories?action=new"
-            className="p-4 bg-card rounded-lg border border-border hover:border-primary transition-colors text-center"
-          >
-            <FolderOpen className="w-8 h-8 mx-auto text-primary mb-2" />
-            <p className="font-body font-medium">Créer une catégorie</p>
-          </Link>
-          <Link
-            to="/admin/produits?action=new"
-            className="p-4 bg-card rounded-lg border border-border hover:border-primary transition-colors text-center"
-          >
-            <Package className="w-8 h-8 mx-auto text-primary mb-2" />
-            <p className="font-body font-medium">Ajouter un produit</p>
-          </Link>
-          <Link
-            to="/admin/commandes"
-            className="p-4 bg-card rounded-lg border border-border hover:border-primary transition-colors text-center"
-          >
-            <ShoppingCart className="w-8 h-8 mx-auto text-primary mb-2" />
-            <p className="font-body font-medium">Gérer les commandes</p>
-          </Link>
-          <Link
-            to="/admin/produits-selectionnes"
-            className="p-4 bg-card rounded-lg border border-border hover:border-primary transition-colors text-center"
-          >
-            <Star className="w-8 h-8 mx-auto text-primary mb-2" />
-            <p className="font-body font-medium">Produits sélectionnés</p>
-          </Link>
-          <Link
-            to="/admin/stock"
-            className="p-4 bg-card rounded-lg border border-border hover:border-primary transition-colors text-center"
-          >
-            <AlertTriangle className="w-8 h-8 mx-auto text-primary mb-2" />
-            <p className="font-body font-medium">Gérer le stock</p>
-          </Link>
-          <Link
-            to="/admin/revenus"
-            className="p-4 bg-card rounded-lg border border-border hover:border-primary transition-colors text-center"
-          >
-            <TrendingUp className="w-8 h-8 mx-auto text-primary mb-2" />
-            <p className="font-body font-medium">Voir les revenus</p>
-          </Link>
+        <h2 className="mb-3 font-display text-base font-semibold">Actions rapides</h2>
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+          {quickActions.map((action) => (
+            <Link
+              key={action.href}
+              to={action.href}
+              className="group rounded-2xl border border-border/80 bg-white p-4 text-center shadow-soft transition hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md"
+            >
+              <span className="mx-auto mb-2 flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary transition group-hover:bg-primary group-hover:text-primary-foreground">
+                <action.icon className="h-5 w-5" />
+              </span>
+              <p className="text-xs font-medium sm:text-sm">{action.label}</p>
+            </Link>
+          ))}
         </div>
       </div>
 
-      <div className="mb-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {stats.map((stat, index) => (
-          <Card key={index} className="h-full transition-shadow hover:shadow-lg">
-            <div className="flex h-full flex-col justify-center gap-3 p-5 sm:p-6">
+          <Card key={index} className="h-full border-border/80 bg-white shadow-soft transition hover:shadow-md">
+            <div className="flex h-full flex-col justify-center gap-3 p-5">
               <div className="flex items-center justify-between gap-4">
                 <div className="min-w-0 flex-1">
-                  <p className="font-body text-sm text-muted-foreground">{stat.title}</p>
+                  <p className="text-sm text-muted-foreground">{stat.title}</p>
                   <p className="mt-1 font-display text-2xl font-semibold tracking-tight text-foreground">
                     {stat.value}
                   </p>
                   {stat.subValue ? (
-                    <p className="mt-1 font-body text-xs text-muted-foreground">{stat.subValue}</p>
+                    <p className="mt-1 text-xs text-muted-foreground">{stat.subValue}</p>
                   ) : null}
                 </div>
                 <div
-                  className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl ${stat.color}`}
+                  className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${stat.color}`}
                 >
-                  <stat.icon className="h-6 w-6 text-white" aria-hidden />
+                  <stat.icon className="h-5 w-5 text-white" aria-hidden />
                 </div>
               </div>
               {stat.href ? (
                 <Link
                   to={stat.href}
-                  className="inline-flex font-body text-sm font-medium text-primary hover:underline"
+                  className="inline-flex text-sm font-medium text-primary hover:underline"
                 >
                   Voir tout →
                 </Link>

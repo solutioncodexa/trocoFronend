@@ -1,8 +1,10 @@
 import { Link } from 'react-router-dom';
 import Layout from '@/components/layout/Layout';
-import { FREE_SHIPPING_THRESHOLD_MAD } from '@/config/site';
+import { useStoreBrand } from '@/hooks/useStoreBrand';
 
 const FAQ = () => {
+  const { siteName, freeShippingThreshold } = useStoreBrand();
+
   return (
     <Layout>
       <main className="page-section-y animate-fade-in">
@@ -12,7 +14,7 @@ const FAQ = () => {
               Questions fréquentes
             </h1>
             <p className="mx-auto mt-3 max-w-xl text-sm text-muted-foreground sm:text-base">
-              Tout savoir sur les commandes, la livraison et l&apos;emballage Troco.
+              Tout savoir sur les commandes, la livraison et les produits de {siteName}.
             </p>
           </div>
 
@@ -101,7 +103,7 @@ const FAQ = () => {
                   </summary>
                   <div className="px-5 pb-5 text-sm leading-relaxed text-muted-foreground sm:px-6 sm:pb-6">
                     <p>
-                      Oui, la livraison est gratuite dès {FREE_SHIPPING_THRESHOLD_MAD} DH d&apos;achat. En
+                      Oui, la livraison est gratuite dès {freeShippingThreshold} DH d&apos;achat. En
                       dessous de ce seuil, des frais de livraison sont indiqués au panier avant validation.
                     </p>
                   </div>
@@ -138,7 +140,7 @@ const FAQ = () => {
                 <details className="group border-b border-border">
                   <summary className="flex cursor-pointer list-none items-center justify-between gap-4 p-5 transition-colors hover:bg-muted/40 focus:outline-none sm:p-6">
                     <span className="text-base font-medium text-foreground">
-                      Quels types d&apos;emballages proposez-vous ?
+                      Quels types de produits proposez-vous ?
                     </span>
                     <span className="material-symbols-outlined shrink-0 text-primary transition-transform duration-300 group-open:rotate-180">
                       expand_more
@@ -146,9 +148,8 @@ const FAQ = () => {
                   </summary>
                   <div className="px-5 pb-5 text-sm leading-relaxed text-muted-foreground sm:px-6 sm:pb-6">
                     <p>
-                      Troco propose des solutions d&apos;emballage pour e-commerce et boutiques : sachets et
-                      pochettes, cartons et boîtes, protections (bulles, calages), décorations et matériels
-                      associés. Consultez la boutique pour voir les formats et variants disponibles.
+                      {siteName} propose une sélection de produits adaptés à vos besoins. Consultez la
+                      boutique pour découvrir les articles, formats et options disponibles.
                     </p>
                   </div>
                 </details>
@@ -188,7 +189,7 @@ const FAQ = () => {
                 <details className="group border-b border-border">
                   <summary className="flex cursor-pointer list-none items-center justify-between gap-4 p-5 transition-colors hover:bg-muted/40 focus:outline-none sm:p-6">
                     <span className="text-base font-medium text-foreground">
-                      Comment commander un emballage personnalisé ?
+                      Comment passer une demande personnalisée ?
                     </span>
                     <span className="material-symbols-outlined shrink-0 text-primary transition-transform duration-300 group-open:rotate-180">
                       expand_more
@@ -204,8 +205,8 @@ const FAQ = () => {
                       <Link to="/devis" className="font-medium text-primary hover:underline">
                         Devis
                       </Link>
-                      . Décrivez votre besoin (formats, quantités, logo ou marquage), joignez vos fichiers
-                      si besoin : nous vous recontactons avec une proposition adaptée.
+                      . Décrivez votre besoin, joignez vos fichiers si besoin : nous vous recontactons avec
+                      une proposition adaptée.
                     </p>
                   </div>
                 </details>
@@ -220,8 +221,8 @@ const FAQ = () => {
                   </summary>
                   <div className="px-5 pb-5 text-sm leading-relaxed text-muted-foreground sm:px-6 sm:pb-6">
                     <p>
-                      Le délai dépend du volume, du type d&apos;emballage et de la personnalisation
-                      demandée. Nous vous communiquons une estimation claire après étude de votre devis.
+                      Le délai dépend du volume et de la personnalisation demandée. Nous vous communiquons
+                      une estimation claire après étude de votre devis.
                     </p>
                   </div>
                 </details>

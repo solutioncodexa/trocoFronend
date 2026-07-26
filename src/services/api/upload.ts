@@ -1,7 +1,20 @@
-import { buildApiUrl } from '@/config/api';
+import { buildApiUrl, TENANT_SLUG_STORAGE_KEY } from '@/config/api';
 import { resolvePublicImageUrl } from '@/utils/resolvePublicImageUrl';
 import { compressImageWithReport, type CompressImageOptions } from '@/utils/compressImage';
 import { notifyCompressionReports } from '@/utils/notifyCompression';
+
+function authAndTenantHeaders(): Record<string, string> {
+  const headers: Record<string, string> = {};
+  const token = localStorage.getItem('troco_admin_token');
+  if (token) headers.Authorization = `Bearer ${token}`;
+  try {
+    const slug = localStorage.getItem(TENANT_SLUG_STORAGE_KEY);
+    if (slug) headers['X-Fournisseur-Slug'] = slug;
+  } catch {
+    /* ignore */
+  }
+  return headers;
+}
 
 /**
  * Options communes aux fonctions d'upload :
@@ -32,13 +45,12 @@ export async function uploadImage(
     notifyCompressionReports([report]);
   }
 
-  const token = localStorage.getItem('troco_admin_token');
   const formData = new FormData();
   formData.append('file', finalFile);
 
   const response = await fetch(buildApiUrl('/upload'), {
     method: 'POST',
-    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    headers: authAndTenantHeaders(),
     body: formData,
   });
 
@@ -71,13 +83,12 @@ export async function uploadImages(
     notifyCompressionReports(results.map((r) => r.report));
   }
 
-  const token = localStorage.getItem('troco_admin_token');
   const formData = new FormData();
   finalFiles.forEach((f) => formData.append('files', f));
 
   const response = await fetch(buildApiUrl('/upload-multiple'), {
     method: 'POST',
-    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    headers: authAndTenantHeaders(),
     body: formData,
   });
 

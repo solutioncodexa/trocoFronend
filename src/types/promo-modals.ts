@@ -8,6 +8,7 @@ export interface PromoModalDTO {
   autoCloseSeconds: number;
   isActive: boolean;
   displayOrder: number;
+  targetPaths?: string | null;
 }
 
 export interface CreatePromoModalRequest {
@@ -19,6 +20,7 @@ export interface CreatePromoModalRequest {
   autoCloseSeconds: number;
   isActive: boolean;
   displayOrder: number;
+  targetPaths?: string | null;
 }
 
 export interface UpdatePromoModalRequest {
@@ -30,4 +32,5 @@ export interface UpdatePromoModalRequest {
   autoCloseSeconds: number;
   isActive: boolean;
   displayOrder: number;
+  targetPaths?: string | null;
 }
