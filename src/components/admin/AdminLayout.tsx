@@ -1,4 +1,4 @@
-import { ReactNode, useMemo, useState } from 'react';
+import { ReactNode, useEffect, useMemo, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard,
@@ -15,13 +15,11 @@ import {
   ExternalLink,
   Menu,
   X,
-  Sparkles,
   Warehouse,
   TrendingUp,
   Share2,
   Users,
   History,
-  Settings2,
   Shield,
   BookOpen,
   Inbox,
@@ -32,6 +30,11 @@ import {
   Webhook,
   Key,
   Truck,
+  Store,
+  Settings2,
+  FileText,
+  Wand2,
+  PenTool,
 } from 'lucide-react';
 import AdminNotification from './AdminNotification';
 import StockAlertDialog from './StockAlertDialog';
@@ -43,7 +46,8 @@ import { PERMISSIONS } from '@/config/permissions';
 import { cn } from '@/lib/utils';
 import { BrandLogoImg } from '@/components/layout/BrandLogoImg';
 import { useStoreBrand } from '@/hooks/useStoreBrand';
-import { buildStorefrontUrl } from '@/utils/storefrontUrl';
+import { buildFreshStorefrontUrl } from '@/utils/storefrontUrl';
+import { applyDocumentBrand } from '@/utils/storeTheme';
 
 interface AdminLayoutProps {
   children: ReactNode;
@@ -58,6 +62,8 @@ interface AdminLayoutProps {
    * contenu sans max-width / padding, hauteur utile pour 3 panneaux.
    */
   workspace?: boolean;
+  /** Contenu plus large (ex. paramètres + aperçu côte à côte). */
+  wide?: boolean;
   /** Contrôle externe de la sidebar admin (masquer / afficher). */
   sidebarOpen?: boolean;
   onSidebarOpenChange?: (open: boolean) => void;
@@ -86,7 +92,7 @@ const ALL_NAV: NavSection[] = [
     items: [
       { href: '/admin/commandes', label: 'Commandes', icon: ShoppingCart, permission: PERMISSIONS.ORDERS_VIEW },
       { href: '/admin/paniers-abandonnes', label: 'Paniers abandonnés', icon: TimerReset, permission: PERMISSIONS.ORDERS_VIEW },
-      { href: '/admin/personnalisations', label: 'Devis / Sur-mesure', icon: Palette, permission: PERMISSIONS.CUSTOM_ORDERS_VIEW },
+      { href: '/admin/personnalisations', label: 'Devis / Sur-mesure', icon: PenTool, permission: PERMISSIONS.CUSTOM_ORDERS_VIEW },
       { href: '/admin/stock', label: 'Stock', icon: Warehouse, permission: PERMISSIONS.STOCK_VIEW },
     ],
   },
@@ -95,28 +101,34 @@ const ALL_NAV: NavSection[] = [
     items: [
       { href: '/admin/produits', label: 'Produits', icon: Package, permission: PERMISSIONS.PRODUCTS_VIEW },
       { href: '/admin/categories', label: 'Catégories', icon: FolderOpen, permission: PERMISSIONS.CATALOG_MANAGE },
-      { href: '/admin/produits-selectionnes', label: 'Sélection', icon: Star, permission: PERMISSIONS.CATALOG_MANAGE },
-      { href: '/admin/accueil-categories', label: 'Accueil', icon: Sparkles, permission: PERMISSIONS.CATALOG_MANAGE },
     ],
   },
   {
-    label: 'Marketing',
+    label: 'Boutique en ligne',
     items: [
+      { href: '/admin/boutique-en-ligne', label: 'Vue d’ensemble', icon: Store },
+      { href: '/admin/parametres', label: 'Apparence', icon: Palette, adminOnly: true },
+      { href: '/admin/pages', label: 'Pages', icon: FileText },
+      { href: '/admin/sections', label: 'Navigation', icon: LayoutPanelLeft },
       { href: '/admin/top-bar-messages', label: 'Bandeau', icon: MessageSquare, permission: PERMISSIONS.CONTENT_MANAGE },
-      { href: '/admin/promo-modals', label: 'Pop-ups promo', icon: ImageIcon, permission: PERMISSIONS.CONTENT_MANAGE },
-      { href: '/admin/codes-promo', label: 'Codes promo', icon: Ticket, permission: PERMISSIONS.CONTENT_MANAGE },
-      { href: '/admin/blog', label: 'Blog', icon: BookOpen },
-      { href: '/admin/leads', label: 'Leads', icon: Inbox },
-      { href: '/admin/avis', label: 'Avis', icon: Star, permission: PERMISSIONS.CONTENT_MANAGE },
-      { href: '/admin/reseaux-sociaux', label: 'Réseaux sociaux', icon: Share2, permission: PERMISSIONS.CONTENT_MANAGE },
+      { href: '/admin/onboarding', label: 'Assistant', icon: Wand2, adminOnly: true },
     ],
   },
   {
     label: 'Boutique',
     items: [
-      { href: '/admin/pages', label: 'Pages & composants', icon: Sparkles },
-      { href: '/admin/sections', label: 'Sections globales', icon: LayoutPanelLeft },
-      { href: '/admin/parametres', label: 'Identité & design', icon: Settings2, adminOnly: true },
+      { href: '/admin/reglages', label: 'Paramètres', icon: Settings2, adminOnly: true },
+    ],
+  },
+  {
+    label: 'Marketing',
+    items: [
+      { href: '/admin/promo-modals', label: 'Pop-ups promo', icon: ImageIcon, permission: PERMISSIONS.CONTENT_MANAGE },
+      { href: '/admin/codes-promo', label: 'Codes promo', icon: Ticket, permission: PERMISSIONS.CONTENT_MANAGE },
+      { href: '/admin/blog', label: 'Blog', icon: BookOpen },
+      { href: '/admin/leads', label: 'Clients / Leads', icon: Inbox },
+      { href: '/admin/avis', label: 'Avis', icon: Star, permission: PERMISSIONS.CONTENT_MANAGE },
+      { href: '/admin/reseaux-sociaux', label: 'Réseaux sociaux', icon: Share2, permission: PERMISSIONS.CONTENT_MANAGE },
     ],
   },
   {
@@ -167,6 +179,7 @@ const AdminLayout = ({
   description,
   actions,
   workspace = false,
+  wide = false,
   sidebarOpen: sidebarOpenProp,
   onSidebarOpenChange,
 }: AdminLayoutProps) => {
@@ -175,13 +188,25 @@ const AdminLayout = ({
   const { logout, isAuthenticated, isAdmin, isSuperAdmin, hasPermission, user } = useAdmin();
   const { store } = useTenant();
   const { siteName, logoUrl, slug } = useStoreBrand();
-  const storefrontUrl = buildStorefrontUrl(slug);
+  const storefrontUrl = buildFreshStorefrontUrl(slug);
   const [sidebarOpenInternal, setSidebarOpenInternal] = useState(() => window.innerWidth >= 1024);
   const isSidebarOpen = sidebarOpenProp ?? sidebarOpenInternal;
   const setIsSidebarOpen = (open: boolean) => {
     if (sidebarOpenProp === undefined) setSidebarOpenInternal(open);
     onSidebarOpenChange?.(open);
   };
+
+  // Favicon / titre de l’onglet = branding boutique (sinon les icons Troco de index.html restent).
+  useEffect(() => {
+    if (!store) return;
+    applyDocumentBrand({
+      siteName: store.siteName,
+      tagline: store.tagline,
+      logoUrl: store.logoUrl,
+      faviconUrl: store.faviconUrl,
+    });
+    return () => applyDocumentBrand(null);
+  }, [store?.siteName, store?.tagline, store?.logoUrl, store?.faviconUrl, store]);
 
   const navSections = useMemo(() => {
     return ALL_NAV.map((section) => ({
@@ -314,7 +339,7 @@ const AdminLayout = ({
             className="w-full justify-start gap-2 text-white/75 hover:bg-white/10 hover:text-white"
             asChild
           >
-            <a href={storefrontUrl} target="_blank" rel="noopener noreferrer" title={storefrontUrl}>
+            <a href={storefrontUrl} target="troco-storefront" rel="noopener noreferrer" title={storefrontUrl}>
               <ExternalLink className="h-4 w-4" />
               Voir ma boutique
             </a>
@@ -401,7 +426,7 @@ const AdminLayout = ({
               'w-full',
               workspace
                 ? 'flex min-h-0 flex-1 flex-col overflow-hidden'
-                : 'mx-auto max-w-6xl p-4 sm:p-6 lg:p-8',
+                : cn('mx-auto p-4 sm:p-6 lg:p-8', wide ? 'max-w-7xl' : 'max-w-6xl'),
             )}
           >
             {children}

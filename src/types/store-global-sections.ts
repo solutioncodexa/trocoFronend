@@ -59,11 +59,16 @@ export type FooterLinksConfig = {
   columns: FooterLinksColumn[];
 };
 
+export type StickyCtaStyle = 'bar' | 'pill' | 'floating';
+export type StickyCtaPosition = 'bottom' | 'bottom-right';
+
 export type StickyCtaConfig = {
   text: string;
   ctaLabel: string;
   ctaHref: string;
   dismissible?: boolean;
+  style?: StickyCtaStyle;
+  position?: StickyCtaPosition;
 };
 
 export type StoreGlobalSection = {
@@ -136,11 +141,21 @@ export function parseStickyCtaConfig(config: Record<string, unknown> | undefined
   const ctaLabel = String(config.ctaLabel ?? '').trim();
   const ctaHref = String(config.ctaHref ?? '').trim();
   if (!text || !ctaLabel || !ctaHref) return null;
+  const styleRaw = String(config.style ?? 'bar');
+  const style = (['bar', 'pill', 'floating'].includes(styleRaw)
+    ? styleRaw
+    : 'bar') as StickyCtaStyle;
+  const positionRaw = String(config.position ?? 'bottom');
+  const position = (['bottom', 'bottom-right'].includes(positionRaw)
+    ? positionRaw
+    : 'bottom') as StickyCtaPosition;
   return {
     text,
     ctaLabel,
     ctaHref,
     dismissible: config.dismissible !== false,
+    style,
+    position,
   };
 }
 

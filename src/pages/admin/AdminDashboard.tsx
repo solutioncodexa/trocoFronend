@@ -11,7 +11,7 @@ import {
   CheckCircle2,
   Circle,
   ExternalLink,
-  Settings2,
+  Store,
   ImagePlus,
 } from 'lucide-react';
 import { useEffect } from 'react';
@@ -28,6 +28,7 @@ import { getImageUrl } from '@/services/api';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { useStoreBrand } from '@/hooks/useStoreBrand';
 import { buildStorefrontUrl } from '@/utils/storefrontUrl';
+import { normalizeThemeKey } from '@/config/storeThemes';
 import { toast } from 'sonner';
 
 const AdminDashboard = () => {
@@ -136,6 +137,12 @@ const AdminDashboard = () => {
       storeSettings?.aboutText?.trim());
   const setupSteps = [
     {
+      done: !!normalizeThemeKey(storeSettings?.themeKey),
+      label: 'Choisir un thème',
+      href: '/admin/onboarding',
+      icon: Palette,
+    },
+    {
       done: hasLogo,
       label: 'Ajouter un logo',
       href: '/admin/parametres',
@@ -143,9 +150,9 @@ const AdminDashboard = () => {
     },
     {
       done: hasBranding,
-      label: 'Personnaliser la boutique',
+      label: 'Personnaliser l’apparence',
       href: '/admin/parametres',
-      icon: Settings2,
+      icon: Palette,
     },
     {
       done: productCount > 0,
@@ -171,7 +178,7 @@ const AdminDashboard = () => {
     { href: '/admin/produits?action=new', label: 'Nouveau produit', icon: Package },
     { href: '/admin/commandes', label: 'Commandes', icon: ShoppingCart },
     { href: '/admin/categories?action=new', label: 'Catégorie', icon: FolderOpen },
-    { href: '/admin/parametres', label: 'Identité & design', icon: Settings2 },
+    { href: '/admin/boutique-en-ligne', label: 'Boutique en ligne', icon: Store },
     { href: '/admin/stock', label: 'Stock', icon: AlertTriangle },
     { href: '/admin/revenus', label: 'Revenus', icon: TrendingUp },
   ];

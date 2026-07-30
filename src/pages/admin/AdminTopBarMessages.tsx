@@ -4,13 +4,13 @@ import {
   Plus, 
   Edit, 
   Trash2, 
-  Eye, 
-  EyeOff, 
   MoveUp,
   MoveDown,
   MessageSquare
 } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import AdminLayout from '@/components/admin/AdminLayout';
+import { BoutiqueWorkspaceLinks } from '@/components/admin/BoutiqueWorkspaceLinks';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
@@ -144,6 +144,8 @@ const AdminTopBarMessages = () => {
             isActive: newMessages[index].isActive,
             displayDurationSeconds: newMessages[index].displayDurationSeconds ?? 7,
             targetPaths: newMessages[index].targetPaths ?? '',
+            backgroundColor: newMessages[index].backgroundColor ?? '',
+            textColor: newMessages[index].textColor ?? '',
           } 
         }),
         updateMutation.mutateAsync({ 
@@ -154,6 +156,8 @@ const AdminTopBarMessages = () => {
             isActive: newMessages[targetIndex].isActive,
             displayDurationSeconds: newMessages[targetIndex].displayDurationSeconds ?? 7,
             targetPaths: newMessages[targetIndex].targetPaths ?? '',
+            backgroundColor: newMessages[targetIndex].backgroundColor ?? '',
+            textColor: newMessages[targetIndex].textColor ?? '',
           } 
         })
       ]).then(() => {
@@ -170,7 +174,13 @@ const AdminTopBarMessages = () => {
 
   if (isLoading) {
     return (
-      <AdminLayout title="Messages Top Bar" breadcrumbs={[{ label: 'Messages Top Bar' }]}>
+      <AdminLayout
+        title="Bandeau"
+        breadcrumbs={[
+          { label: 'Boutique en ligne', href: '/admin/boutique-en-ligne' },
+          { label: 'Bandeau' },
+        ]}
+      >
         <div className="p-8 text-center text-muted-foreground">Chargement...</div>
       </AdminLayout>
     );
@@ -178,7 +188,13 @@ const AdminTopBarMessages = () => {
 
   if (error) {
     return (
-      <AdminLayout title="Messages Top Bar" breadcrumbs={[{ label: 'Messages Top Bar' }]}>
+      <AdminLayout
+        title="Bandeau"
+        breadcrumbs={[
+          { label: 'Boutique en ligne', href: '/admin/boutique-en-ligne' },
+          { label: 'Bandeau' },
+        ]}
+      >
         <div className="p-8">
           <div className="bg-red-50 border border-red-200 rounded-lg p-4">
             <h3 className="text-red-800 font-medium mb-2">Erreur de chargement</h3>
@@ -192,19 +208,35 @@ const AdminTopBarMessages = () => {
   }
 
   return (
-    <AdminLayout title="Messages Top Bar" breadcrumbs={[{ label: 'Messages Top Bar' }]}>
+    <AdminLayout
+      title="Bandeau"
+      description="Créez plusieurs bandeaux promo : texte, couleurs, durée d’affichage et rotation automatique."
+      breadcrumbs={[
+        { label: 'Boutique en ligne', href: '/admin/boutique-en-ligne' },
+        { label: 'Bandeau' },
+      ]}
+    >
+      <BoutiqueWorkspaceLinks current="/admin/top-bar-messages" className="mb-4" />
       <div className="max-h-[calc(100vh-8rem)] overflow-y-auto">
+        <div className="mb-4 rounded-xl border border-border bg-muted/30 px-4 py-3 text-sm text-muted-foreground">
+          Ces bandeaux s’affichent aussi dans{' '}
+          <Link to="/admin/parametres" className="font-medium text-primary hover:underline">
+            Apparence → Header
+          </Link>{' '}
+          (aperçu live) et sur la vitrine. Les messages actifs ont la priorité sur le bandeau fixe
+          de secours.
+        </div>
         <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
           <div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Messages de la Top Bar</h1>
+            <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Bandeaux promo</h1>
             <p className="text-sm text-muted-foreground mt-1 sm:mt-2">
-              Gérez les messages et la durée d&apos;affichage avant passage au suivant (si plusieurs messages
-              actifs), sur le même principe que la fermeture auto des promo modals.
+              Gérez plusieurs bandeaux, leurs couleurs et le temps d&apos;affichage avant passage au
+              suivant.
             </p>
           </div>
           <Button onClick={() => setIsCreateDialogOpen(true)} className="w-full sm:w-auto">
             <Plus className="w-4 h-4 mr-2" />
-            Ajouter un message
+            Ajouter un bandeau
           </Button>
         </div>
 
@@ -231,6 +263,16 @@ const AdminTopBarMessages = () => {
               <div className="space-y-4">
                 {messages.map((message, index) => (
                   <div key={message.id} className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 p-3 sm:p-4 border rounded-lg hover:bg-muted/50 transition-colors">
+                    <div
+                      className="flex h-10 w-full shrink-0 items-center justify-center rounded-md px-2 text-center text-[11px] font-medium sm:h-12 sm:w-28 sm:text-xs"
+                      style={{
+                        backgroundColor: message.backgroundColor || 'hsl(var(--primary))',
+                        color: message.textColor || '#fff',
+                      }}
+                      title="Aperçu couleurs"
+                    >
+                      <span className="line-clamp-2">{message.message || '—'}</span>
+                    </div>
                     <div className="flex-1 min-w-0">
                       <p className="font-medium text-sm sm:text-base">{message.message}</p>
                       <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 mt-2">
@@ -325,6 +367,48 @@ const AdminTopBarMessages = () => {
   );
 };
 
+function ColorField({
+  id,
+  label,
+  value,
+  onChange,
+  fallback = '#0F766E',
+}: {
+  id: string;
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  fallback?: string;
+}) {
+  const hex = /^#[0-9A-Fa-f]{6}$/.test(value) ? value : fallback;
+  return (
+    <div>
+      <Label htmlFor={id}>{label}</Label>
+      <div className="mt-1.5 flex items-center gap-2">
+        <input
+          type="color"
+          aria-label={label}
+          className="h-9 w-10 cursor-pointer rounded border border-border bg-transparent p-0.5"
+          value={hex}
+          onChange={(e) => onChange(e.target.value.toUpperCase())}
+        />
+        <Input
+          id={id}
+          className="h-9 font-mono text-xs"
+          placeholder="Auto (thème)"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+        />
+        {value ? (
+          <Button type="button" size="sm" variant="ghost" className="h-9 px-2 text-xs" onClick={() => onChange('')}>
+            Auto
+          </Button>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
 // Dialog pour créer un message
 const CreateMessageDialog = ({ 
   open, 
@@ -343,6 +427,8 @@ const CreateMessageDialog = ({
     isActive: true,
     displayDurationSeconds: 7,
     targetPaths: '',
+    backgroundColor: '',
+    textColor: '',
   });
 
   useEffect(() => {
@@ -351,10 +437,15 @@ const CreateMessageDialog = ({
       .map((m) => Number(m.displayOrder))
       .filter((n) => Number.isFinite(n));
     const maxOrder = orders.length > 0 ? Math.max(...orders) : 0;
-    setFormData((prev) => ({
-      ...prev,
+    setFormData({
+      message: '',
       displayOrder: maxOrder + 1,
-    }));
+      isActive: true,
+      displayDurationSeconds: 7,
+      targetPaths: '',
+      backgroundColor: '',
+      textColor: '',
+    });
   }, [open, messages]);
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -366,7 +457,7 @@ const CreateMessageDialog = ({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Ajouter un message</DialogTitle>
+          <DialogTitle>Ajouter un bandeau promo</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
@@ -379,6 +470,31 @@ const CreateMessageDialog = ({
               required
             />
           </div>
+
+          <div
+            className="rounded-md border px-3 py-2.5 text-center text-sm font-medium"
+            style={{
+              backgroundColor: formData.backgroundColor || 'hsl(var(--primary))',
+              color: formData.textColor || '#fff',
+            }}
+          >
+            {formData.message.trim() || 'Aperçu du bandeau'}
+          </div>
+
+          <ColorField
+            id="backgroundColor"
+            label="Couleur de fond"
+            value={formData.backgroundColor ?? ''}
+            fallback="#0F766E"
+            onChange={(backgroundColor) => setFormData({ ...formData, backgroundColor })}
+          />
+          <ColorField
+            id="textColor"
+            label="Couleur du texte"
+            value={formData.textColor ?? ''}
+            fallback="#FFFFFF"
+            onChange={(textColor) => setFormData({ ...formData, textColor })}
+          />
 
           <div>
             <Label htmlFor="displayOrder">Ordre d'affichage</Label>
@@ -418,8 +534,7 @@ const CreateMessageDialog = ({
               required
             />
             <p className="text-xs text-muted-foreground mt-1">
-              Temps pendant lequel ce message reste visible avant le suivant (si plusieurs messages actifs).
-              Défaut: 7 s.
+              Temps visible avant le bandeau suivant (si plusieurs actifs). Défaut: 7 s.
             </p>
           </div>
 
@@ -476,6 +591,8 @@ const EditMessageDialog = ({
     isActive: message?.isActive,
     displayDurationSeconds: message?.displayDurationSeconds ?? 7,
     targetPaths: message?.targetPaths ?? '',
+    backgroundColor: message?.backgroundColor ?? '',
+    textColor: message?.textColor ?? '',
   });
 
   useEffect(() => {
@@ -486,6 +603,8 @@ const EditMessageDialog = ({
         isActive: message.isActive,
         displayDurationSeconds: message.displayDurationSeconds ?? 7,
         targetPaths: message.targetPaths ?? '',
+        backgroundColor: message.backgroundColor ?? '',
+        textColor: message.textColor ?? '',
       });
     }
   }, [message]);
@@ -499,7 +618,7 @@ const EditMessageDialog = ({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Modifier le message</DialogTitle>
+          <DialogTitle>Modifier le bandeau</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
@@ -512,6 +631,31 @@ const EditMessageDialog = ({
               required
             />
           </div>
+
+          <div
+            className="rounded-md border px-3 py-2.5 text-center text-sm font-medium"
+            style={{
+              backgroundColor: formData.backgroundColor || 'hsl(var(--primary))',
+              color: formData.textColor || '#fff',
+            }}
+          >
+            {formData.message.trim() || 'Aperçu du bandeau'}
+          </div>
+
+          <ColorField
+            id="edit-backgroundColor"
+            label="Couleur de fond"
+            value={formData.backgroundColor ?? ''}
+            fallback="#0F766E"
+            onChange={(backgroundColor) => setFormData({ ...formData, backgroundColor })}
+          />
+          <ColorField
+            id="edit-textColor"
+            label="Couleur du texte"
+            value={formData.textColor ?? ''}
+            fallback="#FFFFFF"
+            onChange={(textColor) => setFormData({ ...formData, textColor })}
+          />
 
           <div>
             <Label htmlFor="displayOrder">Ordre d'affichage</Label>
@@ -542,7 +686,7 @@ const EditMessageDialog = ({
               required
             />
             <p className="text-xs text-muted-foreground mt-1">
-              Avant passage au message suivant lorsque plusieurs messages sont actifs.
+              Avant passage au bandeau suivant lorsque plusieurs sont actifs.
             </p>
           </div>
 

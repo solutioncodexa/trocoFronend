@@ -182,7 +182,13 @@ const AdminFeaturedProducts = () => {
 
   if (isLoading) {
     return (
-      <AdminLayout title="Produits Sélectionnés" breadcrumbs={[{ label: 'Produits Sélectionnés' }]}>
+      <AdminLayout
+        title="Produits à la une"
+        breadcrumbs={[
+          { label: 'Boutique en ligne', href: '/admin/boutique-en-ligne' },
+          { label: 'Produits à la une' },
+        ]}
+      >
         <div className="flex items-center justify-center py-16">
           <Loader2 className="w-8 h-8 animate-spin text-primary" />
         </div>
@@ -192,7 +198,13 @@ const AdminFeaturedProducts = () => {
 
   if (error) {
     return (
-      <AdminLayout title="Produits Sélectionnés" breadcrumbs={[{ label: 'Produits Sélectionnés' }]}>
+      <AdminLayout
+        title="Produits à la une"
+        breadcrumbs={[
+          { label: 'Boutique en ligne', href: '/admin/boutique-en-ligne' },
+          { label: 'Produits à la une' },
+        ]}
+      >
         <ErrorState
           title="Erreur de chargement"
           description="Impossible de charger les produits sélectionnés. Veuillez vérifier que le serveur backend est en cours d'exécution."
@@ -203,7 +215,13 @@ const AdminFeaturedProducts = () => {
   }
 
   return (
-    <AdminLayout title="Produits Sélectionnés" breadcrumbs={[{ label: 'Produits Sélectionnés' }]}>
+    <AdminLayout
+      title="Produits à la une"
+      breadcrumbs={[
+        { label: 'Boutique en ligne', href: '/admin/boutique-en-ligne' },
+        { label: 'Produits à la une' },
+      ]}
+    >
       {/* Stats */}
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4 mb-6">
         <div className="bg-card rounded-2xl shadow-soft p-3 sm:p-4 border border-border">

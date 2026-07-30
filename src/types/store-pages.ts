@@ -136,6 +136,8 @@ export const BLOCK_CATALOG: {
       ctaLabel: 'Voir la boutique',
       ctaHref: '/boutique',
       imageUrl: '',
+      layout: 'overlay',
+      buttonSize: 'lg',
       align: 'left',
       vAlign: 'center',
       paddingY: 'lg',
@@ -163,13 +165,32 @@ export const BLOCK_CATALOG: {
     type: 'products',
     label: 'Vos produits',
     description: 'Affiche automatiquement les produits de la boutique',
-    defaults: { title: 'Nos produits', limit: 8, columns: 4, align: 'left', paddingY: 'md', maxWidth: 'lg' },
+    defaults: {
+      title: 'Nos produits',
+      limit: 8,
+      columns: 4,
+      imageAspect: 'portrait',
+      cardDensity: 'comfortable',
+      mediaRadius: 'xl',
+      align: 'left',
+      paddingY: 'md',
+      maxWidth: 'lg',
+    },
   },
   {
     type: 'categories',
     label: 'Vos catégories',
     description: 'Grille des catégories de la boutique',
-    defaults: { title: 'Catégories', columns: 4, align: 'left', paddingY: 'md', maxWidth: 'lg' },
+    defaults: {
+      title: 'Catégories',
+      columns: 4,
+      imageAspect: 'portrait',
+      cardDensity: 'comfortable',
+      mediaRadius: 'xl',
+      align: 'left',
+      paddingY: 'md',
+      maxWidth: 'lg',
+    },
   },
   {
     type: 'cta',
@@ -180,6 +201,8 @@ export const BLOCK_CATALOG: {
       body: 'Contactez-nous, réponse sous 24 h.',
       ctaLabel: 'Nous écrire',
       ctaHref: '/contact',
+      ctaLayout: 'inline',
+      buttonSize: 'lg',
       align: 'left',
       paddingY: 'md',
       maxWidth: 'md',
@@ -192,7 +215,7 @@ export const BLOCK_CATALOG: {
     type: 'image',
     label: 'Grande image',
     description: 'Une image mise en avant',
-    defaults: { imageUrl: '', alt: '', caption: '' },
+    defaults: { imageUrl: '', alt: '', caption: '', mediaRadius: 'xl' },
   },
   {
     type: 'faq',
@@ -200,6 +223,7 @@ export const BLOCK_CATALOG: {
     description: 'Liste de questions / réponses',
     defaults: {
       title: 'Questions fréquentes',
+      faqStyle: 'accordion',
       items: [
         { q: 'Quels délais de livraison ?', a: '24–48 h à Casablanca, 2–4 jours ailleurs.' },
         { q: 'Puis-je retourner un article ?', a: 'Oui, sous 14 jours.' },
@@ -225,6 +249,7 @@ export const BLOCK_CATALOG: {
     defaults: {
       title: 'En vidéo',
       url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
+      mediaRadius: 'xl',
     },
   },
   {
@@ -233,6 +258,7 @@ export const BLOCK_CATALOG: {
     description: 'Mettez en avant les retours de vos clients',
     defaults: {
       title: 'Ils nous font confiance',
+      testimonialLayout: 'grid2',
       items: [
         { name: 'Sara B.', text: 'Livraison rapide et produits magnifiques.', role: 'Casablanca' },
         { name: 'Youssef K.', text: 'Service client au top.', role: 'Rabat' },
@@ -249,6 +275,7 @@ export const BLOCK_CATALOG: {
       endsAt: new Date(Date.now() + 7 * 24 * 3600 * 1000).toISOString().slice(0, 16),
       ctaLabel: 'J’en profite',
       ctaHref: '/boutique',
+      buttonSize: 'md',
     },
   },
   {
@@ -258,6 +285,9 @@ export const BLOCK_CATALOG: {
     defaults: {
       title: '@votre_boutique',
       handle: 'matjarona',
+      columns: 3,
+      cardDensity: 'compact',
+      mediaRadius: 'md',
       images: ['', '', '', '', '', ''],
     },
   },

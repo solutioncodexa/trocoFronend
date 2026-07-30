@@ -1,4 +1,4 @@
-import { ReactNode, useEffect, useMemo, useRef } from 'react';
+import { ReactNode, useEffect, useMemo, useRef, type CSSProperties } from 'react';
 import { useLocation } from 'react-router-dom';
 import Header from './Header';
 import Footer from './Footer';
@@ -10,6 +10,8 @@ import { resolveTenantSlug, useTenant } from '@/contexts/TenantContext';
 import { StorefrontBrandOverrideProvider } from '@/contexts/StorefrontBrandOverride';
 import { useDesignDemo } from '@/demo/DesignDemoContext';
 import { normalizeThemeKey } from '@/config/storeThemes';
+import { normalizeFontPair, normalizeRadiusPreset } from '@/config/storefrontTheme';
+import { normalizeAppearance } from '@/config/storeAppearance';
 import {
   applyDocumentBrand,
   clearRootStoreTheme,
@@ -53,7 +55,21 @@ const Layout = ({ children, forceThemeKey, forceBrand }: LayoutProps) => {
   const themeKey = normalizeThemeKey(
     forceThemeKey ?? (onTenantStorefront ? store?.themeKey : null),
   );
-  const themeVars = useMemo(() => storeThemeStyleVars(brand), [brand]);
+  const fontPair = normalizeFontPair(store?.fontPair);
+  const radiusPreset = normalizeRadiusPreset(store?.radiusPreset);
+  const appearance = normalizeAppearance(store?.appearance);
+  const themeBrand = useMemo(
+    () =>
+      brand
+        ? {
+            ...brand,
+            fontPair,
+            radiusPreset,
+          }
+        : null,
+    [brand, fontPair, radiusPreset],
+  );
+  const themeVars = useMemo(() => storeThemeStyleVars(themeBrand), [themeBrand]);
 
   useEffect(() => {
     // Les couleurs restent sur le wrapper — jamais sur :root (admin / Matjarona).
@@ -96,7 +112,40 @@ const Layout = ({ children, forceThemeKey, forceBrand }: LayoutProps) => {
           `store-theme store-theme--${themeKey}`,
         )}
         data-store-theme={themeKey}
-        style={themeVars}
+        data-font-pair={fontPair || 'display_sans'}
+        data-radius-preset={radiusPreset || 'soft'}
+        data-button-style={appearance.buttonStyle}
+        data-card-style={appearance.cardStyle}
+        data-hero-style={appearance.heroStyle}
+        data-footer-layout={appearance.footerLayout}
+        data-header-custom={
+          appearance.headerBgColor || appearance.headerTextColor ? '1' : undefined
+        }
+        data-page-custom={appearance.pageBgColor ? '1' : undefined}
+        data-footer-custom={
+          appearance.footerBgColor || appearance.footerTextColor ? '1' : undefined
+        }
+        style={{
+          ...themeVars,
+          ...(appearance.headerBgColor
+            ? ({ '--header-bg': appearance.headerBgColor } as CSSProperties)
+            : {}),
+          ...(appearance.headerTextColor
+            ? ({ '--header-fg': appearance.headerTextColor } as CSSProperties)
+            : {}),
+          ...(appearance.pageBgColor
+            ? ({ '--page-bg': appearance.pageBgColor } as CSSProperties)
+            : {}),
+          ...(appearance.footerBgColor
+            ? ({ '--footer-bg': appearance.footerBgColor } as CSSProperties)
+            : {}),
+          ...(appearance.footerTextColor
+            ? ({ '--footer-fg': appearance.footerTextColor } as CSSProperties)
+            : {}),
+          ...(appearance.pageBgColor
+            ? ({ backgroundColor: appearance.pageBgColor } as CSSProperties)
+            : {}),
+        }}
       >
         <TrackingPixels />
         <div
@@ -109,7 +158,12 @@ const Layout = ({ children, forceThemeKey, forceBrand }: LayoutProps) => {
         </div>
         <main
           className="w-full min-w-0 flex-grow overflow-x-hidden"
-          style={{ paddingTop: 'var(--layout-top-offset, 4rem)' }}
+          style={{
+            paddingTop: 'var(--layout-top-offset, 4rem)',
+            ...(appearance.pageBgColor
+              ? { backgroundColor: appearance.pageBgColor }
+              : {}),
+          }}
         >
           {pageFade ? (
             <div

@@ -43,6 +43,7 @@ import { resolvePublicImageUrl } from '@/utils/resolvePublicImageUrl';
 import { buildApiUrl } from '@/config/api';
 import { useSocialNetworks } from '@/hooks/useSocialNetworks';
 import { useStoreBrand } from '@/hooks/useStoreBrand';
+import { useStorefrontTheme } from '@/hooks/useStorefrontTheme';
 import { productReviewsApi } from '@/services/api/productReviews';
 import {
   ProductReviewsSection,
@@ -159,6 +160,7 @@ const ProductDetail = () => {
   const { toggleWishlist, isInWishlist } = useWishlist();
   const { isEnabled } = useSocialNetworks();
   const { whatsappOrderTemplate, contactWhatsapp, contactPhone } = useStoreBrand();
+  const theme = useStorefrontTheme();
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [quantity, setQuantity] = useState(1);
   /** `undefined` = aucune taille (requis pour Radix Select + validation explicite) */
@@ -543,7 +545,7 @@ const ProductDetail = () => {
       </div>
 
       {/* ============ PRODUCT SECTION ============ */}
-      <section className="max-w-[1280px] mx-auto px-3 sm:px-6 py-3 sm:py-5 lg:py-6 w-full animate-fade-in">
+      <section className={cn('max-w-[1280px] mx-auto px-3 sm:px-6 py-3 sm:py-5 lg:py-6 w-full animate-fade-in', theme.shell)}>
         <div className="flex flex-col lg:flex-row gap-4 lg:gap-6 items-stretch lg:items-start">
 
           {/* ---- LEFT: Thumbnails (desktop only) ---- */}

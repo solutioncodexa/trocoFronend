@@ -1,11 +1,33 @@
-import { API_BASE_URL } from '@/config/api';
+import { API_BASE_URL, TENANT_SLUG_STORAGE_KEY } from '@/config/api';
 import { TopBarMessageDTO, CreateTopBarMessageRequest, UpdateTopBarMessageRequest } from '@/types/top-bar-messages';
 
 const getAuthHeaders = () => {
   const token = localStorage.getItem('troco_admin_token');
+  const slug = (() => {
+    try {
+      return localStorage.getItem(TENANT_SLUG_STORAGE_KEY);
+    } catch {
+      return null;
+    }
+  })();
   return {
     'Content-Type': 'application/json',
     ...(token && { Authorization: `Bearer ${token}` }),
+    ...(slug ? { 'X-Fournisseur-Slug': slug } : {}),
+  };
+};
+
+const getPublicHeaders = () => {
+  const slug = (() => {
+    try {
+      return localStorage.getItem(TENANT_SLUG_STORAGE_KEY);
+    } catch {
+      return null;
+    }
+  })();
+  return {
+    'Content-Type': 'application/json',
+    ...(slug ? { 'X-Fournisseur-Slug': slug } : {}),
   };
 };
 
@@ -14,9 +36,7 @@ class TopBarMessagesApi {
     const qs = path ? `?path=${encodeURIComponent(path)}` : '';
     const response = await fetch(`${API_BASE_URL}/top-bar-messages/public${qs}`, {
       method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: getPublicHeaders(),
     });
 
     if (!response.ok) {
@@ -52,6 +72,8 @@ class TopBarMessagesApi {
         ? Number(message.displayDurationSeconds)
         : 7,
       targetPaths: message.targetPaths ?? '',
+      backgroundColor: message.backgroundColor?.trim() || '',
+      textColor: message.textColor?.trim() || '',
     };
     const response = await fetch(`${API_BASE_URL}/top-bar-messages`, {
       method: 'POST',
@@ -78,6 +100,8 @@ class TopBarMessagesApi {
         ? Number(message.displayDurationSeconds)
         : 7,
       targetPaths: message.targetPaths ?? '',
+      backgroundColor: message.backgroundColor?.trim() || '',
+      textColor: message.textColor?.trim() || '',
     };
     const response = await fetch(`${API_BASE_URL}/top-bar-messages/${id}`, {
       method: 'PUT',

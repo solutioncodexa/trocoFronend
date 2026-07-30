@@ -68,3 +68,74 @@ export function getThemeDefinition(key?: string | null): StoreThemeDefinition {
 export function designDemoPath(themeKey: StoreThemeKey): string {
   return `/design-demo/${themeKey}`;
 }
+
+/** Presets look initiaux (miroir backend ThemePresetFactory) — doc / preview locale. */
+export type ThemeLookPreset = {
+  primaryColor: string;
+  secondaryColor: string;
+  fontPair: string;
+  radiusPreset: string;
+};
+
+export const THEME_LOOK_DEFAULTS: Record<StoreThemeKey, ThemeLookPreset> = {
+  classic: {
+    primaryColor: '#0F766E',
+    secondaryColor: '#0369A1',
+    fontPair: 'display_sans',
+    radiusPreset: 'soft',
+  },
+  minimal: {
+    primaryColor: '#171717',
+    secondaryColor: '#737373',
+    fontPair: 'display_sans',
+    radiusPreset: 'sharp',
+  },
+  bold: {
+    primaryColor: '#E11D48',
+    secondaryColor: '#F97316',
+    fontPair: 'display_sans',
+    radiusPreset: 'sharp',
+  },
+  elegant: {
+    primaryColor: '#7851A9',
+    secondaryColor: '#A78BFA',
+    fontPair: 'editorial_serif',
+    radiusPreset: 'round',
+  },
+};
+
+/** Appearance de base par thème (miroir ThemePresetFactory backend). */
+export function themeAppearanceDefaults(themeKey: StoreThemeKey): Partial<
+  import('@/config/storeAppearance').StoreAppearance
+> {
+  switch (themeKey) {
+    case 'minimal':
+      return {
+        buttonStyle: 'soft',
+        cardStyle: 'minimal',
+        heroStyle: 'minimal',
+        footerLayout: 'links_only',
+      };
+    case 'bold':
+      return {
+        buttonStyle: 'solid',
+        cardStyle: 'bordered',
+        heroStyle: 'banner',
+        footerLayout: 'compact',
+      };
+    case 'elegant':
+      return {
+        buttonStyle: 'pill',
+        cardStyle: 'flat',
+        heroStyle: 'split',
+        footerLayout: 'default',
+      };
+    default:
+      return {
+        buttonStyle: 'solid',
+        cardStyle: 'elevated',
+        heroStyle: 'fullbleed',
+        footerLayout: 'default',
+      };
+  }
+}

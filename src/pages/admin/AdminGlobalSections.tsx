@@ -1,13 +1,27 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { Link } from 'react-router-dom';
 import { Loader2, Plus, Save, Trash2 } from 'lucide-react';
 import AdminLayout from '@/components/admin/AdminLayout';
+import { BoutiqueWorkspaceLinks } from '@/components/admin/BoutiqueWorkspaceLinks';
+import {
+  StorePageHrefSelect,
+  toStorePageLinkOptions,
+} from '@/components/admin/StorePageHrefSelect';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { storeGlobalSectionsApi } from '@/services/api/storeGlobalSections';
+import { storePagesApi } from '@/services/api/storePages';
 import type {
   AppBarConfig,
   FooterLinksColumn,
@@ -16,6 +30,8 @@ import type {
   MegaMenuConfig,
   MegaMenuItem,
   StickyCtaConfig,
+  StickyCtaPosition,
+  StickyCtaStyle,
 } from '@/types/store-global-sections';
 import { DEFAULT_APP_BAR, parseAppBarConfig } from '@/types/store-global-sections';
 import AppBarStylePanel from '@/components/admin/page-builder/AppBarStylePanel';
@@ -23,10 +39,10 @@ import { toast } from 'sonner';
 import { toastError } from '@/utils/toastMessages';
 
 const SECTION_LABELS: Record<GlobalSectionKey, string> = {
-  mega_menu: 'Mega menu',
-  footer_links: 'Liens pied de page',
-  sticky_cta: 'Bandeau CTA fixe',
-  app_bar: 'App bar (en-tête)',
+  mega_menu: 'Menus',
+  footer_links: 'Pied de page',
+  app_bar: 'En-tête',
+  sticky_cta: 'CTA sticky',
 };
 
 const emptyMegaMenu = (): MegaMenuConfig => ({
@@ -42,6 +58,8 @@ const emptySticky = (): StickyCtaConfig => ({
   ctaLabel: 'Contact',
   ctaHref: '/contact',
   dismissible: true,
+  style: 'bar',
+  position: 'bottom',
 });
 
 function sectionFromList(list: { sectionKey: string; enabled: boolean; config: Record<string, unknown> }[], key: GlobalSectionKey) {
@@ -49,10 +67,12 @@ function sectionFromList(list: { sectionKey: string; enabled: boolean; config: R
 }
 
 const TAB_HINTS: Record<GlobalSectionKey, string> = {
-  mega_menu: 'Remplace la navigation principale quand activé. Ajoutez des sous-liens pour un vrai mega-menu.',
+  mega_menu:
+    'Menu principal de la boutique. Activé = remplace les liens simples d’Apparence → Header.',
   footer_links: 'Colonnes de liens en bas de page (boutique, aide, légal…).',
-  sticky_cta: 'Bandeau fixe en bas d’écran — idéal pour une promo ou un contact rapide.',
-  app_bar: 'Couleurs, bandeau promo, icônes et logo de l’en-tête boutique. Aussi éditable depuis le constructeur de pages.',
+  app_bar:
+    'En-tête global (toute la boutique) : couleurs, logo, icônes. Aussi éditable dans le constructeur.',
+  sticky_cta: 'Bandeau fixe en bas d’écran — promo ou contact rapide.',
 };
 
 const AdminGlobalSections = () => {
@@ -73,6 +93,12 @@ const AdminGlobalSections = () => {
     queryKey: ['store-global-sections', 'admin'],
     queryFn: () => storeGlobalSectionsApi.listAdmin(),
   });
+
+  const { data: storePages = [] } = useQuery({
+    queryKey: ['store-pages', 'nav-destinations'],
+    queryFn: () => storePagesApi.list(),
+  });
+  const pageLinkOptions = toStorePageLinkOptions(storePages);
 
   useEffect(() => {
     if (!sections.length) return;
@@ -99,11 +125,19 @@ const AdminGlobalSections = () => {
       setFooterLinks({ columns: columns.length ? columns : emptyFooter().columns });
     }
     if (sticky?.config) {
+      const styleRaw = String(sticky.config.style ?? 'bar');
+      const positionRaw = String(sticky.config.position ?? 'bottom');
       setStickyCta({
         text: String(sticky.config.text ?? emptySticky().text),
         ctaLabel: String(sticky.config.ctaLabel ?? emptySticky().ctaLabel),
         ctaHref: String(sticky.config.ctaHref ?? emptySticky().ctaHref),
         dismissible: sticky.config.dismissible !== false,
+        style: (['bar', 'pill', 'floating'].includes(styleRaw)
+          ? styleRaw
+          : 'bar') as StickyCtaStyle,
+        position: (['bottom', 'bottom-right'].includes(positionRaw)
+          ? positionRaw
+          : 'bottom') as StickyCtaPosition,
       });
     }
     if (bar?.config) {
@@ -149,6 +183,8 @@ const AdminGlobalSections = () => {
       ctaLabel: stickyCta.ctaLabel,
       ctaHref: stickyCta.ctaHref,
       dismissible: stickyCta.dismissible !== false,
+      style: stickyCta.style ?? 'bar',
+      position: stickyCta.position ?? 'bottom',
     };
   }, [tab, megaMenu, footerLinks, stickyCta, appBar]);
 
@@ -271,7 +307,13 @@ const AdminGlobalSections = () => {
 
   if (isLoading) {
     return (
-      <AdminLayout title="Sections globales" breadcrumbs={[{ label: 'Sections globales' }]}>
+      <AdminLayout
+        title="Navigation"
+        breadcrumbs={[
+          { label: 'Boutique en ligne', href: '/admin/boutique-en-ligne' },
+          { label: 'Navigation' },
+        ]}
+      >
         <div className="flex justify-center p-12 text-muted-foreground">Chargement…</div>
       </AdminLayout>
     );
@@ -279,7 +321,13 @@ const AdminGlobalSections = () => {
 
   if (error) {
     return (
-      <AdminLayout title="Sections globales" breadcrumbs={[{ label: 'Sections globales' }]}>
+      <AdminLayout
+        title="Navigation"
+        breadcrumbs={[
+          { label: 'Boutique en ligne', href: '/admin/boutique-en-ligne' },
+          { label: 'Navigation' },
+        ]}
+      >
         <p className="p-6 text-destructive">Impossible de charger les sections.</p>
       </AdminLayout>
     );
@@ -287,9 +335,12 @@ const AdminGlobalSections = () => {
 
   return (
     <AdminLayout
-      title="Sections globales"
-      description="Mega menu, liens du pied de page et bandeau CTA sur toute la vitrine."
-      breadcrumbs={[{ label: 'Sections globales' }]}
+      title="Navigation"
+      description="Menus · En-tête · Pied de page · CTA sticky. Un seul menu principal à la fois : Menus activé remplace Apparence → Header."
+      breadcrumbs={[
+        { label: 'Boutique en ligne', href: '/admin/boutique-en-ligne' },
+        { label: 'Navigation' },
+      ]}
       actions={
         <Button size="sm" className="gap-1.5" onClick={save} disabled={saveMutation.isPending}>
           {saveMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
@@ -297,6 +348,20 @@ const AdminGlobalSections = () => {
         </Button>
       }
     >
+      <BoutiqueWorkspaceLinks current="/admin/sections" className="mb-6" />
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-border bg-muted/20 px-4 py-3 text-sm text-muted-foreground">
+        <span>
+          Les pages créées dans{' '}
+          <Link to="/admin/pages" className="font-medium text-primary hover:underline">
+            Pages
+          </Link>{' '}
+          sont sélectionnables ci-dessous. Boutons header simples :{' '}
+          <Link to="/admin/parametres" className="font-medium text-primary hover:underline">
+            Apparence
+          </Link>
+          .
+        </span>
+      </div>
       <Tabs value={tab} onValueChange={(v) => setTab(v as GlobalSectionKey)} className="space-y-6">
         <TabsList className="flex h-auto flex-wrap gap-1">
           {(Object.keys(SECTION_LABELS) as GlobalSectionKey[]).map((key) => (
@@ -342,8 +407,14 @@ const AdminGlobalSections = () => {
                 </div>
                 <div className="min-w-[140px] flex-1">
                   <Label>Lien (href)</Label>
+                  <StorePageHrefSelect
+                    className="mt-1"
+                    value={item.href}
+                    pages={pageLinkOptions}
+                    onPick={(href, label) => updateMegaItem(index, { href, label })}
+                  />
                   <Input
-                    className="mt-1 font-mono text-sm"
+                    className="mt-1.5 font-mono text-sm"
                     value={item.href}
                     onChange={(e) => updateMegaItem(index, { href: e.target.value })}
                     placeholder="/boutique"
@@ -363,12 +434,19 @@ const AdminGlobalSections = () => {
                       onChange={(e) => updateMegaChild(index, ci, { label: e.target.value })}
                       placeholder="Libellé"
                     />
-                    <Input
-                      className="flex-1 font-mono text-sm"
-                      value={child.href}
-                      onChange={(e) => updateMegaChild(index, ci, { href: e.target.value })}
-                      placeholder="/page"
-                    />
+                    <div className="flex min-w-[180px] flex-1 flex-col gap-1">
+                      <StorePageHrefSelect
+                        value={child.href}
+                        pages={pageLinkOptions}
+                        onPick={(href, label) => updateMegaChild(index, ci, { href, label })}
+                      />
+                      <Input
+                        className="font-mono text-sm"
+                        value={child.href}
+                        onChange={(e) => updateMegaChild(index, ci, { href: e.target.value })}
+                        placeholder="/page"
+                      />
+                    </div>
                     <Button type="button" variant="ghost" size="icon" onClick={() => removeMegaChild(index, ci)}>
                       <Trash2 className="h-4 w-4" />
                     </Button>
@@ -410,11 +488,22 @@ const AdminGlobalSections = () => {
                     value={link.label}
                     onChange={(e) => updateFooterLink(colIndex, linkIndex, { label: e.target.value })}
                   />
-                  <Input
-                    className="flex-1 font-mono text-sm"
-                    value={link.href}
-                    onChange={(e) => updateFooterLink(colIndex, linkIndex, { href: e.target.value })}
-                  />
+                  <div className="flex min-w-[180px] flex-1 flex-col gap-1">
+                    <StorePageHrefSelect
+                      value={link.href}
+                      pages={pageLinkOptions}
+                      onPick={(href, label) =>
+                        updateFooterLink(colIndex, linkIndex, { href, label })
+                      }
+                    />
+                    <Input
+                      className="font-mono text-sm"
+                      value={link.href}
+                      onChange={(e) =>
+                        updateFooterLink(colIndex, linkIndex, { href: e.target.value })
+                      }
+                    />
+                  </div>
                   <Button type="button" variant="ghost" size="icon" onClick={() => removeFooterLink(colIndex, linkIndex)}>
                     <Trash2 className="h-4 w-4" />
                   </Button>
@@ -451,11 +540,60 @@ const AdminGlobalSections = () => {
           </div>
           <div>
             <Label>Lien du bouton</Label>
+            <StorePageHrefSelect
+              className="mt-1"
+              value={stickyCta.ctaHref}
+              pages={pageLinkOptions}
+              onPick={(href, label) =>
+                setStickyCta((s) => ({
+                  ...s,
+                  ctaHref: href,
+                  ctaLabel: s.ctaLabel?.trim() ? s.ctaLabel : label,
+                }))
+              }
+            />
             <Input
-              className="mt-1 font-mono text-sm"
+              className="mt-1.5 font-mono text-sm"
               value={stickyCta.ctaHref}
               onChange={(e) => setStickyCta((s) => ({ ...s, ctaHref: e.target.value }))}
             />
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div>
+              <Label>Style</Label>
+              <Select
+                value={stickyCta.style ?? 'bar'}
+                onValueChange={(v) =>
+                  setStickyCta((s) => ({ ...s, style: v as StickyCtaStyle }))
+                }
+              >
+                <SelectTrigger className="mt-1">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="bar">Barre pleine largeur</SelectItem>
+                  <SelectItem value="pill">Pilule centrée</SelectItem>
+                  <SelectItem value="floating">Carte flottante</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Position</Label>
+              <Select
+                value={stickyCta.position ?? 'bottom'}
+                onValueChange={(v) =>
+                  setStickyCta((s) => ({ ...s, position: v as StickyCtaPosition }))
+                }
+              >
+                <SelectTrigger className="mt-1">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="bottom">Bas (centré)</SelectItem>
+                  <SelectItem value="bottom-right">Bas droite</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
           <div className="flex items-center gap-2">
             <Switch

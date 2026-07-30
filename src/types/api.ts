@@ -258,6 +258,9 @@ export interface StorefrontBootstrapDTO {
   primaryColor?: string | null;
   secondaryColor?: string | null;
   themeKey?: string | null;
+  fontPair?: string | null;
+  radiusPreset?: string | null;
+  appearance?: import('@/config/storeAppearance').StoreAppearance | Record<string, unknown> | null;
   contactEmail?: string | null;
   contactPhone?: string | null;
   contactWhatsapp?: string | null;
@@ -310,6 +313,9 @@ export interface AdminStoreSummaryDTO {
   primaryColor?: string | null;
   secondaryColor?: string | null;
   themeKey?: string | null;
+  fontPair?: string | null;
+  radiusPreset?: string | null;
+  appearance?: import('@/config/storeAppearance').StoreAppearance | Record<string, unknown> | null;
   planCode?: string | null;
   planName?: string | null;
 }
@@ -348,6 +354,9 @@ export interface StoreSettingsDTO {
   categoriesEnabled: boolean;
   surMesureEnabled: boolean;
   themeKey?: string | null;
+  fontPair?: string | null;
+  radiusPreset?: string | null;
+  appearance?: import('@/config/storeAppearance').StoreAppearance | Record<string, unknown> | null;
   status?: string | null;
   planCode?: string | null;
   planName?: string | null;
@@ -375,6 +384,8 @@ export interface StoreSettingsDTO {
   dataRetentionDays?: number | null;
   cndpNoticeVersion?: string | null;
   shippingDefaultCarrier?: string | null;
+  /** Snapshots look par thème (classic/minimal/bold/elegant). */
+  themePresets?: Record<string, Record<string, unknown>> | null;
 }
 
 export interface StoreThemeDTO {
@@ -450,6 +461,9 @@ export interface UpdateStoreSettingsRequest {
   categoriesEnabled?: boolean;
   surMesureEnabled?: boolean;
   themeKey?: string;
+  fontPair?: string;
+  radiusPreset?: string;
+  appearance?: import('@/config/storeAppearance').StoreAppearance | Record<string, unknown>;
   metaPixelId?: string;
   tiktokPixelId?: string;
   googleAdsId?: string;

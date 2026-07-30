@@ -8,6 +8,7 @@ import { useStoreBrand } from '@/hooks/useStoreBrand';
 import { useStorefrontPath } from '@/hooks/useStorefrontPath';
 import { useSystemNavReplacements } from '@/hooks/useSystemNavReplacements';
 import { useGlobalSections } from '@/hooks/useGlobalSections';
+import { useStoreAppearance } from '@/hooks/useStoreAppearance';
 import { categoriesApi } from '@/services/api/categories';
 import { staticCatalogQueryOptions } from '@/config/queryOptions';
 
@@ -24,8 +25,16 @@ const Footer = () => {
   const { to, isDemo, demo } = useStorefrontPath();
   const { navHref, isReplaced } = useSystemNavReplacements();
   const { footerLinksConfig } = useGlobalSections();
+  const appearance = useStoreAppearance();
   const useCustomFooter = !!footerLinksConfig?.columns.length;
   const surMesureOn = isDemo || store?.surMesureEnabled !== false;
+  const showBrand = appearance.footerShowBrand;
+  const showNewsletter = appearance.footerShowNewsletter && appearance.footerLayout !== 'links_only';
+  const showSocials = appearance.footerShowSocials;
+  const compact = appearance.footerLayout === 'compact';
+  const linksOnly = appearance.footerLayout === 'links_only';
+  const footerBg = appearance.footerBgColor.trim();
+  const footerFg = appearance.footerTextColor.trim();
 
   const { data: categories = [] } = useQuery({
     queryKey: ['categories', 'nav', 'footer'],
@@ -54,14 +63,34 @@ const Footer = () => {
   };
 
   return (
-    <footer className="w-full max-w-full min-w-0 overflow-x-hidden border-t border-border bg-muted/50 text-foreground">
-      <div className="page-padding mx-auto max-w-[1280px] pb-8 pt-14 sm:pb-10 sm:pt-16 md:pt-20">
+    <footer
+      className="w-full max-w-full min-w-0 overflow-x-hidden border-t border-border bg-muted/50 text-foreground"
+      data-footer-custom={footerBg || footerFg ? '1' : undefined}
+      style={{
+        ...(footerBg ? { backgroundColor: footerBg, ['--footer-bg' as string]: footerBg } : {}),
+        ...(footerFg ? { color: footerFg, ['--footer-fg' as string]: footerFg } : {}),
+      }}
+    >
+      <div
+        className={cn(
+          'page-padding mx-auto max-w-[1280px]',
+          compact ? 'pb-6 pt-8 sm:pb-8 sm:pt-10' : 'pb-8 pt-14 sm:pb-10 sm:pt-16 md:pt-20',
+        )}
+      >
         <div
           className={cn(
             'mb-12 grid grid-cols-1 gap-10 md:grid-cols-2 lg:mb-16 lg:gap-12',
-            useCustomFooter ? 'lg:grid-cols-[minmax(0,1.2fr)_repeat(auto-fit,minmax(10rem,1fr))]' : 'lg:grid-cols-4',
+            compact && 'mb-8 gap-6 lg:mb-10',
+            useCustomFooter
+              ? 'lg:grid-cols-[minmax(0,1.2fr)_repeat(auto-fit,minmax(10rem,1fr))]'
+              : linksOnly
+                ? 'lg:grid-cols-3'
+                : showNewsletter
+                  ? 'lg:grid-cols-4'
+                  : 'lg:grid-cols-3',
           )}
         >
+          {showBrand && !linksOnly ? (
           <div className="flex w-full flex-col items-center gap-5 lg:items-start">
             <BrandLogoImg
               className="h-14 w-auto object-contain object-center sm:h-16 md:h-20"
@@ -81,11 +110,14 @@ const Footer = () => {
                 ) : null}
               </div>
             )}
+            {showSocials ? (
             <SocialLinks
               className="justify-center lg:justify-start"
               linkClassName={socialIconClass}
             />
+            ) : null}
           </div>
+          ) : null}
 
           {useCustomFooter ? (
             footerLinksConfig!.columns.map((col, colIndex) => (
@@ -191,6 +223,8 @@ const Footer = () => {
           </div>
 
           <div>
+            {showNewsletter ? (
+              <>
             <h5 className="mb-5 font-display text-sm font-semibold tracking-wide text-foreground">
               Newsletter
             </h5>
@@ -211,12 +245,16 @@ const Footer = () => {
                 autoComplete="email"
               />
               <button
-                className="rounded-xl bg-primary px-6 py-3 text-xs font-bold uppercase tracking-wider text-primary-foreground transition-colors hover:bg-primary/90"
+                className="sf-btn rounded-xl bg-primary px-6 py-3 text-xs font-bold uppercase tracking-wider text-primary-foreground transition-colors hover:bg-primary/90"
                 type="submit"
               >
                 S&apos;inscrire
               </button>
             </form>
+              </>
+            ) : showSocials && (linksOnly || !showBrand) ? (
+              <SocialLinks className="justify-center lg:justify-start" linkClassName={socialIconClass} />
+            ) : null}
           </div>
               </>
             )}
@@ -225,6 +263,9 @@ const Footer = () => {
         <div className="flex flex-col items-center justify-between gap-4 border-t border-border pt-6 text-center text-xs text-muted-foreground sm:pt-8 md:flex-row md:text-left">
           <p>© {new Date().getFullYear()} {siteName}. Tous droits réservés.</p>
           <div className="flex flex-wrap justify-center gap-4 sm:gap-6">
+            {showSocials && !showBrand && !showNewsletter ? (
+              <SocialLinks className="justify-center" linkClassName={socialIconClass} />
+            ) : null}
             <Link className={footerLinkClass} to="#">Mentions Légales</Link>
             <Link className={footerLinkClass} to="#">Confidentialité</Link>
             <Link className={footerLinkClass} to="#">CGV</Link>

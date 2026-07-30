@@ -4,6 +4,10 @@ import { Button } from '@/components/ui/button';
 import { formatPrice } from '@/utils/formatPrice';
 import { useStorefrontPath } from '@/hooks/useStorefrontPath';
 import type { StoreThemeKey } from '@/config/storeThemes';
+import {
+  DEFAULT_APPEARANCE,
+  type StoreAppearance,
+} from '@/config/storeAppearance';
 import type { Product } from '@/types/product';
 import type { DemoCategory } from '@/demo/mockCatalog';
 import { cn } from '@/lib/utils';
@@ -16,18 +20,23 @@ type ThemeHomeProps = {
   heroImage: string;
   products: Product[];
   categories: DemoCategory[];
+  appearance?: StoreAppearance;
+  showHero?: boolean;
+  showCategories?: boolean;
 };
 
 export function ThemeHome(props: ThemeHomeProps) {
+  const appearance = props.appearance ?? DEFAULT_APPEARANCE;
+  const merged = { ...props, appearance };
   switch (props.themeKey) {
     case 'minimal':
-      return <MinimalHome {...props} />;
+      return <MinimalHome {...merged} />;
     case 'bold':
-      return <BoldHome {...props} />;
+      return <BoldHome {...merged} />;
     case 'elegant':
-      return <ElegantHome {...props} />;
+      return <ElegantHome {...merged} />;
     default:
-      return <ClassicHome {...props} />;
+      return <ClassicHome {...merged} />;
   }
 }
 
@@ -38,34 +47,96 @@ function ClassicHome({
   heroImage,
   products,
   categories,
-}: ThemeHomeProps) {
+  appearance,
+  showHero = true,
+  showCategories = true,
+}: ThemeHomeProps & { appearance: StoreAppearance }) {
   const { to } = useStorefrontPath();
   const featured = products.slice(0, 4);
+  const cta = appearance.heroCtaLabel || 'Voir la boutique';
+  const heroStyle = appearance.heroStyle;
+
+  const ctaBlock = (
+    <div className="mt-8 flex flex-wrap gap-3">
+      <Button
+        size="lg"
+        className={cn(
+          'sf-btn',
+          appearance.buttonStyle === 'pill' && 'rounded-full',
+          appearance.buttonStyle === 'outline' &&
+            'border-2 border-primary bg-transparent text-primary hover:bg-primary/5',
+          appearance.buttonStyle === 'soft' &&
+            'bg-primary/15 text-primary shadow-none hover:bg-primary/25',
+        )}
+        asChild
+      >
+        <Link to={to('/boutique')}>
+          {cta} <ArrowRight className="ml-2 h-4 w-4" />
+        </Link>
+      </Button>
+      <Button size="lg" variant="outline" asChild>
+        <Link to={to('/contact')}>Nous contacter</Link>
+      </Button>
+    </div>
+  );
 
   return (
     <div className="theme-home theme-home--classic">
-      <section className="relative min-h-[min(88dvh,720px)] overflow-hidden">
-        <img src={heroImage} alt="" className="absolute inset-0 h-full w-full object-cover" />
-        <div className="absolute inset-0 bg-gradient-to-r from-background via-background/85 to-background/20" />
-        <div className="relative mx-auto flex min-h-[min(88dvh,720px)] max-w-6xl flex-col justify-center px-4 py-16 sm:px-6">
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">{siteName}</p>
-          <h1 className="mt-3 max-w-xl font-display text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl">
-            {tagline}
-          </h1>
-          <p className="mt-4 max-w-lg text-muted-foreground">{aboutText}</p>
-          <div className="mt-8 flex flex-wrap gap-3">
-            <Button size="lg" asChild>
-              <Link to={to('/boutique')}>
-                Voir la boutique <ArrowRight className="ml-2 h-4 w-4" />
-              </Link>
-            </Button>
-            <Button size="lg" variant="outline" asChild>
-              <Link to={to('/contact')}>Nous contacter</Link>
-            </Button>
-          </div>
-        </div>
-      </section>
+      {showHero ? (
+        heroStyle === 'split' ? (
+          <section className="mx-auto grid max-w-6xl items-center gap-8 px-4 py-12 sm:px-6 lg:grid-cols-2 lg:py-16">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">{siteName}</p>
+              <h1 className="mt-3 font-display text-4xl font-bold tracking-tight sm:text-5xl">{tagline}</h1>
+              <p className="mt-4 max-w-lg text-muted-foreground">{aboutText}</p>
+              {ctaBlock}
+            </div>
+            <div className="aspect-[4/5] overflow-hidden rounded-[var(--theme-radius-card)]">
+              <img src={heroImage} alt="" className="h-full w-full object-cover" />
+            </div>
+          </section>
+        ) : heroStyle === 'minimal' ? (
+          <section className="mx-auto max-w-3xl px-4 py-20 text-center sm:px-6 sm:py-28">
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">{siteName}</p>
+            <h1 className="mt-4 font-display text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl">
+              {tagline}
+            </h1>
+            <p className="mx-auto mt-4 max-w-lg text-muted-foreground">{aboutText}</p>
+            <div className="mt-8 flex justify-center">{ctaBlock}</div>
+          </section>
+        ) : heroStyle === 'banner' ? (
+          <section className="relative overflow-hidden border-b border-border">
+            <div className="relative mx-auto flex min-h-[220px] max-w-6xl items-center gap-6 px-4 py-10 sm:px-6 md:min-h-[280px]">
+              <img
+                src={heroImage}
+                alt=""
+                className="absolute inset-0 h-full w-full object-cover opacity-40"
+              />
+              <div className="absolute inset-0 bg-background/70" />
+              <div className="relative">
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">{siteName}</p>
+                <h1 className="mt-2 font-display text-3xl font-bold sm:text-4xl">{tagline}</h1>
+                {ctaBlock}
+              </div>
+            </div>
+          </section>
+        ) : (
+          <section className="relative min-h-[min(88dvh,720px)] overflow-hidden">
+            <img src={heroImage} alt="" className="absolute inset-0 h-full w-full object-cover" />
+            <div className="absolute inset-0 bg-gradient-to-r from-background via-background/85 to-background/20" />
+            <div className="relative mx-auto flex min-h-[min(88dvh,720px)] max-w-6xl flex-col justify-center px-4 py-16 sm:px-6">
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">{siteName}</p>
+              <h1 className="mt-3 max-w-xl font-display text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl">
+                {tagline}
+              </h1>
+              <p className="mt-4 max-w-lg text-muted-foreground">{aboutText}</p>
+              {ctaBlock}
+            </div>
+          </section>
+        )
+      ) : null}
 
+      {appearance.heroShowBenefits ? (
       <section className="border-y border-border bg-muted/30 py-10">
         <div className="mx-auto grid max-w-6xl gap-6 px-4 sm:grid-cols-3 sm:px-6">
           {[
@@ -85,7 +156,9 @@ function ClassicHome({
           ))}
         </div>
       </section>
+      ) : null}
 
+      {showCategories ? (
       <section className="mx-auto max-w-6xl px-4 py-14 sm:px-6">
         <div className="mb-8 flex items-end justify-between gap-4">
           <h2 className="font-display text-2xl font-bold sm:text-3xl">Catégories</h2>
@@ -116,6 +189,7 @@ function ClassicHome({
           ))}
         </div>
       </section>
+      ) : null}
 
       <section className="bg-muted/20 py-14">
         <div className="mx-auto max-w-6xl px-4 sm:px-6">
@@ -131,9 +205,17 @@ function ClassicHome({
   );
 }
 
-function MinimalHome({ siteName, tagline, products, categories }: ThemeHomeProps) {
+function MinimalHome({
+  siteName,
+  tagline,
+  products,
+  categories,
+  appearance = DEFAULT_APPEARANCE,
+  showCategories = true,
+}: ThemeHomeProps) {
   const { to } = useStorefrontPath();
   const list = products.filter((p) => p.inStock).slice(0, 6);
+  const cta = appearance.heroCtaLabel || 'Shop';
 
   return (
     <div className="theme-home theme-home--minimal bg-[hsl(0_0%_99%)] text-[hsl(0_0%_10%)]">
@@ -147,7 +229,7 @@ function MinimalHome({ siteName, tagline, products, categories }: ThemeHomeProps
         <div className="mx-auto mt-10 h-px w-16 bg-neutral-900" />
         <div className="mt-10 flex justify-center gap-8 text-sm tracking-wide">
           <Link to={to('/boutique')} className="underline-offset-4 hover:underline">
-            Shop
+            {cta}
           </Link>
           <Link to={to('/contact')} className="underline-offset-4 hover:underline">
             Contact
@@ -176,6 +258,7 @@ function MinimalHome({ siteName, tagline, products, categories }: ThemeHomeProps
         </div>
       </section>
 
+      {showCategories ? (
       <section className="border-t border-neutral-200 py-16 text-center">
         <p className="text-xs uppercase tracking-[0.25em] text-neutral-500">Collections</p>
         <div className="mx-auto mt-6 flex max-w-xl flex-wrap justify-center gap-x-6 gap-y-2 text-sm">
@@ -190,14 +273,24 @@ function MinimalHome({ siteName, tagline, products, categories }: ThemeHomeProps
           ))}
         </div>
       </section>
+      ) : null}
     </div>
   );
 }
 
-function BoldHome({ siteName, tagline, aboutText, heroImage, products, categories }: ThemeHomeProps) {
+function BoldHome({
+  siteName,
+  tagline,
+  aboutText,
+  heroImage,
+  products,
+  categories,
+  appearance = DEFAULT_APPEARANCE,
+}: ThemeHomeProps) {
   const { to } = useStorefrontPath();
   const deal = products.find((p) => p.originalPrice) ?? products[0];
   const grid = products.slice(0, 6);
+  const cta = appearance.heroCtaLabel || 'Shop now';
 
   return (
     <div className="theme-home theme-home--bold bg-[hsl(350_40%_8%)] text-white">
@@ -221,39 +314,47 @@ function BoldHome({ siteName, tagline, aboutText, heroImage, products, categorie
                 className="rounded-none px-8 text-base font-bold uppercase tracking-wider shadow-none"
                 asChild
               >
-                <Link to={to('/boutique')}>Shop now</Link>
+                <Link to={to('/boutique')}>{cta}</Link>
               </Button>
-              <Button
-                size="lg"
-                variant="outline"
-                className="rounded-none border-white/40 bg-transparent text-white hover:bg-white hover:text-black"
-                asChild
-              >
-                <Link to={to(`/produit/${deal.id}`)}>
-                  -
-                  {deal.originalPrice
-                    ? Math.round(
-                        ((deal.originalPrice - deal.price) / deal.originalPrice) * 100,
-                      )
-                    : 15}
-                  %
-                </Link>
-              </Button>
+              {deal && (
+                <Button
+                  size="lg"
+                  variant="outline"
+                  className="rounded-none border-white/40 bg-transparent text-white hover:bg-white hover:text-black"
+                  asChild
+                >
+                  <Link to={to(`/produit/${deal.id}`)}>
+                    -
+                    {deal.originalPrice
+                      ? Math.round(
+                          ((deal.originalPrice - deal.price) / deal.originalPrice) * 100,
+                        )
+                      : 15}
+                    %
+                  </Link>
+                </Button>
+              )}
             </div>
           </div>
-          <Link
-            to={to(`/produit/${deal.id}`)}
-            className="relative aspect-square overflow-hidden border-4 border-[hsl(var(--primary))] bg-black/40"
-          >
-            <img src={deal.images[0]} alt="" className="h-full w-full object-cover" />
-            <div className="absolute bottom-0 inset-x-0 bg-black/70 p-4">
-              <p className="text-xs font-bold uppercase tracking-widest text-[hsl(var(--primary))]">
-                Deal du moment
-              </p>
-              <p className="font-display text-xl font-bold">{deal.name}</p>
-              <p className="text-2xl font-black">{formatPrice(deal.price)}</p>
+          {deal ? (
+            <Link
+              to={to(`/produit/${deal.id}`)}
+              className="relative aspect-square overflow-hidden border-4 border-[hsl(var(--primary))] bg-black/40"
+            >
+              <img src={deal.images[0]} alt="" className="h-full w-full object-cover" />
+              <div className="absolute bottom-0 inset-x-0 bg-black/70 p-4">
+                <p className="text-xs font-bold uppercase tracking-widest text-[hsl(var(--primary))]">
+                  Deal du moment
+                </p>
+                <p className="font-display text-xl font-bold">{deal.name}</p>
+                <p className="text-2xl font-black">{formatPrice(deal.price)}</p>
+              </div>
+            </Link>
+          ) : (
+            <div className="relative aspect-square overflow-hidden border-4 border-[hsl(var(--primary))] bg-black/40">
+              <img src={heroImage} alt="" className="h-full w-full object-cover" />
             </div>
-          </Link>
+          )}
         </div>
       </section>
 
@@ -320,10 +421,12 @@ function ElegantHome({
   heroImage,
   products,
   categories,
+  appearance = DEFAULT_APPEARANCE,
 }: ThemeHomeProps) {
   const { to } = useStorefrontPath();
   const editorial = products.slice(0, 3);
   const more = products.slice(3, 7);
+  const cta = appearance.heroCtaLabel || 'Découvrir la collection';
 
   return (
     <div className="theme-home theme-home--elegant bg-[hsl(40_30%_97%)] text-[hsl(280_20%_18%)]">
@@ -341,7 +444,7 @@ function ElegantHome({
             className="mt-10 rounded-full bg-white px-10 text-[hsl(280_20%_18%)] hover:bg-white/90"
             asChild
           >
-            <Link to={to('/boutique')}>Découvrir la collection</Link>
+            <Link to={to('/boutique')}>{cta}</Link>
           </Button>
         </div>
       </section>

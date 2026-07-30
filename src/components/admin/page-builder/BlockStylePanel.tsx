@@ -15,11 +15,19 @@ import {
   COLOR_PRESETS,
   readBlockStyle,
   type BlockAlign,
+  type BlockButtonSize,
+  type BlockCardDensity,
   type BlockColumns,
+  type BlockCtaLayout,
+  type BlockFaqStyle,
   type BlockHeroHeight,
+  type BlockHeroLayout,
+  type BlockImageAspect,
   type BlockMaxWidth,
+  type BlockMediaRadius,
   type BlockOverlay,
   type BlockPaddingY,
+  type BlockTestimonialLayout,
   type BlockVAlign,
 } from '@/components/admin/page-builder/blockAppearance';
 
@@ -123,9 +131,20 @@ export default function BlockStylePanel({ blockType, config, onChange }: BlockSt
   const style = readBlockStyle(config);
   const isHero = blockType === 'hero';
   const isSpacer = blockType === 'spacer';
+  const isCta = blockType === 'cta';
+  const isFaq = blockType === 'faq';
+  const isTestimonials = blockType === 'testimonials';
   const showButton = ['hero', 'cta', 'countdown'].includes(blockType);
-  const showOverlay = isHero;
-  const showColumns = blockType === 'products' || blockType === 'categories';
+  const showOverlay = isHero && style.layout === 'overlay';
+  const showColumns =
+    blockType === 'products' || blockType === 'categories' || blockType === 'instagram';
+  const showGridExtras = blockType === 'products' || blockType === 'categories';
+  const showMediaRadius =
+    blockType === 'image' ||
+    blockType === 'video' ||
+    blockType === 'instagram' ||
+    showGridExtras;
+
 
   if (isSpacer) {
     return null;
@@ -138,6 +157,117 @@ export default function BlockStylePanel({ blockType, config, onChange }: BlockSt
         Style & position
       </p>
 
+      {isHero ? (
+        <div>
+          <Label className="text-xs">Disposition</Label>
+          <Select
+            value={style.layout}
+            onValueChange={(v) => onChange('layout', v as BlockHeroLayout)}
+          >
+            <SelectTrigger className="mt-1.5 h-9">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="overlay">Plein écran (overlay)</SelectItem>
+              <SelectItem value="split">Texte + image</SelectItem>
+              <SelectItem value="minimal">Minimal</SelectItem>
+              <SelectItem value="banner">Bandeau</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      ) : null}
+
+      {isCta ? (
+        <ChoiceRow<BlockCtaLayout>
+          label="Disposition"
+          value={style.ctaLayout}
+          onChange={(v) => onChange('ctaLayout', v)}
+          options={[
+            { value: 'inline', label: 'Côte à côte' },
+            { value: 'stacked', label: 'Empilé' },
+            { value: 'centered', label: 'Centré' },
+          ]}
+        />
+      ) : null}
+
+      {isFaq ? (
+        <ChoiceRow<BlockFaqStyle>
+          label="Style FAQ"
+          value={style.faqStyle}
+          onChange={(v) => onChange('faqStyle', v)}
+          options={[
+            { value: 'accordion', label: 'Accordéon' },
+            { value: 'list', label: 'Liste' },
+            { value: 'two_col', label: '2 colonnes' },
+          ]}
+        />
+      ) : null}
+
+      {isTestimonials ? (
+        <ChoiceRow<BlockTestimonialLayout>
+          label="Disposition"
+          value={style.testimonialLayout}
+          onChange={(v) => onChange('testimonialLayout', v)}
+          options={[
+            { value: 'grid2', label: '2 col.' },
+            { value: 'grid3', label: '3 col.' },
+            { value: 'stack', label: 'Pile' },
+          ]}
+        />
+      ) : null}
+
+      {showGridExtras ? (
+        <>
+          <ChoiceRow<BlockImageAspect>
+            label="Ratio image"
+            value={style.imageAspect}
+            onChange={(v) => onChange('imageAspect', v)}
+            options={[
+              { value: 'portrait', label: 'Portrait' },
+              { value: 'square', label: 'Carré' },
+              { value: 'wide', label: 'Large' },
+            ]}
+          />
+          <ChoiceRow<BlockCardDensity>
+            label="Densité"
+            value={style.cardDensity}
+            onChange={(v) => onChange('cardDensity', v)}
+            options={[
+              { value: 'compact', label: 'Compact' },
+              { value: 'comfortable', label: 'Normal' },
+              { value: 'airy', label: 'Aéré' },
+            ]}
+          />
+        </>
+      ) : null}
+
+      {showMediaRadius ? (
+        <ChoiceRow<BlockMediaRadius>
+          label="Coins arrondis"
+          value={style.mediaRadius}
+          onChange={(v) => onChange('mediaRadius', v)}
+          options={[
+            { value: 'none', label: 'Aucun' },
+            { value: 'md', label: 'Moyen' },
+            { value: 'xl', label: 'Grand' },
+            { value: 'full', label: 'Cercle' },
+          ]}
+        />
+      ) : null}
+
+      {showButton ? (
+        <ChoiceRow<BlockButtonSize>
+          label="Taille du bouton"
+          value={style.buttonSize}
+          onChange={(v) => onChange('buttonSize', v)}
+          options={[
+            { value: 'sm', label: 'S' },
+            { value: 'md', label: 'M' },
+            { value: 'lg', label: 'L' },
+          ]}
+        />
+      ) : null}
+
       <ChoiceRow<BlockAlign>
         label="Alignement du contenu"
         value={style.align}
@@ -149,7 +279,7 @@ export default function BlockStylePanel({ blockType, config, onChange }: BlockSt
         ]}
       />
 
-      {isHero ? (
+      {isHero && style.layout === 'overlay' ? (
         <ChoiceRow<BlockVAlign>
           label="Position verticale"
           value={style.vAlign}

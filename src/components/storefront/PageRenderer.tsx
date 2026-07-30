@@ -18,14 +18,19 @@ import { toast } from 'sonner';
 import {
   alignClass,
   buttonInlineStyle,
+  buttonSizeProp,
+  cardDensityClass,
   columnsClass,
   heroHeightClass,
+  imageAspectClass,
   justifyClass,
   maxWidthClass,
+  mediaRadiusClass,
   overlayClass,
   paddingYClass,
   readBlockStyle,
   sectionInlineStyle,
+  testimonialLayoutClass,
   vAlignClass,
 } from '@/components/admin/page-builder/blockAppearance';
 import {
@@ -194,7 +199,184 @@ function HeroBlock({
   const imageUrl = str(c.imageUrl);
   const href = str(c.ctaHref, '/boutique');
   const btnStyle = buttonInlineStyle(style.buttonColor);
+  const layout = style.layout;
 
+  const headline = (
+    <h1
+      className={cn(
+        'max-w-2xl font-display text-4xl font-bold tracking-tight sm:text-5xl',
+        layout === 'minimal' && 'text-3xl sm:text-4xl',
+        layout === 'banner' && 'text-2xl sm:text-3xl',
+        style.align === 'center' && 'mx-auto',
+        style.align === 'right' && 'ml-auto',
+      )}
+      style={style.textColor ? { color: style.textColor } : undefined}
+    >
+      {str(c.headline, 'Bienvenue')}
+    </h1>
+  );
+
+  const subtext = (
+    <p
+      className={cn(
+        'mt-4 max-w-lg',
+        layout === 'banner' && 'mt-2 text-sm',
+        !style.textColor && 'text-muted-foreground',
+        style.align === 'center' && 'mx-auto',
+        style.align === 'right' && 'ml-auto',
+      )}
+      style={style.textColor ? { color: style.textColor, opacity: 0.85 } : undefined}
+    >
+      {str(c.subtext)}
+    </p>
+  );
+
+  const cta =
+    str(c.ctaLabel) ? (
+      <div className={cn('mt-8 flex w-full', layout === 'banner' && 'mt-4', justifyClass(style.align))}>
+        <Button
+          size={buttonSizeProp(style.buttonSize)}
+          asChild
+          style={btnStyle}
+          onClick={() => trackCta(pageId, str(c.ctaLabel), href, page)}
+        >
+          <Link to={to(href)}>{str(c.ctaLabel)}</Link>
+        </Button>
+      </div>
+    ) : null;
+
+  if (layout === 'split') {
+    return (
+      <section
+        className={cn('overflow-hidden', paddingYClass(style.paddingY))}
+        style={sectionInlineStyle(style)}
+      >
+        <div
+          className={cn(
+            'mx-auto grid items-center gap-8 px-4 sm:px-6 lg:grid-cols-2',
+            maxWidthClass(style.maxWidth),
+          )}
+        >
+          <div className={cn('flex flex-col', alignClass(style.align))}>
+            {headline}
+            {subtext}
+            {cta}
+          </div>
+          <div
+            className={cn(
+              'min-h-[280px] overflow-hidden bg-muted',
+              mediaRadiusClass(style.mediaRadius),
+              heroHeightClass(style.heroHeight === 'full' ? 'lg' : style.heroHeight),
+            )}
+          >
+            {imageUrl ? (
+              <img
+                src={getImageUrl(imageUrl)}
+                alt=""
+                className="h-full w-full object-cover"
+                fetchPriority={priority ? 'high' : 'auto'}
+                decoding={priority ? 'sync' : 'async'}
+                loading={priority ? 'eager' : 'lazy'}
+              />
+            ) : (
+              <div
+                className="h-full w-full"
+                style={{
+                  backgroundImage:
+                    'radial-gradient(ellipse 80% 60% at 20% 20%, hsl(var(--primary) / 0.28), transparent 55%), linear-gradient(165deg, hsl(var(--background)), hsl(var(--muted)))',
+                }}
+              />
+            )}
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  if (layout === 'minimal') {
+    return (
+      <section
+        className={cn('overflow-hidden', paddingYClass(style.paddingY))}
+        style={sectionInlineStyle(style)}
+      >
+        <div
+          className={cn(
+            'mx-auto flex flex-col px-4 sm:px-6',
+            maxWidthClass(style.maxWidth === 'lg' ? 'md' : style.maxWidth),
+            alignClass(style.align),
+          )}
+        >
+          {headline}
+          {subtext}
+          {cta}
+          {imageUrl ? (
+            <div
+              className={cn(
+                'mt-10 w-full overflow-hidden bg-muted',
+                mediaRadiusClass(style.mediaRadius),
+                'aspect-[16/10]',
+              )}
+            >
+              <img
+                src={getImageUrl(imageUrl)}
+                alt=""
+                className="h-full w-full object-cover"
+                fetchPriority={priority ? 'high' : 'auto'}
+                decoding={priority ? 'sync' : 'async'}
+                loading={priority ? 'eager' : 'lazy'}
+              />
+            </div>
+          ) : null}
+        </div>
+      </section>
+    );
+  }
+
+  if (layout === 'banner') {
+    return (
+      <section
+        className={cn('relative overflow-hidden', heroHeightClass('sm'), paddingYClass('sm'))}
+        style={sectionInlineStyle(style)}
+      >
+        {imageUrl ? (
+          <img
+            src={getImageUrl(imageUrl)}
+            alt=""
+            className="absolute inset-0 h-full w-full object-cover"
+            fetchPriority={priority ? 'high' : 'auto'}
+            decoding={priority ? 'sync' : 'async'}
+            loading={priority ? 'eager' : 'lazy'}
+          />
+        ) : (
+          <div
+            className="absolute inset-0"
+            style={
+              style.bgColor
+                ? { backgroundColor: style.bgColor }
+                : { backgroundColor: 'hsl(var(--muted))' }
+            }
+          />
+        )}
+        {imageUrl && style.overlay !== 'none' ? (
+          <div className={cn('absolute inset-0', overlayClass(style.overlay))} />
+        ) : null}
+        <div
+          className={cn(
+            'relative mx-auto flex flex-col justify-center px-4 sm:px-6',
+            heroHeightClass('sm'),
+            maxWidthClass(style.maxWidth),
+            alignClass(style.align),
+          )}
+        >
+          {headline}
+          {subtext}
+          {cta}
+        </div>
+      </section>
+    );
+  }
+
+  // overlay (default)
   return (
     <section
       className={cn('relative overflow-hidden', heroHeightClass(style.heroHeight), paddingYClass(style.paddingY))}
@@ -234,39 +416,9 @@ function HeroBlock({
           alignClass(style.align),
         )}
       >
-        <h1
-          className={cn(
-            'max-w-2xl font-display text-4xl font-bold tracking-tight sm:text-5xl',
-            style.align === 'center' && 'mx-auto',
-            style.align === 'right' && 'ml-auto',
-          )}
-          style={style.textColor ? { color: style.textColor } : undefined}
-        >
-          {str(c.headline, 'Bienvenue')}
-        </h1>
-        <p
-          className={cn(
-            'mt-4 max-w-lg',
-            !style.textColor && 'text-muted-foreground',
-            style.align === 'center' && 'mx-auto',
-            style.align === 'right' && 'ml-auto',
-          )}
-          style={style.textColor ? { color: style.textColor, opacity: 0.85 } : undefined}
-        >
-          {str(c.subtext)}
-        </p>
-        {str(c.ctaLabel) ? (
-          <div className={cn('mt-8 flex w-full', justifyClass(style.align))}>
-            <Button
-              size="lg"
-              asChild
-              style={btnStyle}
-              onClick={() => trackCta(pageId, str(c.ctaLabel), href, page)}
-            >
-              <Link to={to(href)}>{str(c.ctaLabel)}</Link>
-            </Button>
-          </div>
-        ) : null}
+        {headline}
+        {subtext}
+        {cta}
       </div>
     </section>
   );
@@ -337,13 +489,19 @@ function ProductsBlock({
           </Link>
         ) : null}
       </div>
-      <div className={cn('grid gap-6', columnsClass(style.columns))}>
+      <div className={cn('grid', cardDensityClass(style.cardDensity), columnsClass(style.columns))}>
         {products.map((p) => {
           const href = usingMocks ? to('/boutique') : to(`/produit/${p.id}`);
           const img = p.images[0];
           return (
             <Link key={p.id} to={href} className="group block" onClick={usingMocks ? (e) => e.preventDefault() : undefined}>
-              <div className="aspect-[4/5] overflow-hidden rounded-2xl bg-muted">
+              <div
+                className={cn(
+                  'overflow-hidden bg-muted',
+                  imageAspectClass(style.imageAspect),
+                  mediaRadiusClass(style.mediaRadius),
+                )}
+              >
                 {img ? (
                   <img
                     src={img.startsWith('data:') ? img : getImageUrl(img)}
@@ -395,14 +553,18 @@ function CategoriesBlock({
       >
         {str(c.title, 'Catégories')}
       </h2>
-      <div className={cn('grid gap-4', columnsClass(style.columns))}>
+      <div className={cn('grid', cardDensityClass(style.cardDensity), columnsClass(style.columns))}>
         {roots.map((cat) => {
           const img = cat.heroImageUrl;
           return (
             <Link
               key={cat.id}
               to={to(`/boutique?category=${encodeURIComponent(cat.slug)}`)}
-              className="group relative aspect-[4/5] overflow-hidden rounded-2xl bg-muted"
+              className={cn(
+                'group relative overflow-hidden bg-muted',
+                imageAspectClass(style.imageAspect),
+                mediaRadiusClass(style.mediaRadius),
+              )}
               onClick={usingMocks ? (e) => e.preventDefault() : undefined}
             >
               {img ? (
@@ -440,6 +602,10 @@ function CtaBlock({
   const style = readBlockStyle(c);
   const href = str(c.ctaHref, '/contact');
   const btnStyle = buttonInlineStyle(style.buttonColor);
+  const layout = style.ctaLayout;
+  const centered = layout === 'centered' || style.align === 'center';
+  const stacked = layout === 'stacked' || layout === 'centered';
+
   return (
     <section
       className={cn(
@@ -451,9 +617,14 @@ function CtaBlock({
     >
       <div
         className={cn(
-          'mx-auto flex flex-col gap-6 sm:flex-row sm:items-center',
+          'mx-auto flex gap-6',
           maxWidthClass(style.maxWidth === 'lg' ? 'md' : style.maxWidth),
-          style.align === 'center' ? 'items-center text-center sm:flex-col' : 'items-start justify-between',
+          stacked ? 'flex-col' : 'flex-col sm:flex-row sm:items-center',
+          centered
+            ? 'items-center text-center'
+            : stacked
+              ? alignClass(style.align)
+              : 'items-start justify-between',
         )}
       >
         <div>
@@ -472,7 +643,7 @@ function CtaBlock({
         </div>
         {str(c.ctaLabel) ? (
           <Button
-            size="lg"
+            size={buttonSizeProp(style.buttonSize)}
             variant={style.buttonColor || style.bgColor ? 'default' : 'secondary'}
             asChild
             style={btnStyle}
@@ -501,7 +672,7 @@ function ImageBlock({ block }: { block: StorePageBlock }) {
         alt={str(c.alt)}
         loading="lazy"
         decoding="async"
-        className="w-full rounded-2xl object-cover"
+        className={cn('w-full object-cover', mediaRadiusClass(style.mediaRadius))}
       />
       {str(c.caption) ? (
         <p
@@ -527,6 +698,8 @@ function FaqBlock({
   const raw = Array.isArray(c.items) ? (c.items as { q?: string; a?: string }[]) : [];
   const usingMocks = usePreviewMocks && raw.length === 0;
   const items = usingMocks ? MOCK_FAQ : raw;
+  const faqStyle = style.faqStyle;
+
   return (
     <section
       className={cn('mx-auto px-4 sm:px-6', maxWidthClass(style.maxWidth === 'lg' ? 'sm' : style.maxWidth), paddingYClass(style.paddingY), alignClass(style.align))}
@@ -539,14 +712,25 @@ function FaqBlock({
       >
         {str(c.title, 'FAQ')}
       </h2>
-      <div className="space-y-3">
-        {items.map((item, i) => (
-          <details key={i} className="rounded-xl border border-border p-4">
-            <summary className="cursor-pointer font-display font-semibold">{item.q}</summary>
-            <p className="mt-2 text-sm text-muted-foreground">{item.a}</p>
-          </details>
-        ))}
-      </div>
+      {faqStyle === 'list' ? (
+        <div className="space-y-5">
+          {items.map((item, i) => (
+            <div key={i} className="border-b border-border pb-4 last:border-0">
+              <p className="font-display font-semibold">{item.q}</p>
+              <p className="mt-2 text-sm text-muted-foreground">{item.a}</p>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className={cn(faqStyle === 'two_col' ? 'grid gap-3 sm:grid-cols-2' : 'space-y-3')}>
+          {items.map((item, i) => (
+            <details key={i} className="rounded-xl border border-border p-4">
+              <summary className="cursor-pointer font-display font-semibold">{item.q}</summary>
+              <p className="mt-2 text-sm text-muted-foreground">{item.a}</p>
+            </details>
+          ))}
+        </div>
+      )}
     </section>
   );
 }
@@ -717,11 +901,11 @@ function VideoBlock({ block }: { block: StorePageBlock }) {
         </h2>
       ) : null}
       {embed && embed.includes('embed') ? (
-        <div className="aspect-video overflow-hidden rounded-2xl bg-black">
+        <div className={cn('aspect-video overflow-hidden bg-black', mediaRadiusClass(style.mediaRadius))}>
           <iframe title={str(c.title, 'Vidéo')} src={embed} className="h-full w-full" allowFullScreen />
         </div>
       ) : embed ? (
-        <video src={embed} controls className="w-full rounded-2xl" />
+        <video src={embed} controls className={cn('w-full', mediaRadiusClass(style.mediaRadius))} />
       ) : (
         <p className="text-center text-sm text-muted-foreground">URL vidéo invalide</p>
       )}
@@ -756,7 +940,7 @@ function TestimonialsBlock({
         >
           {str(c.title, 'Témoignages')}
         </h2>
-        <div className="grid gap-4 md:grid-cols-2">
+        <div className={testimonialLayoutClass(style.testimonialLayout)}>
           {items.map((item, i) => (
             <blockquote key={i} className="rounded-2xl border border-border bg-card p-5">
               <p className="text-sm leading-relaxed text-muted-foreground">“{item.text}”</p>
@@ -851,6 +1035,7 @@ function CountdownBlock({
         ) : str(c.ctaLabel) ? (
           <div className={cn('mt-6 flex', justifyClass(style.align))}>
             <Button
+              size={buttonSizeProp(style.buttonSize)}
               asChild
               style={btnStyle}
               onClick={() => trackCta(pageId, str(c.ctaLabel), href, page)}
@@ -876,6 +1061,9 @@ function InstagramBlock({
   const raw = Array.isArray(c.images) ? (c.images as string[]).filter(Boolean) : [];
   const usingMocks = usePreviewMocks && raw.length === 0;
   const images = usingMocks ? MOCK_INSTAGRAM : raw;
+  const columnsRaw = typeof c.columns === 'number' ? c.columns : Number(c.columns);
+  const columns = ([2, 3, 4].includes(columnsRaw) ? columnsRaw : 3) as 2 | 3 | 4;
+  const densityClass = c.cardDensity ? cardDensityClass(style.cardDensity) : 'gap-2';
   return (
     <section
       className={cn('mx-auto px-4 sm:px-6', maxWidthClass(style.maxWidth === 'lg' ? 'md' : style.maxWidth), paddingYClass(style.paddingY))}
@@ -898,9 +1086,15 @@ function InstagramBlock({
           </p>
         ) : null}
       </div>
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+      <div className={cn('grid grid-cols-2', densityClass, columnsClass(columns))}>
         {images.map((src, i) => (
-          <div key={i} className="aspect-square overflow-hidden rounded-xl bg-muted">
+          <div
+            key={i}
+            className={cn(
+              'aspect-square overflow-hidden bg-muted',
+              c.mediaRadius ? mediaRadiusClass(style.mediaRadius) : 'rounded-xl',
+            )}
+          >
             <img
               src={src.startsWith('data:') ? src : getImageUrl(src)}
               alt=""

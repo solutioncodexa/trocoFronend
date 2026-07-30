@@ -2,6 +2,7 @@ import type { CSSProperties } from 'react';
 import { hexToHslComponents } from '@/utils/color';
 import { setActiveStoreBrand } from '@/lib/activeStoreBrand';
 import { resolvePublicImageUrl } from '@/utils/resolvePublicImageUrl';
+import { fontPairVars, normalizeFontPair, normalizeRadiusPreset, radiusPresetVars } from '@/config/storefrontTheme';
 
 export type StoreThemeInput = {
   siteName?: string | null;
@@ -10,6 +11,8 @@ export type StoreThemeInput = {
   faviconUrl?: string | null;
   primaryColor?: string | null;
   secondaryColor?: string | null;
+  fontPair?: string | null;
+  radiusPreset?: string | null;
 };
 
 const ROOT_THEME_VARS = [
@@ -98,6 +101,10 @@ export function storeThemeStyleVars(store: StoreThemeInput | null | undefined): 
     vars['--store-secondary-soft'] = adjustLightness(secondaryHsl, 45);
   }
 
+  const fontVars = fontPairVars(normalizeFontPair(store.fontPair));
+  const radiusVars = radiusPresetVars(normalizeRadiusPreset(store.radiusPreset));
+  Object.assign(vars, fontVars, radiusVars);
+
   return vars as CSSProperties;
 }
 
@@ -108,26 +115,86 @@ export function applyStoreTheme(store: StoreThemeInput | null) {
   // no-op on :root — les couleurs vivent sur le wrapper vitrine
 }
 
+const STORE_FAVICON_ATTR = 'data-store-favicon';
+const DISABLED_ICON_ATTR = 'data-icon-disabled-by-store';
+
+function defaultIconLinks(): NodeListOf<HTMLLinkElement> {
+  return document.querySelectorAll<HTMLLinkElement>(
+    "link[rel='icon'], link[rel='shortcut icon'], link[rel='apple-touch-icon']",
+  );
+}
+
+/** Les favicons Matjarona/Troco dans index.html passent avant un link ajouté en fin de head. */
+function disableDefaultFavicons() {
+  defaultIconLinks().forEach((el) => {
+    if (el.getAttribute(STORE_FAVICON_ATTR) === '1') return;
+    if (el.hasAttribute(DISABLED_ICON_ATTR)) return;
+    el.setAttribute(DISABLED_ICON_ATTR, '1');
+    el.setAttribute('data-prev-href', el.getAttribute('href') || '');
+    el.removeAttribute('href');
+  });
+}
+
+function restoreDefaultFavicons() {
+  document
+    .querySelectorAll<HTMLLinkElement>(`link[${DISABLED_ICON_ATTR}]`)
+    .forEach((el) => {
+      const prev = el.getAttribute('data-prev-href');
+      if (prev) el.setAttribute('href', prev);
+      el.removeAttribute('data-prev-href');
+      el.removeAttribute(DISABLED_ICON_ATTR);
+    });
+  document
+    .querySelectorAll(`link[${STORE_FAVICON_ATTR}='1']`)
+    .forEach((el) => el.remove());
+}
+
+function faviconMime(url: string): string | null {
+  if (/\.svg(\?|#|$)/i.test(url)) return 'image/svg+xml';
+  if (/\.ico(\?|#|$)/i.test(url)) return 'image/x-icon';
+  if (/\.png(\?|#|$)/i.test(url)) return 'image/png';
+  if (/\.jpe?g(\?|#|$)/i.test(url)) return 'image/jpeg';
+  if (/\.webp(\?|#|$)/i.test(url)) return 'image/webp';
+  if (/\.gif(\?|#|$)/i.test(url)) return 'image/gif';
+  return null;
+}
+
+function applyStoreFavicon(rawUrl: string) {
+  const resolved = resolvePublicImageUrl(rawUrl);
+  if (!resolved) return;
+  disableDefaultFavicons();
+  const bust = `_sf=${Date.now()}`;
+  const href = resolved.includes('?') ? `${resolved}&${bust}` : `${resolved}?${bust}`;
+  let link = document.querySelector<HTMLLinkElement>(
+    `link[${STORE_FAVICON_ATTR}='1']`,
+  );
+  if (!link) {
+    link = document.createElement('link');
+    link.rel = 'icon';
+    link.setAttribute(STORE_FAVICON_ATTR, '1');
+    document.head.prepend(link);
+  }
+  const mime = faviconMime(resolved);
+  if (mime) link.type = mime;
+  else link.removeAttribute('type');
+  link.href = href;
+}
+
 export function applyDocumentBrand(store: StoreThemeInput | null) {
   if (!store) {
     setActiveStoreBrand(null);
+    restoreDefaultFavicons();
     return;
   }
   const siteName = store.siteName?.trim() || 'Boutique';
   const tagline = store.tagline?.trim();
   document.title = tagline ? `${siteName} — ${tagline}` : siteName;
 
-  const favicon = store.faviconUrl || store.logoUrl;
+  const favicon = store.faviconUrl?.trim() || store.logoUrl?.trim();
   if (favicon) {
-    const href = resolvePublicImageUrl(favicon);
-    let link = document.querySelector<HTMLLinkElement>("link[rel='icon'][data-store-favicon='1']");
-    if (!link) {
-      link = document.createElement('link');
-      link.rel = 'icon';
-      link.setAttribute('data-store-favicon', '1');
-      document.head.appendChild(link);
-    }
-    link.href = href;
+    applyStoreFavicon(favicon);
+  } else {
+    restoreDefaultFavicons();
   }
 
   setActiveStoreBrand({

@@ -59,6 +59,8 @@ const AdminWebhooks = lazy(() => import("./pages/admin/AdminWebhooks"));
 const AdminPrivacy = lazy(() => import("./pages/admin/AdminPrivacy"));
 const AdminApiKeys = lazy(() => import("./pages/admin/AdminApiKeys"));
 const AdminShipping = lazy(() => import("./pages/admin/AdminShipping"));
+const AdminOnboarding = lazy(() => import("./pages/admin/AdminOnboarding"));
+const AdminOnlineStore = lazy(() => import("./pages/admin/AdminOnlineStore"));
 const BlogList = lazy(() => import("./pages/BlogList"));
 const BlogPost = lazy(() => import("./pages/BlogPost"));
 const CustomStorePage = lazy(() => import("./pages/CustomStorePage"));
@@ -204,6 +206,9 @@ const App = () => (
                     <Route path="/admin/membres" element={<ProtectedAdminRoute adminOnly><AdminMembers /></ProtectedAdminRoute>} />
                     <Route path="/admin/audit" element={<ProtectedAdminRoute permission={PERMISSIONS.AUDIT_VIEW}><AdminAudit /></ProtectedAdminRoute>} />
                     <Route path="/admin/parametres" element={<ProtectedAdminRoute adminOnly><AdminStoreSettings /></ProtectedAdminRoute>} />
+                    <Route path="/admin/reglages" element={<ProtectedAdminRoute adminOnly><AdminStoreSettings /></ProtectedAdminRoute>} />
+                    <Route path="/admin/boutique-en-ligne" element={<ProtectedAdminRoute><AdminOnlineStore /></ProtectedAdminRoute>} />
+                    <Route path="/admin/onboarding" element={<ProtectedAdminRoute adminOnly><AdminOnboarding /></ProtectedAdminRoute>} />
                     <Route path="/admin/pages" element={<ProtectedAdminRoute><AdminPages /></ProtectedAdminRoute>} />
                     <Route path="/admin/pages/:id" element={<ProtectedAdminRoute><AdminPageEditor /></ProtectedAdminRoute>} />
                     <Route path="/admin/sections" element={<ProtectedAdminRoute><AdminGlobalSections /></ProtectedAdminRoute>} />

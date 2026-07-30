@@ -100,7 +100,7 @@ const AdminPageEditor = () => {
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['store-global-sections'] });
-      toast.success('App bar enregistrée');
+      toast.success('En-tête global enregistré');
     },
     onError: (err: unknown) => toastError(err, 'Impossible d’enregistrer l’app bar'),
   });
@@ -415,7 +415,8 @@ const AdminPageEditor = () => {
       workspace
       title={`Constructeur — ${data.title}`}
       breadcrumbs={[
-        { label: 'Pages & design', href: '/admin/pages' },
+        { label: 'Boutique en ligne', href: '/admin/boutique-en-ligne' },
+        { label: 'Pages', href: '/admin/pages' },
         { label: data.title },
       ]}
       sidebarOpen={adminSidebarOpen}

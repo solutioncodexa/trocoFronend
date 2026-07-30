@@ -1,4 +1,5 @@
 import { Paintbrush } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -77,10 +78,10 @@ export default function AppBarStylePanel({ value, onChange, onSave, saving }: Ap
     <div className="space-y-4">
       <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
         <Paintbrush className="h-3.5 w-3.5" />
-        Barre du haut (app bar)
+        Barre d’en-tête globale
       </p>
       <p className="text-xs text-muted-foreground">
-        Ces réglages s’appliquent à l’aperçu et à la boutique (après enregistrement).
+        S’applique à toute la boutique (pas seulement cette page), après enregistrement.
       </p>
 
       <ColorField label="Fond de la barre" value={value.bgColor} onChange={(v) => onChange({ bgColor: v })} />
@@ -138,40 +139,23 @@ export default function AppBarStylePanel({ value, onChange, onSave, saving }: Ap
         ))}
       </div>
 
-      <div className="space-y-3 rounded-lg border border-border/70 p-2.5">
-        <div className="flex items-center justify-between gap-2">
-          <Label className="text-xs font-normal">Bandeau au-dessus</Label>
-          <Switch
-            checked={value.topBarEnabled}
-            onCheckedChange={(v) => onChange({ topBarEnabled: v })}
-          />
-        </div>
-        {value.topBarEnabled ? (
-          <>
-            <div>
-              <Label className="text-xs">Texte du bandeau</Label>
-              <Input
-                className="mt-1.5"
-                value={value.topBarText}
-                onChange={(e) => onChange({ topBarText: e.target.value })}
-              />
-            </div>
-            <ColorField
-              label="Fond du bandeau"
-              value={value.topBarBg}
-              onChange={(v) => onChange({ topBarBg: v })}
-            />
-            <ColorField
-              label="Texte du bandeau"
-              value={value.topBarTextColor}
-              onChange={(v) => onChange({ topBarTextColor: v })}
-            />
-          </>
-        ) : null}
+      <div className="space-y-2 rounded-lg border border-dashed border-border/70 bg-muted/20 p-2.5 text-xs text-muted-foreground">
+        <p className="font-medium text-foreground">Bandeau d’annonce</p>
+        <p>
+          Un seul bandeau sur la vitrine : gérez-le dans{' '}
+          <Link to="/admin/top-bar-messages" className="font-medium text-primary hover:underline">
+            Bandeau
+          </Link>{' '}
+          (messages rotatifs) ou un texte fixe dans{' '}
+          <Link to="/admin/parametres" className="font-medium text-primary hover:underline">
+            Apparence → Header
+          </Link>
+          .
+        </p>
       </div>
 
       <Button type="button" className="w-full" disabled={saving} onClick={onSave}>
-        {saving ? 'Enregistrement…' : 'Enregistrer l’app bar'}
+        {saving ? 'Enregistrement…' : 'Enregistrer l’en-tête global'}
       </Button>
     </div>
   );

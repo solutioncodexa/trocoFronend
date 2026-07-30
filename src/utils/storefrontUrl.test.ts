@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { buildStorefrontPath, buildStorefrontUrl } from './storefrontUrl';
+import { buildStorefrontPath, buildStorefrontUrl, withStorefrontCacheBust } from './storefrontUrl';
 
 describe('buildStorefrontPath', () => {
   it('retourne / sans slug', () => {
@@ -9,6 +9,20 @@ describe('buildStorefrontPath', () => {
 
   it('ajoute ?tenant= pour un slug', () => {
     expect(buildStorefrontPath('maison-atlas')).toBe('/?tenant=maison-atlas');
+  });
+});
+
+describe('withStorefrontCacheBust', () => {
+  it('ajoute _v sur une URL propre', () => {
+    expect(withStorefrontCacheBust('http://shop.localhost:5173/', 42)).toBe(
+      'http://shop.localhost:5173/?_v=42',
+    );
+  });
+
+  it('conserve les query existantes', () => {
+    expect(withStorefrontCacheBust('http://192.168.1.10:5173/?tenant=demo', 99)).toBe(
+      'http://192.168.1.10:5173/?tenant=demo&_v=99',
+    );
   });
 });
 

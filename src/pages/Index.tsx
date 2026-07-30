@@ -15,6 +15,7 @@ import { getImageUrl } from '@/services/api/upload';
 import { staticCatalogQueryOptions } from '@/config/queryOptions';
 import { useStoreLang } from '@/hooks/useStoreLang';
 import { usePreloadImage } from '@/hooks/usePreloadImage';
+import { useStoreAppearance } from '@/hooks/useStoreAppearance';
 import { resolveStickyHomeAbVariant } from '@/utils/homeAbVariant';
 import type { DemoCategory } from '@/demo/mockCatalog';
 
@@ -24,6 +25,7 @@ const FALLBACK_HERO =
 const Index = () => {
   const { store } = useTenant();
   const { siteName, tagline, aboutText } = useStoreBrand();
+  const appearance = useStoreAppearance();
   const { lang, isAr } = useStoreLang();
   const theme = normalizeThemeKey(store?.themeKey);
 
@@ -65,6 +67,17 @@ const Index = () => {
     enabled: !customHome,
   });
 
+  const heroImage = useMemo(
+    () =>
+      (homeHero?.imageUrls?.[0] && getImageUrl(homeHero.imageUrls[0])) ||
+      (homeHero?.imageUrl && getImageUrl(homeHero.imageUrl)) ||
+      FALLBACK_HERO,
+    [homeHero?.imageUrls, homeHero?.imageUrl],
+  );
+
+  // Must run before any early return (Rules of Hooks).
+  usePreloadImage(!customHome && !loadingHome ? heroImage : null);
+
   if (loadingHome) {
     return (
       <Layout>
@@ -97,13 +110,6 @@ const Index = () => {
       count: 0,
     }));
 
-  const heroImage =
-    (homeHero?.imageUrls?.[0] && getImageUrl(homeHero.imageUrls[0])) ||
-    (homeHero?.imageUrl && getImageUrl(homeHero.imageUrl)) ||
-    FALLBACK_HERO;
-
-  usePreloadImage(!customHome ? heroImage : null);
-
   return (
     <Layout>
       <ThemeHome
@@ -113,6 +119,9 @@ const Index = () => {
         aboutText={aboutText || 'Découvrez nos produits.'}
         heroImage={heroImage}
         products={products}
+        appearance={appearance}
+        showHero={store?.heroEnabled !== false}
+        showCategories={store?.categoriesEnabled !== false}
         categories={
           categories.length > 0
             ? categories

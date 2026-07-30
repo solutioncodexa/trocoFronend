@@ -22,6 +22,7 @@ import {
 } from '@/components/ui/select';
 import { SYSTEM_NAV_REPLACEMENTS } from '@/config/pageTemplates';
 import type { MegaMenuItem } from '@/types/store-global-sections';
+import { useStoreAppearance } from '@/hooks/useStoreAppearance';
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -36,6 +37,7 @@ const Header = () => {
   const { to, isDemo, demo } = useStorefrontPath();
   const { customNav, isReplaced, navHref } = useSystemNavReplacements();
   const { megaMenuConfig, useMegaMenuNav, appBarConfig } = useGlobalSections();
+  const appearance = useStoreAppearance();
   const { lang, setLang, withLang } = useStoreLang();
   const { locale, supportedLocales, setLocale, t } = useLocale();
   const itemCount = isDemo ? demo?.cartCount ?? 0 : getItemCount();
@@ -44,25 +46,30 @@ const Header = () => {
   const surMesureOn = isDemo || store?.surMesureEnabled !== false;
   const boutiquePath = to('/boutique');
   const homePath = to('/');
-  const showSearch = appBarConfig?.showSearch !== false;
-  const showWishlist = appBarConfig?.showWishlist !== false;
-  const showCart = appBarConfig?.showCart !== false;
+  const showSearch = appearance.headerShowSearch;
+  const showWishlist = appearance.headerShowWishlist;
+  const showCart = appearance.headerShowCart;
+  const showLogo = appearance.headerShowLogo;
+  const showNav = appearance.headerShowNav;
+  const headerBg = appearance.headerBgColor.trim() || appBarConfig?.bgColor || '';
+  const headerFg = appearance.headerTextColor.trim() || appBarConfig?.textColor || '';
   const logoClass =
     appBarConfig?.logoHeight === 'sm'
       ? 'h-10 w-auto sm:h-11 lg:h-12'
       : appBarConfig?.logoHeight === 'lg'
         ? 'h-14 w-auto sm:h-16 lg:h-[4.75rem]'
         : 'h-12 w-auto sm:h-14 lg:h-[4.25rem]';
-  const headerStyle = appBarConfig
-    ? {
-        backgroundColor: appBarConfig.bgColor || undefined,
-        color: appBarConfig.textColor || undefined,
-        borderColor: appBarConfig.bgColor ? 'transparent' : undefined,
-      }
-    : undefined;
-  const iconTone: CSSProperties | undefined = appBarConfig?.textColor
-    ? { color: appBarConfig.textColor }
-    : undefined;
+  const headerStyle: CSSProperties | undefined =
+    headerBg || headerFg
+      ? {
+          backgroundColor: headerBg || undefined,
+          color: headerFg || undefined,
+          borderColor: headerBg ? 'transparent' : undefined,
+          ['--header-bg' as string]: headerBg || undefined,
+          ['--header-fg' as string]: headerFg || undefined,
+        }
+      : undefined;
+  const iconTone: CSSProperties | undefined = headerFg ? { color: headerFg } : undefined;
 
   useEffect(() => {
     if (!isSearchOpen) return;
@@ -115,32 +122,78 @@ const Header = () => {
     return withLang(to(path));
   };
 
+  const resolveNav = (customHref: string, fallbackHref: string) => {
+    const raw = customHref.trim();
+    if (!raw) return { href: fallbackHref, external: false as const };
+    if (/^https?:\/\//i.test(raw)) return { href: raw, external: true as const };
+    return { href: resolveStoreHref(raw), external: false as const };
+  };
+
   const customExtra = customNav.filter(
     (p) => !(SYSTEM_NAV_REPLACEMENTS as readonly string[]).includes(p.slug.toLowerCase()),
   );
 
   const defaultNavLinks = [
-    { href: withLang(homePath), label: lang === 'ar' ? 'الرئيسية' : 'Accueil' },
-    { href: withLang(boutiquePath), label: lang === 'ar' ? 'المتجر' : 'Boutique' },
+    ...(appearance.headerShowHome
+      ? [
+          {
+            ...resolveNav(appearance.headerHrefHome, withLang(homePath)),
+            label: lang === 'ar' ? 'الرئيسية' : appearance.headerLabelHome || 'Accueil',
+          },
+        ]
+      : []),
+    ...(appearance.headerShowShop
+      ? [
+          {
+            ...resolveNav(appearance.headerHrefShop, withLang(boutiquePath)),
+            label: lang === 'ar' ? 'المتجر' : appearance.headerLabelShop || 'Boutique',
+          },
+        ]
+      : []),
     ...customExtra.map((p) => ({
       href: withLang(to(`/page/${p.slug}`)),
       label: p.title,
+      external: false as const,
     })),
-    ...(surMesureOn && !isReplaced('/sur-mesure')
-      ? [{ href: withLang(to('/sur-mesure')), label: lang === 'ar' ? 'حسب الطلب' : 'Sur-mesure' }]
-      : isReplaced('/sur-mesure')
-        ? [{ href: navHref('/sur-mesure'), label: lang === 'ar' ? 'حسب الطلب' : 'Sur-mesure' }]
+    ...(appearance.headerShowSurMesure && surMesureOn && !isReplaced('/sur-mesure')
+      ? [
+          {
+            ...resolveNav(appearance.headerHrefSurMesure, withLang(to('/sur-mesure'))),
+            label: lang === 'ar' ? 'حسب الطلب' : appearance.headerLabelSurMesure || 'Sur-mesure',
+          },
+        ]
+      : appearance.headerShowSurMesure && isReplaced('/sur-mesure')
+        ? [
+            {
+              ...resolveNav(appearance.headerHrefSurMesure, navHref('/sur-mesure')),
+              label: lang === 'ar' ? 'حسب الطلب' : appearance.headerLabelSurMesure || 'Sur-mesure',
+            },
+          ]
         : []),
-    ...(surMesureOn && !isReplaced('/devis')
-      ? [{ href: withLang(to('/devis')), label: lang === 'ar' ? 'عرض سعر' : 'Devis' }]
-      : isReplaced('/devis')
-        ? [{ href: navHref('/devis'), label: lang === 'ar' ? 'عرض سعر' : 'Devis' }]
+    ...(appearance.headerShowDevis && surMesureOn && !isReplaced('/devis')
+      ? [
+          {
+            ...resolveNav(appearance.headerHrefDevis, withLang(to('/devis'))),
+            label: lang === 'ar' ? 'عرض سعر' : appearance.headerLabelDevis || 'Devis',
+          },
+        ]
+      : appearance.headerShowDevis && isReplaced('/devis')
+        ? [
+            {
+              ...resolveNav(appearance.headerHrefDevis, navHref('/devis')),
+              label: lang === 'ar' ? 'عرض سعر' : appearance.headerLabelDevis || 'Devis',
+            },
+          ]
         : []),
-    {
-      href: navHref('/contact'),
-      label: lang === 'ar' ? 'اتصل بنا' : 'Contact',
-    },
-  ].filter((link, i, arr) => arr.findIndex((x) => x.href === link.href) === i);
+    ...(appearance.headerShowContact
+      ? [
+          {
+            ...resolveNav(appearance.headerHrefContact, navHref('/contact')),
+            label: lang === 'ar' ? 'اتصل بنا' : appearance.headerLabelContact || 'Contact',
+          },
+        ]
+      : []),
+  ].filter((link, i, arr) => arr.findIndex((x) => x.href === link.href && x.label === link.label) === i);
 
   const megaMenuItems: MegaMenuItem[] | null =
     useMegaMenuNav && megaMenuConfig?.items.length ? megaMenuConfig.items : null;
@@ -261,19 +314,10 @@ const Header = () => {
         'z-50 w-full max-w-full min-w-0 overflow-x-clip border-b border-border bg-card shadow-soft',
         appBarConfig?.sticky === false ? 'relative' : 'sticky top-0',
       )}
+      data-header-custom={headerBg || headerFg ? '1' : undefined}
       style={headerStyle}
     >
-      {appBarConfig?.topBarEnabled && appBarConfig.topBarText ? (
-        <div
-          className="px-3 py-1.5 text-center text-xs font-medium sm:px-4"
-          style={{
-            backgroundColor: appBarConfig.topBarBg || '#0F766E',
-            color: appBarConfig.topBarTextColor || '#FFFFFF',
-          }}
-        >
-          {appBarConfig.topBarText}
-        </div>
-      ) : null}
+      {/* Bandeau unifié via <TopBar /> — pas de second strip ici (évite le double bandeau). */}
       <div className="container mx-auto w-full max-w-full min-w-0 px-3 sm:px-4 md:px-6">
         <div className="flex h-[4.25rem] w-full min-w-0 items-center justify-between gap-2 sm:h-[4.75rem] lg:h-20">
           <button
@@ -283,10 +327,12 @@ const Header = () => {
             onClick={() => setIsMenuOpen(!isMenuOpen)}
             aria-label={isMenuOpen ? 'Fermer le menu' : 'Ouvrir le menu'}
             aria-expanded={isMenuOpen}
+            hidden={!showNav}
           >
             {isMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
           </button>
 
+          {showLogo ? (
           <Link
             to={homePath}
             aria-label={`${siteName} — accueil`}
@@ -298,7 +344,11 @@ const Header = () => {
           >
             <BrandLogoImg className={logoClass} draggable={false} />
           </Link>
+          ) : (
+            <div className="min-w-0 flex-1" />
+          )}
 
+          {showNav ? (
           <nav
             className="ml-6 hidden shrink-0 items-center gap-0.5 xl:ml-10 lg:flex xl:gap-1"
             aria-label="Navigation principale"
@@ -306,12 +356,15 @@ const Header = () => {
             {megaMenuItems
               ? megaMenuItems.map((item, index) => renderDesktopMegaItem(item, index))
               : navLinks.map((link) => {
-                  const active = isActive(link.href);
+                  const active = !link.external && isActive(link.href);
                   return (
-                    <div key={link.href}>{renderNavAnchor(link.href, link.label, active)}</div>
+                    <div key={`${link.label}-${link.href}`}>
+                      {renderNavAnchor(link.href, link.label, active, link.external)}
+                    </div>
                   );
                 })}
           </nav>
+          ) : null}
 
           <div className="flex shrink-0 items-center gap-0.5 sm:gap-1 md:gap-1.5" style={iconTone}>
             {showSearch ? (
@@ -515,17 +568,31 @@ const Header = () => {
                   );
                 })
               : navLinks.map((link) => {
-                  const active = isActive(link.href);
+                  const active = !link.external && isActive(link.href);
+                  const className = cn(
+                    'flex min-h-[48px] touch-manipulation items-center border-l-2 px-4 py-3 font-display text-base font-semibold tracking-tight transition-colors',
+                    active
+                      ? 'border-primary text-primary'
+                      : 'border-transparent text-foreground/85 hover:border-primary/40 hover:text-primary',
+                  );
+                  if (link.external) {
+                    return (
+                      <a
+                        key={`${link.label}-${link.href}`}
+                        href={link.href}
+                        className={className}
+                        rel="noopener noreferrer"
+                        onClick={() => setIsMenuOpen(false)}
+                      >
+                        {link.label}
+                      </a>
+                    );
+                  }
                   return (
                     <Link
-                      key={link.href}
+                      key={`${link.label}-${link.href}`}
                       to={link.href}
-                      className={cn(
-                        'flex min-h-[48px] touch-manipulation items-center border-l-2 px-4 py-3 font-display text-base font-semibold tracking-tight transition-colors',
-                        active
-                          ? 'border-primary text-primary'
-                          : 'border-transparent text-foreground/85 hover:border-primary/40 hover:text-primary',
-                      )}
+                      className={className}
                       onClick={() => setIsMenuOpen(false)}
                     >
                       {link.label}

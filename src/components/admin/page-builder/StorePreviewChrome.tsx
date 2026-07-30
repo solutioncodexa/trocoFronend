@@ -53,17 +53,6 @@ export default function StorePreviewChrome({
           borderColor: appBar.bgColor ? 'transparent' : undefined,
         }}
       >
-        {appBar.topBarEnabled && appBar.topBarText ? (
-          <div
-            className="px-4 py-1.5 text-center text-[11px] font-medium sm:px-6"
-            style={{
-              backgroundColor: appBar.topBarBg || '#0F766E',
-              color: appBar.topBarTextColor || '#FFFFFF',
-            }}
-          >
-            {appBar.topBarText}
-          </div>
-        ) : null}
         <div className="flex items-center justify-between gap-3 px-4 py-3 sm:px-6">
           <div className="flex min-w-0 items-center gap-2">
             <BrandLogoImg className={cn('w-auto max-w-[7rem]', logoClass)} draggable={false} />

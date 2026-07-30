@@ -186,6 +186,22 @@
   border-color: hsl(0 0% 90%) !important;
   box-shadow: none !important;
 }
+.store-theme--minimal header[data-header-custom='1'],
+.store-theme[data-header-custom='1'] header {
+  background: var(--header-bg, hsl(0 0% 99%)) !important;
+  color: var(--header-fg, inherit) !important;
+  border-color: color-mix(in srgb, var(--header-fg, #000) 18%, transparent) !important;
+}
+.store-theme[data-header-custom='1'] header a:not([class*='bg-primary']),
+.store-theme[data-header-custom='1'] header button:not([class*='bg-primary']),
+.store-theme[data-header-custom='1'] header .text-foreground,
+.store-theme[data-header-custom='1'] header .text-foreground\/80 {
+  color: var(--header-fg) !important;
+}
+.store-theme[data-header-custom='1'] header a.text-primary,
+.store-theme[data-header-custom='1'] header .text-primary {
+  color: hsl(var(--primary)) !important;
+}
 .store-theme--minimal header .rounded-xl,
 .store-theme--minimal header .rounded-2xl {
   border-radius: 0 !important;
@@ -200,6 +216,11 @@
   background: hsl(350 40% 7%) !important;
   border-color: hsl(0 0% 100% / 0.12) !important;
   color: hsl(0 0% 98%);
+}
+.store-theme--bold header[data-header-custom='1'] {
+  background: var(--header-bg) !important;
+  color: var(--header-fg) !important;
+  border-color: color-mix(in srgb, var(--header-fg) 18%, transparent) !important;
 }
 .store-theme--bold header a,
 .store-theme--bold footer a,
@@ -239,12 +260,112 @@
   border-color: hsl(280 15% 85%) !important;
   box-shadow: none !important;
 }
+.store-theme--elegant header[data-header-custom='1'] {
+  background: var(--header-bg) !important;
+  color: var(--header-fg) !important;
+  border-color: color-mix(in srgb, var(--header-fg) 18%, transparent) !important;
+}
 .store-theme--elegant header a {
   letter-spacing: 0.08em;
   text-transform: uppercase;
   font-size: 0.72rem !important;
   font-style: normal !important;
   font-weight: 600 !important;
+}
+
+.store-theme {
+  font-family: var(--font-body, 'DM Sans', system-ui, sans-serif);
+  --theme-radius-card: 1rem;
+  --theme-radius-button: 0.75rem;
+  --theme-radius-chip: 0.5rem;
+}
+
+.store-theme .font-display {
+  font-family: var(--font-display, 'Syne', system-ui, sans-serif) !important;
+}
+.store-theme .font-body {
+  font-family: var(--font-body, 'DM Sans', system-ui, sans-serif) !important;
+}
+
+/* Arrondis issus du preset (surchargent les rounded-* Tailwind courants) */
+.store-theme[data-radius-preset='sharp'] .rounded-md,
+.store-theme[data-radius-preset='sharp'] .rounded-lg,
+.store-theme[data-radius-preset='sharp'] .rounded-xl,
+.store-theme[data-radius-preset='sharp'] .rounded-2xl,
+.store-theme[data-radius-preset='sharp'] .rounded-3xl,
+.store-theme[data-radius-preset='sharp'] .rounded-full {
+  border-radius: 0 !important;
+}
+
+.store-theme[data-radius-preset='round'] .rounded-md,
+.store-theme[data-radius-preset='round'] .rounded-lg,
+.store-theme[data-radius-preset='round'] .rounded-xl {
+  border-radius: var(--theme-radius-button) !important;
+}
+.store-theme[data-radius-preset='round'] .rounded-2xl,
+.store-theme[data-radius-preset='round'] .rounded-3xl {
+  border-radius: var(--theme-radius-card) !important;
+}
+
+.store-theme .sf-preview-card {
+  border-radius: var(--theme-radius-card);
+}
+.store-theme .sf-preview-btn {
+  border-radius: var(--theme-radius-button);
+}
+
+/* Boutons vitrine (CTA + boutons primaires) */
+.store-theme[data-button-style='outline'] .sf-btn,
+.store-theme[data-button-style='outline'] a.bg-primary,
+.store-theme[data-button-style='outline'] button.bg-primary {
+  background: transparent !important;
+  color: hsl(var(--primary)) !important;
+  border: 2px solid hsl(var(--primary)) !important;
+  box-shadow: none !important;
+}
+.store-theme[data-button-style='soft'] .sf-btn,
+.store-theme[data-button-style='soft'] a.bg-primary,
+.store-theme[data-button-style='soft'] button.bg-primary {
+  background: hsl(var(--primary) / 0.15) !important;
+  color: hsl(var(--primary)) !important;
+  box-shadow: none !important;
+}
+.store-theme[data-button-style='pill'] .sf-btn,
+.store-theme[data-button-style='pill'] a.bg-primary,
+.store-theme[data-button-style='pill'] button.bg-primary,
+.store-theme[data-button-style='pill'] .rounded-xl {
+  border-radius: 9999px !important;
+}
+
+.store-theme[data-page-custom='1'],
+.store-theme[data-page-custom='1'] main {
+  background-color: var(--page-bg) !important;
+}
+.store-theme--minimal[data-page-custom='1'],
+.store-theme--bold[data-page-custom='1'],
+.store-theme--elegant[data-page-custom='1'] {
+  background: var(--page-bg) !important;
+}
+
+.store-theme footer[data-footer-custom='1'],
+.store-theme--minimal footer[data-footer-custom='1'],
+.store-theme--bold footer[data-footer-custom='1'],
+.store-theme--elegant footer[data-footer-custom='1'] {
+  background: var(--footer-bg, inherit) !important;
+  color: var(--footer-fg, inherit) !important;
+  border-color: color-mix(in srgb, var(--footer-fg, #000) 18%, transparent) !important;
+}
+.store-theme footer[data-footer-custom='1'] a,
+.store-theme footer[data-footer-custom='1'] .text-muted-foreground,
+.store-theme footer[data-footer-custom='1'] .text-foreground {
+  color: inherit;
+}
+.store-theme footer[data-footer-custom='1'] a:hover {
+  color: hsl(var(--primary));
+}
+
+.store-theme[data-footer-layout='compact'] footer {
+  font-size: 0.925em;
 }
 
 @layer base {

@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Package, Plus, Pencil, Trash2, Search, Upload, X, ArrowLeft, ArrowRight, Star } from 'lucide-react';
 import { createEmptyVariantRow, type ProductVariantFormRow } from '@/types/product-variant';
 import { ProductVariantEditor } from '@/components/admin/ProductVariantEditor';
@@ -30,6 +30,13 @@ import { notifyCompressionReports } from '@/utils/notifyCompression';
 import { useAdmin } from '@/contexts/AdminContext';
 import { PERMISSIONS } from '@/config/permissions';
 import { EmptyState } from '@/components/ui/EmptyState';
+import {
+  ONBOARDING_PUBLICATION_PATH,
+  ONBOARDING_PRODUCTS_PATH,
+  ONBOARDING_RETURN_QUERY,
+  writeOnboardingDraft,
+  readOnboardingDraft,
+} from '@/utils/onboardingSession';
 
 type AdminFormData = {
   name: string;
@@ -48,7 +55,9 @@ const PLACEHOLDER_IMAGE = '/placeholder-modern-fixed.svg';
 
 const AdminProducts = () => {
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
+  const fromOnboarding = searchParams.get(ONBOARDING_RETURN_QUERY) === '1';
   const { hasPermission } = useAdmin();
   const canCreate = hasPermission(PERMISSIONS.PRODUCTS_CREATE);
   const canUpdate = hasPermission(PERMISSIONS.PRODUCTS_UPDATE);
@@ -116,6 +125,18 @@ const AdminProducts = () => {
   const [imageFiles, setImageFiles] = useState<File[]>([]);
   const [existingImageUrls, setExistingImageUrls] = useState<string[]>([]);
   const [variantRows, setVariantRows] = useState<ProductVariantFormRow[]>([createEmptyVariantRow(true)]);
+  const imageInputRef = useRef<HTMLInputElement>(null);
+
+  const newImagePreviewUrls = useMemo(
+    () => imageFiles.map((file) => URL.createObjectURL(file)),
+    [imageFiles],
+  );
+
+  useEffect(() => {
+    return () => {
+      newImagePreviewUrls.forEach((url) => URL.revokeObjectURL(url));
+    };
+  }, [newImagePreviewUrls]);
 
   const isPromo = formData.badges.includes('promo');
 
@@ -225,10 +246,30 @@ const AdminProducts = () => {
     if (canCreate) {
       void handleOpenModal();
     }
-    searchParams.delete('action');
-    setSearchParams(searchParams, { replace: true });
+    const next = new URLSearchParams(searchParams);
+    next.delete('action');
+    // conserver fromOnboarding pour le retour après création
+    setSearchParams(next, { replace: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const returnToOnboardingPublication = () => {
+    const draft = readOnboardingDraft();
+    writeOnboardingDraft({
+      ...(draft ?? { step: 4 }),
+      step: 4,
+    });
+    navigate(ONBOARDING_PUBLICATION_PATH, { replace: true });
+  };
+
+  const returnToOnboardingProducts = () => {
+    const draft = readOnboardingDraft();
+    writeOnboardingDraft({
+      ...(draft ?? { step: 3 }),
+      step: 3,
+    });
+    navigate(ONBOARDING_PRODUCTS_PATH, { replace: true });
+  };
 
   const hasActiveFilters = Boolean(debouncedSearch.trim()) || filterCategory !== 'all';
 
@@ -242,6 +283,7 @@ const AdminProducts = () => {
   const handleCloseModal = () => {
     setIsModalOpen(false);
     setEditingProduct(null);
+    setIsLoadingProduct(false);
     setImageFiles([]);
     setExistingImageUrls([]);
   };
@@ -253,6 +295,10 @@ const AdminProducts = () => {
       queryClient.invalidateQueries({ queryKey: ['products'] });
       toast.success('Produit ajouté avec succès');
       handleCloseModal();
+      if (fromOnboarding) {
+        toast.message('Retour à l’assistant — étape Publication');
+        returnToOnboardingPublication();
+      }
     },
     onError: (err: Error) => toastError(err, 'Erreur lors de l\'ajout du produit'),
   });
@@ -450,6 +496,17 @@ const AdminProducts = () => {
 
   return (
     <AdminLayout title="Gestion des Produits" breadcrumbs={[{ label: 'Produits' }]}>
+      {fromOnboarding ? (
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-primary/30 bg-primary/5 px-4 py-3">
+          <p className="text-sm text-foreground">
+            Assistant de configuration — ajoutez un produit, puis vous reviendrez à l’étape{' '}
+            <strong>Publication</strong>.
+          </p>
+          <Button type="button" variant="outline" size="sm" onClick={returnToOnboardingProducts}>
+            Retour à l’assistant
+          </Button>
+        </div>
+      ) : null}
       <p className="text-xs sm:text-sm text-muted-foreground mb-3 flex flex-wrap items-center gap-x-1.5 gap-y-1">
         <span className="font-medium text-foreground">{productsPage?.totalElements ?? 0}</span>
         produit{(productsPage?.totalElements ?? 0) > 1 ? 's' : ''}
@@ -722,9 +779,19 @@ const AdminProducts = () => {
         />
       )}
 
-      <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-        <DialogContent className="flex max-h-[92vh] w-[calc(100%-1.5rem)] max-w-3xl flex-col gap-0 overflow-hidden p-0 sm:rounded-2xl">
-          <DialogHeader className="shrink-0 border-b border-border px-5 py-4 sm:px-6">
+      <Dialog
+        open={isModalOpen}
+        onOpenChange={(open) => {
+          if (!open) handleCloseModal();
+        }}
+      >
+        <DialogContent
+          className="!flex h-[min(92vh,880px)] w-[calc(100%-1.5rem)] max-w-3xl flex-col gap-0 overflow-hidden bg-card p-0 text-foreground sm:rounded-2xl"
+          onPointerDownOutside={(e) => e.preventDefault()}
+          onInteractOutside={(e) => e.preventDefault()}
+          onFocusOutside={(e) => e.preventDefault()}
+        >
+          <DialogHeader className="shrink-0 space-y-1 border-b border-border bg-card px-5 py-4 text-left sm:px-6">
             <DialogTitle className="font-display text-xl text-foreground">
               {editingProduct ? 'Modifier le produit' : 'Nouveau produit'}
             </DialogTitle>
@@ -735,10 +802,12 @@ const AdminProducts = () => {
           </DialogHeader>
 
           {isLoadingProduct ? (
-            <div className="px-6 py-12 text-center text-muted-foreground">Chargement du produit…</div>
+            <div className="flex-1 px-6 py-12 text-center text-muted-foreground">
+              Chargement du produit…
+            </div>
           ) : (
-            <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col">
-              <div className="min-h-0 flex-1 space-y-6 overflow-y-auto px-5 py-5 sm:px-6">
+            <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col bg-card">
+              <div className="min-h-0 flex-1 space-y-6 overflow-y-auto overscroll-contain px-5 py-5 sm:px-6">
                 <section className="space-y-4">
                   <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                     Informations
@@ -841,7 +910,7 @@ const AdminProducts = () => {
                     <div>
                       <Label>Catégorie *</Label>
                       <Select
-                        value={formData.category}
+                        value={formData.category || undefined}
                         onValueChange={(value: string) =>
                           setFormData((prev) => ({ ...prev, category: value }))
                         }
@@ -1010,7 +1079,7 @@ const AdminProducts = () => {
                         <div className="flex flex-wrap gap-2">
                           {imageFiles.map((file, index) => (
                             <div
-                              key={`new-${index}`}
+                              key={`${file.name}-${file.size}-${file.lastModified}-${index}`}
                               className={cn(
                                 'group relative overflow-hidden rounded-xl border-2 border-primary/40',
                                 index === 0 &&
@@ -1019,7 +1088,7 @@ const AdminProducts = () => {
                               )}
                             >
                               <img
-                                src={URL.createObjectURL(file)}
+                                src={newImagePreviewUrls[index]}
                                 alt={`Nouvelle ${index + 1}`}
                                 className="h-20 w-20 object-cover"
                               />
@@ -1071,16 +1140,22 @@ const AdminProducts = () => {
                       </div>
                     )}
 
-                    <label className="inline-flex h-20 w-20 cursor-pointer items-center justify-center rounded-xl border-2 border-dashed border-border transition-colors hover:border-primary">
-                      <input
-                        type="file"
-                        accept="image/jpeg,image/png,image/gif,image/webp"
-                        multiple
-                        className="sr-only"
-                        onChange={handleImageSelect}
-                      />
+                    <input
+                      ref={imageInputRef}
+                      type="file"
+                      accept="image/jpeg,image/png,image/gif,image/webp"
+                      multiple
+                      className="sr-only"
+                      onChange={handleImageSelect}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => imageInputRef.current?.click()}
+                      className="inline-flex h-20 w-20 cursor-pointer items-center justify-center rounded-xl border-2 border-dashed border-border transition-colors hover:border-primary"
+                      aria-label="Ajouter des images"
+                    >
                       <Upload className="h-6 w-6 text-muted-foreground" />
-                    </label>
+                    </button>
                   </div>
                 </section>
               </div>

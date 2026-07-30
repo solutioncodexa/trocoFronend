@@ -107,7 +107,7 @@ export const TenantProvider = ({ children }: { children: ReactNode }) => {
   const loadFromAdminSession = useCallback(async () => {
     try {
       const data = await platformApi.getMyStoreSummary();
-      // Résumé léger — config complète uniquement sur /admin/parametres.
+      // Résumé admin — inclut thème / typo / apparence pour cohérence vitrine.
       setStore({
         ...data,
         heroEnabled: true,

@@ -12,6 +12,7 @@ import { useWishlist } from '@/contexts/WishlistContext';
 import { ANIMATIONS } from '@/config/animations';
 import { toast } from 'sonner';
 import { useStorefrontPath } from '@/hooks/useStorefrontPath';
+import { useStorefrontTheme } from '@/hooks/useStorefrontTheme';
 
 interface ProductCardProps {
   product: Product;
@@ -22,6 +23,7 @@ const ProductCard = ({ product, className }: ProductCardProps) => {
   const queryClient = useQueryClient();
   const { isInWishlist, toggleWishlist } = useWishlist();
   const { to, isDemo } = useStorefrontPath();
+  const theme = useStorefrontTheme();
   const isFavorite = isInWishlist(product.id);
 
   const prefetchProductDetail = useCallback(() => {
@@ -68,19 +70,23 @@ const ProductCard = ({ product, className }: ProductCardProps) => {
   return (
     <div
       className={cn(
-        'group flex h-full min-h-0 flex-col rounded-2xl border border-border/70 bg-card p-3 shadow-soft transition-all duration-300 sm:p-4',
-        hover && 'hover:-translate-y-1 hover:shadow-elegant hover:border-primary/20',
-        !hover && 'hover:shadow-card',
+        'group flex h-full min-h-0 flex-col p-3 transition-all duration-300 sm:p-4',
+        theme.productCard,
+        ANIMATIONS.productCardHover && 'hover:-translate-y-1 hover:shadow-elegant hover:border-primary/20',
+        !ANIMATIONS.productCardHover && 'hover:shadow-card',
         className,
       )}
     >
       <Link
         to={to(`/produit/${product.id}`)}
-        className="flex min-h-0 flex-1 flex-col outline-none focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:ring-offset-2 rounded-xl"
+        className={cn(
+          'flex min-h-0 flex-1 flex-col outline-none focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:ring-offset-2',
+          theme.radiusPreset === 'round' ? 'rounded-3xl' : theme.radiusPreset === 'sharp' ? 'rounded-none' : 'rounded-xl',
+        )}
         onMouseEnter={prefetchProductDetail}
         onFocus={prefetchProductDetail}
       >
-        <div className="relative mb-4 aspect-[4/5] w-full shrink-0 overflow-hidden rounded-xl bg-muted">
+        <div className={cn('relative mb-4 w-full shrink-0 overflow-hidden bg-muted', theme.productImage)}>
           <div className="absolute left-2.5 top-2.5 z-10 flex flex-col gap-1.5">
             {product.badges.map((badge) => (
               <span

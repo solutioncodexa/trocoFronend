@@ -82,7 +82,7 @@ const CreateStore = () => {
         toast.success(
           `Boutique « ${created.name} » créée — en attente d'activation Matjarona`,
         );
-        navigate('/admin/dashboard', {
+        navigate('/admin/onboarding', {
           replace: true,
           state: { onboarding: true, pendingActivation: true },
         });

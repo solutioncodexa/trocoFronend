@@ -13,6 +13,7 @@ import { mapProductListItemListToProducts } from '@/utils/productMapper';
 import { parseAbandonedCartJson } from '@/utils/abandonedCartItems';
 import ProductCard from '@/components/ui/ProductCard';
 import { useStoreBrand } from '@/hooks/useStoreBrand';
+import { useStorefrontTheme } from '@/hooks/useStorefrontTheme';
 import {
   buildCartWhatsAppMessage,
   buildWhatsAppMessageUrl,
@@ -34,6 +35,7 @@ const Cart = () => {
     addToCart,
   } = useCart();
   const { freeShippingThreshold, contactWhatsapp, contactPhone } = useStoreBrand();
+  const theme = useStorefrontTheme();
 
   const { data: recoveredCart, isLoading: recovering } = useQuery({
     queryKey: ['abandoned-cart-recover', recoverToken],
@@ -144,7 +146,7 @@ const Cart = () => {
 
   return (
     <Layout>
-      <main className="flex-grow bg-paper-pattern py-12 px-4 sm:px-6 w-full min-w-0 overflow-x-hidden animate-fade-in">
+      <main className={cn('flex-grow bg-paper-pattern py-12 px-4 sm:px-6 w-full min-w-0 overflow-x-hidden animate-fade-in', theme.shell)}>
         <div className="max-w-[1200px] mx-auto w-full min-w-0">
           <div className="text-center mb-12">
             <h2 className="font-display text-3xl font-semibold tracking-tight text-foreground sm:text-4xl md:text-5xl mb-2">Votre Panier</h2>

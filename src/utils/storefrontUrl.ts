@@ -27,6 +27,28 @@ export function buildStorefrontUrl(slug: string | null | undefined): string {
   return `${window.location.origin}/?tenant=${encodeURIComponent(s)}`;
 }
 
+/** Force un rechargement frais de la vitrine (évite cache navigateur après Enregistrer). */
+export function withStorefrontCacheBust(
+  url: string,
+  rev: number | string = Date.now(),
+): string {
+  try {
+    const u = new URL(url);
+    u.searchParams.set('_v', String(rev));
+    return u.href;
+  } catch {
+    const sep = url.includes('?') ? '&' : '?';
+    return `${url}${sep}_v=${encodeURIComponent(String(rev))}`;
+  }
+}
+
+export function buildFreshStorefrontUrl(
+  slug: string | null | undefined,
+  rev: number | string = Date.now(),
+): string {
+  return withStorefrontCacheBust(buildStorefrontUrl(slug), rev);
+}
+
 export function buildStorefrontPath(slug: string | null | undefined): string {
   const s = slug?.trim().toLowerCase();
   if (!s) return '/';

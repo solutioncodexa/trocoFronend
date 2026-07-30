@@ -1,25 +1,38 @@
 import { useEffect, useRef, useState } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link, useLocation, useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Copy, ExternalLink, Eye, ImagePlus, Loader2, Save, Settings2 } from 'lucide-react';
+import { Copy, ExternalLink, Save, Settings2 } from 'lucide-react';
 import AdminLayout from '@/components/admin/AdminLayout';
+import { AppearanceWorkspace } from '@/components/admin/appearance/AppearanceWorkspace';
+import { toStorePageLinkOptions } from '@/components/admin/StorePageHrefSelect';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { platformApi } from '@/services/api/platform';
-import { getImageUrl, uploadImage } from '@/services/api/upload';
+import { storeGlobalSectionsApi } from '@/services/api/storeGlobalSections';
+import { storePagesApi } from '@/services/api/storePages';
+import { uploadImage } from '@/services/api/upload';
 import type { UpdateStoreSettingsRequest } from '@/types/api';
 import { useTenant } from '@/contexts/TenantContext';
 import { toast } from 'sonner';
 import { toastError } from '@/utils/toastMessages';
-import { buildStorefrontUrl } from '@/utils/storefrontUrl';
-import { storeThemeStyleVars } from '@/utils/storeTheme';
+import { buildFreshStorefrontUrl, buildStorefrontUrl } from '@/utils/storefrontUrl';
 import {
-  STORE_THEMES,
-  designDemoPath,
+  normalizeFontPair,
+  normalizeRadiusPreset,
+} from '@/config/storefrontTheme';
+import {
+  DEFAULT_APPEARANCE,
+  normalizeAppearance,
+  type StoreAppearance,
+} from '@/config/storeAppearance';
+import {
+  THEME_LOOK_DEFAULTS,
+  getThemeDefinition,
   normalizeThemeKey,
+  themeAppearanceDefaults,
   type StoreThemeKey,
 } from '@/config/storeThemes';
 
@@ -48,6 +61,9 @@ type FormState = {
   categoriesEnabled: boolean;
   surMesureEnabled: boolean;
   themeKey: string;
+  fontPair: string;
+  radiusPreset: string;
+  appearance: StoreAppearance;
   metaPixelId: string;
   tiktokPixelId: string;
   googleAdsId: string;
@@ -94,6 +110,9 @@ const emptyForm: FormState = {
   categoriesEnabled: true,
   surMesureEnabled: true,
   themeKey: 'classic',
+  fontPair: 'display_sans',
+  radiusPreset: 'soft',
+  appearance: { ...DEFAULT_APPEARANCE },
   metaPixelId: '',
   tiktokPixelId: '',
   googleAdsId: '',
@@ -120,21 +139,63 @@ const emptyForm: FormState = {
 };
 
 const AdminStoreSettings = () => {
+  const location = useLocation();
+  const settingsMode = location.pathname.includes('/reglages');
   const queryClient = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
   const { refresh: refreshTenant, loadFromAdminSession } = useTenant();
   const [form, setForm] = useState<FormState>(emptyForm);
   const [uploadingLogo, setUploadingLogo] = useState(false);
+  const [uploadingFavicon, setUploadingFavicon] = useState(false);
+  const [previewTick, setPreviewTick] = useState(0);
   const logoInputRef = useRef<HTMLInputElement>(null);
+  const faviconInputRef = useRef<HTMLInputElement>(null);
   const applyThemeHandled = useRef(false);
+  const applyingThemeRef = useRef(false);
 
   const { data, isLoading, error } = useQuery({
     queryKey: ['store-settings', 'me'],
     queryFn: () => platformApi.getMyStoreSettings(),
   });
 
+  const { data: storePages = [] } = useQuery({
+    queryKey: ['store-pages', 'nav-destinations'],
+    queryFn: () => storePagesApi.list(),
+  });
+
+  const { data: globalSections = [] } = useQuery({
+    queryKey: ['store-global-sections', 'admin'],
+    queryFn: () => storeGlobalSectionsApi.listAdmin(),
+    enabled: !settingsMode,
+  });
+  const megaMenuEnabled = globalSections.some(
+    (s) => s.sectionKey === 'mega_menu' && s.enabled,
+  );
+  const publishedHomePage = storePages.find((p) => p.isHome && p.published);
+  const pageLinkOptions = toStorePageLinkOptions(storePages);
+  const customHeaderPages = storePages.filter((p) => Boolean(p.slug) && !p.isHome);
+
+  const togglePageInNav = useMutation({
+    mutationFn: (page: { id: number; title: string; showInNav: boolean }) =>
+      storePagesApi.update(page.id, {
+        title: page.title,
+        showInNav: !page.showInNav,
+      }),
+    onSuccess: (updated) => {
+      queryClient.invalidateQueries({ queryKey: ['store-pages'] });
+      toast.success(
+        updated.showInNav
+          ? `« ${updated.title} » ajoutée au header`
+          : `« ${updated.title} » retirée du header`,
+      );
+    },
+    onError: (err: unknown) => toastError(err, 'Impossible de mettre à jour le menu'),
+  });
+
   useEffect(() => {
     if (!data) return;
+    // Pendant un changement de thème, applyThemeNow pousse déjà le form — éviter un écrasement.
+    if (applyingThemeRef.current) return;
     setForm({
       siteName: data.siteName ?? '',
       tagline: data.tagline ?? '',
@@ -157,6 +218,9 @@ const AdminStoreSettings = () => {
       categoriesEnabled: data.categoriesEnabled ?? true,
       surMesureEnabled: data.surMesureEnabled ?? true,
       themeKey: normalizeThemeKey(data.themeKey),
+      fontPair: normalizeFontPair(data.fontPair),
+      radiusPreset: normalizeRadiusPreset(data.radiusPreset),
+      appearance: normalizeAppearance(data.appearance),
       metaPixelId: data.metaPixelId ?? '',
       tiktokPixelId: data.tiktokPixelId ?? '',
       googleAdsId: data.googleAdsId ?? '',
@@ -202,7 +266,7 @@ const AdminStoreSettings = () => {
 
   // Persiste les couleurs dès qu’elles sont valides (vitrine du tenant uniquement).
   useEffect(() => {
-    if (!data) return;
+    if (!data || applyingThemeRef.current) return;
     const primary = form.primaryColor.trim();
     const secondary = form.secondaryColor.trim();
     if (primary && !isHexColor(primary)) return;
@@ -215,12 +279,14 @@ const AdminStoreSettings = () => {
     }
 
     const timer = window.setTimeout(() => {
+      if (applyingThemeRef.current) return;
       void (async () => {
         try {
           const updated = await platformApi.updateMyStoreSettings({
             primaryColor: primary,
             secondaryColor: secondary,
           });
+          if (applyingThemeRef.current) return;
           queryClient.setQueryData(['store-settings', 'me'], updated);
           await loadFromAdminSession();
         } catch {
@@ -236,27 +302,177 @@ const AdminStoreSettings = () => {
       platformApi.updateMyStoreSettings(payload),
     onSuccess: async (updated) => {
       queryClient.setQueryData(['store-settings', 'me'], updated);
-      toast.success('Paramètres boutique enregistrés');
+      const rev = Date.now();
+      setPreviewTick(rev);
       await refreshTenant();
       await loadFromAdminSession();
+      queryClient.invalidateQueries({ queryKey: ['store-settings'] });
+
+      const slug = updated.slug || data?.slug;
+      if (slug) {
+        const url = buildFreshStorefrontUrl(slug, rev);
+        window.open(url, 'troco-storefront');
+        toast.success('Enregistré — vitrine ouverte avec vos changements');
+      } else {
+        toast.success('Paramètres boutique enregistrés');
+      }
     },
     onError: (err: unknown) => toastError(err, 'Erreur lors de la sauvegarde'),
   });
+
+  const storefrontHref = data?.slug
+    ? previewTick
+      ? buildFreshStorefrontUrl(data.slug, previewTick)
+      : buildStorefrontUrl(data.slug)
+    : null;
 
   const patch = <K extends keyof FormState>(key: K, value: FormState[K]) => {
     setForm((prev) => ({ ...prev, [key]: value }));
   };
 
+  const patchAppearance = <K extends keyof StoreAppearance>(key: K, value: StoreAppearance[K]) => {
+    setForm((prev) => ({
+      ...prev,
+      appearance: { ...prev.appearance, [key]: value },
+    }));
+  };
+
   const applyThemeNow = async (themeKey: StoreThemeKey) => {
+    const previousKey = normalizeThemeKey(form.themeKey);
+    if (previousKey === themeKey) {
+      toast.message(`Le thème « ${getThemeDefinition(themeKey).label} » est déjà actif`);
+      return;
+    }
+    const hadPreset = Boolean(
+      data?.themePresets &&
+        typeof data.themePresets === 'object' &&
+        data.themePresets[themeKey],
+    );
+    const previousLabel = getThemeDefinition(previousKey).label;
+    const nextLabel = getThemeDefinition(themeKey).label;
+    const look = THEME_LOOK_DEFAULTS[themeKey];
+
+    applyingThemeRef.current = true;
     patch('themeKey', themeKey);
     try {
-      const updated = await platformApi.updateMyStoreSettings({ themeKey });
+      const cachedSnap =
+        hadPreset && data?.themePresets && typeof data.themePresets === 'object'
+          ? (data.themePresets[themeKey] as Record<string, unknown> | undefined)
+          : undefined;
+
+      // Envoie aussi le look attendu à l’init : évite une course avec l’autosave couleurs
+      // et couvre le cas où le backend n’a pas encore la migration presets.
+      let updated = await platformApi.updateMyStoreSettings(
+        hadPreset
+          ? { themeKey }
+          : {
+              themeKey,
+              primaryColor: look.primaryColor,
+              secondaryColor: look.secondaryColor,
+              fontPair: look.fontPair,
+              radiusPreset: look.radiusPreset,
+              appearance: normalizeAppearance({
+                ...DEFAULT_APPEARANCE,
+                ...themeAppearanceDefaults(themeKey),
+              }),
+            },
+      );
+
+      const serverPrimary = (updated.primaryColor ?? '').trim().toUpperCase();
+      const expectedPrimary = look.primaryColor.toUpperCase();
+      if (!hadPreset && serverPrimary !== expectedPrimary) {
+        updated = await platformApi.updateMyStoreSettings({
+          primaryColor: look.primaryColor,
+          secondaryColor: look.secondaryColor,
+          fontPair: look.fontPair,
+          radiusPreset: look.radiusPreset,
+          appearance: normalizeAppearance({
+            ...DEFAULT_APPEARANCE,
+            ...themeAppearanceDefaults(themeKey),
+          }),
+        });
+      }
+
       queryClient.setQueryData(['store-settings', 'me'], updated);
-      toast.success(`Design « ${themeKey} » appliqué à votre vitrine`);
+
+      const snapPrimary =
+        typeof cachedSnap?.primaryColor === 'string' ? cachedSnap.primaryColor : undefined;
+      const snapSecondary =
+        typeof cachedSnap?.secondaryColor === 'string' ? cachedSnap.secondaryColor : undefined;
+
+      // Appliquer immédiatement au formulaire (ne pas attendre useEffect).
+      setForm((prev) => ({
+        ...prev,
+        themeKey: normalizeThemeKey(updated.themeKey),
+        primaryColor:
+          updated.primaryColor ||
+          snapPrimary ||
+          (!hadPreset ? look.primaryColor : prev.primaryColor) ||
+          '',
+        secondaryColor:
+          updated.secondaryColor ||
+          snapSecondary ||
+          (!hadPreset ? look.secondaryColor : prev.secondaryColor) ||
+          '',
+        fontPair: normalizeFontPair(
+          updated.fontPair ||
+            (typeof cachedSnap?.fontPair === 'string' ? cachedSnap.fontPair : undefined) ||
+            look.fontPair,
+        ),
+        radiusPreset: normalizeRadiusPreset(
+          updated.radiusPreset ||
+            (typeof cachedSnap?.radiusPreset === 'string' ? cachedSnap.radiusPreset : undefined) ||
+            look.radiusPreset,
+        ),
+        appearance: normalizeAppearance(
+          updated.appearance ??
+            cachedSnap?.appearance ?? {
+              ...DEFAULT_APPEARANCE,
+              ...themeAppearanceDefaults(themeKey),
+            },
+        ),
+        heroEnabled:
+          updated.heroEnabled ??
+          (typeof cachedSnap?.heroEnabled === 'boolean' ? cachedSnap.heroEnabled : true),
+        categoriesEnabled:
+          updated.categoriesEnabled ??
+          (typeof cachedSnap?.categoriesEnabled === 'boolean'
+            ? cachedSnap.categoriesEnabled
+            : true),
+        surMesureEnabled:
+          updated.surMesureEnabled ??
+          (typeof cachedSnap?.surMesureEnabled === 'boolean' ? cachedSnap.surMesureEnabled : true),
+      }));
+
+      const rev = Date.now();
+      setPreviewTick(rev);
       await refreshTenant();
       await loadFromAdminSession();
+      queryClient.invalidateQueries({ queryKey: ['store-settings'] });
+      queryClient.invalidateQueries({ queryKey: ['store-pages'] });
+
+      if (publishedHomePage) {
+        toast.success(
+          `Réglages « ${previousLabel} » sauvegardés · « ${nextLabel} » ${
+            hadPreset ? 'restauré' : 'initialisé'
+          }. Accueil page builder actif — le thème change surtout le look global.`,
+          { duration: 8000 },
+        );
+      } else {
+        toast.success(
+          `Réglages « ${previousLabel} » sauvegardés · « ${nextLabel} » ${
+            hadPreset ? 'restauré' : 'initialisé'
+          }`,
+          { duration: 6000 },
+        );
+      }
     } catch (err) {
+      patch('themeKey', previousKey);
       toastError(err, 'Impossible d’appliquer le design');
+    } finally {
+      window.setTimeout(() => {
+        applyingThemeRef.current = false;
+      }, 1200);
     }
   };
 
@@ -277,6 +493,25 @@ const AdminStoreSettings = () => {
     } finally {
       setUploadingLogo(false);
       if (logoInputRef.current) logoInputRef.current.value = '';
+    }
+  };
+
+  const handleFaviconUpload = async (file: File | null) => {
+    if (!file) return;
+    setUploadingFavicon(true);
+    try {
+      const url = await uploadImage(file, { compress: false });
+      patch('faviconUrl', url);
+      const updated = await platformApi.updateMyStoreSettings({ faviconUrl: url });
+      queryClient.setQueryData(['store-settings', 'me'], updated);
+      await refreshTenant();
+      await loadFromAdminSession();
+      toast.success('Favicon enregistré');
+    } catch (err) {
+      toastError(err, "Erreur lors de l'upload du favicon");
+    } finally {
+      setUploadingFavicon(false);
+      if (faviconInputRef.current) faviconInputRef.current.value = '';
     }
   };
 
@@ -316,6 +551,9 @@ const AdminStoreSettings = () => {
       categoriesEnabled: form.categoriesEnabled,
       surMesureEnabled: form.surMesureEnabled,
       themeKey: normalizeThemeKey(form.themeKey),
+      fontPair: normalizeFontPair(form.fontPair),
+      radiusPreset: normalizeRadiusPreset(form.radiusPreset),
+      appearance: normalizeAppearance(form.appearance),
       metaPixelId: form.metaPixelId.trim() || undefined,
       tiktokPixelId: form.tiktokPixelId.trim() || undefined,
       googleAdsId: form.googleAdsId.trim() || undefined,
@@ -378,7 +616,17 @@ const AdminStoreSettings = () => {
 
   if (isLoading) {
     return (
-      <AdminLayout title="Paramètres boutique" breadcrumbs={[{ label: 'Paramètres boutique' }]}>
+      <AdminLayout
+        title={settingsMode ? 'Paramètres' : 'Apparence'}
+        breadcrumbs={
+          settingsMode
+            ? [{ label: 'Paramètres' }]
+            : [
+                { label: 'Boutique en ligne', href: '/admin/boutique-en-ligne' },
+                { label: 'Apparence' },
+              ]
+        }
+      >
         <div className="p-8 text-center text-muted-foreground">Chargement...</div>
       </AdminLayout>
     );
@@ -386,7 +634,17 @@ const AdminStoreSettings = () => {
 
   if (error) {
     return (
-      <AdminLayout title="Paramètres boutique" breadcrumbs={[{ label: 'Paramètres boutique' }]}>
+      <AdminLayout
+        title={settingsMode ? 'Paramètres' : 'Apparence'}
+        breadcrumbs={
+          settingsMode
+            ? [{ label: 'Paramètres' }]
+            : [
+                { label: 'Boutique en ligne', href: '/admin/boutique-en-ligne' },
+                { label: 'Apparence' },
+              ]
+        }
+      >
         <div className="rounded-lg border border-red-200 bg-red-50 p-4">
           <h3 className="mb-2 font-medium text-red-800">Erreur de chargement</h3>
           <p className="text-red-600">Impossible de charger les paramètres boutique.</p>
@@ -395,9 +653,69 @@ const AdminStoreSettings = () => {
     );
   }
 
+
+  if (!settingsMode) {
+    return (
+      <AdminLayout
+        workspace
+        title="Apparence"
+        breadcrumbs={[
+          { label: 'Boutique en ligne', href: '/admin/boutique-en-ligne' },
+          { label: 'Apparence' },
+        ]}
+      >
+        <AppearanceWorkspace
+          form={{
+            siteName: form.siteName,
+            tagline: form.tagline,
+            aboutText: form.aboutText,
+            logoUrl: form.logoUrl,
+            faviconUrl: form.faviconUrl,
+            primaryColor: form.primaryColor,
+            secondaryColor: form.secondaryColor,
+            themeKey: form.themeKey,
+            fontPair: form.fontPair,
+            radiusPreset: form.radiusPreset,
+            appearance: form.appearance,
+            heroEnabled: form.heroEnabled,
+            categoriesEnabled: form.categoriesEnabled,
+            surMesureEnabled: form.surMesureEnabled,
+          }}
+          patch={patch}
+          patchAppearance={patchAppearance}
+          applyThemeNow={applyThemeNow}
+          themePresets={data?.themePresets ?? null}
+          megaMenuEnabled={megaMenuEnabled}
+          pageLinkOptions={pageLinkOptions}
+          customHeaderPages={customHeaderPages}
+          onTogglePageInNav={(page) => togglePageInNav.mutate(page)}
+          togglePagePending={togglePageInNav.isPending}
+          uploadingLogo={uploadingLogo}
+          onLogoUpload={handleLogoUpload}
+          logoInputRef={logoInputRef}
+          uploadingFavicon={uploadingFavicon}
+          onFaviconUpload={handleFaviconUpload}
+          faviconInputRef={faviconInputRef}
+          publishedHomePage={
+            publishedHomePage
+              ? { id: publishedHomePage.id, title: publishedHomePage.title }
+              : null
+          }
+          storefrontHref={storefrontHref}
+          onSave={handleSave}
+          saving={saveMutation.isPending}
+        />
+      </AdminLayout>
+    );
+  }
+
+
   return (
-    <AdminLayout title="Paramètres boutique" breadcrumbs={[{ label: 'Paramètres boutique' }]}>
-      <div className="mx-auto max-w-3xl space-y-8">
+    <AdminLayout
+      title="Paramètres"
+      breadcrumbs={[{ label: 'Paramètres' }]}
+    >
+      <div className="space-y-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <h1 className="flex items-center gap-2 text-2xl font-bold sm:text-3xl">
@@ -405,23 +723,22 @@ const AdminStoreSettings = () => {
               Paramètres boutique
             </h1>
             <p className="mt-1 text-sm text-muted-foreground">
-              Identité, domaine personnalisé, contact et sections de l&apos;accueil.
+              Domaine, abonnement, paiements, tracking et conformité.
               {data?.slug ? (
                 <span className="mt-1 block font-mono text-xs">slug : {data.slug}</span>
               ) : null}
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
-            {data?.slug ? (
+            {data?.slug && storefrontHref ? (
               <>
                 <Button
                   type="button"
                   variant="outline"
                   className="gap-2"
                   onClick={async () => {
-                    const url = buildStorefrontUrl(data.slug);
                     try {
-                      await navigator.clipboard.writeText(url);
+                      await navigator.clipboard.writeText(storefrontHref);
                       toast.success('Lien boutique copié');
                     } catch {
                       toast.error('Impossible de copier le lien');
@@ -432,7 +749,7 @@ const AdminStoreSettings = () => {
                   Copier le lien
                 </Button>
                 <Button type="button" variant="outline" className="gap-2" asChild>
-                  <a href={buildStorefrontUrl(data.slug)} target="_blank" rel="noopener noreferrer">
+                  <a href={storefrontHref} target="troco-storefront" rel="noopener noreferrer">
                     <ExternalLink className="h-4 w-4" />
                     Voir la boutique
                   </a>
@@ -451,219 +768,18 @@ const AdminStoreSettings = () => {
           </div>
         </div>
 
-        {/* Aperçu live — couleurs scopées ici uniquement (pas l’admin / Matjarona). */}
-        <div
-          className="storefront-skin overflow-hidden rounded-2xl border border-border"
-          style={{
-            ...storeThemeStyleVars({
-              primaryColor: form.primaryColor,
-              secondaryColor: form.secondaryColor,
-            }),
-            borderColor: form.primaryColor || undefined,
-            background: `linear-gradient(135deg, ${form.primaryColor || '#0d9488'}22, transparent 60%)`,
-          }}
-        >
-          <div className="flex items-center gap-4 p-5 sm:p-6">
-            <div className="flex h-14 w-28 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-card/80">
-              {form.logoUrl ? (
-                <img
-                  src={getImageUrl(form.logoUrl)}
-                  alt=""
-                  className="max-h-full max-w-full object-contain p-1"
-                />
-              ) : (
-                <span
-                  className="font-display text-sm font-bold text-primary"
-                  style={{ color: form.primaryColor || undefined }}
-                >
-                  {(form.siteName || 'Boutique').slice(0, 12)}
-                </span>
-              )}
-            </div>
-            <div className="min-w-0">
-              <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                Aperçu vitrine (votre boutique seulement)
-              </p>
-              <p className="truncate font-display text-lg font-semibold">
-                {form.siteName || 'Nom de la boutique'}
-              </p>
-              <p className="truncate text-sm text-muted-foreground">
-                {form.tagline || 'Votre accroche apparaîtra ici'}
-              </p>
-              <div className="mt-2 flex gap-2">
-                <span
-                  className="inline-flex rounded-md px-2.5 py-1 text-xs font-medium text-primary-foreground"
-                  style={{ backgroundColor: form.primaryColor || '#0d9488' }}
-                >
-                  Bouton
-                </span>
-                <span
-                  className="inline-flex rounded-md border px-2.5 py-1 text-xs font-medium"
-                  style={{
-                    borderColor: form.secondaryColor || '#0369a1',
-                    color: form.secondaryColor || '#0369a1',
-                  }}
-                >
-                  Secondaire
-                </span>
-              </div>
-            </div>
-          </div>
+
+        <div className="flex flex-wrap gap-2">
+          <Button type="button" variant="outline" size="sm" asChild>
+            <Link to="/admin/parametres">Apparence</Link>
+          </Button>
+          <Button type="button" variant="default" size="sm" asChild>
+            <Link to="/admin/reglages">Paramètres boutique</Link>
+          </Button>
         </div>
 
-        <section className="space-y-4 rounded-2xl border border-border bg-card p-5 sm:p-6">
-          <h2 className="font-display text-lg font-semibold">Identité</h2>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="sm:col-span-2">
-              <Label htmlFor="siteName">Nom du site</Label>
-              <Input
-                id="siteName"
-                className="mt-1.5"
-                value={form.siteName}
-                onChange={(e) => patch('siteName', e.target.value)}
-              />
-            </div>
-            <div className="sm:col-span-2">
-              <Label htmlFor="tagline">Accroche</Label>
-              <Input
-                id="tagline"
-                className="mt-1.5"
-                value={form.tagline}
-                onChange={(e) => patch('tagline', e.target.value)}
-              />
-            </div>
-            <div className="sm:col-span-2">
-              <Label htmlFor="aboutText">À propos</Label>
-              <Textarea
-                id="aboutText"
-                className="mt-1.5 min-h-[100px]"
-                value={form.aboutText}
-                onChange={(e) => patch('aboutText', e.target.value)}
-              />
-            </div>
-            <div className="sm:col-span-2 space-y-3">
-              <Label>Logo</Label>
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-start">
-                <div className="flex h-20 w-40 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-border bg-muted/30">
-                  {form.logoUrl ? (
-                    <img
-                      src={getImageUrl(form.logoUrl)}
-                      alt="Aperçu logo"
-                      className="max-h-full max-w-full object-contain p-2"
-                    />
-                  ) : (
-                    <span className="text-xs text-muted-foreground">Aucun logo</span>
-                  )}
-                </div>
-                <div className="min-w-0 flex-1 space-y-2">
-                  <Input
-                    id="logoUrl"
-                    value={form.logoUrl}
-                    onChange={(e) => patch('logoUrl', e.target.value)}
-                    placeholder="URL du logo ou upload"
-                  />
-                  <div className="flex flex-wrap gap-2">
-                    <input
-                      ref={logoInputRef}
-                      type="file"
-                      accept="image/jpeg,image/png,image/gif,image/webp,image/svg+xml"
-                      className="sr-only"
-                      onChange={(e) => handleLogoUpload(e.target.files?.[0] ?? null)}
-                    />
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      className="gap-2"
-                      disabled={uploadingLogo}
-                      onClick={() => logoInputRef.current?.click()}
-                    >
-                      {uploadingLogo ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <ImagePlus className="h-4 w-4" />
-                      )}
-                      {uploadingLogo ? 'Upload…' : 'Uploader un logo'}
-                    </Button>
-                    {form.logoUrl ? (
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => patch('logoUrl', '')}
-                      >
-                        Retirer
-                      </Button>
-                    ) : null}
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div className="sm:col-span-2">
-              <Label htmlFor="faviconUrl">URL du favicon</Label>
-              <Input
-                id="faviconUrl"
-                className="mt-1.5"
-                value={form.faviconUrl}
-                onChange={(e) => patch('faviconUrl', e.target.value)}
-                placeholder="https://… ou /uploads/…"
-              />
-            </div>
-            <div>
-              <Label htmlFor="primaryColor">Couleur primaire</Label>
-              <div className="mt-1.5 flex gap-2">
-                <Input
-                  id="primaryColor"
-                  value={form.primaryColor}
-                  onChange={(e) => patch('primaryColor', e.target.value)}
-                  placeholder="#0d9488"
-                />
-                <input
-                  type="color"
-                  aria-label="Sélecteur couleur primaire"
-                  className="h-10 w-12 cursor-pointer rounded border border-border bg-transparent"
-                  value={/^#[0-9a-fA-F]{6}$/.test(form.primaryColor) ? form.primaryColor : '#0d9488'}
-                  onChange={(e) => patch('primaryColor', e.target.value)}
-                />
-              </div>
-            </div>
-            <div>
-              <Label htmlFor="secondaryColor">Couleur secondaire</Label>
-              <div className="mt-1.5 flex gap-2">
-                <Input
-                  id="secondaryColor"
-                  value={form.secondaryColor}
-                  onChange={(e) => patch('secondaryColor', e.target.value)}
-                  placeholder="#0a1628"
-                />
-                <input
-                  type="color"
-                  aria-label="Sélecteur couleur secondaire"
-                  className="h-10 w-12 cursor-pointer rounded border border-border bg-transparent"
-                  value={
-                    /^#[0-9a-fA-F]{6}$/.test(form.secondaryColor) ? form.secondaryColor : '#0a1628'
-                  }
-                  onChange={(e) => patch('secondaryColor', e.target.value)}
-                />
-              </div>
-            </div>
-            <div className="sm:col-span-2">
-              <Label htmlFor="freeShippingThreshold">Seuil livraison gratuite (DH)</Label>
-              <Input
-                id="freeShippingThreshold"
-                type="number"
-                min={0}
-                step={1}
-                className="mt-1.5"
-                value={form.freeShippingThreshold}
-                onChange={(e) => patch('freeShippingThreshold', e.target.value)}
-                placeholder="750"
-              />
-            </div>
-          </div>
-        </section>
-
-        <section className="space-y-4 rounded-2xl border border-border bg-card p-5 sm:p-6">
+        <div className="mx-auto max-w-3xl space-y-8">
+<section className="space-y-4 rounded-2xl border border-border bg-card p-5 sm:p-6">
           <h2 className="font-display text-lg font-semibold">Réseaux sociaux</h2>
           <p className="text-sm text-muted-foreground">
             Ces liens sont synchronisés automatiquement vers{' '}
@@ -795,55 +911,6 @@ const AdminStoreSettings = () => {
           >
             Vérifier le DNS
           </Button>
-        </section>
-
-        <section className="space-y-4 rounded-2xl border border-border bg-card p-5 sm:p-6">
-          <h2 className="font-display text-lg font-semibold">Design de la vitrine</h2>
-          <p className="text-sm text-muted-foreground">
-            Explorez une démo, puis appliquez le design à <strong>votre</strong> boutique. Vos
-            couleurs et logo restent les vôtres.
-          </p>
-          <div className="grid gap-3 sm:grid-cols-2">
-            {STORE_THEMES.map((theme) => {
-              const selected = form.themeKey === theme.key;
-              return (
-                <div
-                  key={theme.key}
-                  className={`rounded-xl border p-4 transition ${
-                    selected
-                      ? 'border-primary bg-primary/5 ring-2 ring-primary/30'
-                      : 'border-border'
-                  }`}
-                >
-                  <div
-                    className="mb-3 h-14 overflow-hidden rounded-lg"
-                    style={{
-                      background: `linear-gradient(135deg, ${theme.demoPrimary}, ${theme.demoSecondary})`,
-                    }}
-                    aria-hidden
-                  />
-                  <p className="font-display font-semibold">{theme.label}</p>
-                  <p className="mt-1 text-xs text-muted-foreground">{theme.description}</p>
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    <Button type="button" size="sm" variant="outline" className="gap-1.5" asChild>
-                      <Link to={designDemoPath(theme.key)} target="_blank" rel="noreferrer">
-                        <Eye className="h-3.5 w-3.5" />
-                        Explorer la démo
-                      </Link>
-                    </Button>
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant={selected ? 'default' : 'secondary'}
-                      onClick={() => void applyThemeNow(theme.key)}
-                    >
-                      {selected ? 'Design actif' : 'Appliquer'}
-                    </Button>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
         </section>
 
         <section className="space-y-4 rounded-2xl border border-border bg-card p-5 sm:p-6">
@@ -1195,6 +1262,23 @@ const AdminStoreSettings = () => {
         </section>
 
         <section className="space-y-4 rounded-2xl border border-border bg-card p-5 sm:p-6">
+          <h2 className="font-display text-lg font-semibold">Livraison</h2>
+          <div>
+            <Label htmlFor="freeShippingThreshold">Seuil livraison gratuite (DH)</Label>
+            <Input
+              id="freeShippingThreshold"
+              type="number"
+              min={0}
+              step={1}
+              className="mt-1.5"
+              value={form.freeShippingThreshold}
+              onChange={(e) => patch('freeShippingThreshold', e.target.value)}
+              placeholder="750"
+            />
+          </div>
+        </section>
+
+        <section className="space-y-4 rounded-2xl border border-border bg-card p-5 sm:p-6">
           <h2 className="font-display text-lg font-semibold">Contact</h2>
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
@@ -1227,33 +1311,8 @@ const AdminStoreSettings = () => {
             </div>
           </div>
         </section>
+        </div>
 
-        <section className="space-y-4 rounded-2xl border border-border bg-card p-5 sm:p-6">
-          <h2 className="font-display text-lg font-semibold">Sections accueil</h2>
-          <div className="space-y-4">
-            {(
-              [
-                ['heroEnabled', 'Hero'] as const,
-                ['categoriesEnabled', 'Catégories'] as const,
-                ['surMesureEnabled', 'Sur mesure'] as const,
-              ] as const
-            ).map(([key, label]) => (
-              <div
-                key={key}
-                className="flex items-center justify-between gap-4 rounded-xl border border-border/60 px-4 py-3"
-              >
-                <Label htmlFor={key} className="cursor-pointer font-medium">
-                  Afficher « {label} »
-                </Label>
-                <Switch
-                  id={key}
-                  checked={form[key]}
-                  onCheckedChange={(checked) => patch(key, checked)}
-                />
-              </div>
-            ))}
-          </div>
-        </section>
       </div>
     </AdminLayout>
   );

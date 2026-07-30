@@ -25,6 +25,7 @@ import { trackPurchase } from '@/components/storefront/TrackingPixels';
 import { mapProductListItemListToProducts } from '@/utils/productMapper';
 import ProductCard from '@/components/ui/ProductCard';
 import { useLocale } from '@/contexts/LocaleContext';
+import { useStorefrontTheme } from '@/hooks/useStorefrontTheme';
 import type { ShippingCarrierDTO } from '@/types/api';
 
 function etaLabel(carrier: ShippingCarrierDTO): string | null {
@@ -48,6 +49,7 @@ const Checkout = () => {
   const { freeShippingThreshold: brandFreeShipping } = useStoreBrand();
   const { store } = useTenant();
   const { formatPrice: formatStorePrice, t } = useLocale();
+  const theme = useStorefrontTheme();
   const subtotal = getTotal();
 
   const { data: checkoutStore } = useQuery({
@@ -180,6 +182,7 @@ const Checkout = () => {
   const codEnabled = checkoutStore?.paymentCodEnabled !== false;
   const cmiEnabled = !!checkoutStore?.paymentCmiEnabled;
   const bnplEnabled = !!checkoutStore?.paymentBnplEnabled;
+  const paymentOptionsAvailable = codEnabled || cmiEnabled || bnplEnabled;
 
   useEffect(() => {
     const options: PaymentMethod[] = [];
@@ -357,7 +360,7 @@ const Checkout = () => {
 
   return (
     <Layout>
-      <main className="max-w-[1280px] mx-auto px-6 py-12 animate-fade-in">
+      <main className={cn('max-w-[1280px] mx-auto px-6 py-12 animate-fade-in', theme.shell)}>
         <div className="flex flex-col lg:flex-row gap-16">
           {/* Left Column - Form */}
           <div className="flex-1 max-w-2xl">
@@ -368,7 +371,7 @@ const Checkout = () => {
               </p>
             </div>
 
-            <form onSubmit={handleSubmit} className="space-y-8 bg-card rounded-2xl border border-border shadow-card p-8 md:p-10">
+            <form onSubmit={handleSubmit} className={cn('space-y-8 p-8 md:p-10 shadow-card', theme.pagePanel)}>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="col-span-full md:col-span-1">
                   <Label className="block text-xs uppercase tracking-widest text-muted-foreground mb-2 font-bold" htmlFor="fullname">Nom Complet</Label>
@@ -518,6 +521,11 @@ const Checkout = () => {
               {/* Mode de paiement */}
               <div>
                 <Label className="block text-xs uppercase tracking-widest text-muted-foreground mb-2 font-bold">Mode de paiement *</Label>
+                {!paymentOptionsAvailable ? (
+                  <p className="rounded-xl border border-amber-500/40 bg-amber-50 px-4 py-3 text-sm text-amber-950">
+                    Aucun mode de paiement n’est activé pour cette boutique. Contactez le vendeur ou réessayez plus tard.
+                  </p>
+                ) : null}
                 <div className="space-y-3">
                   {codEnabled ? (
                   <div 
@@ -593,7 +601,7 @@ const Checkout = () => {
               <Button
                 type="submit"
                 className="w-full !h-auto min-h-[3.25rem] bg-primary px-4 py-3.5 hover:bg-primary/90 text-primary-foreground text-xs sm:text-sm uppercase font-bold tracking-[0.12em] sm:tracking-[0.2em] transition-all shadow-card grid grid-cols-[auto_1fr] items-center gap-2.5 sm:gap-3 sm:px-6 whitespace-normal leading-snug sm:min-h-[3.5rem] sm:py-4"
-                disabled={isSubmitting}
+                disabled={isSubmitting || !paymentOptionsAvailable}
               >
                 <CheckCircle className="size-5 shrink-0 justify-self-start sm:size-[1.35rem]" aria-hidden />
                 <span className="min-w-0 text-center text-balance">

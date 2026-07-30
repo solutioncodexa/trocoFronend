@@ -16,6 +16,8 @@ describe('parseStickyCtaConfig', () => {
       ctaLabel: 'Boutique',
       ctaHref: '/boutique',
       dismissible: true,
+      style: 'bar',
+      position: 'bottom',
     });
   });
 
@@ -27,6 +29,18 @@ describe('parseStickyCtaConfig', () => {
       dismissible: false,
     });
     expect(cfg?.dismissible).toBe(false);
+  });
+
+  it('parse style et position', () => {
+    const cfg = parseStickyCtaConfig({
+      text: 'Promo',
+      ctaLabel: 'Go',
+      ctaHref: '/boutique',
+      style: 'pill',
+      position: 'bottom-right',
+    });
+    expect(cfg?.style).toBe('pill');
+    expect(cfg?.position).toBe('bottom-right');
   });
 });
 

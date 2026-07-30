@@ -33,6 +33,7 @@ import { sanitizeErrorMessage } from '@/utils/toastMessages';
 import { staticCatalogQueryOptions } from '@/config/queryOptions';
 import { cn } from '@/lib/utils';
 import { useStoreBrand } from '@/hooks/useStoreBrand';
+import { useStorefrontTheme } from '@/hooks/useStorefrontTheme';
 
 const PRODUCTS_PER_PAGE = 12;
 const PRICE_MAX = 2000;
@@ -70,6 +71,7 @@ function buildVisiblePageNumbers(current: number, total: number): (number | 'gap
 
 const Boutique = () => {
   const { siteName } = useStoreBrand();
+  const theme = useStorefrontTheme();
   const [searchParams, setSearchParams] = useSearchParams();
   const categoryParam = searchParams.get('category');
   const [selectedCategory, setSelectedCategory] = useState<string | null>(categoryParam);
@@ -477,7 +479,7 @@ const Boutique = () => {
         </div>
       </section>
 
-      <main className="mx-auto w-full min-w-0 max-w-[1400px] overflow-x-hidden px-0 py-5 sm:px-6 sm:py-6 md:py-8">
+      <main className={cn('mx-auto w-full min-w-0 max-w-[1400px] overflow-x-hidden px-0 py-5 sm:px-6 sm:py-6 md:py-8', theme.shell)}>
         <div className="flex flex-col lg:flex-row gap-8 lg:gap-12 min-w-0">
 
           {/* Desktop sidebar — hidden on mobile */}
@@ -631,7 +633,7 @@ const Boutique = () => {
                 )}
               </EmptyState>
             ) : (
-              <div className="grid grid-cols-2 xl:grid-cols-3 gap-x-8 gap-y-12 items-stretch">
+              <div className={cn('grid gap-x-8 gap-y-12 items-stretch', theme.grid)}>
                 {products.map((product, index) => (
                   <RevealOnScroll
                     key={product.id}

@@ -265,7 +265,13 @@ const AdminHeroCategories = () => {
 
   if (isLoading) {
     return (
-      <AdminLayout title="Catégories de l’accueil" breadcrumbs={[{ label: 'Catégories accueil' }]}>
+      <AdminLayout
+        title="Catégories de l’accueil"
+        breadcrumbs={[
+          { label: 'Boutique en ligne', href: '/admin/boutique-en-ligne' },
+          { label: 'Catégories accueil' },
+        ]}
+      >
         <div className="flex items-center justify-center py-12">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
         </div>
@@ -276,7 +282,10 @@ const AdminHeroCategories = () => {
   return (
     <AdminLayout
       title="Catégories de l’accueil"
-      breadcrumbs={[{ label: 'Catégories accueil' }]}
+      breadcrumbs={[
+        { label: 'Boutique en ligne', href: '/admin/boutique-en-ligne' },
+        { label: 'Catégories accueil' },
+      ]}
     >
       <div className="mb-4 rounded-lg border border-border bg-muted/30 p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <p className="text-sm text-muted-foreground max-w-2xl">

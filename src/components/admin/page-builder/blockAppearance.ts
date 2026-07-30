@@ -8,6 +8,14 @@ export type BlockMaxWidth = 'sm' | 'md' | 'lg' | 'full';
 export type BlockOverlay = 'none' | 'light' | 'medium' | 'dark';
 export type BlockHeroHeight = 'sm' | 'md' | 'lg' | 'full';
 export type BlockColumns = 2 | 3 | 4;
+export type BlockHeroLayout = 'overlay' | 'split' | 'minimal' | 'banner';
+export type BlockButtonSize = 'sm' | 'md' | 'lg';
+export type BlockCtaLayout = 'inline' | 'stacked' | 'centered';
+export type BlockImageAspect = 'portrait' | 'square' | 'wide';
+export type BlockCardDensity = 'compact' | 'comfortable' | 'airy';
+export type BlockFaqStyle = 'accordion' | 'list' | 'two_col';
+export type BlockTestimonialLayout = 'grid2' | 'grid3' | 'stack';
+export type BlockMediaRadius = 'none' | 'md' | 'xl' | 'full';
 
 export const STYLE_KEYS = [
   'align',
@@ -20,6 +28,14 @@ export const STYLE_KEYS = [
   'overlay',
   'heroHeight',
   'columns',
+  'layout',
+  'buttonSize',
+  'ctaLayout',
+  'imageAspect',
+  'cardDensity',
+  'faqStyle',
+  'testimonialLayout',
+  'mediaRadius',
 ] as const;
 
 export type BlockStyleKey = (typeof STYLE_KEYS)[number];
@@ -37,27 +53,56 @@ function asStr(v: unknown, fallback = '') {
   return typeof v === 'string' ? v : fallback;
 }
 
+function pickEnum<T extends string>(value: unknown, allowed: readonly T[], fallback: T): T {
+  const s = asStr(value);
+  return (allowed as readonly string[]).includes(s) ? (s as T) : fallback;
+}
+
 export function readBlockStyle(config: Record<string, unknown>) {
-  const align = (['left', 'center', 'right'].includes(asStr(config.align))
-    ? asStr(config.align)
-    : 'left') as BlockAlign;
-  const vAlign = (['top', 'center', 'bottom'].includes(asStr(config.vAlign))
-    ? asStr(config.vAlign)
-    : 'center') as BlockVAlign;
-  const paddingY = (['sm', 'md', 'lg', 'xl'].includes(asStr(config.paddingY))
-    ? asStr(config.paddingY)
-    : 'md') as BlockPaddingY;
-  const maxWidth = (['sm', 'md', 'lg', 'full'].includes(asStr(config.maxWidth))
-    ? asStr(config.maxWidth)
-    : 'lg') as BlockMaxWidth;
-  const overlay = (['none', 'light', 'medium', 'dark'].includes(asStr(config.overlay))
-    ? asStr(config.overlay)
-    : 'medium') as BlockOverlay;
-  const heroHeight = (['sm', 'md', 'lg', 'full'].includes(asStr(config.heroHeight))
-    ? asStr(config.heroHeight)
-    : 'lg') as BlockHeroHeight;
+  const align = pickEnum(config.align, ['left', 'center', 'right'] as const, 'left');
+  const vAlign = pickEnum(config.vAlign, ['top', 'center', 'bottom'] as const, 'center');
+  const paddingY = pickEnum(config.paddingY, ['sm', 'md', 'lg', 'xl'] as const, 'md');
+  const maxWidth = pickEnum(config.maxWidth, ['sm', 'md', 'lg', 'full'] as const, 'lg');
+  const overlay = pickEnum(config.overlay, ['none', 'light', 'medium', 'dark'] as const, 'medium');
+  const heroHeight = pickEnum(config.heroHeight, ['sm', 'md', 'lg', 'full'] as const, 'lg');
   const columnsRaw = typeof config.columns === 'number' ? config.columns : Number(config.columns);
   const columns = ([2, 3, 4].includes(columnsRaw) ? columnsRaw : 4) as BlockColumns;
+  const layout = pickEnum(
+    config.layout,
+    ['overlay', 'split', 'minimal', 'banner'] as const,
+    'overlay',
+  );
+  const buttonSize = pickEnum(config.buttonSize, ['sm', 'md', 'lg'] as const, 'lg');
+  const ctaLayout = pickEnum(
+    config.ctaLayout,
+    ['inline', 'stacked', 'centered'] as const,
+    'inline',
+  );
+  const imageAspect = pickEnum(
+    config.imageAspect,
+    ['portrait', 'square', 'wide'] as const,
+    'portrait',
+  );
+  const cardDensity = pickEnum(
+    config.cardDensity,
+    ['compact', 'comfortable', 'airy'] as const,
+    'comfortable',
+  );
+  const faqStyle = pickEnum(
+    config.faqStyle,
+    ['accordion', 'list', 'two_col'] as const,
+    'accordion',
+  );
+  const testimonialLayout = pickEnum(
+    config.testimonialLayout,
+    ['grid2', 'grid3', 'stack'] as const,
+    'grid2',
+  );
+  const mediaRadius = pickEnum(
+    config.mediaRadius,
+    ['none', 'md', 'xl', 'full'] as const,
+    'xl',
+  );
 
   return {
     align,
@@ -70,6 +115,14 @@ export function readBlockStyle(config: Record<string, unknown>) {
     overlay,
     heroHeight,
     columns,
+    layout,
+    buttonSize,
+    ctaLayout,
+    imageAspect,
+    cardDensity,
+    faqStyle,
+    testimonialLayout,
+    mediaRadius,
   };
 }
 
@@ -166,6 +219,63 @@ export function overlayClass(overlay: BlockOverlay): string {
       return 'bg-gradient-to-r from-background via-background/90 to-background/20';
     default:
       return 'bg-gradient-to-r from-background via-background/80 to-transparent';
+  }
+}
+
+export function imageAspectClass(aspect: BlockImageAspect): string {
+  switch (aspect) {
+    case 'square':
+      return 'aspect-square';
+    case 'wide':
+      return 'aspect-[16/10]';
+    default:
+      return 'aspect-[4/5]';
+  }
+}
+
+export function cardDensityClass(density: BlockCardDensity): string {
+  switch (density) {
+    case 'compact':
+      return 'gap-3';
+    case 'airy':
+      return 'gap-8';
+    default:
+      return 'gap-6';
+  }
+}
+
+export function mediaRadiusClass(radius: BlockMediaRadius): string {
+  switch (radius) {
+    case 'none':
+      return 'rounded-none';
+    case 'md':
+      return 'rounded-xl';
+    case 'full':
+      return 'rounded-full';
+    default:
+      return 'rounded-2xl';
+  }
+}
+
+export function testimonialLayoutClass(layout: BlockTestimonialLayout): string {
+  switch (layout) {
+    case 'grid3':
+      return 'grid gap-4 sm:grid-cols-2 lg:grid-cols-3';
+    case 'stack':
+      return 'mx-auto flex max-w-xl flex-col gap-4';
+    default:
+      return 'grid gap-4 md:grid-cols-2';
+  }
+}
+
+export function buttonSizeProp(size: BlockButtonSize): 'sm' | 'default' | 'lg' {
+  switch (size) {
+    case 'sm':
+      return 'sm';
+    case 'lg':
+      return 'lg';
+    default:
+      return 'default';
   }
 }
 

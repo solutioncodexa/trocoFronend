@@ -15,6 +15,7 @@ import {
   Trophy,
 } from 'lucide-react';
 import AdminLayout from '@/components/admin/AdminLayout';
+import { BoutiqueWorkspaceLinks } from '@/components/admin/BoutiqueWorkspaceLinks';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -26,6 +27,7 @@ import { toastError } from '@/utils/toastMessages';
 import { useRef, useState, useMemo } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { useAdmin } from '@/contexts/AdminContext';
+import { useTenant } from '@/contexts/TenantContext';
 import { PERMISSIONS } from '@/config/permissions';
 import {
   BLOCK_CATALOG,
@@ -52,6 +54,11 @@ const AdminPages = () => {
     queryKey: ['store-pages'],
     queryFn: () => storePagesApi.list(),
   });
+
+  const { store } = useTenant();
+  const planCode = (store?.planCode || 'basic').toLowerCase();
+  const abTestingAllowed = planCode !== 'basic';
+  const fullPageBuilder = planCode === 'business' || planCode === 'pro';
 
   const { data: analytics = [] } = useQuery({
     queryKey: ['store-pages', 'analytics'],
@@ -226,15 +233,44 @@ const AdminPages = () => {
 
   return (
     <AdminLayout
-      title="Pages & design"
-      breadcrumbs={[{ label: 'Pages & design' }]}
+      title="Pages"
+      breadcrumbs={[
+        { label: 'Boutique en ligne', href: '/admin/boutique-en-ligne' },
+        { label: 'Pages' },
+      ]}
       description="Templates, starters, puis édition drag & drop des composants."
     >
       <div className="mx-auto max-w-4xl space-y-8">
+        <BoutiqueWorkspaceLinks current="/admin/pages" />
+        <div className="rounded-xl border border-border bg-card px-4 py-3 text-sm text-muted-foreground">
+          Après création, vos pages apparaissent dans{' '}
+          <Link to="/admin/parametres" className="font-medium text-primary hover:underline">
+            Apparence → Header
+          </Link>{' '}
+          comme destinations de menu, et dans{' '}
+          <Link to="/admin/sections" className="font-medium text-primary hover:underline">
+            Navigation
+          </Link>{' '}
+          (mega menu / footer).
+        </div>
         {!canPublish ? (
           <p className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-900">
             Compte équipe : vous pouvez créer et éditer les pages. La publication et la suppression
             nécessitent la permission « Publier les pages » ou un compte administrateur.
+          </p>
+        ) : null}
+
+        {!abTestingAllowed ? (
+          <p className="rounded-xl border border-border bg-muted/50 px-4 py-3 text-sm text-muted-foreground">
+            Plan <strong>{planCode}</strong> : tests A/B et historique de versions réservés au plan Pro
+            ou Business. Passez à un plan supérieur dans Paramètres boutique.
+          </p>
+        ) : null}
+
+        {!fullPageBuilder ? (
+          <p className="rounded-xl border border-border bg-muted/30 px-4 py-3 text-sm text-muted-foreground">
+            Page builder « simple » : tous les blocs essentiels sont disponibles. Le plan Business débloque
+            l’import/export JSON et les blocs avancés.
           </p>
         ) : null}
 
@@ -438,7 +474,7 @@ const AdminPages = () => {
                       homeById.get(row.pageId) &&
                       row.abVariant &&
                       (row.abVariant.toUpperCase() === 'A' || row.abVariant.toUpperCase() === 'B');
-                    const showPromote = isHomeAb && row.pageId === abWinnerPageId && canPublish;
+                    const showPromote = isHomeAb && row.pageId === abWinnerPageId && canPublish && abTestingAllowed;
                     return (
                     <tr key={row.pageId ?? row.pageSlug} className="border-t border-border">
                       <td className="px-3 py-2">

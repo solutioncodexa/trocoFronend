@@ -6,6 +6,10 @@ export interface TopBarMessageDTO {
   /** Secondes avant le message suivant quand plusieurs messages tournent */
   displayDurationSeconds: number;
   targetPaths?: string | null;
+  /** Fond hex (vide/null = dégradé thème) */
+  backgroundColor?: string | null;
+  /** Texte hex (vide/null = texte thème) */
+  textColor?: string | null;
 }
 
 export interface CreateTopBarMessageRequest {
@@ -14,6 +18,8 @@ export interface CreateTopBarMessageRequest {
   isActive?: boolean;
   displayDurationSeconds?: number;
   targetPaths?: string | null;
+  backgroundColor?: string | null;
+  textColor?: string | null;
 }
 
 export interface UpdateTopBarMessageRequest {
@@ -22,4 +28,6 @@ export interface UpdateTopBarMessageRequest {
   isActive?: boolean;
   displayDurationSeconds?: number;
   targetPaths?: string | null;
+  backgroundColor?: string | null;
+  textColor?: string | null;
 }

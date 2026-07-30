@@ -1028,7 +1028,7 @@ export default function PageBlockBuilder({
               {isLive
                 ? 'Aperçu live'
                 : selectedChrome === 'header'
-                  ? 'App bar'
+                  ? 'En-tête global'
                   : selectedChrome === 'footer'
                     ? 'Pied de page'
                     : selectedMeta?.label || 'Aucune sélection'}
@@ -1069,11 +1069,11 @@ export default function PageBlockBuilder({
               <div className="space-y-3 text-sm">
                 <p className="text-muted-foreground">
                   Le pied de page se personnalise dans{' '}
-                  <span className="font-medium text-foreground">Boutique → Sections globales</span>{' '}
+                  <span className="font-medium text-foreground">Boutique en ligne → Navigation</span>{' '}
                   (liens footer).
                 </p>
                 <Button type="button" variant="outline" size="sm" asChild>
-                  <Link to="/admin/sections">Ouvrir les sections</Link>
+                  <Link to="/admin/sections">Ouvrir la navigation</Link>
                 </Button>
               </div>
             ) : selected && selectedIndex != null ? (
@@ -1162,7 +1162,8 @@ export default function PageBlockBuilder({
                 <MousePointer2 className="h-8 w-8 text-muted-foreground/40" />
                 <p className="mt-3 text-sm font-semibold">Sélectionnez un composant</p>
                 <p className="mt-1 text-xs text-muted-foreground">
-                  Cliquez aussi l’app bar en haut de l’aperçu pour la personnaliser.
+                  Cliquez aussi l’en-tête en haut de l’aperçu — c’est l’en-tête global de toute la
+                  boutique.
                 </p>
                 <Button
                   type="button"
@@ -1171,7 +1172,7 @@ export default function PageBlockBuilder({
                   className="mt-4"
                   onClick={() => selectChrome('header')}
                 >
-                  Personnaliser l’app bar
+                  Personnaliser l’en-tête global
                 </Button>
               </div>
             )}
