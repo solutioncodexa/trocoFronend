@@ -1,18 +1,31 @@
-import { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
-import { useMutation, useQuery } from '@tanstack/react-query';
-import { Check, Banknote, CheckCircle, Verified, Tag, X, Loader2, ArrowRight, Sparkles, CreditCard, Truck } from 'lucide-react';
+import { useState, useEffect, useCallback, useRef, type ReactNode } from 'react';
+import { useNavigate, Link, useSearchParams } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
+import { Check, Banknote, CheckCircle, Verified, Tag, X, Loader2, ArrowRight, Sparkles, CreditCard, Truck, ShieldCheck } from 'lucide-react';
 import Layout from '@/components/layout/Layout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useCart } from '@/contexts/CartContext';
 import { formatPrice } from '@/utils/formatPrice';
 import { toast } from 'sonner';
 import { toastError } from '@/utils/toastMessages';
 import { PaymentMethod } from '@/types/product';
 import { ordersApi, productsApi, shippingApi, loyaltyApi } from '@/services/api';
-import { platformApi } from '@/services/api/platform';
+import { platformApi, submitCmiCheckout } from '@/services/api/platform';
+import {
+  StripeCardSection,
+  confirmStripePaymentMethod,
+} from '@/components/payments/StripeCardSection';
+import {
+  CmiPaymentSection,
+  clearCmiPending,
+  confirmCmiCardDetails,
+  readCmiPending,
+  saveCmiPending,
+} from '@/components/payments/CmiPaymentSection';
+import type { CmiCheckoutDTO } from '@/types/api';
 import { promoCodesApi } from '@/services/api/promoCodes';
 import { abandonedCartsApi } from '@/services/api/abandonedCarts';
 import { OrderDTO, CartItemDTO } from '@/types/api';
@@ -25,8 +38,11 @@ import { trackPurchase } from '@/components/storefront/TrackingPixels';
 import { mapProductListItemListToProducts } from '@/utils/productMapper';
 import ProductCard from '@/components/ui/ProductCard';
 import { useLocale } from '@/contexts/LocaleContext';
+import { useStoreAppearance } from '@/hooks/useStoreAppearance';
 import { useStorefrontTheme } from '@/hooks/useStorefrontTheme';
+import { checkoutCtaClass } from '@/config/storeAppearance';
 import type { ShippingCarrierDTO } from '@/types/api';
+import { cn } from '@/lib/utils';
 
 function etaLabel(carrier: ShippingCarrierDTO): string | null {
   const min = carrier.etaDaysMin;
@@ -37,8 +53,63 @@ function etaLabel(carrier: ShippingCarrierDTO): string | null {
   return null;
 }
 
+type PaymentOption = {
+  id: PaymentMethod;
+  title: string;
+  description: string;
+  badge?: string;
+  icon: ReactNode;
+  accentClass: string;
+};
+
+function paymentSubmitLabel(method: PaymentMethod): string {
+  switch (method) {
+    case 'card_stripe':
+      return 'Payer par carte (Stripe)';
+    case 'card_cmi':
+      return 'Payer par carte';
+    case 'paypal':
+      return 'Continuer vers PayPal';
+    case 'bnpl':
+      return 'Continuer le paiement échelonné';
+    default:
+      return 'Confirmer la commande';
+  }
+}
+
+function paymentConfirmCopy(method: PaymentMethod): { title: string; body: string } {
+  switch (method) {
+    case 'card_stripe':
+      return {
+        title: 'Paiement par carte',
+        body: 'Saisissez vos infos carte ci-dessus. La commande n’est créée qu’après paiement réussi.',
+      };
+    case 'card_cmi':
+      return {
+        title: 'Paiement par carte',
+        body: 'Saisissez vos infos carte ci-dessus. La commande n’est créée qu’après paiement réussi.',
+      };
+    case 'paypal':
+      return {
+        title: 'Redirection PayPal',
+        body: 'Vous serez redirigé vers PayPal pour approuver le paiement, puis ramené automatiquement vers la boutique.',
+      };
+    case 'bnpl':
+      return {
+        title: 'Paiement en plusieurs fois',
+        body: 'Après validation, notre équipe vous contactera pour finaliser le paiement échelonné.',
+      };
+    default:
+      return {
+        title: 'Confirmation immédiate',
+        body: 'En cliquant sur confirmer, votre commande sera enregistrée. Notre service client vous contactera par téléphone pour confirmer la livraison.',
+      };
+  }
+}
+
 const Checkout = () => {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const {
     items,
     getTotal,
@@ -50,7 +121,30 @@ const Checkout = () => {
   const { store } = useTenant();
   const { formatPrice: formatStorePrice, t } = useLocale();
   const theme = useStorefrontTheme();
+  const appearance = useStoreAppearance();
   const subtotal = getTotal();
+  const cmiReturnHandled = useRef(false);
+  const [cmiSession, setCmiSession] = useState<CmiCheckoutDTO | null>(null);
+  const [checkoutStep, setCheckoutStep] = useState<1 | 2>(1);
+  const stepsMode = appearance.checkoutLayout === 'steps';
+  const summaryPos = appearance.checkoutSummaryPosition;
+  const checkoutDense = appearance.checkoutDensity;
+  const formPad =
+    checkoutDense === 'compact'
+      ? 'space-y-5 p-5 md:p-6'
+      : checkoutDense === 'spacious'
+        ? 'space-y-10 p-8 md:p-12'
+        : 'space-y-8 p-8 md:p-10';
+  const formChrome =
+    appearance.checkoutFormStyle === 'flat'
+      ? 'bg-transparent shadow-none border-0'
+      : appearance.checkoutFormStyle === 'bordered'
+        ? 'border-2 border-border bg-card shadow-none'
+        : cn('shadow-card', theme.pagePanel);
+  const mainGap =
+    checkoutDense === 'compact' ? 'gap-8' : checkoutDense === 'spacious' ? 'gap-20' : 'gap-16';
+  const headingAlign =
+    appearance.checkoutHeadingAlign === 'center' ? 'text-center' : 'text-center lg:text-left';
 
   const { data: checkoutStore } = useQuery({
     queryKey: ['store-checkout', store?.slug],
@@ -180,19 +274,25 @@ const Checkout = () => {
   });
 
   const codEnabled = checkoutStore?.paymentCodEnabled !== false;
-  const cmiEnabled = !!checkoutStore?.paymentCmiEnabled;
+  const stripeReady = !!checkoutStore?.stripeReady;
+  const paypalReady = !!checkoutStore?.paypalReady;
+  /** Uniquement si clés + test réussis (pas le simple toggle). */
+  const cmiEnabled = !!checkoutStore?.cmiReady;
   const bnplEnabled = !!checkoutStore?.paymentBnplEnabled;
-  const paymentOptionsAvailable = codEnabled || cmiEnabled || bnplEnabled;
+  const paymentOptionsAvailable =
+    codEnabled || cmiEnabled || bnplEnabled || stripeReady || paypalReady;
 
   useEffect(() => {
     const options: PaymentMethod[] = [];
     if (codEnabled) options.push('cash_on_delivery');
+    if (stripeReady) options.push('card_stripe');
     if (cmiEnabled) options.push('card_cmi');
+    if (paypalReady) options.push('paypal');
     if (bnplEnabled) options.push('bnpl');
     if (options.length && !options.includes(paymentMethod)) {
       setPaymentMethod(options[0]);
     }
-  }, [codEnabled, cmiEnabled, bnplEnabled, paymentMethod]);
+  }, [codEnabled, cmiEnabled, bnplEnabled, stripeReady, paypalReady, paymentMethod]);
 
   const loyaltyRedeemNum = (() => {
     const n = Number(loyaltyPointsToRedeem.trim());
@@ -242,24 +342,72 @@ const Checkout = () => {
     getTotal,
   ]);
 
-  // Mutation pour créer une commande
-  const createOrderMutation = useMutation({
-    mutationFn: async (orderData: OrderDTO) => {
-      return await ordersApi.createOrder(orderData);
-    },
-    onSuccess: (_data, orderData) => {
+  // Succès commande uniquement après POST /orders réussi (await).
+  const finalizeOrder = async (orderData: OrderDTO) => {
+    await ordersApi.createOrder(orderData);
+    setIsSubmitting(false);
+    setIsSuccess(true);
+    setCmiSession(null);
+    clearCmiPending();
+    clearCart();
+    toast.success('Commande créée avec succès!');
+    void abandonedCartsApi.markRecovered(getOrCreateCartSessionKey()).catch(() => {});
+    trackPurchase({ value: orderData.total, currency: 'MAD' });
+  };
+
+  const fallbackCmiRedirect = useCallback((checkout: CmiCheckoutDTO) => {
+    setCmiSession(null);
+    submitCmiCheckout(checkout);
+  }, []);
+
+  // Retour CMI (ok/fail) — commande créée uniquement après succès.
+  useEffect(() => {
+    const status = searchParams.get('cmi');
+    if (!status || cmiReturnHandled.current) return;
+    cmiReturnHandled.current = true;
+
+    const cleanParams = () => {
+      const next = new URLSearchParams(searchParams);
+      next.delete('cmi');
+      setSearchParams(next, { replace: true });
+    };
+
+    if (status === 'fail') {
+      clearCmiPending();
+      setCmiSession(null);
       setIsSubmitting(false);
-      setIsSuccess(true);
-      clearCart();
-      toast.success('Commande créée avec succès!');
-      void abandonedCartsApi.markRecovered(getOrCreateCartSessionKey()).catch(() => {});
-      trackPurchase({ value: orderData.total, currency: 'MAD' });
-    },
-    onError: (error: Error) => {
-      setIsSubmitting(false);
-      toastError(error, 'Erreur lors de la création de la commande');
-    },
-  });
+      toast.error('Paiement CMI annulé ou échoué.');
+      cleanParams();
+      return;
+    }
+
+    if (status !== 'ok') {
+      cleanParams();
+      return;
+    }
+
+    const pending = readCmiPending();
+    if (!pending?.draft) {
+      toast.error('Session de paiement introuvable. Réessayez votre commande.');
+      cleanParams();
+      return;
+    }
+
+    clearCmiPending();
+    setIsSubmitting(true);
+    setPaymentMethod('card_cmi');
+    void (async () => {
+      try {
+        await finalizeOrder({ ...pending.draft, paymentMethod: 'card_cmi' });
+      } catch (err) {
+        setIsSubmitting(false);
+        toastError(err, 'Erreur lors de la création de la commande');
+      } finally {
+        cleanParams();
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- run once on return URL
+  }, [searchParams, setSearchParams]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -288,7 +436,7 @@ const Checkout = () => {
 
     const orderTotal = afterDiscountSubmit + shippingFee;
 
-    const orderDTO: OrderDTO = {
+    const baseOrder: OrderDTO = {
       id: '',
       items: cartItems,
       customer: {
@@ -299,7 +447,7 @@ const Checkout = () => {
         city: formData.city,
       },
       total: orderTotal,
-      paymentMethod: paymentMethod,
+      paymentMethod,
       status: 'new',
       createdAt: new Date().toISOString(),
       shippingFee,
@@ -309,70 +457,280 @@ const Checkout = () => {
         : {}),
       ...(appliedPromo && {
         promoCode: appliedPromo.code,
-        discount: discount,
+        discount,
       }),
     };
 
-    createOrderMutation.mutate(orderDTO);
+    try {
+      if (paymentMethod === 'card_stripe') {
+        if (!checkoutStore?.stripePublishableKey?.trim()) {
+          throw new Error('Clé Stripe publique manquante. Configurez Stripe dans Paramètres → Paiements.');
+        }
+        const paymentMethodId = await confirmStripePaymentMethod();
+        if (!paymentMethodId) {
+          setIsSubmitting(false);
+          return;
+        }
+        const cents = Math.round(orderTotal * 100);
+        const charge = await platformApi.chargeStoreStripe({
+          paymentMethodId,
+          amountCents: cents,
+          currency: (store?.currency || 'mad').toLowerCase(),
+          description: `Commande ${formData.fullName}`,
+        });
+        if (charge?.status !== 'succeeded' || !charge.paymentIntentId) {
+          throw new Error('Le paiement Stripe n’a pas abouti.');
+        }
+        await finalizeOrder({ ...baseOrder, paymentMethod: 'card_stripe' });
+        return;
+      }
+
+      if (paymentMethod === 'paypal') {
+        const paypal = await platformApi.createStorePaypalOrder({
+          amount: orderTotal,
+          currency: (store?.currency || 'MAD').toUpperCase(),
+          description: `Commande ${formData.fullName}`,
+        });
+        if (paypal.approveUrl) {
+          sessionStorage.setItem(
+            'troco_paypal_pending',
+            JSON.stringify({
+              orderId: paypal.orderId,
+              draft: baseOrder,
+            }),
+          );
+          window.location.href = paypal.approveUrl;
+          return;
+        }
+        await platformApi.captureStorePaypalOrder(paypal.orderId);
+        await finalizeOrder({ ...baseOrder, paymentMethod: 'paypal' });
+        return;
+      }
+
+      if (paymentMethod === 'card_cmi') {
+        const card = confirmCmiCardDetails();
+        if (!card) {
+          setIsSubmitting(false);
+          return;
+        }
+
+        // Carte test 4242… — confirme sans gateway (comme le mock Grammar).
+        if (card.isTestCard) {
+          await finalizeOrder({ ...baseOrder, paymentMethod: 'card_cmi' });
+          return;
+        }
+
+        const origin = window.location.origin;
+        const cmi = await platformApi.initStoreCmiCheckout({
+          amount: orderTotal,
+          currency: store?.currency || 'MAD',
+          description: `Commande ${formData.fullName}`,
+          okUrl: `${origin}/cmi-return.html?status=ok`,
+          failUrl: `${origin}/cmi-return.html?status=fail`,
+        });
+        saveCmiPending(cmi.oid, { ...baseOrder, paymentMethod: 'card_cmi' });
+        setCmiSession(cmi);
+        setIsSubmitting(false);
+        return;
+      }
+
+      await finalizeOrder(baseOrder);
+    } catch (err) {
+      setIsSubmitting(false);
+      toastError(err, 'Erreur lors du paiement');
+    }
   };
 
-  if (items.length === 0 && !isSuccess) {
+  const paymentLabel =
+    paymentMethod === 'card_cmi'
+      ? t('payCard')
+      : paymentMethod === 'card_stripe'
+        ? 'Carte (Stripe)'
+        : paymentMethod === 'paypal'
+          ? 'PayPal'
+          : paymentMethod === 'bnpl'
+            ? t('payBnpl')
+            : t('payCod');
+
+  const cmiReturnStatus = searchParams.get('cmi');
+  const awaitingCmiReturn = cmiReturnStatus === 'ok' || cmiReturnStatus === 'fail';
+
+  const confirmCopy = paymentConfirmCopy(paymentMethod);
+  const submitLabel =
+    appearance.checkoutCtaLabel?.trim() || paymentSubmitLabel(paymentMethod);
+
+  const paymentOptions: PaymentOption[] = [
+    ...(codEnabled
+      ? [
+          {
+            id: 'cash_on_delivery' as const,
+            title: t('payCod'),
+            description: 'Payez en espèces à la réception',
+            badge: 'Sans carte',
+            icon: <Banknote className="size-5" aria-hidden />,
+            accentClass: 'text-emerald-700 bg-emerald-50',
+          },
+        ]
+      : []),
+    ...(stripeReady
+      ? [
+          {
+            id: 'card_stripe' as const,
+            title: 'Carte · Stripe',
+            description: 'Visa, Mastercard — paiement sécurisé international',
+            badge: 'En ligne',
+            icon: <CreditCard className="size-5" aria-hidden />,
+            accentClass: 'text-indigo-700 bg-indigo-50',
+          },
+        ]
+      : []),
+    ...(cmiEnabled
+      ? [
+          {
+            id: 'card_cmi' as const,
+            title: 'Carte · CMI',
+            description: 'Visa, Mastercard — paiement sécurisé marocain',
+            badge: 'En ligne',
+            icon: <ShieldCheck className="size-5" aria-hidden />,
+            accentClass: 'text-sky-700 bg-sky-50',
+          },
+        ]
+      : []),
+    ...(paypalReady
+      ? [
+          {
+            id: 'paypal' as const,
+            title: 'PayPal',
+            description: 'Compte PayPal ou carte via PayPal',
+            badge: 'Redirection',
+            icon: (
+              <span className="text-[11px] font-black tracking-tight text-[#003087]" aria-hidden>
+                PP
+              </span>
+            ),
+            accentClass: 'text-[#003087] bg-[#FFC439]/25',
+          },
+        ]
+      : []),
+    ...(bnplEnabled
+      ? [
+          {
+            id: 'bnpl' as const,
+            title: t('payBnpl'),
+            description: checkoutStore?.bnplProvider || 'Paiement en plusieurs fois',
+            badge: 'Échelonné',
+            icon: <CreditCard className="size-5" aria-hidden />,
+            accentClass: 'text-amber-800 bg-amber-50',
+          },
+        ]
+      : []),
+  ];
+
+  if (items.length === 0 && !isSuccess && !awaitingCmiReturn && !cmiSession) {
     navigate('/panier');
     return null;
   }
 
   if (isSuccess) {
-    return <Layout>
+    return (
+      <Layout>
         <div className="container mx-auto px-4 py-20 text-center max-w-lg animate-fade-in">
           <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-green-100 flex items-center justify-center">
             <Check className="w-10 h-10 text-green-600" />
           </div>
           <h1 className="font-display text-3xl mb-4">Commande Confirmée!</h1>
           <p className="font-body text-muted-foreground mb-8">
-            Merci pour votre commande, {formData.fullName}! 
+            Merci pour votre commande, {formData.fullName}!
             {` Nous vous contacterons au ${formData.phone} pour confirmer la livraison.`}
           </p>
           <div className="bg-card border border-border rounded-2xl shadow-soft p-6 mb-8 text-left">
             <h3 className="font-display text-lg mb-4">Détails de livraison</h3>
             <div className="space-y-2 font-body text-sm">
-              <p><span className="text-muted-foreground">Nom:</span> {formData.fullName}</p>
-              <p><span className="text-muted-foreground">Téléphone:</span> {formData.phone}</p>
-              <p><span className="text-muted-foreground">Adresse:</span> {formData.address}</p>
-              <p><span className="text-muted-foreground">Ville:</span> {formData.city}</p>
-              <p><span className="text-muted-foreground">Paiement:</span> À la livraison</p>
+              <p>
+                <span className="text-muted-foreground">Nom:</span> {formData.fullName}
+              </p>
+              <p>
+                <span className="text-muted-foreground">Téléphone:</span> {formData.phone}
+              </p>
+              <p>
+                <span className="text-muted-foreground">Adresse:</span> {formData.address}
+              </p>
+              <p>
+                <span className="text-muted-foreground">Ville:</span> {formData.city}
+              </p>
+              <p>
+                <span className="text-muted-foreground">Paiement:</span> {paymentLabel}
+              </p>
             </div>
           </div>
           <Button asChild size="lg" className="font-body uppercase tracking-wider rounded-2xl">
-            <Link to="/">
-              Retour à l'accueil
-            </Link>
+            <Link to="/">Retour à l&apos;accueil</Link>
           </Button>
         </div>
-      </Layout>;
+      </Layout>
+    );
   }
-
-  const paymentLabel =
-    paymentMethod === 'card_cmi'
-      ? t('payCard')
-      : paymentMethod === 'bnpl'
-        ? t('payBnpl')
-        : t('payCod');
 
   return (
     <Layout>
       <main className={cn('max-w-[1280px] mx-auto px-6 py-12 animate-fade-in', theme.shell)}>
-        <div className="flex flex-col lg:flex-row gap-16">
+        <div
+          className={cn(
+            'flex',
+            summaryPos === 'bottom' ? 'flex-col gap-10' : cn('flex-col lg:flex-row', mainGap),
+            summaryPos === 'left' && 'lg:flex-row-reverse',
+          )}
+        >
           {/* Left Column - Form */}
-          <div className="flex-1 max-w-2xl">
-            <div className="mb-10 text-center lg:text-left">
+          <div className={cn('flex-1', summaryPos !== 'bottom' && 'max-w-2xl')}>
+            <div className={cn('mb-10', headingAlign)}>
               <h2 className="text-3xl font-display text-foreground mb-2">Validation de votre Commande</h2>
               <p className="text-primary font-display text-3xl">
                 {paymentLabel}
               </p>
+              {stepsMode ? (
+                <div
+                  className={cn(
+                    'mt-6 flex items-center gap-2',
+                    appearance.checkoutHeadingAlign === 'center' && 'mx-auto max-w-md',
+                  )}
+                >
+                  <button
+                    type="button"
+                    className={cn(
+                      'rounded-full px-3 py-1 text-xs font-bold uppercase tracking-wider',
+                      checkoutStep === 1
+                        ? 'bg-primary text-primary-foreground'
+                        : 'bg-muted text-muted-foreground',
+                    )}
+                    onClick={() => setCheckoutStep(1)}
+                  >
+                    1 · Livraison
+                  </button>
+                  <div className="h-px flex-1 bg-border" />
+                  <button
+                    type="button"
+                    className={cn(
+                      'rounded-full px-3 py-1 text-xs font-bold uppercase tracking-wider',
+                      checkoutStep === 2
+                        ? 'bg-primary text-primary-foreground'
+                        : 'bg-muted text-muted-foreground',
+                    )}
+                    onClick={() => setCheckoutStep(2)}
+                  >
+                    2 · Paiement
+                  </button>
+                </div>
+              ) : null}
             </div>
 
-            <form onSubmit={handleSubmit} className={cn('space-y-8 p-8 md:p-10 shadow-card', theme.pagePanel)}>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <form onSubmit={handleSubmit} className={cn(formPad, formChrome, 'rounded-2xl')}>
+              <div
+                className={cn(
+                  'grid grid-cols-1 md:grid-cols-2 gap-6',
+                  stepsMode && checkoutStep !== 1 && 'hidden',
+                )}
+              >
                 <div className="col-span-full md:col-span-1">
                   <Label className="block text-xs uppercase tracking-widest text-muted-foreground mb-2 font-bold" htmlFor="fullname">Nom Complet</Label>
                   <Input 
@@ -434,6 +792,7 @@ const Checkout = () => {
                     required 
                   />
                 </div>
+                {appearance.checkoutShowNotes ? (
                 <div className="col-span-full">
                   <Label className="block text-xs uppercase tracking-widest text-muted-foreground mb-2 font-bold" htmlFor="notes">Notes de commande (Optionnel)</Label>
                   <textarea 
@@ -446,10 +805,11 @@ const Checkout = () => {
                     className="w-full rounded-xl border border-input bg-card px-3.5 py-2.5 text-sm text-foreground shadow-soft placeholder:text-muted-foreground/80 hover:border-primary/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:border-primary transition-colors resize-none" 
                   />
                 </div>
+                ) : null}
               </div>
 
               {carriers.length > 0 ? (
-                <div>
+                <div className={cn(stepsMode && checkoutStep !== 1 && 'hidden')}>
                   <Label className="block text-xs uppercase tracking-widest text-muted-foreground mb-2 font-bold">
                     {t('shipping')} *
                   </Label>
@@ -489,7 +849,7 @@ const Checkout = () => {
               ) : null}
 
               {checkoutStore?.loyaltyEnabled ? (
-                <div>
+                <div className={cn(stepsMode && checkoutStep !== 1 && 'hidden')}>
                   <Label className="block text-xs uppercase tracking-widest text-muted-foreground mb-2 font-bold">
                     {t('loyaltyPoints')}
                   </Label>
@@ -518,102 +878,206 @@ const Checkout = () => {
                 </div>
               ) : null}
 
+              {stepsMode && checkoutStep === 1 ? (
+                <Button
+                  type="button"
+                  className="w-full rounded-2xl py-4 text-sm font-bold uppercase tracking-wider"
+                  onClick={() => setCheckoutStep(2)}
+                >
+                  Continuer vers le paiement
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
+              ) : null}
+
               {/* Mode de paiement */}
-              <div>
-                <Label className="block text-xs uppercase tracking-widest text-muted-foreground mb-2 font-bold">Mode de paiement *</Label>
+              <div className={cn(stepsMode && checkoutStep !== 2 && 'hidden')}>
+                <Label className="block text-xs uppercase tracking-widest text-muted-foreground mb-3 font-bold">
+                  Mode de paiement *
+                </Label>
                 {!paymentOptionsAvailable ? (
                   <p className="rounded-xl border border-amber-500/40 bg-amber-50 px-4 py-3 text-sm text-amber-950">
                     Aucun mode de paiement n’est activé pour cette boutique. Contactez le vendeur ou réessayez plus tard.
                   </p>
-                ) : null}
-                <div className="space-y-3">
-                  {codEnabled ? (
-                  <div 
-                    className={`flex items-center space-x-3 p-4 rounded-xl border-2 cursor-pointer transition-colors ${paymentMethod === 'cash_on_delivery' ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50'}`}
-                    onClick={() => setPaymentMethod('cash_on_delivery')}
+                ) : (
+                  <RadioGroup
+                    value={paymentMethod}
+                    onValueChange={(v) => setPaymentMethod(v as PaymentMethod)}
+                    className={cn(
+                      'grid gap-3',
+                      appearance.checkoutPaymentStyle === 'compact' && 'grid-cols-1 sm:grid-cols-2 gap-2',
+                      appearance.checkoutPaymentStyle === 'list' && 'gap-2',
+                    )}
+                    aria-label="Choisir un mode de paiement"
                   >
-                    <div className={`w-4 h-4 rounded-full border-2 ${paymentMethod === 'cash_on_delivery' ? 'border-primary bg-primary' : 'border-border'} flex items-center justify-center`}>
-                      {paymentMethod === 'cash_on_delivery' && <div className="w-2 h-2 rounded-full bg-white"></div>}
-                    </div>
-                    <Banknote className="w-5 h-5 text-primary" />
-                    <div className="flex-1">
-                      <span className="font-medium cursor-pointer">
-                        {t('payCod')}
-                      </span>
-                      <p className="text-xs text-muted-foreground leading-relaxed">Payez en espèces à la réception de votre commande</p>
-                    </div>
+                    {paymentOptions.map((opt) => {
+                      const selected = paymentMethod === opt.id;
+                      const payStyle = appearance.checkoutPaymentStyle;
+                      return (
+                        <label
+                          key={opt.id}
+                          htmlFor={`pay-${opt.id}`}
+                          className={cn(
+                            'relative flex cursor-pointer items-start gap-3 transition-all',
+                            payStyle === 'compact'
+                              ? 'rounded-lg border p-3'
+                              : payStyle === 'list'
+                                ? 'rounded-lg border px-3 py-2.5'
+                                : 'rounded-xl border-2 p-4',
+                            selected
+                              ? 'border-primary bg-primary/[0.06] shadow-sm'
+                              : 'border-border hover:border-primary/40 hover:bg-muted/30',
+                          )}
+                        >
+                          <RadioGroupItem
+                            id={`pay-${opt.id}`}
+                            value={opt.id}
+                            className="mt-1 shrink-0"
+                          />
+                          {payStyle !== 'list' ? (
+                          <div
+                            className={cn(
+                              'mt-0.5 flex shrink-0 items-center justify-center rounded-lg',
+                              payStyle === 'compact' ? 'size-8' : 'size-10',
+                              opt.accentClass,
+                            )}
+                          >
+                            {opt.icon}
+                          </div>
+                          ) : null}
+                          <div className="min-w-0 flex-1">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <span className={cn('font-semibold text-foreground', payStyle === 'compact' && 'text-sm')}>
+                                {opt.title}
+                              </span>
+                              {opt.badge ? (
+                                <span className="rounded-md bg-muted px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
+                                  {opt.badge}
+                                </span>
+                              ) : null}
+                            </div>
+                            {payStyle !== 'compact' ? (
+                            <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">
+                              {opt.description}
+                            </p>
+                            ) : null}
+                          </div>
+                          {selected ? (
+                            <Check className="mt-1 size-4 shrink-0 text-primary" aria-hidden />
+                          ) : null}
+                        </label>
+                      );
+                    })}
+                  </RadioGroup>
+                )}
+
+                {paymentMethod === 'card_stripe' && stripeReady ? (
+                  <div className="mt-4">
+                    {checkoutStore?.stripePublishableKey?.trim() ? (
+                      <StripeCardSection
+                        publishableKey={checkoutStore.stripePublishableKey.trim()}
+                        onError={(msg) => toast.error(msg)}
+                      />
+                    ) : (
+                      <p className="rounded-xl border border-destructive/40 bg-destructive/5 px-4 py-3 text-sm text-destructive">
+                        Clé Stripe publique absente. Ajoutez-la dans Paramètres → Paiements, puis
+                        « Tester & activer ».
+                      </p>
+                    )}
                   </div>
-                  ) : null}
+                ) : null}
 
-                  {cmiEnabled ? (
-                    <div
-                      className={`flex items-center space-x-3 p-4 rounded-xl border-2 cursor-pointer transition-colors ${paymentMethod === 'card_cmi' ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50'}`}
-                      onClick={() => setPaymentMethod('card_cmi')}
-                    >
-                      <div className={`w-4 h-4 rounded-full border-2 ${paymentMethod === 'card_cmi' ? 'border-primary bg-primary' : 'border-border'} flex items-center justify-center`}>
-                        {paymentMethod === 'card_cmi' && <div className="w-2 h-2 rounded-full bg-white"></div>}
-                      </div>
-                      <CreditCard className="w-5 h-5 text-primary" />
-                      <div className="flex-1">
-                        <span className="font-medium">{t('payCard')}</span>
-                        <p className="text-xs text-muted-foreground leading-relaxed">Paiement sécurisé via la passerelle CMI</p>
-                      </div>
-                    </div>
-                  ) : null}
-
-                  {bnplEnabled ? (
-                    <div
-                      className={`flex items-center space-x-3 p-4 rounded-xl border-2 cursor-pointer transition-colors ${paymentMethod === 'bnpl' ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50'}`}
-                      onClick={() => setPaymentMethod('bnpl')}
-                    >
-                      <div className={`w-4 h-4 rounded-full border-2 ${paymentMethod === 'bnpl' ? 'border-primary bg-primary' : 'border-border'} flex items-center justify-center`}>
-                        {paymentMethod === 'bnpl' && <div className="w-2 h-2 rounded-full bg-white"></div>}
-                      </div>
-                      <CreditCard className="w-5 h-5 text-primary" />
-                      <div className="flex-1">
-                        <span className="font-medium">{t('payBnpl')}</span>
-                        {checkoutStore?.bnplProvider ? (
-                          <p className="text-xs text-muted-foreground leading-relaxed">{checkoutStore.bnplProvider}</p>
-                        ) : null}
-                      </div>
-                    </div>
-                  ) : null}
-
-                </div>
+                {paymentMethod === 'card_cmi' && cmiEnabled ? (
+                  <div className="mt-4">
+                    <CmiPaymentSection
+                      session={cmiSession}
+                      onCloseSession={() => {
+                        setCmiSession(null);
+                        clearCmiPending();
+                        setIsSubmitting(false);
+                      }}
+                      onFallbackRedirect={fallbackCmiRedirect}
+                      onError={(msg) => toast.error(msg)}
+                    />
+                  </div>
+                ) : null}
               </div>
 
-              <div className="flex items-center justify-center py-4">
+              <div
+                className={cn(
+                  'flex items-center justify-center py-4',
+                  stepsMode && checkoutStep !== 2 && 'hidden',
+                )}
+              >
                 <div className="w-full h-px bg-border"></div>
                 <div className="mx-4 size-2 rotate-45 border border-border bg-card"></div>
                 <div className="w-full h-px bg-border"></div>
               </div>
 
-              <div className="bg-muted/40 p-4 border border-border rounded-xl">
+              <div
+                className={cn(
+                  'bg-muted/40 p-4 border border-border rounded-xl',
+                  stepsMode && checkoutStep !== 2 && 'hidden',
+                )}
+              >
                 <div className="flex gap-4 items-start">
-                  <Verified className="text-primary" />
+                  <Verified className="text-primary shrink-0" />
                   <div>
-                    <h4 className="text-sm font-bold uppercase tracking-wide text-foreground mb-1">Confirmation Immédiate</h4>
-                    <p className="text-xs text-muted-foreground leading-relaxed">En cliquant sur confirmer, votre commande sera enregistrée. Notre service client vous contactera par téléphone pour confirmer les détails de livraison.</p>
+                    <h4 className="text-sm font-bold uppercase tracking-wide text-foreground mb-1">
+                      {confirmCopy.title}
+                    </h4>
+                    <p className="text-xs text-muted-foreground leading-relaxed">{confirmCopy.body}</p>
                   </div>
                 </div>
               </div>
 
-              <Button
-                type="submit"
-                className="w-full !h-auto min-h-[3.25rem] bg-primary px-4 py-3.5 hover:bg-primary/90 text-primary-foreground text-xs sm:text-sm uppercase font-bold tracking-[0.12em] sm:tracking-[0.2em] transition-all shadow-card grid grid-cols-[auto_1fr] items-center gap-2.5 sm:gap-3 sm:px-6 whitespace-normal leading-snug sm:min-h-[3.5rem] sm:py-4"
-                disabled={isSubmitting || !paymentOptionsAvailable}
-              >
-                <CheckCircle className="size-5 shrink-0 justify-self-start sm:size-[1.35rem]" aria-hidden />
-                <span className="min-w-0 text-center text-balance">
-                  {isSubmitting ? 'Traitement en cours…' : 'Confirmer la commande'}
-                </span>
-              </Button>
+              <div className={cn(stepsMode && checkoutStep !== 2 && 'hidden')}>
+                <Button
+                  type="submit"
+                  className={checkoutCtaClass(appearance.checkoutCtaEmphasis)}
+                  disabled={isSubmitting || !paymentOptionsAvailable}
+                >
+                  <CheckCircle className="size-5 shrink-0 justify-self-start sm:size-[1.35rem]" aria-hidden />
+                  <span className="min-w-0 text-center text-balance">
+                    {isSubmitting ? 'Traitement en cours…' : submitLabel}
+                  </span>
+                </Button>
+                {appearance.checkoutShowTrustBadges ? (
+                  <div className="mt-4 flex flex-wrap items-center justify-center gap-4 text-[11px] text-muted-foreground">
+                    <span className="inline-flex items-center gap-1">
+                      <ShieldCheck className="h-3.5 w-3.5 text-primary" /> Paiement sécurisé
+                    </span>
+                    <span className="inline-flex items-center gap-1">
+                      <Truck className="h-3.5 w-3.5 text-primary" /> Livraison suivie
+                    </span>
+                  </div>
+                ) : null}
+                {stepsMode ? (
+                  <button
+                    type="button"
+                    className="mt-3 w-full text-center text-xs uppercase tracking-wider text-muted-foreground hover:text-primary"
+                    onClick={() => setCheckoutStep(1)}
+                  >
+                    ← Retour livraison
+                  </button>
+                ) : null}
+              </div>
             </form>
           </div>
 
-          {/* Right Column - Cart Summary */}
-          <div className="w-full lg:w-[400px]">
-            <div className="sticky top-24 bg-card border border-border rounded-2xl shadow-card p-8">
+          {/* Cart Summary */}
+          <div
+            className={cn(
+              'w-full',
+              summaryPos === 'bottom' ? 'max-w-2xl' : 'lg:w-[400px]',
+            )}
+          >
+            <div
+              className={cn(
+                'bg-card border border-border rounded-2xl shadow-card',
+                checkoutDense === 'compact' ? 'p-5' : checkoutDense === 'spacious' ? 'p-10' : 'p-8',
+                appearance.checkoutStickySummary && summaryPos !== 'bottom' && 'sticky top-24',
+              )}
+            >
               <h3 className="text-xl font-display text-foreground mb-6 border-b border-border pb-4 uppercase tracking-widest text-sm font-bold">Résumé du Panier</h3>
               
               <div className="space-y-6 mb-8">
@@ -641,6 +1105,7 @@ const Checkout = () => {
               </div>
 
               {/* Promo Code Input */}
+              {appearance.checkoutShowPromoField ? (
               <div className="border-t border-border pt-6 mb-4">
                 <Label className="block text-xs uppercase tracking-widest text-muted-foreground mb-2 font-bold">
                   Code Promo
@@ -687,9 +1152,10 @@ const Checkout = () => {
                   <p className="text-xs text-destructive mt-1.5">{promoError}</p>
                 )}
               </div>
+              ) : null}
 
               {/* Promo suggestions — AliExpress style */}
-              {promoSuggestions.length > 0 && !appliedPromo && (
+              {appearance.checkoutShowPromoField && promoSuggestions.length > 0 && !appliedPromo && (
                 <div className="mb-4 space-y-2">
                   <div className="flex items-center gap-2 mb-2">
                     <Sparkles className="w-4 h-4 text-primary" />

@@ -1,4 +1,4 @@
-import { useState, type RefObject } from 'react';
+import { useCallback, useEffect, useRef, useState, type RefObject } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import {
@@ -8,9 +8,11 @@ import {
   PanelLeft,
   PanelRight,
   Palette,
+  Redo2,
   Save,
   Smartphone,
   Tablet,
+  Undo2,
 } from 'lucide-react';
 import {
   AppearanceSectionEditors,
@@ -20,6 +22,8 @@ import {
 import {
   APPEARANCE_OUTLINE,
   isPreviewHotspotSection,
+  previewHotspotForSection,
+  previewPageForSection,
   type AppearanceSectionId,
 } from '@/components/admin/appearance/appearanceSections';
 import { StoreAppearanceLivePreview } from '@/components/admin/StoreAppearanceLivePreview';
@@ -35,6 +39,8 @@ type Props = {
   form: AppearanceFormSlice;
   patch: AppearanceSectionEditorsProps['patch'];
   patchAppearance: <K extends keyof StoreAppearance>(key: K, value: StoreAppearance[K]) => void;
+  mergeAppearance: (partial: Partial<StoreAppearance>) => void;
+  replaceAppearance: (appearance: StoreAppearance) => void;
   applyThemeNow: (themeKey: StoreThemeKey) => void;
   themePresets?: Record<string, unknown> | null;
   megaMenuEnabled: boolean;
@@ -58,6 +64,8 @@ export function AppearanceWorkspace({
   form,
   patch,
   patchAppearance,
+  mergeAppearance,
+  replaceAppearance,
   applyThemeNow,
   themePresets,
   megaMenuEnabled,
@@ -80,6 +88,18 @@ export function AppearanceWorkspace({
   const [showOutline, setShowOutline] = useState(true);
   const [showEditor, setShowEditor] = useState(true);
   const [device, setDevice] = useState<Device>('desktop');
+  /** Page mockée dans l’aperçu (2ᵉ clic nav = Shopify). */
+  const [previewPage, setPreviewPage] = useState('home');
+  /** Aperçu panier : vide (défaut) ou rempli. */
+  const [cartPreviewMode, setCartPreviewMode] = useState<'empty' | 'filled'>('empty');
+  /** Aperçu favoris : vide (défaut) ou rempli. */
+  const [wishlistPreviewMode, setWishlistPreviewMode] = useState<'empty' | 'filled'>('empty');
+  const [undoLen, setUndoLen] = useState(0);
+  const [redoLen, setRedoLen] = useState(0);
+  const undoStackRef = useRef<StoreAppearance[]>([]);
+  const redoStackRef = useRef<StoreAppearance[]>([]);
+  const skipHistoryRef = useRef(false);
+  const previewFrameRef = useRef<HTMLDivElement>(null);
 
   const { data: topBarMessages = [] } = useQuery({
     queryKey: ['top-bar-messages'],
@@ -87,10 +107,111 @@ export function AppearanceWorkspace({
   });
   const activeTopBarMessages = topBarMessages.filter((m) => m.isActive);
 
+  /** Ramène l’aperçu sur la page où la section est visible. */
+  const syncPreviewToSection = useCallback((section: AppearanceSectionId) => {
+    const page = previewPageForSection(section);
+    if (page) setPreviewPage(page);
+  }, []);
+
+  /** 1er clic = ouvrir éditeur ; 2ᵉ clic sur la même section = fermer (Shopify). */
   const selectSection = (section: AppearanceSectionId) => {
+    if (activeSection === section && showEditor) {
+      setShowEditor(false);
+      return;
+    }
     setActiveSection(section);
     setShowEditor(true);
+    syncPreviewToSection(section);
+    // À l’ouverture Panier seulement : démarrer sur l’état vide (pas à chaque edit).
+    if (section === 'cart') setCartPreviewMode('empty');
+    if (section === 'wishlist') setWishlistPreviewMode('empty');
   };
+
+  const pushHistory = useCallback(() => {
+    if (skipHistoryRef.current) return;
+    undoStackRef.current = [...undoStackRef.current.slice(-39), { ...form.appearance }];
+    redoStackRef.current = [];
+    setUndoLen(undoStackRef.current.length);
+    setRedoLen(0);
+  }, [form.appearance]);
+
+  const undoAppearance = useCallback(() => {
+    const prev = undoStackRef.current.pop();
+    if (!prev) return;
+    redoStackRef.current.push({ ...form.appearance });
+    setUndoLen(undoStackRef.current.length);
+    setRedoLen(redoStackRef.current.length);
+    skipHistoryRef.current = true;
+    replaceAppearance(prev);
+    skipHistoryRef.current = false;
+  }, [form.appearance, replaceAppearance]);
+
+  const redoAppearance = useCallback(() => {
+    const next = redoStackRef.current.pop();
+    if (!next) return;
+    undoStackRef.current.push({ ...form.appearance });
+    setUndoLen(undoStackRef.current.length);
+    setRedoLen(redoStackRef.current.length);
+    skipHistoryRef.current = true;
+    replaceAppearance(next);
+    skipHistoryRef.current = false;
+  }, [form.appearance, replaceAppearance]);
+
+  /** Toute modif propriétés → afficher la bonne page au milieu. */
+  const patchLive: AppearanceSectionEditorsProps['patch'] = (key, value) => {
+    syncPreviewToSection(activeSection);
+    if (key === 'appearance') pushHistory();
+    patch(key, value);
+  };
+  const patchAppearanceLive = <K extends keyof StoreAppearance>(
+    key: K,
+    value: StoreAppearance[K],
+  ) => {
+    syncPreviewToSection(activeSection);
+    pushHistory();
+    patchAppearance(key, value);
+  };
+  const mergeAppearanceLive = (partial: Partial<StoreAppearance>) => {
+    syncPreviewToSection(activeSection);
+    pushHistory();
+    mergeAppearance(partial);
+  };
+  const applyThemeLive = (themeKey: StoreThemeKey) => {
+    syncPreviewToSection('themes');
+    applyThemeNow(themeKey);
+  };
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const mod = e.ctrlKey || e.metaKey;
+      if (!mod) return;
+      const key = e.key.toLowerCase();
+      if (key === 'z' && !e.shiftKey) {
+        e.preventDefault();
+        undoAppearance();
+      } else if (key === 'y' || (key === 'z' && e.shiftKey)) {
+        e.preventDefault();
+        redoAppearance();
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [undoAppearance, redoAppearance]);
+
+  // Scroll l’aperçu jusqu’à la zone éditée (après redirection page).
+  useEffect(() => {
+    if (!showEditor) return;
+    const hotspot = previewHotspotForSection(activeSection);
+    if (!hotspot) return;
+    const timer = window.setTimeout(() => {
+      const root = previewFrameRef.current;
+      const el = root?.querySelector<HTMLElement>(
+        `[data-appearance-section="${hotspot}"]`,
+      );
+      el?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }, 80);
+    return () => window.clearTimeout(timer);
+  }, [activeSection, previewPage, showEditor]);
 
   const deviceMax =
     device === 'mobile' ? 'max-w-[390px]' : device === 'tablet' ? 'max-w-[768px]' : 'max-w-[960px]';
@@ -111,6 +232,30 @@ export function AppearanceWorkspace({
         </div>
 
         <div className="flex shrink-0 flex-wrap items-center justify-end gap-1 sm:gap-1.5">
+          <div className="flex items-center gap-0.5 rounded-lg border border-border p-0.5">
+            <Button
+              type="button"
+              size="icon"
+              variant="ghost"
+              className="h-8 w-8"
+              disabled={undoLen === 0}
+              onClick={undoAppearance}
+              title="Annuler (Ctrl+Z)"
+            >
+              <Undo2 className="h-3.5 w-3.5" />
+            </Button>
+            <Button
+              type="button"
+              size="icon"
+              variant="ghost"
+              className="h-8 w-8"
+              disabled={redoLen === 0}
+              onClick={redoAppearance}
+              title="Rétablir (Ctrl+Y)"
+            >
+              <Redo2 className="h-3.5 w-3.5" />
+            </Button>
+          </div>
           <div className="hidden items-center gap-0.5 rounded-lg border border-border p-0.5 md:flex">
             <Button
               type="button"
@@ -240,7 +385,7 @@ export function AppearanceWorkspace({
         >
           <div className="sticky top-0 z-30 flex items-center justify-between gap-2 border-b border-border/50 bg-white/90 px-3 py-1.5 text-[11px] backdrop-blur">
             <span className="font-medium text-muted-foreground">
-              Aperçu live — cliquez une zone pour éditer
+              1ᵉʳ clic = éditer · 2ᵉ clic même zone = fermer · 2ᵉ clic menu = page
             </span>
             <div className="flex items-center gap-2">
               {!showOutline ? (
@@ -287,7 +432,10 @@ export function AppearanceWorkspace({
 
           <div className="flex justify-center px-3 py-6">
             <div className={cn('w-full origin-top', deviceMax)}>
-              <div className="overflow-hidden rounded-xl border border-border/80 bg-white shadow-lg shadow-black/10">
+              <div
+                ref={previewFrameRef}
+                className="overflow-hidden rounded-xl border border-border/80 bg-white shadow-lg shadow-black/10"
+              >
                 <StoreAppearanceLivePreview
                   siteName={form.siteName}
                   tagline={form.tagline}
@@ -308,6 +456,12 @@ export function AppearanceWorkspace({
                   activeSection={
                     isPreviewHotspotSection(activeSection) ? activeSection : null
                   }
+                  previewPage={previewPage}
+                  onPreviewNavigate={setPreviewPage}
+                  cartPreviewMode={cartPreviewMode}
+                  onCartPreviewModeChange={setCartPreviewMode}
+                  wishlistPreviewMode={wishlistPreviewMode}
+                  onWishlistPreviewModeChange={setWishlistPreviewMode}
                 />
               </div>
             </div>
@@ -342,9 +496,10 @@ export function AppearanceWorkspace({
             <AppearanceSectionEditors
               section={activeSection}
               form={form}
-              patch={patch}
-              patchAppearance={patchAppearance}
-              applyThemeNow={applyThemeNow}
+              patch={patchLive}
+              patchAppearance={patchAppearanceLive}
+              mergeAppearance={mergeAppearanceLive}
+              applyThemeNow={applyThemeLive}
               themePresets={themePresets}
               megaMenuEnabled={megaMenuEnabled}
               pageLinkOptions={pageLinkOptions}
@@ -359,6 +514,10 @@ export function AppearanceWorkspace({
               faviconInputRef={faviconInputRef}
               publishedHomePage={publishedHomePage}
               topBarMessages={topBarMessages}
+              cartPreviewMode={cartPreviewMode}
+              onCartPreviewModeChange={setCartPreviewMode}
+              wishlistPreviewMode={wishlistPreviewMode}
+              onWishlistPreviewModeChange={setWishlistPreviewMode}
             />
           </div>
         </aside>
@@ -388,9 +547,10 @@ export function AppearanceWorkspace({
               <AppearanceSectionEditors
                 section={activeSection}
                 form={form}
-                patch={patch}
-                patchAppearance={patchAppearance}
-                applyThemeNow={applyThemeNow}
+                patch={patchLive}
+                patchAppearance={patchAppearanceLive}
+                mergeAppearance={mergeAppearanceLive}
+                applyThemeNow={applyThemeLive}
                 themePresets={themePresets}
                 megaMenuEnabled={megaMenuEnabled}
                 pageLinkOptions={pageLinkOptions}
@@ -405,6 +565,10 @@ export function AppearanceWorkspace({
                 faviconInputRef={faviconInputRef}
                 publishedHomePage={publishedHomePage}
                 topBarMessages={topBarMessages}
+                cartPreviewMode={cartPreviewMode}
+                onCartPreviewModeChange={setCartPreviewMode}
+                wishlistPreviewMode={wishlistPreviewMode}
+                onWishlistPreviewModeChange={setWishlistPreviewMode}
               />
             </div>
           </div>

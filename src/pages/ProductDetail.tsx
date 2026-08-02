@@ -13,6 +13,8 @@ import { useCart } from '@/contexts/CartContext';
 import { useWishlist } from '@/contexts/WishlistContext';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { appearanceButtonClass } from '@/config/storeAppearance';
+import ProductCard from '@/components/ui/ProductCard';
 import type { ProductDetailDTO } from '@/types/product-dtos';
 import { productsApi } from '@/services/api';
 import {
@@ -161,6 +163,26 @@ const ProductDetail = () => {
   const { isEnabled } = useSocialNetworks();
   const { whatsappOrderTemplate, contactWhatsapp, contactPhone } = useStoreBrand();
   const theme = useStorefrontTheme();
+  const appearance = theme.appearance;
+  const galleryLayout = appearance.productGalleryLayout;
+  const galleryMobile = appearance.productGalleryMobile;
+  const infoBelow = appearance.productInfoPosition === 'below';
+  const [isNarrow, setIsNarrow] = useState(false);
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const mq = window.matchMedia('(max-width: 1023px)');
+    const update = () => setIsNarrow(mq.matches);
+    update();
+    mq.addEventListener('change', update);
+    return () => mq.removeEventListener('change', update);
+  }, []);
+  const activeGallery = isNarrow
+    ? galleryMobile === 'stacked'
+      ? 'stacked'
+      : galleryMobile === 'swipe'
+        ? 'swipe'
+        : 'bottom_thumbs'
+    : galleryLayout;
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [quantity, setQuantity] = useState(1);
   /** `undefined` = aucune taille (requis pour Radix Select + validation explicite) */
@@ -546,10 +568,15 @@ const ProductDetail = () => {
 
       {/* ============ PRODUCT SECTION ============ */}
       <section className={cn('max-w-[1280px] mx-auto px-3 sm:px-6 py-3 sm:py-5 lg:py-6 w-full animate-fade-in', theme.shell)}>
-        <div className="flex flex-col lg:flex-row gap-4 lg:gap-6 items-stretch lg:items-start">
+        <div
+          className={cn(
+            'gap-4 lg:gap-6 items-stretch lg:items-start',
+            infoBelow ? 'flex flex-col' : 'flex flex-col lg:flex-row',
+          )}
+        >
 
-          {/* ---- LEFT: Thumbnails (desktop only) ---- */}
-          {hasMultipleImages && (
+          {/* ---- LEFT: Thumbnails (desktop, left_thumbs) ---- */}
+          {hasMultipleImages && activeGallery === 'left_thumbs' && (
             <div className="hidden lg:flex flex-col gap-2 w-[72px] shrink-0">
               {images.map((img, i) => (
                 <button
@@ -575,8 +602,37 @@ const ProductDetail = () => {
             </div>
           )}
 
-          {/* ---- CENTER: Main image ---- */}
-          <div className="w-full lg:w-[420px] xl:w-[480px] shrink-0 relative group">
+          {/* ---- CENTER: Main image / stacked gallery ---- */}
+          <div
+            className={cn(
+              'shrink-0 relative group',
+              infoBelow ? 'w-full max-w-2xl mx-auto' : 'w-full lg:w-[420px] xl:w-[480px]',
+            )}
+          >
+            {activeGallery === 'stacked' && hasMultipleImages ? (
+              <div className="space-y-3">
+                {images.map((img, i) => (
+                  <button
+                    key={i}
+                    type="button"
+                    className="aspect-square w-full overflow-hidden bg-card border border-border rounded-2xl cursor-zoom-in"
+                    onClick={() => {
+                      setSelectedImageIndex(i);
+                      setLightboxOpen(true);
+                    }}
+                  >
+                    <img
+                      src={img}
+                      alt={`${product.name} ${i + 1}`}
+                      className="w-full h-full object-cover"
+                      loading={i === 0 ? 'eager' : 'lazy'}
+                      decoding="async"
+                    />
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <>
             <div
               className="aspect-square overflow-hidden bg-card border border-border rounded-2xl cursor-zoom-in relative"
               onClick={() => setLightboxOpen(true)}
@@ -630,9 +686,14 @@ const ProductDetail = () => {
               ))}
             </div>
 
-            {/* Mobile thumbnail strip */}
-            {hasMultipleImages && (
-              <div className="lg:hidden flex gap-1.5 mt-2 overflow-x-auto pb-1 overscroll-x-contain scrollbar-app">
+            {/* Thumbnail strip — hidden for swipe / stacked */}
+            {hasMultipleImages && activeGallery !== 'stacked' && activeGallery !== 'swipe' && (
+              <div
+                className={cn(
+                  'flex gap-1.5 mt-2 overflow-x-auto pb-1 overscroll-x-contain scrollbar-app',
+                  activeGallery === 'left_thumbs' && 'lg:hidden',
+                )}
+              >
                 {images.map((img, i) => (
                   <button
                     key={i}
@@ -656,10 +717,17 @@ const ProductDetail = () => {
                 ))}
               </div>
             )}
+              </>
+            )}
           </div>
 
           {/* ---- RIGHT: Product info + buttons ---- */}
-          <div className="flex-1 min-w-0 flex flex-col gap-2 sm:gap-3">
+          <div
+            className={cn(
+              'flex-1 min-w-0 flex flex-col gap-2 sm:gap-3',
+              appearance.productStickyBuyBox && !infoBelow && 'lg:sticky lg:top-24 lg:self-start',
+            )}
+          >
             {/* Title row */}
             <div>
               <h1 className="text-xl sm:text-2xl lg:text-3xl font-display text-foreground leading-tight">
@@ -902,10 +970,15 @@ const ProductDetail = () => {
                 <Button
                   type="button"
                   onClick={handleBuyNow}
-                  className="w-full bg-primary hover:bg-primary/90 text-primary-foreground h-11 text-xs sm:text-sm uppercase tracking-[0.2em] font-bold shadow-card rounded-2xl flex items-center justify-center gap-2 touch-manipulation"
+                  className={cn(
+                    appearanceButtonClass(
+                      appearance.buttonStyle,
+                      'w-full h-11 text-xs sm:text-sm uppercase tracking-[0.2em] font-bold rounded-2xl flex items-center justify-center gap-2 touch-manipulation',
+                    ),
+                  )}
                 >
                   <ShoppingBag className="w-4 h-4" />
-                  Commander
+                  {appearance.productCtaLabel || 'Commander'}
                 </Button>
 
                 {whatsappOrderHref ? (
@@ -1037,10 +1110,12 @@ const ProductDetail = () => {
               </div>
 
             {/* Trust badges */}
+            {appearance.productShowTrust ? (
             <div className="flex items-center gap-4 text-[9px] sm:text-[10px] uppercase tracking-widest text-muted-foreground mt-1">
               <div className="flex items-center gap-1.5"><Verified className="w-3.5 h-3.5" /> Certificat</div>
               <div className="flex items-center gap-1.5"><Truck className="w-3.5 h-3.5" /> Livraison sécurisée</div>
             </div>
+            ) : null}
           </div>
         </div>
       </section>
@@ -1066,7 +1141,7 @@ const ProductDetail = () => {
       {id ? <ProductReviewsSection productId={id} productName={product.name} /> : null}
 
       {/* ============ RELATED PRODUCTS ============ */}
-      {relatedProducts.length > 0 && (
+      {appearance.productShowRelated && relatedProducts.length > 0 && (
         <section className="mt-10 sm:mt-16 lg:mt-24 mb-10 sm:mb-16 lg:mb-24">
           <div className="flex flex-col items-center mb-6 sm:mb-10 text-center px-3">
             <div className="w-16 sm:w-24 h-px bg-border mb-3 relative">
@@ -1078,22 +1153,7 @@ const ProductDetail = () => {
           <div className="max-w-[1280px] mx-auto px-3 sm:px-6">
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
               {relatedProducts.map((rp) => (
-                <Link key={rp.id} to={`/produit/${rp.id}`} className="group bg-card rounded-2xl p-2 sm:p-3 border border-border shadow-soft hover:shadow-card hover:border-primary/30 transition-all duration-500 block">
-                  <div className="relative overflow-hidden rounded-xl aspect-square mb-2 border border-border/60">
-                    <img
-                      src={rp.images[0]}
-                      alt=""
-                      className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
-                      loading="lazy"
-                      decoding="async"
-                      fetchPriority="low"
-                    />
-                  </div>
-                  <div className="text-center">
-                    <h4 className="text-xs sm:text-sm font-bold text-foreground font-display truncate">{rp.name}</h4>
-                    <p className="text-primary font-medium text-xs sm:text-sm">{formatPrice(rp.price)}</p>
-                  </div>
-                </Link>
+                <ProductCard key={rp.id} product={rp} />
               ))}
             </div>
           </div>

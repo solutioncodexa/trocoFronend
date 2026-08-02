@@ -6,11 +6,14 @@ import { useStorefrontPath } from '@/hooks/useStorefrontPath';
 import { useStoreBrand } from '@/hooks/useStoreBrand';
 import { getImageUrl } from '@/services/api/upload';
 import { staticCatalogQueryOptions } from '@/config/queryOptions';
+import { useLocale } from '@/contexts/LocaleContext';
 
 const BlogPost = () => {
   const { slug } = useParams<{ slug: string }>();
   const { to } = useStorefrontPath();
   const { siteName } = useStoreBrand();
+  const { t, locale } = useLocale();
+  const dateLocale = locale === 'ar' ? 'ar-MA' : locale === 'en' ? 'en-GB' : 'fr-MA';
 
   const { data: post, isLoading, error } = useQuery({
     queryKey: ['store-blog', 'public', slug],
@@ -19,7 +22,7 @@ const BlogPost = () => {
     ...staticCatalogQueryOptions,
   });
 
-  const pageTitle = post?.seoTitle?.trim() || post?.title || 'Article';
+  const pageTitle = post?.seoTitle?.trim() || post?.title || t('article');
   const metaDescription = post?.seoDescription?.trim() || post?.excerpt || '';
 
   return (
@@ -29,18 +32,18 @@ const BlogPost = () => {
       <main className="page-section-y animate-fade-in">
         <div className="mx-auto max-w-3xl page-padding">
           {isLoading ? (
-            <p className="text-center text-muted-foreground">Chargement…</p>
+            <p className="text-center text-muted-foreground">{t('loading')}</p>
           ) : error || !post ? (
             <div className="text-center">
-              <p className="text-destructive">Article introuvable.</p>
+              <p className="text-destructive">{t('articleNotFound')}</p>
               <Link className="mt-4 inline-block text-primary hover:underline" to={to('/blog')}>
-                Retour au blog
+                {t('backToBlog')}
               </Link>
             </div>
           ) : (
             <>
               <Link className="text-sm text-primary hover:underline" to={to('/blog')}>
-                ← Blog
+                ← {t('blogTitle')}
               </Link>
               {post.coverUrl ? (
                 <img
@@ -52,7 +55,7 @@ const BlogPost = () => {
               <header className="mt-8">
                 <time className="text-xs uppercase tracking-wider text-muted-foreground">
                   {post.createdAt
-                    ? new Date(post.createdAt).toLocaleDateString('fr-MA', {
+                    ? new Date(post.createdAt).toLocaleDateString(dateLocale, {
                         day: 'numeric',
                         month: 'long',
                         year: 'numeric',

@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import Layout from '@/components/layout/Layout';
@@ -13,6 +13,11 @@ import { toast } from 'sonner';
 import { toastError } from '@/utils/toastMessages';
 import { staticCatalogQueryOptions } from '@/config/queryOptions';
 import { CloudUpload, X, Loader2, Check } from 'lucide-react';
+import { useStoreAppearance } from '@/hooks/useStoreAppearance';
+import { appearanceButtonClass, formsPanelClass } from '@/config/storeAppearance';
+import { cn } from '@/lib/utils';
+import { useLocale } from '@/contexts/LocaleContext';
+import type { MessageKey } from '@/i18n/messages';
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
 const ACCEPTED_TYPES = 'image/jpeg,image/png,image/webp,.pdf';
@@ -37,73 +42,78 @@ type VariantConfig = {
   processSteps: { n: number; title: string; desc: string }[];
   altLink: { to: string; label: string };
   defaultDescription: string;
-  /** Préfixe type API pour distinguer en admin */
   typePrefix: string;
 };
 
-const CONFIG: Record<PackagingRequestVariant, VariantConfig> = {
-  'sur-mesure': {
-    title: 'Sur mesure',
-    eyebrow: 'Création & personnalisation',
-    subtitle: 'Logo, formats uniques et finitions adaptées à votre marque.',
+type TFn = (key: MessageKey, vars?: Record<string, string | number>) => string;
+
+function buildConfig(variant: PackagingRequestVariant, t: TFn): VariantConfig {
+  if (variant === 'sur-mesure') {
+    return {
+      title: t('smTitle'),
+      eyebrow: t('smEyebrow'),
+      subtitle: t('smSubtitle'),
+      needTypes: [
+        { value: 'personnalisation-logo', label: t('smNeedLogo') },
+        { value: 'produit-unique', label: t('smNeedUnique') },
+        { value: 'dimensions-specifiques', label: t('smNeedDims') },
+        { value: 'autre-sur-mesure', label: t('smNeedOther') },
+      ],
+      needLabel: t('smNeedLabel'),
+      descriptionPlaceholder: t('smDescPh'),
+      uploadTitle: t('smUploadTitle'),
+      uploadHint: t('smUploadHint'),
+      tip: t('smTip'),
+      submitLabel: t('smSubmit'),
+      successMessage: t('smSuccess'),
+      processEyebrow: t('smProcessEyebrow'),
+      processSteps: [
+        { n: 1, title: t('smStep1Title'), desc: t('smStep1Desc') },
+        { n: 2, title: t('smStep2Title'), desc: t('smStep2Desc') },
+        { n: 3, title: t('smStep3Title'), desc: t('smStep3Desc') },
+      ],
+      altLink: { to: '/devis', label: t('smAltLink') },
+      defaultDescription: t('smDefaultDesc'),
+      typePrefix: 'sur-mesure',
+    };
+  }
+  return {
+    title: t('dvTitle'),
+    eyebrow: t('dvEyebrow'),
+    subtitle: t('dvSubtitle'),
     needTypes: [
-      { value: 'personnalisation-logo', label: 'Personnalisation logo' },
-      { value: 'produit-unique', label: 'Produit / format unique' },
-      { value: 'dimensions-specifiques', label: 'Dimensions spécifiques' },
-      { value: 'autre-sur-mesure', label: 'Autre projet sur mesure' },
+      { value: 'commande-gros', label: t('dvNeedBulk') },
+      { value: 'renouvellement-stock', label: t('dvNeedRestock') },
+      { value: 'devis-multi-produits', label: t('dvNeedMulti') },
+      { value: 'autre-devis', label: t('dvNeedOther') },
     ],
-    needLabel: 'Type de création *',
-    descriptionPlaceholder: 'Logo, couleurs, finitions, contraintes de production…',
-    uploadTitle: 'Logo ou maquette',
-    uploadHint: 'JPG, PNG, PDF — max 10 Mo (5 fichiers)',
-    tip: 'Joignez votre logo en haute définition (PDF ou PNG) pour un rendu fidèle.',
-    submitLabel: 'Envoyer ma demande sur mesure',
-    successMessage: 'notre équipe étudie votre projet sur mesure et vous contacte sous 48h.',
-    processEyebrow: 'Votre projet sur mesure en 3 étapes',
+    needLabel: t('dvNeedLabel'),
+    descriptionPlaceholder: t('dvDescPh'),
+    uploadTitle: t('dvUploadTitle'),
+    uploadHint: t('dvUploadHint'),
+    tip: t('dvTip'),
+    submitLabel: t('dvSubmit'),
+    successMessage: t('dvSuccess'),
+    processEyebrow: t('dvProcessEyebrow'),
     processSteps: [
-      { n: 1, title: 'Brief & maquette', desc: 'Décrivez le produit et envoyez votre logo' },
-      { n: 2, title: 'Proposition', desc: 'Validation technique et devis associé' },
-      { n: 3, title: 'Production', desc: 'Fabrication personnalisée puis livraison' },
+      { n: 1, title: t('dvStep1Title'), desc: t('dvStep1Desc') },
+      { n: 2, title: t('dvStep2Title'), desc: t('dvStep2Desc') },
+      { n: 3, title: t('dvStep3Title'), desc: t('dvStep3Desc') },
     ],
-    altLink: { to: '/devis', label: 'Besoin d’un devis volume ? Demandez un devis →' },
-    defaultDescription: 'Demande sur mesure emballage',
-    typePrefix: 'sur-mesure',
-  },
-  devis: {
-    title: 'Demande de devis',
-    eyebrow: 'Tarifs & volumes professionnels',
-    subtitle: 'Chiffrage pour commandes en gros, multi-produits et renouvellement de stock.',
-    needTypes: [
-      { value: 'commande-gros', label: 'Commande en gros' },
-      { value: 'renouvellement-stock', label: 'Renouvellement de stock' },
-      { value: 'devis-multi-produits', label: 'Devis multi-produits' },
-      { value: 'autre-devis', label: 'Autre demande de devis' },
-    ],
-    needLabel: 'Type de devis *',
-    descriptionPlaceholder: 'Volumes, fréquence, délais, budget approximatif, livraison…',
-    uploadTitle: 'Fichiers utiles (optionnel)',
-    uploadHint: 'Liste de besoins, cahier des charges — JPG, PNG, PDF',
-    tip: 'Indiquez le volume mensuel et le délai souhaité pour un chiffrage précis.',
-    submitLabel: 'Envoyer ma demande de devis',
-    successMessage: 'notre équipe prépare votre devis et vous contacte sous 48h.',
-    processEyebrow: 'Votre devis en 3 étapes',
-    processSteps: [
-      { n: 1, title: 'Besoins & volumes', desc: 'Catégories, quantités, délais' },
-      { n: 2, title: 'Devis détaillé', desc: 'Réponse sous 48h (WhatsApp / email)' },
-      { n: 3, title: 'Commande', desc: 'Validation puis préparation / livraison' },
-    ],
-    altLink: { to: '/sur-mesure', label: 'Projet personnalisé avec logo ? Sur mesure →' },
-    defaultDescription: 'Demande de devis emballage',
+    altLink: { to: '/sur-mesure', label: t('dvAltLink') },
+    defaultDescription: t('dvDefaultDesc'),
     typePrefix: 'devis',
-  },
-};
+  };
+}
 
 interface PackagingRequestFormProps {
   variant: PackagingRequestVariant;
 }
 
 export default function PackagingRequestForm({ variant }: PackagingRequestFormProps) {
-  const cfg = CONFIG[variant];
+  const { t } = useLocale();
+  const cfg = useMemo(() => buildConfig(variant, t), [variant, t]);
+  const appearance = useStoreAppearance();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const { data: categories = [] } = useQuery({
@@ -139,7 +149,7 @@ export default function PackagingRequestForm({ variant }: PackagingRequestFormPr
 
     for (const file of files) {
       if (file.size > MAX_FILE_SIZE) {
-        toast.error(`${file.name} dépasse 10 MB`);
+        toast.error(t('fileTooBig', { file: file.name }));
         continue;
       }
       validFiles.push(file);
@@ -177,46 +187,44 @@ export default function PackagingRequestForm({ variant }: PackagingRequestFormPr
     },
     onSuccess: () => {
       setIsSuccess(true);
-      toast.success(
-        variant === 'devis' ? 'Demande de devis envoyée !' : 'Demande sur mesure envoyée !'
-      );
+      toast.success(t('requestSent'));
     },
-    onError: (err: Error) => toastError(err, "Impossible d'envoyer la demande"),
+    onError: (err: Error) => toastError(err, t('sendFailed')),
   });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!formData.fullName?.trim()) {
-      toast.error('Nom complet requis');
+      toast.error(t('fieldRequired', { field: t('fullName') }));
       return;
     }
     if (!formData.phone?.trim()) {
-      toast.error('Téléphone requis');
+      toast.error(t('fieldRequired', { field: t('phone') }));
       return;
     }
     if (!formData.address?.trim()) {
-      toast.error('Adresse requise');
+      toast.error(t('fieldRequired', { field: t('address') }));
       return;
     }
     if (!formData.city?.trim()) {
-      toast.error('Ville requise');
+      toast.error(t('fieldRequired', { field: t('city') }));
       return;
     }
     if (!formData.type) {
-      toast.error('Type de besoin requis');
+      toast.error(t('fieldRequired', { field: t('needTypeRequired') }));
       return;
     }
     if (!formData.style) {
-      toast.error('Catégorie requise');
+      toast.error(t('fieldRequired', { field: t('category') }));
       return;
     }
 
     const dimLine = formData.dimensions.trim()
-      ? `Dimensions / format : ${formData.dimensions.trim()}. `
+      ? `${t('dimensionsFormat')} : ${formData.dimensions.trim()}. `
       : '';
     const qtyLine = formData.quantity.trim()
-      ? `Quantité estimée : ${formData.quantity.trim()}. `
+      ? `${t('estimatedQty')} : ${formData.quantity.trim()}. `
       : '';
     const channelLine = `[${cfg.typePrefix}] `;
     const fullDesc =
@@ -267,12 +275,12 @@ export default function PackagingRequestForm({ variant }: PackagingRequestFormPr
             <div className="w-20 h-20 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-6">
               <Check className="w-10 h-10 text-primary" />
             </div>
-            <h1 className="font-display text-4xl md:text-5xl text-foreground mb-4">Demande envoyée !</h1>
+            <h1 className="font-display text-4xl md:text-5xl text-foreground mb-4">{t('requestSent')}</h1>
             <p className="text-muted-foreground mb-8">
-              Merci {formData.fullName} — {cfg.successMessage}
+              {t('thanksContact', { name: formData.fullName, detail: cfg.successMessage })}
             </p>
             <Button onClick={resetForm} variant="outline" className="font-body">
-              Nouvelle demande
+              {t('newRequest')}
             </Button>
           </div>
         </section>
@@ -282,6 +290,7 @@ export default function PackagingRequestForm({ variant }: PackagingRequestFormPr
 
   return (
     <Layout>
+      {appearance.formsShowHero ? (
       <section className="relative overflow-hidden border-b border-border bg-gradient-to-br from-card via-card to-primary/5 animate-fade-in">
         <div
           className="pointer-events-none absolute inset-0 opacity-[0.12]"
@@ -312,11 +321,27 @@ export default function PackagingRequestForm({ variant }: PackagingRequestFormPr
           </div>
         </div>
       </section>
+      ) : null}
 
       <section className="py-20 bg-background border-y border-border">
-        <div className="max-w-[1280px] mx-auto px-6 grid grid-cols-1 lg:grid-cols-2 gap-20">
-          <div className="order-2 lg:order-1">
-            <h2 className="font-display text-3xl mb-8">Détails du projet</h2>
+        <div
+          className={cn(
+            'max-w-[1280px] mx-auto px-6 gap-20',
+            appearance.formsLayout === 'split'
+              ? 'grid grid-cols-1 lg:grid-cols-2'
+              : 'flex flex-col',
+            appearance.formsLayout === 'centered' && 'max-w-2xl',
+          )}
+        >
+          <div
+            className={cn(
+              appearance.formsLayout === 'split' && 'order-2 lg:order-1',
+              appearance.formsLayout === 'stacked' && 'order-2',
+              formsPanelClass(appearance.formsStyle),
+              appearance.formsStyle !== 'flat' && 'rounded-2xl p-6 sm:p-8',
+            )}
+          >
+            <h2 className="font-display text-3xl mb-8">{t('projectDetails')}</h2>
             <form onSubmit={handleSubmit} className="space-y-8">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <div>
@@ -328,7 +353,7 @@ export default function PackagingRequestForm({ variant }: PackagingRequestFormPr
                     onValueChange={(value) => handleInputChange('type', value)}
                   >
                     <SelectTrigger className="h-10 w-full rounded-xl">
-                      <SelectValue placeholder="Sélectionnez" />
+                      <SelectValue placeholder={t('select')} />
                     </SelectTrigger>
                     <SelectContent>
                       {cfg.needTypes.map((t) => (
@@ -341,14 +366,14 @@ export default function PackagingRequestForm({ variant }: PackagingRequestFormPr
                 </div>
                 <div>
                   <Label className="mb-3 block text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-                    Catégorie *
+                    {t('category')} *
                   </Label>
                   <Select
                     value={formData.style || undefined}
                     onValueChange={(value) => handleInputChange('style', value)}
                   >
                     <SelectTrigger className="h-10 w-full rounded-xl">
-                      <SelectValue placeholder="Sélectionnez" />
+                      <SelectValue placeholder={t('select')} />
                     </SelectTrigger>
                     <SelectContent>
                       {categories.map((cat) => (
@@ -364,22 +389,22 @@ export default function PackagingRequestForm({ variant }: PackagingRequestFormPr
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <div>
                   <Label className="block text-xs uppercase tracking-widest text-muted-foreground mb-3 font-semibold">
-                    Dimensions / format
+                    {t('dimensionsFormat')}
                   </Label>
                   <Input
-                    placeholder="Ex: 25×35 cm, pack 100"
+                    placeholder={t('phDimensions')}
                     value={formData.dimensions}
                     onChange={(e) => handleInputChange('dimensions', e.target.value)}
                   />
                 </div>
                 <div>
                   <Label className="block text-xs uppercase tracking-widest text-muted-foreground mb-3 font-semibold">
-                    Quantité estimée
+                    {t('estimatedQty')}
                   </Label>
                   <Input
                     type="number"
                     min={1}
-                    placeholder="Ex: 500"
+                    placeholder={t('phQuantity')}
                     value={formData.quantity}
                     onChange={(e) => handleInputChange('quantity', e.target.value)}
                   />
@@ -388,7 +413,7 @@ export default function PackagingRequestForm({ variant }: PackagingRequestFormPr
 
               <div>
                 <Label className="block text-xs uppercase tracking-widest text-muted-foreground mb-3 font-semibold">
-                  Description
+                  {t('description')}
                 </Label>
                 <Textarea
                   placeholder={cfg.descriptionPlaceholder}
@@ -399,62 +424,62 @@ export default function PackagingRequestForm({ variant }: PackagingRequestFormPr
               </div>
 
               <div className="space-y-6 border-t border-border pt-8">
-                <h3 className="font-display text-xl text-foreground">Vos coordonnées *</h3>
+                <h3 className="font-display text-xl text-foreground">{t('yourDetails')} *</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
                     <Label className="block text-xs uppercase tracking-widest text-muted-foreground mb-2 font-semibold">
-                      Nom complet *
+                      {t('fullName')} *
                     </Label>
                     <Input
                       value={formData.fullName}
                       onChange={(e) => handleInputChange('fullName', e.target.value)}
-                      placeholder="Nom et prénom"
+                      placeholder={t('phFullNameForm')}
                       required
                     />
                   </div>
                   <div>
                     <Label className="block text-xs uppercase tracking-widest text-muted-foreground mb-2 font-semibold">
-                      Téléphone *
+                      {t('phone')} *
                     </Label>
                     <Input
                       type="tel"
                       value={formData.phone}
                       onChange={(e) => handleInputChange('phone', e.target.value)}
-                      placeholder="06 XX XX XX XX"
+                      placeholder={t('phPhone')}
                       required
                     />
                   </div>
                   <div>
                     <Label className="block text-xs uppercase tracking-widest text-muted-foreground mb-2 font-semibold">
-                      Adresse *
+                      {t('address')} *
                     </Label>
                     <Input
                       value={formData.address}
                       onChange={(e) => handleInputChange('address', e.target.value)}
-                      placeholder="Adresse complète"
+                      placeholder={t('phAddress')}
                       required
                     />
                   </div>
                   <div>
                     <Label className="block text-xs uppercase tracking-widest text-muted-foreground mb-2 font-semibold">
-                      Ville *
+                      {t('city')} *
                     </Label>
                     <Input
                       value={formData.city}
                       onChange={(e) => handleInputChange('city', e.target.value)}
-                      placeholder="Casablanca, Rabat…"
+                      placeholder={t('phCity')}
                       required
                     />
                   </div>
                   <div className="md:col-span-2">
                     <Label className="block text-xs uppercase tracking-widest text-muted-foreground mb-2 font-semibold">
-                      Email
+                      {t('emailAddress')}
                     </Label>
                     <Input
                       type="email"
                       value={formData.email}
                       onChange={(e) => handleInputChange('email', e.target.value)}
-                      placeholder="vous@entreprise.ma"
+                      placeholder={t('phBusinessEmail')}
                     />
                   </div>
                 </div>
@@ -464,21 +489,34 @@ export default function PackagingRequestForm({ variant }: PackagingRequestFormPr
                 type="submit"
                 disabled={createMutation.isPending}
                 size="lg"
-                className="w-full h-12 uppercase tracking-widest font-semibold"
+                className={cn(
+                  appearanceButtonClass(
+                    appearance.buttonStyle,
+                    'w-full h-12 uppercase tracking-widest font-semibold',
+                  ),
+                )}
               >
                 {createMutation.isPending ? (
                   <>
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Envoi…
+                    {t('sending')}
                   </>
                 ) : (
-                  cfg.submitLabel
+                  appearance.formsCtaLabel || cfg.submitLabel
                 )}
               </Button>
             </form>
           </div>
 
-          <div className="order-1 lg:order-2">
+          <div
+            className={cn(
+              appearance.formsLayout === 'split' && 'order-1 lg:order-2',
+              appearance.formsLayout === 'stacked' && 'order-1',
+              appearance.formsLayout === 'centered' && 'mt-10',
+              formsPanelClass(appearance.formsStyle),
+              appearance.formsStyle !== 'flat' && 'rounded-2xl p-6 sm:p-8',
+            )}
+          >
             <h2 className="font-display text-3xl mb-8 text-foreground">{cfg.uploadTitle}</h2>
             <input
               ref={fileInputRef}
@@ -527,7 +565,7 @@ export default function PackagingRequestForm({ variant }: PackagingRequestFormPr
                   {imagePreviews.length < 5 && (
                     <div className="aspect-square rounded-xl border-2 border-dashed border-border flex flex-col items-center justify-center text-muted-foreground">
                       <CloudUpload className="w-8 h-8 mb-2" />
-                      <span className="text-xs">Ajouter</span>
+                      <span className="text-xs">{t('add')}</span>
                     </div>
                   )}
                 </div>
@@ -545,16 +583,18 @@ export default function PackagingRequestForm({ variant }: PackagingRequestFormPr
                     }}
                     className="text-xs uppercase tracking-widest font-semibold"
                   >
-                    Parcourir
+                    {t('browse')}
                   </Button>
                 </div>
               )}
             </div>
 
+            {appearance.formsShowSidebar ? (
             <div className="mt-12 p-8 border border-border bg-card rounded-2xl shadow-soft">
-              <p className="text-sm font-semibold uppercase tracking-wide mb-2 text-foreground">Conseil Troco</p>
+              <p className="text-sm font-semibold uppercase tracking-wide mb-2 text-foreground">{t('tipTitle')}</p>
               <p className="text-sm italic text-muted-foreground">{cfg.tip}</p>
             </div>
+            ) : null}
           </div>
         </div>
       </section>
@@ -562,7 +602,7 @@ export default function PackagingRequestForm({ variant }: PackagingRequestFormPr
       <section className="py-16 md:py-24 bg-paper-pattern">
         <div className="max-w-[1280px] mx-auto px-6">
           <div className="flex flex-col items-center mb-16 text-center">
-            <h3 className="font-display text-4xl md:text-5xl text-foreground mb-2">Processus</h3>
+            <h3 className="font-display text-4xl md:text-5xl text-foreground mb-2">{t('processTitle')}</h3>
             <p className="text-primary uppercase tracking-widest text-sm">{cfg.processEyebrow}</p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">

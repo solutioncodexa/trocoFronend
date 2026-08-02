@@ -34,8 +34,7 @@ import { toast } from 'sonner';
 const AdminDashboard = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { siteName, logoUrl, slug } = useStoreBrand();
-  const storefrontUrl = buildStorefrontUrl(slug);
+  const { siteName, logoUrl, slug, store } = useStoreBrand();
 
   useEffect(() => {
     const state = location.state as { onboarding?: boolean; pendingActivation?: boolean } | null;
@@ -57,6 +56,7 @@ const AdminDashboard = () => {
     queryKey: ['store-settings', 'me', 'summary'],
     queryFn: () => platformApi.getMyStoreSummary(),
   });
+  const storefrontUrl = buildStorefrontUrl(slug || store?.slug || storeSettings?.slug);
   const { data: ordersPage } = useQuery({
     queryKey: ['orders', 'dashboard'],
     queryFn: () => ordersApi.getAllOrders({ page: 0, size: 5 }),

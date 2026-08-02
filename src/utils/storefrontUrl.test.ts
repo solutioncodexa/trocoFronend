@@ -14,8 +14,8 @@ describe('buildStorefrontPath', () => {
 
 describe('withStorefrontCacheBust', () => {
   it('ajoute _v sur une URL propre', () => {
-    expect(withStorefrontCacheBust('http://shop.localhost:5173/', 42)).toBe(
-      'http://shop.localhost:5173/?_v=42',
+    expect(withStorefrontCacheBust('http://localhost:5173/?tenant=shop', 42)).toBe(
+      'http://localhost:5173/?tenant=shop&_v=42',
     );
   });
 
@@ -51,8 +51,10 @@ describe('buildStorefrontUrl', () => {
     });
   });
 
-  it('utilise sous-domaine .localhost en local', () => {
-    expect(buildStorefrontUrl('atelier-nord')).toBe('http://atelier-nord.localhost:5173/');
+  it('utilise ?tenant= en local (fiable vs sous-domaine .localhost)', () => {
+    expect(buildStorefrontUrl('atelier-nord')).toBe(
+      'http://localhost:5173/?tenant=atelier-nord',
+    );
   });
 
   it('utilise sous-domaine matjarona en prod', () => {

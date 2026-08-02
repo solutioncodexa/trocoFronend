@@ -1,9 +1,11 @@
 import { Link } from 'react-router-dom';
 import Layout from '@/components/layout/Layout';
 import { useStoreBrand } from '@/hooks/useStoreBrand';
+import { useLocale } from '@/contexts/LocaleContext';
 
 const FAQ = () => {
   const { siteName, freeShippingThreshold } = useStoreBrand();
+  const { t } = useLocale();
 
   return (
     <Layout>
@@ -11,10 +13,10 @@ const FAQ = () => {
         <div className="mx-auto max-w-4xl page-padding">
           <div className="mb-14 text-center sm:mb-16">
             <h1 className="font-display text-3xl font-semibold tracking-tight text-foreground sm:text-4xl md:text-5xl">
-              Questions fréquentes
+              {t('faqTitle')}
             </h1>
             <p className="mx-auto mt-3 max-w-xl text-sm text-muted-foreground sm:text-base">
-              Tout savoir sur les commandes, la livraison et les produits de {siteName}.
+              {t('faqSubtitle')}
             </p>
           </div>
 
@@ -25,7 +27,7 @@ const FAQ = () => {
                   payments
                 </span>
                 <h2 className="font-display text-sm font-semibold uppercase tracking-widest text-muted-foreground">
-                  Commandes &amp; paiement
+                  {t('faqSecOrders')}
                 </h2>
               </div>
               <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-soft">
@@ -71,7 +73,7 @@ const FAQ = () => {
                   local_shipping
                 </span>
                 <h2 className="font-display text-sm font-semibold uppercase tracking-widest text-muted-foreground">
-                  Livraison
+                  {t('faqSecShipping')}
                 </h2>
               </div>
               <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-soft">
@@ -133,7 +135,7 @@ const FAQ = () => {
                   inventory_2
                 </span>
                 <h2 className="font-display text-sm font-semibold uppercase tracking-widest text-muted-foreground">
-                  Produits &amp; qualité
+                  {t('faqSecProducts')}
                 </h2>
               </div>
               <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-soft">
@@ -182,7 +184,7 @@ const FAQ = () => {
                   design_services
                 </span>
                 <h2 className="font-display text-sm font-semibold uppercase tracking-widest text-muted-foreground">
-                  Sur-mesure &amp; devis
+                  {t('faqSecCustom')}
                 </h2>
               </div>
               <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-soft">
@@ -232,17 +234,17 @@ const FAQ = () => {
 
           <div className="mt-16 rounded-2xl border border-border bg-card p-8 text-center shadow-soft sm:p-10">
             <h2 className="font-display text-xl font-semibold text-foreground">
-              Vous n&apos;avez pas trouvé votre réponse ?
+              {t('faqCtaTitle')}
             </h2>
             <p className="mt-2 text-sm text-muted-foreground">
-              Notre équipe est disponible pour vous accompagner.
+              {t('faqCtaDesc')}
             </p>
             <div className="mt-6 flex justify-center">
               <Link
                 to="/contact"
                 className="inline-flex rounded-xl bg-primary px-8 py-3 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
               >
-                Nous contacter
+                {t('contactUs')}
               </Link>
             </div>
           </div>

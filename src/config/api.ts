@@ -35,16 +35,24 @@ export const buildApiUrl = (endpoint: string): string => {
 };
 
 // Helper pour les requêtes fetch avec gestion d'erreurs
+export type ApiRequestOptions = RequestInit & {
+  /** Ne pas envoyer le JWT admin (ex. POST /orders vitrine — tenant via Host/slug). */
+  skipAuth?: boolean;
+};
+
 export const apiRequest = async <T>(
   url: string,
-  options: RequestInit = {}
+  options: ApiRequestOptions = {}
 ): Promise<T> => {
+  const { skipAuth = false, ...fetchOptions } = options;
   const token = getAuthToken();
-  const headers: Record<string, string> = { ...(options.headers as Record<string, string>) };
-  if (!headers['Content-Type'] && !(options.body instanceof FormData)) {
+  const headers: Record<string, string> = {
+    ...((fetchOptions.headers as Record<string, string>) || {}),
+  };
+  if (!headers['Content-Type'] && !(fetchOptions.body instanceof FormData)) {
     headers['Content-Type'] = 'application/json';
   }
-  if (token) {
+  if (token && !skipAuth) {
     headers['Authorization'] = `Bearer ${token}`;
   }
   const tenantSlug = getTenantSlug();
@@ -53,19 +61,33 @@ export const apiRequest = async <T>(
   }
 
   const response = await fetch(url, {
-    ...options,
+    ...fetchOptions,
     headers,
   });
 
   if (!response.ok) {
-    if (response.status === 401) {
+    if (response.status === 401 && !skipAuth) {
       localStorage.removeItem('troco_admin_token');
     }
-    const error = await response.json().catch(() => ({} as Record<string, unknown>));
+    const rawText = await response.text().catch(() => '');
+    let error: Record<string, unknown> = {};
+    try {
+      error = rawText ? (JSON.parse(rawText) as Record<string, unknown>) : {};
+    } catch {
+      /* plain text body (ex. Spring CORS "Invalid CORS request") */
+    }
     const detail = typeof error.detail === 'string' ? error.detail : '';
     const message = typeof error.message === 'string' ? error.message : '';
     const title = typeof error.title === 'string' ? error.title : '';
-    const candidate = [detail, message, title].find((s) => s.length > 0 && s.length < 200);
+    const plain = rawText.trim();
+    if (/invalid cors request/i.test(plain) || /invalid cors request/i.test(message)) {
+      throw new Error(
+        'Paiement bloqué (CORS). Redémarrez le backend après mise à jour des origines autorisées (*.localhost).',
+      );
+    }
+    const candidate = [detail, message, title, plain].find(
+      (s) => typeof s === 'string' && s.length > 0 && s.length < 200,
+    );
     throw new Error(candidate || 'Une erreur est survenue');
   }
 
@@ -74,11 +96,11 @@ export const apiRequest = async <T>(
   }
 
   const data = await response.json();
-  
+
   // Si la réponse est une ApiResponse wrapper, extraire le data
   if (data.success !== undefined && data.data !== undefined) {
     return data.data as T;
   }
-  
+
   return data as T;
 };

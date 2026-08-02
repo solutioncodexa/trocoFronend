@@ -13,7 +13,7 @@ import {
   type FontPairKey,
   type RadiusPresetKey,
 } from '@/config/storefrontTheme';
-import { normalizeAppearance } from '@/config/storeAppearance';
+import { normalizeAppearance, shopGridClass } from '@/config/storeAppearance';
 import { useDesignDemo } from '@/demo/DesignDemoContext';
 
 /**
@@ -35,7 +35,8 @@ export function useStorefrontTheme(forceThemeKey?: string) {
       radiusPreset,
       appearance,
       shell: storefrontShellClass(themeKey),
-      grid: storefrontGridClass(themeKey),
+      /** Grille catalogue : colonnes / densité Apparence (sinon fallback thème). */
+      grid: shopGridClass(appearance.shopGridColumns, appearance.shopDensity) || storefrontGridClass(themeKey),
       chip: (extra?: string) => storefrontChipClass(themeKey, radiusPreset) + (extra ? ` ${extra}` : ''),
       productImage: storefrontProductImageClass(themeKey, radiusPreset),
       productCard: storefrontProductCardShell(themeKey, radiusPreset, appearance.cardStyle),

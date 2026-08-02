@@ -6,6 +6,7 @@ import { useStorefrontPath } from '@/hooks/useStorefrontPath';
 import type { StoreThemeKey } from '@/config/storeThemes';
 import {
   DEFAULT_APPEARANCE,
+  appearanceButtonClass,
   type StoreAppearance,
 } from '@/config/storeAppearance';
 import type { Product } from '@/types/product';
@@ -55,19 +56,18 @@ function ClassicHome({
   const featured = products.slice(0, 4);
   const cta = appearance.heroCtaLabel || 'Voir la boutique';
   const heroStyle = appearance.heroStyle;
+  const densityPad =
+    appearance.homeDensity === 'compact'
+      ? '[&_section]:!py-8'
+      : appearance.homeDensity === 'spacious'
+        ? '[&_section]:!py-20'
+        : '';
 
   const ctaBlock = (
     <div className="mt-8 flex flex-wrap gap-3">
       <Button
         size="lg"
-        className={cn(
-          'sf-btn',
-          appearance.buttonStyle === 'pill' && 'rounded-full',
-          appearance.buttonStyle === 'outline' &&
-            'border-2 border-primary bg-transparent text-primary hover:bg-primary/5',
-          appearance.buttonStyle === 'soft' &&
-            'bg-primary/15 text-primary shadow-none hover:bg-primary/25',
-        )}
+        className={appearanceButtonClass(appearance.buttonStyle, 'h-11')}
         asChild
       >
         <Link to={to('/boutique')}>
@@ -81,7 +81,7 @@ function ClassicHome({
   );
 
   return (
-    <div className="theme-home theme-home--classic">
+    <div className={cn('theme-home theme-home--classic', densityPad)}>
       {showHero ? (
         heroStyle === 'split' ? (
           <section className="mx-auto grid max-w-6xl items-center gap-8 px-4 py-12 sm:px-6 lg:grid-cols-2 lg:py-16">
@@ -117,6 +117,47 @@ function ClassicHome({
                 <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">{siteName}</p>
                 <h1 className="mt-2 font-display text-3xl font-bold sm:text-4xl">{tagline}</h1>
                 {ctaBlock}
+              </div>
+            </div>
+          </section>
+        ) : heroStyle === 'stacked' ? (
+          <section className="mx-auto max-w-6xl px-4 py-10 sm:px-6 sm:py-14">
+            <div className="aspect-[21/9] overflow-hidden rounded-[var(--theme-radius-card)] sm:aspect-[2.4/1]">
+              <img src={heroImage} alt="" className="h-full w-full object-cover" />
+            </div>
+            <div className="mx-auto mt-8 max-w-2xl text-center">
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">{siteName}</p>
+              <h1 className="mt-3 font-display text-4xl font-bold tracking-tight sm:text-5xl">{tagline}</h1>
+              <p className="mt-4 text-muted-foreground">{aboutText}</p>
+              <div className="flex justify-center">{ctaBlock}</div>
+            </div>
+          </section>
+        ) : heroStyle === 'overlay' ? (
+          <section className="relative min-h-[min(70dvh,640px)] overflow-hidden">
+            <img src={heroImage} alt="" className="absolute inset-0 h-full w-full object-cover" />
+            <div className="absolute inset-0 bg-foreground/45" />
+            <div className="relative mx-auto flex min-h-[min(70dvh,640px)] max-w-3xl flex-col items-center justify-center px-4 py-16 text-center text-primary-foreground sm:px-6">
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] opacity-90">{siteName}</p>
+              <h1 className="mt-3 font-display text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl">
+                {tagline}
+              </h1>
+              <p className="mt-4 max-w-lg opacity-90">{aboutText}</p>
+              <div className="[&_.sf-btn]:shadow-lg">{ctaBlock}</div>
+            </div>
+          </section>
+        ) : heroStyle === 'asymmetric' ? (
+          <section className="relative mx-auto max-w-6xl overflow-hidden px-4 py-12 sm:px-6 lg:py-20">
+            <div className="grid items-end gap-8 lg:grid-cols-12">
+              <div className="lg:col-span-5 lg:pb-8">
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">{siteName}</p>
+                <h1 className="mt-3 font-display text-4xl font-bold tracking-tight sm:text-5xl">{tagline}</h1>
+                <p className="mt-4 max-w-md text-muted-foreground">{aboutText}</p>
+                {ctaBlock}
+              </div>
+              <div className="lg:col-span-7 lg:col-start-6">
+                <div className="aspect-[4/5] overflow-hidden rounded-[var(--theme-radius-card)] sm:aspect-[5/4] lg:-mr-8 lg:translate-x-4">
+                  <img src={heroImage} alt="" className="h-full w-full object-cover" />
+                </div>
               </div>
             </div>
           </section>
@@ -211,6 +252,7 @@ function MinimalHome({
   products,
   categories,
   appearance = DEFAULT_APPEARANCE,
+  showHero = true,
   showCategories = true,
 }: ThemeHomeProps) {
   const { to } = useStorefrontPath();
@@ -219,6 +261,7 @@ function MinimalHome({
 
   return (
     <div className="theme-home theme-home--minimal bg-[hsl(0_0%_99%)] text-[hsl(0_0%_10%)]">
+      {showHero ? (
       <section className="mx-auto max-w-3xl px-4 pb-8 pt-20 text-center sm:px-6 sm:pt-28">
         <p className="text-[11px] font-medium uppercase tracking-[0.35em] text-neutral-500">
           {siteName}
@@ -239,6 +282,7 @@ function MinimalHome({
           </Link>
         </div>
       </section>
+      ) : null}
 
       <section className="mx-auto max-w-5xl px-4 py-10 sm:px-6">
         <div className="grid grid-cols-2 gap-x-4 gap-y-12 md:grid-cols-3 md:gap-x-8">
@@ -286,6 +330,7 @@ function BoldHome({
   products,
   categories,
   appearance = DEFAULT_APPEARANCE,
+  showHero = true,
 }: ThemeHomeProps) {
   const { to } = useStorefrontPath();
   const deal = products.find((p) => p.originalPrice) ?? products[0];
@@ -294,6 +339,7 @@ function BoldHome({
 
   return (
     <div className="theme-home theme-home--bold bg-[hsl(350_40%_8%)] text-white">
+      {showHero ? (
       <section className="relative overflow-hidden">
         <div className="absolute inset-0">
           <img src={heroImage} alt="" className="h-full w-full object-cover opacity-50" />
@@ -357,6 +403,7 @@ function BoldHome({
           )}
         </div>
       </section>
+      ) : null}
 
       <section className="border-y-4 border-[hsl(var(--primary))] bg-[hsl(var(--primary))] py-3 text-center text-sm font-black uppercase tracking-[0.2em] text-primary-foreground">
         {siteName} · Livraison 48h · Retours faciles · Sur-mesure
@@ -422,6 +469,7 @@ function ElegantHome({
   products,
   categories,
   appearance = DEFAULT_APPEARANCE,
+  showHero = true,
 }: ThemeHomeProps) {
   const { to } = useStorefrontPath();
   const editorial = products.slice(0, 3);
@@ -430,6 +478,7 @@ function ElegantHome({
 
   return (
     <div className="theme-home theme-home--elegant bg-[hsl(40_30%_97%)] text-[hsl(280_20%_18%)]">
+      {showHero ? (
       <section className="relative min-h-[min(92dvh,800px)]">
         <img src={heroImage} alt="" className="absolute inset-0 h-full w-full object-cover" />
         <div className="absolute inset-0 bg-[hsl(280_25%_12%/0.35)]" />
@@ -448,6 +497,7 @@ function ElegantHome({
           </Button>
         </div>
       </section>
+      ) : null}
 
       <section className="mx-auto max-w-5xl px-4 py-20 sm:px-6">
         <div className="mb-12 text-center">

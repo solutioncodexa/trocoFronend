@@ -7,6 +7,7 @@ import type {
   FournisseurDTO,
   PlanDTO,
   PlanMarketingDTO,
+  StorePaymentsConfigDTO,
   StoreSettingsDTO,
   StoreThemeDTO,
   StorefrontBootstrapDTO,
@@ -14,6 +15,16 @@ import type {
   UpdatePlanRequest,
   UpdateStoreSettingsRequest,
 } from '@/types/api';
+
+export type PaymentCredentialsTestPayload = {
+  stripePublishableKey?: string;
+  stripeSecretKey?: string;
+  paypalClientId?: string;
+  paypalClientSecret?: string;
+  paypalMode?: string;
+  cmiClientId?: string;
+  cmiStoreKey?: string;
+};
 
 export const platformApi = {
   getPlans: (): Promise<PlanMarketingDTO[]> =>
@@ -112,14 +123,99 @@ export const platformApi = {
       method: 'POST',
       body: JSON.stringify({ planCode }),
     }),
+
+  testStoreStripe: (
+    payload?: PaymentCredentialsTestPayload,
+  ): Promise<{ message: string; settings: StoreSettingsDTO }> =>
+    apiRequest(buildApiUrl('/store-settings/me/payments/test-stripe'), {
+      method: 'POST',
+      body: JSON.stringify(payload ?? {}),
+    }),
+
+  testStorePaypal: (
+    payload?: PaymentCredentialsTestPayload,
+  ): Promise<{ message: string; settings: StoreSettingsDTO }> =>
+    apiRequest(buildApiUrl('/store-settings/me/payments/test-paypal'), {
+      method: 'POST',
+      body: JSON.stringify(payload ?? {}),
+    }),
+
+  testStoreCmi: (
+    payload?: PaymentCredentialsTestPayload,
+  ): Promise<{ message: string; settings: StoreSettingsDTO }> =>
+    apiRequest(buildApiUrl('/store-settings/me/payments/test-cmi'), {
+      method: 'POST',
+      body: JSON.stringify(payload ?? {}),
+    }),
+
+  getStorePaymentsConfig: (slug?: string): Promise<StorePaymentsConfigDTO> => {
+    const qs = slug ? `?slug=${encodeURIComponent(slug)}` : '';
+    return apiRequest<StorePaymentsConfigDTO>(buildApiUrl(`/store-payments/config${qs}`));
+  },
+
+  createStoreStripePaymentIntent: (payload: {
+    amountCents: number;
+    currency: string;
+    description?: string;
+  }): Promise<{ paymentIntentId: string; clientSecret: string }> =>
+    apiRequest(buildApiUrl('/store-payments/stripe/payment-intent'), {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+
+  /** Débit carte (PaymentMethod Stripe Elements) — comme Grammar. */
+  chargeStoreStripe: (payload: {
+    paymentMethodId: string;
+    amountCents: number;
+    currency: string;
+    description?: string;
+  }): Promise<{ paymentIntentId: string; status: string }> =>
+    apiRequest(buildApiUrl('/store-payments/stripe/charge'), {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+
+  createStorePaypalOrder: (payload: {
+    amount: number;
+    currency: string;
+    description?: string;
+  }): Promise<{ orderId: string; approveUrl?: string }> =>
+    apiRequest(buildApiUrl('/store-payments/paypal/create-order'), {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+
+  captureStorePaypalOrder: (orderId: string): Promise<{ status: string; orderId: string }> =>
+    apiRequest(buildApiUrl(`/store-payments/paypal/capture/${encodeURIComponent(orderId)}`), {
+      method: 'POST',
+      body: JSON.stringify({}),
+    }),
+
+  initStoreCmiCheckout: (payload: {
+    amount: number;
+    currency?: string;
+    description?: string;
+    okUrl?: string;
+    failUrl?: string;
+  }): Promise<CmiCheckoutDTO> =>
+    apiRequest(buildApiUrl('/store-payments/cmi/init'), {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
 };
 
-/** Auto-submit POST vers la gateway CMI. */
-export function submitCmiCheckout(checkout: CmiCheckoutDTO): void {
+/** Auto-submit POST vers la gateway CMI (iframe via `target`, ou page courante). */
+export function submitCmiCheckout(
+  checkout: CmiCheckoutDTO,
+  options?: { target?: string },
+): void {
   const form = document.createElement('form');
   form.method = 'POST';
   form.action = checkout.gatewayUrl;
   form.acceptCharset = 'UTF-8';
+  if (options?.target) {
+    form.target = options.target;
+  }
   Object.entries(checkout.fields).forEach(([name, value]) => {
     const input = document.createElement('input');
     input.type = 'hidden';
@@ -129,4 +225,5 @@ export function submitCmiCheckout(checkout: CmiCheckoutDTO): void {
   });
   document.body.appendChild(form);
   form.submit();
+  window.setTimeout(() => form.remove(), 1500);
 }

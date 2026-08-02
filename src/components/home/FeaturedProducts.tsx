@@ -10,6 +10,7 @@ import { resolvePublicImageUrl } from '@/utils/resolvePublicImageUrl';
 import { staticCatalogQueryOptions } from '@/config/queryOptions';
 import type { Product } from '@/types/product';
 import type { FeaturedProductDTO } from '@/types/featured-products';
+import { useLocale } from '@/contexts/LocaleContext';
 
 function mapFeaturedToProduct(fp: FeaturedProductDTO): Product {
   const image =
@@ -29,6 +30,7 @@ function mapFeaturedToProduct(fp: FeaturedProductDTO): Product {
 }
 
 const FeaturedProducts = () => {
+  const { t } = useLocale();
   const { data: featured = [] } = useQuery({
     queryKey: ['featured-products', 'home'],
     queryFn: () => featuredProductsApi.getAllFeaturedProducts(),
@@ -57,10 +59,10 @@ const FeaturedProducts = () => {
         <div className="flex flex-col md:flex-row md:items-end justify-between mb-10 sm:mb-12">
           <div>
             <h2 className="font-display text-3xl md:text-4xl text-foreground mb-3">
-              Produits sélectionnés
+              {t('featuredProducts')}
             </h2>
             <p className="font-body text-muted-foreground max-w-xl">
-              Une sélection mise en avant depuis l&apos;admin — emballages préférés des e-commerçants au Maroc
+              {t('featuredIntro')}
             </p>
           </div>
           <Button
@@ -69,7 +71,7 @@ const FeaturedProducts = () => {
             className="mt-6 md:mt-0 border-primary text-primary hover:bg-primary hover:text-primary-foreground font-body uppercase tracking-wider text-sm"
           >
             <Link to="/boutique">
-              Voir tout
+              {t('seeAll')}
               <ArrowRight className="ml-2 w-4 h-4" />
             </Link>
           </Button>
@@ -89,7 +91,7 @@ const FeaturedProducts = () => {
 
         {displayProducts.length === 0 && (
           <p className="text-center text-muted-foreground font-body py-8">
-            Aucun produit sélectionné pour le moment. Ajoutez-en depuis l&apos;admin → Produits Sélectionnés.
+            {t('noFeatured')}
           </p>
         )}
       </div>

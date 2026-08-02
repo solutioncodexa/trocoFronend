@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Retour paiement</title>
+    <style>
+      body {
+        font-family: system-ui, sans-serif;
+        display: grid;
+        place-items: center;
+        min-height: 100vh;
+        margin: 0;
+        color: #334155;
+        background: #f8fafc;
+      }
+    </style>
+  </head>
+  <body>
+    <p>Finalisation du paiement…</p>
+    <script>
+      (function () {
+        var params = new URLSearchParams(window.location.search);
+        var status = params.get('status') === 'fail' ? 'fail' : 'ok';
+        var target = '/checkout?cmi=' + encodeURIComponent(status);
+        try {
+          if (window.top && window.top !== window.self) {
+            window.top.location.replace(target);
+            return;
+          }
+        } catch (e) {
+          /* cross-origin top — fallback */
+        }
+        window.location.replace(target);
+      })();
+    </script>
+  </body>
+</html>

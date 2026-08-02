@@ -1,4 +1,4 @@
-import { buildApiUrl, apiRequest } from '@/config/api';
+import { buildApiUrl, apiRequest, TENANT_SLUG_STORAGE_KEY } from '@/config/api';
 import type { ProductDetailDTO, ProductListItemDTO, ProductVariant } from '@/types/product-dtos';
 import type { PageResponse, CatalogFacetsDTO } from '@/types/api';
 
@@ -77,6 +77,19 @@ function buildProductsQueryString(params: ProductQueryParams): string {
   return qs.toString();
 }
 
+function authAndTenantHeaders(): Record<string, string> {
+  const headers: Record<string, string> = {};
+  const token = localStorage.getItem('troco_admin_token');
+  if (token) headers.Authorization = `Bearer ${token}`;
+  try {
+    const slug = localStorage.getItem(TENANT_SLUG_STORAGE_KEY);
+    if (slug) headers['X-Fournisseur-Slug'] = slug;
+  } catch {
+    /* ignore */
+  }
+  return headers;
+}
+
 export const productsApi = {
   /** Pagination publique — ProductListItemDTO */
   getAllProducts: async (params: ProductQueryParams = {}): Promise<PageResponse<ProductListItemDTO>> => {
@@ -120,10 +133,9 @@ export const productsApi = {
     formData.append('product', new Blob([JSON.stringify(product)], { type: 'application/json' }));
     images.forEach((file) => formData.append('images', file));
 
-    const token = localStorage.getItem('troco_admin_token');
     const response = await fetch(url, {
       method: 'POST',
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      headers: authAndTenantHeaders(),
       body: formData,
     });
     const data = await response.json();
@@ -139,10 +151,9 @@ export const productsApi = {
       images.forEach((file) => formData.append('images', file));
     }
 
-    const token = localStorage.getItem('troco_admin_token');
     const response = await fetch(url, {
       method: 'PUT',
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      headers: authAndTenantHeaders(),
       body: formData,
     });
     const data = await response.json();

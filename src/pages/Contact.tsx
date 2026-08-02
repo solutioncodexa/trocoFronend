@@ -3,10 +3,16 @@ import { Facebook, Instagram, Sparkles } from 'lucide-react';
 import Layout from '@/components/layout/Layout';
 import { useSocialNetworks } from '@/hooks/useSocialNetworks';
 import { useStoreBrand } from '@/hooks/useStoreBrand';
+import { useStoreAppearance } from '@/hooks/useStoreAppearance';
+import { appearanceButtonClass, formsPanelClass } from '@/config/storeAppearance';
+import { cn } from '@/lib/utils';
+import { useLocale } from '@/contexts/LocaleContext';
 
 const Contact = () => {
   const { isEnabled, getUrl } = useSocialNetworks();
   const { contactEmail, contactPhone, contactPhoneHref } = useStoreBrand();
+  const appearance = useStoreAppearance();
+  const { t } = useLocale();
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -33,35 +39,68 @@ const Contact = () => {
     <Layout>
       <div className="bg-background min-h-screen animate-fade-in">
         {/* Hero Section */}
+        {appearance.formsShowHero ? (
         <section className="py-14 md:py-16 text-center">
         <div className="max-w-[1280px] mx-auto px-6">
-          <span className="text-primary uppercase tracking-[0.4em] text-xs mb-4 block font-semibold">Service Client d'Excellence</span>
-          <h2 className="text-5xl md:text-6xl font-display text-foreground mb-6">Contactez-nous</h2>
+          <span className="text-primary uppercase tracking-[0.4em] text-xs mb-4 block font-semibold">{t('contactEyebrow')}</span>
+          <h2 className="text-5xl md:text-6xl font-display text-foreground mb-6">{t('contactTitle')}</h2>
           <div className="mx-auto my-6 flex max-w-sm items-center gap-3">
             <span className="h-px flex-1 bg-border" />
             <Sparkles className="h-5 w-5 text-primary" aria-hidden />
             <span className="h-px flex-1 bg-border" />
           </div>
           <p className="max-w-2xl mx-auto text-muted-foreground leading-relaxed text-lg">
-            Pour toute demande d'information, conseil personnalisé ou emballage sur-mesure, notre équipe est à votre entière disposition.
+            {t('contactIntro')}
           </p>
         </div>
       </section>
+        ) : null}
 
       {/* Contact Form Section */}
-      <section className="pb-20 md:pb-24">
-        <div className="max-w-5xl xl:max-w-[1280px] mx-auto px-6">
-          <div className="grid grid-cols-1 xl:grid-cols-2 gap-10 xl:gap-14 items-stretch">
+      <section className={cn('pb-20 md:pb-24', !appearance.formsShowHero && 'pt-14')}>
+        <div
+          className={cn(
+            'mx-auto px-6',
+            appearance.formsLayout === 'centered' ? 'max-w-2xl' : 'max-w-5xl xl:max-w-[1280px]',
+          )}
+        >
+          <div
+            className={cn(
+              'gap-10 xl:gap-14 items-stretch',
+              appearance.formsLayout === 'split' && appearance.formsShowSidebar
+                ? 'grid grid-cols-1 xl:grid-cols-2'
+                : 'flex flex-col',
+              appearance.formsLayout === 'centered' && 'mx-auto max-w-2xl',
+            )}
+          >
+            {appearance.formsLayout === 'stacked' && appearance.formsShowSidebar ? (
+              <aside className="flex min-h-0 w-full order-1">
+                <div className={cn('flex w-full flex-col rounded-2xl p-8 sm:p-10 md:p-12', formsPanelClass(appearance.formsStyle))}>
+                  <header className="mb-4 border-b border-border pb-4">
+                    <h3 className="text-2xl font-display text-foreground">{t('contactQuickTitle')}</h3>
+                    <p className="mt-2 text-sm text-muted-foreground">
+                      {t('contactQuickDesc')}
+                    </p>
+                  </header>
+                </div>
+              </aside>
+            ) : null}
             {/* Form */}
-            <div className="bg-card rounded-2xl p-8 sm:p-10 md:p-12 border border-border shadow-card flex flex-col min-h-0">
-              <h3 className="text-2xl font-display mb-8 text-foreground border-b border-border pb-4">Votre demande</h3>
+            <div
+              className={cn(
+                'rounded-2xl p-8 sm:p-10 md:p-12 flex flex-col min-h-0',
+                formsPanelClass(appearance.formsStyle),
+                appearance.formsLayout === 'stacked' && 'order-2',
+              )}
+            >
+              <h3 className="text-2xl font-display mb-8 text-foreground border-b border-border pb-4">{t('yourRequest')}</h3>
               <form onSubmit={handleSubmit} className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="flex flex-col gap-1.5">
-                    <label className="text-xs uppercase tracking-widest text-muted-foreground">Nom Complet</label>
+                    <label className="text-xs uppercase tracking-widest text-muted-foreground">{t('fullName')}</label>
                     <input 
                       className={inputClass} 
-                      placeholder="M. Jean Dupont" 
+                      placeholder={t('phFullName')} 
                       type="text"
                       name="name"
                       value={formData.name}
@@ -69,10 +108,10 @@ const Contact = () => {
                     />
                   </div>
                   <div className="flex flex-col gap-1.5">
-                    <label className="text-xs uppercase tracking-widest text-muted-foreground">Email</label>
+                    <label className="text-xs uppercase tracking-widest text-muted-foreground">{t('emailAddress')}</label>
                     <input 
                       className={inputClass} 
-                      placeholder="votre@email.com" 
+                      placeholder={t('phEmail')} 
                       type="email"
                       name="email"
                       value={formData.email}
@@ -82,10 +121,10 @@ const Contact = () => {
                 </div>
                 
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-xs uppercase tracking-widest text-muted-foreground">Téléphone</label>
+                  <label className="text-xs uppercase tracking-widest text-muted-foreground">{t('phone')}</label>
                   <input 
                     className={inputClass} 
-                    placeholder="+212 6..." 
+                    placeholder={t('phPhone')} 
                     type="tel"
                     name="phone"
                     value={formData.phone}
@@ -94,10 +133,10 @@ const Contact = () => {
                 </div>
                 
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-xs uppercase tracking-widest text-muted-foreground">Votre Message</label>
+                  <label className="text-xs uppercase tracking-widest text-muted-foreground">{t('message')}</label>
                   <textarea 
                     className={`${inputClass} resize-none`} 
-                    placeholder="Comment pouvons-nous vous accompagner ?" 
+                    placeholder={t('phMessage')} 
                     rows={4}
                     name="message"
                     value={formData.message}
@@ -106,11 +145,16 @@ const Contact = () => {
                 </div>
 
                 <div className="pt-2">
-                  <button 
-                    className="w-full bg-primary text-primary-foreground rounded-2xl px-8 py-4 text-sm uppercase tracking-widest font-bold hover:bg-primary/90 transition-all duration-300 shadow-card group flex items-center justify-center gap-3" 
+                  <button
+                    className={cn(
+                      appearanceButtonClass(
+                        appearance.buttonStyle,
+                        'w-full rounded-2xl px-8 py-4 text-sm uppercase tracking-widest font-bold group flex items-center justify-center gap-3',
+                      ),
+                    )}
                     type="submit"
                   >
-                    <span>Envoyer le message</span>
+                    <span>{appearance.formsCtaLabel || t('sendMessage')}</span>
                     <span className="material-symbols-outlined text-sm group-hover:translate-x-1 transition-transform">east</span>
                   </button>
                 </div>
@@ -118,19 +162,20 @@ const Contact = () => {
             </div>
 
             {/* Contact Info — carte alignée sur le formulaire */}
+            {appearance.formsShowSidebar && appearance.formsLayout === 'split' ? (
             <aside className="flex min-h-0 w-full">
-              <div className="flex w-full flex-col bg-card rounded-2xl p-8 sm:p-10 md:p-12 border border-border shadow-card">
+              <div className={cn('flex w-full flex-col rounded-2xl p-8 sm:p-10 md:p-12', formsPanelClass(appearance.formsStyle))}>
                 <header className="mb-8 border-b border-border pb-5">
-                  <h3 className="text-2xl font-display text-foreground">Une réponse rapide</h3>
+                  <h3 className="text-2xl font-display text-foreground">{t('contactQuickTitle')}</h3>
                   <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-                    Joignez-nous par téléphone, e-mail ou messagerie — nous revenons vers vous dans les meilleurs délais.
+                    {t('contactQuickDescLong')}
                   </p>
                 </header>
 
                 <div className="flex flex-1 flex-col gap-9">
                   {contactPhone && contactPhoneHref ? (
                     <div className="space-y-3">
-                      <h4 className="text-xs uppercase tracking-[0.3em] text-primary font-bold">Téléphone</h4>
+                      <h4 className="text-xs uppercase tracking-[0.3em] text-primary font-bold">{t('phone')}</h4>
                       <a
                         className="inline-flex w-fit max-w-full items-center gap-3 rounded-xl border border-border bg-muted/30 px-4 py-3 text-foreground transition-colors hover:border-primary/40 hover:bg-primary/[0.06]"
                         href={contactPhoneHref}
@@ -145,7 +190,7 @@ const Contact = () => {
 
                   {contactEmail ? (
                     <div className="space-y-3">
-                      <h4 className="text-xs uppercase tracking-[0.3em] text-primary font-bold">Email</h4>
+                      <h4 className="text-xs uppercase tracking-[0.3em] text-primary font-bold">{t('emailAddress')}</h4>
                       <a
                         className="inline-flex w-fit max-w-full items-center gap-3 rounded-xl border border-border bg-muted/30 px-4 py-3 text-foreground transition-colors hover:border-primary/40 hover:bg-primary/[0.06]"
                         href={`mailto:${contactEmail}`}
@@ -159,7 +204,7 @@ const Contact = () => {
                   ) : null}
 
                   <div className="space-y-3">
-                    <h4 className="text-xs uppercase tracking-[0.3em] text-primary font-bold">Messagerie</h4>
+                    <h4 className="text-xs uppercase tracking-[0.3em] text-primary font-bold">{t('messaging')}</h4>
                     <div className="flex -space-x-2 overflow-hidden">
                       {isEnabled('facebook') && getUrl('facebook') ? (
                         <a href={getUrl('facebook')} target="_blank" rel="noopener noreferrer" aria-label="Facebook" className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-blue-600 ring-2 ring-card transition-colors hover:bg-blue-700 sm:h-10 sm:w-10">
@@ -190,6 +235,7 @@ const Contact = () => {
                 </div>
               </div>
             </aside>
+            ) : null}
           </div>
         </div>
       </section>

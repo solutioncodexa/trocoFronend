@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+﻿import { useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { Heart } from 'lucide-react';
@@ -13,6 +13,9 @@ import { ANIMATIONS } from '@/config/animations';
 import { toast } from 'sonner';
 import { useStorefrontPath } from '@/hooks/useStorefrontPath';
 import { useStorefrontTheme } from '@/hooks/useStorefrontTheme';
+import { cardImageRatioClass } from '@/config/storeAppearance';
+import { useLocaleOptional } from '@/contexts/LocaleContext';
+import { messages, type MessageKey } from '@/i18n/messages';
 
 interface ProductCardProps {
   product: Product;
@@ -24,7 +27,10 @@ const ProductCard = ({ product, className }: ProductCardProps) => {
   const { isInWishlist, toggleWishlist } = useWishlist();
   const { to, isDemo } = useStorefrontPath();
   const theme = useStorefrontTheme();
+  const appearance = theme.appearance;
   const isFavorite = isInWishlist(product.id);
+  const localeCtx = useLocaleOptional();
+  const t = (key: MessageKey) => localeCtx?.t(key) ?? messages.fr[key];
 
   const prefetchProductDetail = useCallback(() => {
     if (isDemo) return;
@@ -42,20 +48,20 @@ const ProductCard = ({ product, className }: ProductCardProps) => {
     e.stopPropagation();
     toggleWishlist(product.id);
     if (isFavorite) {
-      toast.info('Retiré des favoris');
+      toast.info(t('removedFromWishlist'));
     } else {
-      toast.success('Ajouté aux favoris');
+      toast.success(t('addedToWishlist'));
     }
   };
 
   const getBadgeLabel = (badge: string) => {
     switch (badge) {
       case 'new':
-        return 'Nouveauté';
+        return t('badgeNew');
       case 'bestseller':
-        return 'Best-seller';
+        return t('badgeBestseller');
       case 'promo':
-        return 'Promo';
+        return t('badgePromo');
       default:
         return badge;
     }
@@ -65,15 +71,18 @@ const ProductCard = ({ product, className }: ProductCardProps) => {
     ? Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)
     : 0;
 
-  const hover = ANIMATIONS.productCardHover;
+  const hoverLift = appearance.cardHoverEffect === 'lift' && ANIMATIONS.productCardHover;
+  const hoverZoom = appearance.cardHoverEffect === 'zoom';
+  const infoCenter = appearance.cardInfoAlign === 'center';
 
   return (
     <div
       className={cn(
         'group flex h-full min-h-0 flex-col p-3 transition-all duration-300 sm:p-4',
         theme.productCard,
-        ANIMATIONS.productCardHover && 'hover:-translate-y-1 hover:shadow-elegant hover:border-primary/20',
-        !ANIMATIONS.productCardHover && 'hover:shadow-card',
+        hoverLift && 'hover:-translate-y-1 hover:shadow-elegant hover:border-primary/20',
+        appearance.cardHoverEffect === 'none' && 'hover:shadow-none',
+        appearance.cardHoverEffect === 'zoom' && 'hover:shadow-card',
         className,
       )}
     >
@@ -86,17 +95,28 @@ const ProductCard = ({ product, className }: ProductCardProps) => {
         onMouseEnter={prefetchProductDetail}
         onFocus={prefetchProductDetail}
       >
-        <div className={cn('relative mb-4 w-full shrink-0 overflow-hidden bg-muted', theme.productImage)}>
-          <div className="absolute left-2.5 top-2.5 z-10 flex flex-col gap-1.5">
-            {product.badges.map((badge) => (
-              <span
-                key={badge}
-                className="rounded-lg bg-secondary-dark px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-white shadow-soft"
-              >
-                {getBadgeLabel(badge)}
-              </span>
-            ))}
-          </div>
+        <div
+          className={cn(
+            'relative mb-4 w-full shrink-0 overflow-hidden bg-muted',
+            cardImageRatioClass(appearance.cardImageRatio),
+            theme.productImage
+              .split(/\s+/)
+              .filter((c) => c.startsWith('rounded'))
+              .join(' '),
+          )}
+        >
+          {appearance.cardShowBadges ? (
+            <div className="absolute left-2.5 top-2.5 z-10 flex flex-col gap-1.5">
+              {product.badges.map((badge) => (
+                <span
+                  key={badge}
+                  className="rounded-lg bg-secondary-dark px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-white shadow-soft"
+                >
+                  {getBadgeLabel(badge)}
+                </span>
+              ))}
+            </div>
+          ) : null}
 
           <img
             src={product.images[0]}
@@ -106,7 +126,7 @@ const ProductCard = ({ product, className }: ProductCardProps) => {
             fetchPriority="low"
             className={cn(
               'h-full w-full object-cover transition-transform duration-700 ease-premium',
-              hover && 'group-hover:scale-105',
+              hoverZoom && 'group-hover:scale-105',
             )}
             onError={(e) => {
               e.currentTarget.src = '/placeholder-modern-fixed.svg';
@@ -116,41 +136,60 @@ const ProductCard = ({ product, className }: ProductCardProps) => {
           {!product.inStock && (
             <div className="absolute inset-0 flex items-center justify-center bg-foreground/55 backdrop-blur-[2px]">
               <span className="rounded-full bg-card/95 px-4 py-2 font-display text-sm font-semibold text-foreground">
-                Rupture de stock
+                {t('outOfStock')}
               </span>
             </div>
           )}
 
-          <div className="absolute right-2.5 top-2.5 flex flex-col gap-2">
-            <button
-              type="button"
-              aria-label={isFavorite ? 'Retirer des favoris' : 'Ajouter aux favoris'}
-              className={cn(
-                'flex h-10 w-10 items-center justify-center rounded-xl shadow-soft backdrop-blur-sm transition-all',
-                isFavorite
-                  ? 'bg-primary text-primary-foreground'
-                  : 'bg-card/90 text-foreground opacity-0 group-hover:opacity-100 hover:bg-primary hover:text-primary-foreground',
-              )}
-              style={isFavorite ? { opacity: 1 } : undefined}
-              onClick={handleWishlistToggle}
-            >
-              <Heart className={cn('h-4 w-4', isFavorite && 'fill-current')} />
-            </button>
-          </div>
+          {appearance.cardShowWishlist ? (
+            <div className="absolute right-2.5 top-2.5 flex flex-col gap-2">
+              <button
+                type="button"
+                aria-label={isFavorite ? t('removeFromWishlist') : t('addToWishlist')}
+                className={cn(
+                  'flex h-10 w-10 items-center justify-center rounded-xl shadow-soft backdrop-blur-sm transition-all',
+                  isFavorite
+                    ? 'bg-primary text-primary-foreground'
+                    : 'bg-card/90 text-foreground opacity-0 group-hover:opacity-100 hover:bg-primary hover:text-primary-foreground',
+                )}
+                style={isFavorite ? { opacity: 1 } : undefined}
+                onClick={handleWishlistToggle}
+              >
+                <Heart className={cn('h-4 w-4', isFavorite && 'fill-current')} />
+              </button>
+            </div>
+          ) : null}
 
-          <div className="pointer-events-none absolute inset-x-0 bottom-3 flex justify-center opacity-0 transition-opacity duration-300 group-hover:opacity-100">
-            <span className="rounded-full bg-card/95 px-5 py-2 text-[11px] font-bold uppercase tracking-wider text-foreground shadow-soft">
-              Voir
-            </span>
-          </div>
+          {appearance.cardShowQuickAdd ? (
+            <div className="pointer-events-none absolute inset-x-0 bottom-3 flex justify-center opacity-0 transition-opacity duration-300 group-hover:opacity-100">
+              <span className="rounded-full bg-card/95 px-5 py-2 text-[11px] font-bold uppercase tracking-wider text-foreground shadow-soft">
+                {t('seeProduct')}
+              </span>
+            </div>
+          ) : null}
         </div>
 
-        <div className="flex min-h-0 flex-1 flex-col text-center">
+        <div
+          className={cn(
+            'flex min-h-0 flex-1 flex-col',
+            infoCenter ? 'text-center' : 'text-left',
+          )}
+        >
           <h4 className="mb-1 line-clamp-2 min-h-[3.25rem] font-display text-base font-semibold leading-snug text-foreground transition-colors group-hover:text-primary sm:text-lg">
             {product.name}
           </h4>
-          <div className="mt-auto flex flex-col items-center gap-1 pt-2">
-            <div className="flex min-h-[1.5rem] flex-wrap items-center justify-center gap-x-2 gap-y-0.5">
+          <div
+            className={cn(
+              'mt-auto flex flex-col gap-1 pt-2',
+              infoCenter ? 'items-center' : 'items-start',
+            )}
+          >
+            <div
+              className={cn(
+                'flex min-h-[1.5rem] flex-wrap items-center gap-x-2 gap-y-0.5',
+                infoCenter && 'justify-center',
+              )}
+            >
               <span className="text-lg font-semibold tabular-nums text-primary">{formatPrice(product.price)}</span>
               {product.originalPrice && (
                 <span className="text-xs text-muted-foreground line-through">
@@ -170,7 +209,9 @@ const ProductCard = ({ product, className }: ProductCardProps) => {
             )}
             {product.variants && product.variants.length > 1 && (
               <span className="text-[11px] text-muted-foreground">
-                À partir de {formatPrice(product.price)} · {product.variants.length} options
+                {t('fromPriceOptions')
+                  .replace('{price}', formatPrice(product.price))
+                  .replace('{n}', String(product.variants.length))}
               </span>
             )}
           </div>

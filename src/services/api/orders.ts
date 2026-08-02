@@ -53,10 +53,12 @@ export const ordersApi = {
 
   createOrder: async (order: OrderDTO): Promise<OrderCreatedDTO> => {
     const url = buildApiUrl('/orders');
+    // skipAuth : le JWT admin ne doit pas écraser le tenant vitrine (Host / slug).
     return apiRequest<OrderCreatedDTO>(url, {
       method: 'POST',
       body: JSON.stringify(order),
-    }, true);
+      skipAuth: true,
+    });
   },
 
   updateOrderStatus: async (id: string, status: string): Promise<OrderDTO> => {

@@ -55,7 +55,13 @@ export interface CustomerSummaryDTO {
   city?: string;
 }
 
-export type CheckoutPaymentMethod = 'cash_on_delivery' | 'online' | 'card_cmi' | 'bnpl';
+export type CheckoutPaymentMethod =
+  | 'cash_on_delivery'
+  | 'online'
+  | 'card_cmi'
+  | 'card_stripe'
+  | 'paypal'
+  | 'bnpl';
 
 export interface OrderDTO {
   id: string;
@@ -90,6 +96,8 @@ export interface OrderListItemDTO {
   customer: CustomerSummaryDTO;
   total: number;
   status: string;
+  paymentMethod?: string | null;
+  paymentStatus?: string | null;
   createdAt: string;
   itemCount: number;
   previewProductName?: string;
@@ -292,12 +300,34 @@ export interface StorefrontCheckoutDTO {
   paymentCmiEnabled: boolean;
   paymentBnplEnabled: boolean;
   bnplProvider?: string | null;
+  paymentStripeEnabled?: boolean;
+  paymentPaypalEnabled?: boolean;
+  stripeReady?: boolean;
+  paypalReady?: boolean;
+  cmiReady?: boolean;
+  stripePublishableKey?: string | null;
+  paypalClientId?: string | null;
+  paypalMode?: string | null;
   loyaltyEnabled: boolean;
   loyaltyPointsPerMad?: number | null;
   loyaltyMadPerPoint?: number | null;
   shippingDefaultCarrier?: string | null;
   abandonedCartEnabled: boolean;
   freeShippingThreshold?: number | null;
+}
+
+/** Config publique paiements (GET /store-payments/config). */
+export interface StorePaymentsConfigDTO {
+  slug: string;
+  paymentCodEnabled: boolean;
+  stripeReady: boolean;
+  paypalReady: boolean;
+  cmiReady: boolean;
+  bnplEnabled: boolean;
+  bnplProvider?: string | null;
+  stripePublishableKey?: string | null;
+  paypalClientId?: string | null;
+  paypalMode?: string | null;
 }
 
 /** Shell admin (GET /store-settings/me/summary). */
@@ -318,6 +348,8 @@ export interface AdminStoreSummaryDTO {
   appearance?: import('@/config/storeAppearance').StoreAppearance | Record<string, unknown> | null;
   planCode?: string | null;
   planName?: string | null;
+  defaultLocale?: string | null;
+  supportedLocales?: string | null;
 }
 
 /**
@@ -376,6 +408,21 @@ export interface StoreSettingsDTO {
   paymentCmiEnabled?: boolean;
   paymentBnplEnabled?: boolean;
   bnplProvider?: string | null;
+  paymentStripeEnabled?: boolean;
+  stripePublishableKey?: string | null;
+  stripeSecretKeyConfigured?: boolean;
+  stripeReady?: boolean;
+  stripeVerifiedAt?: string | null;
+  paymentPaypalEnabled?: boolean;
+  paypalClientId?: string | null;
+  paypalClientSecretConfigured?: boolean;
+  paypalMode?: string | null;
+  paypalReady?: boolean;
+  paypalVerifiedAt?: string | null;
+  cmiClientId?: string | null;
+  cmiStoreKeyConfigured?: boolean;
+  cmiReady?: boolean;
+  cmiVerifiedAt?: string | null;
   loyaltyEnabled?: boolean;
   loyaltyPointsPerMad?: number | null;
   loyaltyMadPerPoint?: number | null;
@@ -479,6 +526,15 @@ export interface UpdateStoreSettingsRequest {
   paymentCmiEnabled?: boolean;
   paymentBnplEnabled?: boolean;
   bnplProvider?: string;
+  paymentStripeEnabled?: boolean;
+  stripePublishableKey?: string;
+  stripeSecretKey?: string;
+  paymentPaypalEnabled?: boolean;
+  paypalClientId?: string;
+  paypalClientSecret?: string;
+  paypalMode?: string;
+  cmiClientId?: string;
+  cmiStoreKey?: string;
   loyaltyEnabled?: boolean;
   loyaltyPointsPerMad?: number | null;
   loyaltyMadPerPoint?: number | null;

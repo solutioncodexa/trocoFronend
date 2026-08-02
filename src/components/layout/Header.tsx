@@ -38,7 +38,7 @@ const Header = () => {
   const { customNav, isReplaced, navHref } = useSystemNavReplacements();
   const { megaMenuConfig, useMegaMenuNav, appBarConfig } = useGlobalSections();
   const appearance = useStoreAppearance();
-  const { lang, setLang, withLang } = useStoreLang();
+  const { setLang, withLang } = useStoreLang();
   const { locale, supportedLocales, setLocale, t } = useLocale();
   const itemCount = isDemo ? demo?.cartCount ?? 0 : getItemCount();
   const favCount = isDemo ? 3 : wishlistCount;
@@ -133,12 +133,16 @@ const Header = () => {
     (p) => !(SYSTEM_NAV_REPLACEMENTS as readonly string[]).includes(p.slug.toLowerCase()),
   );
 
+  /** Libellé FR perso (admin) ; sinon traduction locale (fr / ar / en). */
+  const navLabel = (customFr: string | undefined, key: 'home' | 'shop' | 'surMesure' | 'quote' | 'contact') =>
+    locale === 'fr' && customFr?.trim() ? customFr.trim() : t(key);
+
   const defaultNavLinks = [
     ...(appearance.headerShowHome
       ? [
           {
             ...resolveNav(appearance.headerHrefHome, withLang(homePath)),
-            label: lang === 'ar' ? 'الرئيسية' : appearance.headerLabelHome || 'Accueil',
+            label: navLabel(appearance.headerLabelHome, 'home'),
           },
         ]
       : []),
@@ -146,7 +150,7 @@ const Header = () => {
       ? [
           {
             ...resolveNav(appearance.headerHrefShop, withLang(boutiquePath)),
-            label: lang === 'ar' ? 'المتجر' : appearance.headerLabelShop || 'Boutique',
+            label: navLabel(appearance.headerLabelShop, 'shop'),
           },
         ]
       : []),
@@ -159,14 +163,14 @@ const Header = () => {
       ? [
           {
             ...resolveNav(appearance.headerHrefSurMesure, withLang(to('/sur-mesure'))),
-            label: lang === 'ar' ? 'حسب الطلب' : appearance.headerLabelSurMesure || 'Sur-mesure',
+            label: navLabel(appearance.headerLabelSurMesure, 'surMesure'),
           },
         ]
       : appearance.headerShowSurMesure && isReplaced('/sur-mesure')
         ? [
             {
               ...resolveNav(appearance.headerHrefSurMesure, navHref('/sur-mesure')),
-              label: lang === 'ar' ? 'حسب الطلب' : appearance.headerLabelSurMesure || 'Sur-mesure',
+              label: navLabel(appearance.headerLabelSurMesure, 'surMesure'),
             },
           ]
         : []),
@@ -174,14 +178,14 @@ const Header = () => {
       ? [
           {
             ...resolveNav(appearance.headerHrefDevis, withLang(to('/devis'))),
-            label: lang === 'ar' ? 'عرض سعر' : appearance.headerLabelDevis || 'Devis',
+            label: navLabel(appearance.headerLabelDevis, 'quote'),
           },
         ]
       : appearance.headerShowDevis && isReplaced('/devis')
         ? [
             {
               ...resolveNav(appearance.headerHrefDevis, navHref('/devis')),
-              label: lang === 'ar' ? 'عرض سعر' : appearance.headerLabelDevis || 'Devis',
+              label: navLabel(appearance.headerLabelDevis, 'quote'),
             },
           ]
         : []),
@@ -189,7 +193,7 @@ const Header = () => {
       ? [
           {
             ...resolveNav(appearance.headerHrefContact, navHref('/contact')),
-            label: lang === 'ar' ? 'اتصل بنا' : appearance.headerLabelContact || 'Contact',
+            label: navLabel(appearance.headerLabelContact, 'contact'),
           },
         ]
       : []),
@@ -312,20 +316,33 @@ const Header = () => {
     <header
       className={cn(
         'z-50 w-full max-w-full min-w-0 overflow-x-clip border-b border-border bg-card shadow-soft',
-        appBarConfig?.sticky === false ? 'relative' : 'sticky top-0',
+        appBarConfig?.sticky === false || appearance.headerSticky === false
+          ? 'relative'
+          : 'sticky top-0',
       )}
       data-header-custom={headerBg || headerFg ? '1' : undefined}
+      data-header-layout={appearance.headerLayout || 'inline'}
       style={headerStyle}
     >
       {/* Bandeau unifié via <TopBar /> — pas de second strip ici (évite le double bandeau). */}
       <div className="container mx-auto w-full max-w-full min-w-0 px-3 sm:px-4 md:px-6">
-        <div className="flex h-[4.25rem] w-full min-w-0 items-center justify-between gap-2 sm:h-[4.75rem] lg:h-20">
+        <div
+          className={cn(
+            'flex w-full min-w-0 items-center gap-2',
+            appearance.headerLayout === 'centered' &&
+              'h-auto flex-wrap justify-center py-3 sm:py-4',
+            appearance.headerLayout === 'stacked' &&
+              'h-auto flex-wrap justify-between py-3 sm:py-4',
+            appearance.headerLayout === 'inline' &&
+              'h-[4.25rem] justify-between sm:h-[4.75rem] lg:h-20',
+          )}
+        >
           <button
             type="button"
             className={cn(iconBtnClass, 'lg:hidden')}
             style={iconTone}
             onClick={() => setIsMenuOpen(!isMenuOpen)}
-            aria-label={isMenuOpen ? 'Fermer le menu' : 'Ouvrir le menu'}
+            aria-label={isMenuOpen ? t('closeMenu') : t('openMenu')}
             aria-expanded={isMenuOpen}
             hidden={!showNav}
           >
@@ -338,6 +355,7 @@ const Header = () => {
             aria-label={`${siteName} — accueil`}
             className={cn(
               'flex min-w-0 max-lg:max-w-[56%] shrink items-center overflow-visible py-0.5',
+              appearance.headerLayout === 'centered' && 'order-1 max-lg:max-w-none',
               ANIMATIONS.headerLogoHover &&
                 'transition-transform duration-300 ease-premium hover:scale-[1.03] active:scale-100',
             )}
@@ -350,8 +368,13 @@ const Header = () => {
 
           {showNav ? (
           <nav
-            className="ml-6 hidden shrink-0 items-center gap-0.5 xl:ml-10 lg:flex xl:gap-1"
-            aria-label="Navigation principale"
+            className={cn(
+              'hidden shrink-0 items-center gap-0.5 lg:flex xl:gap-1',
+              appearance.headerLayout === 'inline' && 'ml-6 xl:ml-10',
+              appearance.headerLayout === 'centered' && 'order-3 w-full justify-center',
+              appearance.headerLayout === 'stacked' && 'order-3 w-full justify-center border-t border-border/50 pt-2',
+            )}
+            aria-label={t('mainNav')}
           >
             {megaMenuItems
               ? megaMenuItems.map((item, index) => renderDesktopMegaItem(item, index))
@@ -366,7 +389,13 @@ const Header = () => {
           </nav>
           ) : null}
 
-          <div className="flex shrink-0 items-center gap-0.5 sm:gap-1 md:gap-1.5" style={iconTone}>
+          <div
+            className={cn(
+              'flex shrink-0 items-center gap-0.5 sm:gap-1 md:gap-1.5',
+              appearance.headerLayout === 'centered' && 'order-2',
+            )}
+            style={iconTone}
+          >
             {showSearch ? (
             <div className="relative" ref={searchRootRef}>
               {isSearchOpen ? (
@@ -382,7 +411,7 @@ const Header = () => {
                       name="q"
                       value={searchDraft}
                       onChange={(e) => setSearchDraft(e.target.value)}
-                      placeholder="Rechercher des produits…"
+                      placeholder={t('searchPlaceholder')}
                       className="h-11 w-full border-0 bg-transparent pl-9 pr-[4.5rem] text-base shadow-none focus-visible:ring-0 md:text-sm"
                       autoFocus
                       autoComplete="off"
@@ -392,7 +421,7 @@ const Header = () => {
                       <button
                         type="submit"
                         className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary text-primary-foreground transition-opacity hover:opacity-90"
-                        aria-label="Lancer la recherche"
+                        aria-label={t('searchSubmit')}
                       >
                         <ArrowRight className="h-4 w-4" />
                       </button>
@@ -400,7 +429,7 @@ const Header = () => {
                         type="button"
                         className="flex h-9 w-9 items-center justify-center rounded-xl text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
                         onClick={() => setIsSearchOpen(false)}
-                        aria-label="Fermer la recherche"
+                        aria-label={t('searchClose')}
                       >
                         <X className="h-4 w-4" />
                       </button>
@@ -408,7 +437,7 @@ const Header = () => {
                   </form>
                 </div>
               ) : (
-                <button type="button" onClick={() => setIsSearchOpen(true)} className={iconBtnClass} style={iconTone} aria-label="Rechercher">
+                <button type="button" onClick={() => setIsSearchOpen(true)} className={iconBtnClass} style={iconTone} aria-label={t('search')}>
                   <Search className="h-5 w-5 sm:h-[1.35rem] sm:w-[1.35rem]" />
                 </button>
               )}
@@ -420,7 +449,7 @@ const Header = () => {
               onValueChange={(v) => {
                 const next = v as 'fr' | 'ar' | 'en';
                 setLocale(next);
-                if (next === 'ar' || next === 'fr') setLang(next === 'ar' ? 'ar' : 'fr');
+                setLang(next === 'ar' ? 'ar' : 'fr');
               }}
             >
               <SelectTrigger
@@ -445,7 +474,7 @@ const Header = () => {
                 const idx = supportedLocales.indexOf(locale);
                 const next = supportedLocales[(idx + 1) % supportedLocales.length] ?? 'fr';
                 setLocale(next);
-                if (next === 'ar' || next === 'fr') setLang(next === 'ar' ? 'ar' : 'fr');
+                setLang(next === 'ar' ? 'ar' : 'fr');
               }}
               aria-label={t('language')}
             >
@@ -453,7 +482,7 @@ const Header = () => {
             </button>
 
             {showWishlist ? (
-            <Link to={withLang(to('/favoris'))} className={cn(iconBtnClass, 'relative')} style={iconTone} aria-label="Favoris">
+            <Link to={withLang(to('/favoris'))} className={cn(iconBtnClass, 'relative')} style={iconTone} aria-label={t('wishlist')}>
               <Heart className="h-5 w-5 sm:h-[1.35rem] sm:w-[1.35rem]" />
               {favCount > 0 && (
                 <span className="absolute -right-0.5 -top-0.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1 text-[11px] font-bold text-primary-foreground animate-scale-in">
@@ -464,7 +493,7 @@ const Header = () => {
             ) : null}
 
             {showCart ? (
-            <Link to={withLang(to('/panier'))} className={cn(iconBtnClass, 'relative')} style={iconTone} aria-label="Panier">
+            <Link to={withLang(to('/panier'))} className={cn(iconBtnClass, 'relative')} style={iconTone} aria-label={t('cart')}>
               <ShoppingBag className="h-5 w-5 sm:h-[1.35rem] sm:w-[1.35rem]" />
               {itemCount > 0 && (
                 <span className="absolute -right-0.5 -top-0.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1 text-[11px] font-bold text-primary-foreground animate-scale-in">
@@ -487,7 +516,7 @@ const Header = () => {
             'max-h-[min(70dvh,28rem)] overflow-y-auto overscroll-contain border-t border-border bg-card scrollbar-app lg:hidden',
             ANIMATIONS.mobileNavSlideDown ? 'animate-slide-down-fade' : 'animate-fade-in',
           )}
-          aria-label="Navigation mobile"
+          aria-label={t('mobileNav')}
         >
           <div className="container mx-auto space-y-0.5 px-4 py-3 pb-[max(1rem,env(safe-area-inset-bottom))]">
             {megaMenuItems

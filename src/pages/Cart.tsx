@@ -13,18 +13,23 @@ import { mapProductListItemListToProducts } from '@/utils/productMapper';
 import { parseAbandonedCartJson } from '@/utils/abandonedCartItems';
 import ProductCard from '@/components/ui/ProductCard';
 import { useStoreBrand } from '@/hooks/useStoreBrand';
+import { useStoreAppearance } from '@/hooks/useStoreAppearance';
 import { useStorefrontTheme } from '@/hooks/useStorefrontTheme';
+import { appearanceButtonClass } from '@/config/storeAppearance';
 import {
   buildCartWhatsAppMessage,
   buildWhatsAppMessageUrl,
   resolveStoreWhatsAppNumber,
 } from '@/utils/whatsappOrder';
 import { toast } from 'sonner';
+import { cn } from '@/lib/utils';
+import { useLocale } from '@/contexts/LocaleContext';
 
 const Cart = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const recoverToken = searchParams.get('recover');
   const recoverStarted = useRef(false);
+  const { t, locale } = useLocale();
 
   const {
     items,
@@ -34,8 +39,33 @@ const Cart = () => {
     clearCart,
     addToCart,
   } = useCart();
-  const { freeShippingThreshold, contactWhatsapp, contactPhone } = useStoreBrand();
+  const { freeShippingThreshold, contactWhatsapp, contactPhone, siteName } = useStoreBrand();
   const theme = useStorefrontTheme();
+  const appearance = useStoreAppearance();
+  const cartPad =
+    appearance.cartDensity === 'compact'
+      ? 'p-4'
+      : appearance.cartDensity === 'spacious'
+        ? 'p-8'
+        : 'p-6';
+  const cartGap =
+    appearance.cartDensity === 'compact'
+      ? 'gap-4'
+      : appearance.cartDensity === 'spacious'
+        ? 'gap-16'
+        : 'gap-12';
+  const cartItemGap =
+    appearance.cartDensity === 'compact'
+      ? 'space-y-3'
+      : appearance.cartDensity === 'spacious'
+        ? 'space-y-8'
+        : 'space-y-6';
+  const cartCtaLabel =
+    !appearance.cartCtaLabel?.trim() || appearance.cartCtaLabel.trim() === 'Passer la commande'
+      ? t('placeOrder')
+      : locale === 'fr'
+        ? appearance.cartCtaLabel.trim()
+        : t('placeOrder');
 
   const { data: recoveredCart, isLoading: recovering } = useQuery({
     queryKey: ['abandoned-cart-recover', recoverToken],
@@ -114,24 +144,44 @@ const Cart = () => {
       <Layout>
         <div className="container mx-auto px-4 py-20 text-center">
           <Loader2 className="mx-auto mb-4 h-8 w-8 animate-spin text-primary" />
-          <p className="text-muted-foreground">Restauration de votre panier…</p>
+          <p className="text-muted-foreground">{t('restoringCart')}</p>
         </div>
       </Layout>
     );
   }
 
   if (items.length === 0) {
+    const emptyBranded = appearance.cartEmptyStyle === 'branded';
+    const emptyIllustrated = appearance.cartEmptyStyle === 'illustrated';
     return (
       <Layout>
-        <div className="container mx-auto px-4 py-20">
+        <div
+          className={cn(
+            'container mx-auto px-4 py-20',
+            emptyBranded && 'rounded-3xl bg-primary/5',
+          )}
+        >
+          {emptyIllustrated ? (
+            <div className="mx-auto mb-8 h-32 max-w-md rounded-2xl bg-gradient-to-br from-primary/25 to-muted" />
+          ) : null}
           <EmptyState
             icon={ShoppingBag}
-            title="Votre panier est vide"
-            description="Découvrez nos solutions d'emballage e-commerce"
+            title={t('cartEmptyTitle')}
+            description={
+              emptyBranded
+                ? t('cartEmptyDescBranded', { name: siteName || t('shop') })
+                : t('cartEmptyDesc')
+            }
           >
-            <Button asChild size="lg" className="mt-6 rounded-2xl font-body uppercase tracking-wider">
+            <Button
+              asChild
+              size="lg"
+              className={cn(
+                appearanceButtonClass(appearance.buttonStyle, 'mt-6 font-body uppercase tracking-wider'),
+              )}
+            >
               <Link to="/boutique">
-                Voir la boutique
+                {t('seeShop')}
                 <ArrowRight className="ml-2 w-5 h-5" />
               </Link>
             </Button>
@@ -149,19 +199,19 @@ const Cart = () => {
       <main className={cn('flex-grow bg-paper-pattern py-12 px-4 sm:px-6 w-full min-w-0 overflow-x-hidden animate-fade-in', theme.shell)}>
         <div className="max-w-[1200px] mx-auto w-full min-w-0">
           <div className="text-center mb-12">
-            <h2 className="font-display text-3xl font-semibold tracking-tight text-foreground sm:text-4xl md:text-5xl mb-2">Votre Panier</h2>
+            <h2 className="font-display text-3xl font-semibold tracking-tight text-foreground sm:text-4xl md:text-5xl mb-2">{t('cartTitle')}</h2>
             <div className="flex items-center justify-center gap-4">
               <div className="h-px w-12 bg-border"></div>
-              <p className="text-muted-foreground uppercase tracking-[0.3em] text-xs">Articles sélectionnés pour vous</p>
+              <p className="text-muted-foreground uppercase tracking-[0.3em] text-xs">{t('cartSubtitle')}</p>
               <div className="h-px w-12 bg-border"></div>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-12 items-start">
+          <div className={cn('grid grid-cols-1 items-start lg:grid-cols-3', cartGap)}>
             {/* Cart Items */}
-            <div className="lg:col-span-2 space-y-6">
+            <div className={cn('lg:col-span-2', cartItemGap)}>
               {items.map((item, index) => (
-                <div key={`${item.product.id}-${item.selectedVariantId ?? ''}-${item.selectedSize ?? ''}-${index}`} className="bg-card border border-border rounded-2xl shadow-soft p-6">
+                <div key={`${item.product.id}-${item.selectedVariantId ?? ''}-${item.selectedSize ?? ''}-${index}`} className={cn('bg-card border border-border rounded-2xl shadow-soft', cartPad)}>
                   <div className="flex flex-col md:flex-row gap-6">
                     <div className="w-full md:w-40 aspect-square rounded-xl border border-border/60 p-2 bg-muted/30 shrink-0">
                       <div className="w-full h-full rounded-lg bg-cover bg-center" style={{ backgroundImage: `url(${item.product.images[0]})` }}></div>
@@ -179,11 +229,11 @@ const Cart = () => {
                         </div>
                         <div className="space-y-1 text-sm text-muted-foreground">
                           {item.product.category && (
-                            <p><span className="uppercase tracking-widest text-[10px] font-bold">Catégorie:</span> {item.product.category}</p>
+                            <p><span className="uppercase tracking-widest text-[10px] font-bold">{t('category')}:</span> {item.product.category}</p>
                           )}
                           {item.selectedVariantId && item.product.variants && (
                             <p>
-                              <span className="uppercase tracking-widest text-[10px] font-bold">Option:</span>{' '}
+                              <span className="uppercase tracking-widest text-[10px] font-bold">{t('option')}:</span>{' '}
                               {item.product.variants.find((v) => String(v.id) === String(item.selectedVariantId))?.label
                                 || item.product.variants.find((v) => String(v.id) === String(item.selectedVariantId))?.attributeValue
                                 || '—'}
@@ -192,10 +242,10 @@ const Cart = () => {
                           )}
                           {item.customLogoUrl && (
                             <p className="text-green-700">
-                              <span className="uppercase tracking-widest text-[10px] font-bold">Logo:</span> joint
+                              <span className="uppercase tracking-widest text-[10px] font-bold">{t('logoAttached')}</span>
                             </p>
                           )}
-                          {item.selectedSize && <p><span className="uppercase tracking-widest text-[10px] font-bold">Taille:</span> {item.selectedSize}</p>}
+                          {item.selectedSize && <p><span className="uppercase tracking-widest text-[10px] font-bold">{t('size')}:</span> {item.selectedSize}</p>}
                         </div>
                       </div>
                       <div className="mt-6 flex items-center justify-between">
@@ -227,13 +277,13 @@ const Cart = () => {
               <div className="flex justify-between items-center px-2">
                 <Link to="/boutique" className="text-xs uppercase tracking-widest text-muted-foreground hover:text-primary transition-colors flex items-center gap-2">
                   <ArrowLeft className="text-sm" />
-                  Continuer vos achats
+                  {t('continueShopping')}
                 </Link>
                 <button 
                   onClick={clearCart}
                   className="text-xs uppercase tracking-widest text-muted-foreground hover:text-destructive transition-colors border-b border-border pb-0.5"
                 >
-                  Vider le panier
+                  {t('clearCart')}
                 </button>
               </div>
             </div>
@@ -241,37 +291,43 @@ const Cart = () => {
             {/* Order Summary */}
             <div className="lg:col-span-1">
               <div className="bg-card border border-border rounded-2xl shadow-card p-8">
-                <h3 className="text-lg font-bold uppercase tracking-widest mb-8 text-center text-foreground">Récapitulatif</h3>
+                <h3 className="text-lg font-bold uppercase tracking-widest mb-8 text-center text-foreground">{t('summary')}</h3>
                 
                 <div className="space-y-4 mb-8">
                   <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Sous-total</span>
+                    <span className="text-muted-foreground">{t('subtotal')}</span>
                     <span className="font-medium text-foreground">{formatPrice(getTotal())}</span>
                   </div>
                   <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Livraison</span>
+                    <span className="text-muted-foreground">{t('shipping')}</span>
                     <span className={shipping === 0 ? 'text-green-600 font-medium' : 'font-medium text-foreground'}>
-                      {shipping === 0 ? 'Gratuite' : formatPrice(shipping)}
+                      {shipping === 0 ? t('free') : formatPrice(shipping)}
                     </span>
                   </div>
                   {shipping > 0 && (
                     <p className="text-xs text-muted-foreground">
-                      Plus que {formatPrice(freeShippingThreshold - getTotal())} pour la livraison gratuite
+                      {t('freeShippingRemaining', { amount: formatPrice(freeShippingThreshold - getTotal()) })}
                     </p>
                   )}
                 </div>
 
                 <div className="pt-4 border-t border-border flex justify-between">
-                  <span className="text-lg font-bold uppercase tracking-widest text-foreground">Total</span>
+                  <span className="text-lg font-bold uppercase tracking-widest text-foreground">{t('total')}</span>
                   <span className="text-xl font-bold text-primary">{formatPrice(total)}</span>
                 </div>
 
                
 
-                <Button asChild className="w-full py-4 text-sm font-bold uppercase tracking-[0.2em] rounded-2xl shadow-card mt-6">
-                  <Link to="/checkout">
-                    Passer la commande
-                  </Link>
+                <Button
+                  asChild
+                  className={cn(
+                    appearanceButtonClass(
+                      appearance.buttonStyle,
+                      'mt-6 w-full py-4 text-sm font-bold uppercase tracking-[0.2em]',
+                    ),
+                  )}
+                >
+                  <Link to="/checkout">{cartCtaLabel}</Link>
                 </Button>
 
                 {cartWhatsAppHref ? (
@@ -283,7 +339,7 @@ const Cart = () => {
                   >
                     <a href={cartWhatsAppHref} target="_blank" rel="noopener noreferrer">
                       <MessageCircle className="h-4 w-4" />
-                      Commander le panier sur WhatsApp
+                      {t('orderCartWhatsApp')}
                     </a>
                   </Button>
                 ) : null}
@@ -292,17 +348,17 @@ const Cart = () => {
           </div>
         </div>
 
-        {crossSellProducts.length > 0 && (
+        {appearance.cartShowCrossSell && crossSellProducts.length > 0 && (
           <section className="max-w-[1200px] mx-auto w-full mt-16 mb-4">
             <div className="flex flex-col items-center mb-8 text-center">
               <div className="w-16 h-px bg-border mb-3 relative">
                 <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 size-2 rotate-45 border border-border bg-card" />
               </div>
               <h3 className="font-display text-xl sm:text-2xl text-foreground mb-1">
-                Complétez votre commande
+                {t('youMayAlsoLike')}
               </h3>
               <p className="text-muted-foreground uppercase tracking-widest text-[10px] sm:text-xs">
-                Des emballages complémentaires pour votre e-commerce
+                {t('complementaryPicks')}
               </p>
             </div>
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6 px-4 sm:px-0">

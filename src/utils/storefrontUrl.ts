@@ -1,6 +1,6 @@
 /**
  * Construit l'URL publique d'une boutique (preview vendeur).
- * Priorité : sous-domaine en prod, sinon ?tenant=slug (dev / plateforme).
+ * Priorité : sous-domaine en prod ; en local → ?tenant=slug (fiable sur Windows).
  */
 export function buildStorefrontUrl(slug: string | null | undefined): string {
   const s = slug?.trim().toLowerCase();
@@ -12,9 +12,9 @@ export function buildStorefrontUrl(slug: string | null | undefined): string {
   const port = window.location.port ? `:${window.location.port}` : '';
   const protocol = window.location.protocol;
 
-  // troco.localhost:5173
+  // Dev local : ?tenant= sur localhost (évite *.localhost qui ouvre parfois la landing Matjarona).
   if (host === 'localhost' || host === '127.0.0.1' || host.endsWith('.localhost')) {
-    return `${protocol}//${s}.localhost${port}/`;
+    return `${protocol}//localhost${port}/?tenant=${encodeURIComponent(s)}`;
   }
 
   // slug.matjarona.ma

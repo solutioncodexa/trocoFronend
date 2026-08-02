@@ -11,6 +11,7 @@ import { useSearchParams } from 'react-router-dom';
 import { useTenant } from '@/contexts/TenantContext';
 import {
   messages,
+  interpolate,
   normalizeLocale,
   parseSupportedLocales,
   type MessageKey,
@@ -23,7 +24,7 @@ type LocaleContextValue = {
   locale: StoreLocale;
   supportedLocales: StoreLocale[];
   setLocale: (next: StoreLocale) => void;
-  t: (key: MessageKey) => string;
+  t: (key: MessageKey, vars?: Record<string, string | number>) => string;
   formatPrice: (madAmount: number) => string;
   priceOptions: PriceDisplayOptions;
 };
@@ -36,20 +37,33 @@ function pickInitialLocale(
   supported?: StoreLocale[],
 ): StoreLocale {
   const allowed = supported?.length ? supported : (['fr'] as StoreLocale[]);
+  const storeDefault = normalizeLocale(defaultLocale);
+  const fallback = allowed.includes(storeDefault) ? storeDefault : allowed[0];
+
+  // Priorité URL ?lang= (partage / SEO)
+  if (typeof window !== 'undefined') {
+    const fromUrl = new URLSearchParams(window.location.search).get('lang');
+    if (fromUrl) {
+      const norm = normalizeLocale(fromUrl);
+      if (allowed.includes(norm)) return norm;
+    }
+  }
+
   if (slug) {
     try {
       const stored = localStorage.getItem(localeStorageKey(slug));
       if (stored) {
         const norm = normalizeLocale(stored);
+        // Préférence visiteurs uniquement si encore dans les langues activées
         if (allowed.includes(norm)) return norm;
+        localStorage.removeItem(localeStorageKey(slug));
       }
     } catch {
       /* ignore */
     }
   }
-  const fromStore = normalizeLocale(defaultLocale);
-  if (allowed.includes(fromStore)) return fromStore;
-  return allowed[0];
+
+  return fallback;
 }
 
 export function LocaleProvider({ children }: { children: ReactNode }) {
@@ -92,8 +106,8 @@ export function LocaleProvider({ children }: { children: ReactNode }) {
       document.documentElement.lang = next;
       document.documentElement.dir = next === 'ar' ? 'rtl' : 'ltr';
       const p = new URLSearchParams(searchParams);
-      if (next === 'ar') p.set('lang', 'ar');
-      else p.delete('lang');
+      if (next === 'fr') p.delete('lang');
+      else p.set('lang', next);
       setSearchParams(p, { replace: true });
     },
     [slug, supportedLocales, searchParams, setSearchParams],
@@ -104,7 +118,13 @@ export function LocaleProvider({ children }: { children: ReactNode }) {
     document.documentElement.dir = locale === 'ar' ? 'rtl' : 'ltr';
   }, [locale]);
 
-  const t = useCallback((key: MessageKey) => messages[locale][key] ?? messages.fr[key], [locale]);
+  const t = useCallback(
+    (key: MessageKey, vars?: Record<string, string | number>) => {
+      const raw = messages[locale][key] ?? messages.fr[key] ?? key;
+      return vars ? interpolate(raw, vars) : raw;
+    },
+    [locale],
+  );
 
   const formatPrice = useCallback(
     (madAmount: number) => formatPriceMad(madAmount, priceOptions),

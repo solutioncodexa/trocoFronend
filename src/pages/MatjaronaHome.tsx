@@ -1,8 +1,11 @@
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
-import { ArrowRight, Check, Minus, Store, Layers, Zap } from 'lucide-react';
+import { ArrowRight, Check, Minus, Store, Layers, Zap, ExternalLink, LayoutDashboard } from 'lucide-react';
 import { platformApi } from '@/services/api/platform';
 import type { PlanMarketingDTO } from '@/types/api';
+import { useAdmin } from '@/contexts/AdminContext';
+import { useTenant } from '@/contexts/TenantContext';
+import { buildStorefrontUrl } from '@/utils/storefrontUrl';
 
 const FALLBACK_PLANS: PlanMarketingDTO[] = [
   {
@@ -85,6 +88,11 @@ const COMPARISON_ROWS: { label: string; values: (p: PlanMarketingDTO) => string 
 ];
 
 const MatjaronaHome = () => {
+  const { isAuthenticated } = useAdmin();
+  const { slug, store } = useTenant();
+  const storeSlug = slug || store?.slug || null;
+  const storefrontUrl = storeSlug ? buildStorefrontUrl(storeSlug) : null;
+
   const { data: plans = [] } = useQuery({
     queryKey: ['platform', 'plans'],
     queryFn: () => platformApi.getPlans(),
@@ -167,12 +175,21 @@ const MatjaronaHome = () => {
         <span className="font-mj text-xl font-extrabold tracking-tight text-[var(--mj-foam)] sm:text-2xl">
           Matjarona
         </span>
-        <Link
-          to="/admin"
-          className="text-sm font-medium text-[var(--mj-foam)]/70 transition-colors hover:text-[var(--mj-foam)]"
-        >
-          Connexion admin
-        </Link>
+        {isAuthenticated ? (
+          <Link
+            to="/admin"
+            className="text-sm font-medium text-[var(--mj-foam)]/70 transition-colors hover:text-[var(--mj-foam)]"
+          >
+            Tableau de bord
+          </Link>
+        ) : (
+          <Link
+            to="/admin"
+            className="text-sm font-medium text-[var(--mj-foam)]/70 transition-colors hover:text-[var(--mj-foam)]"
+          >
+            Connexion admin
+          </Link>
+        )}
       </header>
 
       {/* Hero — brand first, one composition */}
@@ -188,25 +205,55 @@ const MatjaronaHome = () => {
           Créez, personnalisez et vendez — hébergé pour le marché marocain.
         </p>
         <div className="mj-rise mj-rise-4 mt-10 flex flex-wrap items-center gap-3 sm:gap-4">
-          <Link
-            to="/creer-boutique"
-            className="inline-flex items-center gap-2 rounded-md bg-[var(--mj-saffron)] px-5 py-3 text-sm font-semibold text-[var(--mj-ink)] transition hover:brightness-110"
-          >
-            Créer ma boutique
-            <ArrowRight className="h-4 w-4" />
-          </Link>
-          <a
-            href="#tarifs"
-            className="inline-flex items-center gap-2 rounded-md border border-[var(--mj-foam)]/25 bg-white/5 px-5 py-3 text-sm font-semibold text-[var(--mj-foam)] backdrop-blur-sm transition hover:border-[var(--mj-foam)]/45 hover:bg-white/10"
-          >
-            Voir le plan
-          </a>
-          <Link
-            to="/admin"
-            className="inline-flex items-center gap-2 px-2 py-3 text-sm font-medium text-[var(--mj-foam)]/65 underline-offset-4 transition hover:text-[var(--mj-foam)] hover:underline"
-          >
-            Connexion admin
-          </Link>
+          {isAuthenticated ? (
+            <>
+              <Link
+                to="/admin"
+                className="inline-flex items-center gap-2 rounded-md bg-[var(--mj-saffron)] px-5 py-3 text-sm font-semibold text-[var(--mj-ink)] transition hover:brightness-110"
+              >
+                <LayoutDashboard className="h-4 w-4" />
+                Tableau de bord
+              </Link>
+              {storefrontUrl ? (
+                <a
+                  href={storefrontUrl}
+                  className="inline-flex items-center gap-2 rounded-md border border-[var(--mj-foam)]/25 bg-white/5 px-5 py-3 text-sm font-semibold text-[var(--mj-foam)] backdrop-blur-sm transition hover:border-[var(--mj-foam)]/45 hover:bg-white/10"
+                >
+                  Voir ma boutique
+                  <ExternalLink className="h-4 w-4" />
+                </a>
+              ) : (
+                <a
+                  href="#tarifs"
+                  className="inline-flex items-center gap-2 rounded-md border border-[var(--mj-foam)]/25 bg-white/5 px-5 py-3 text-sm font-semibold text-[var(--mj-foam)] backdrop-blur-sm transition hover:border-[var(--mj-foam)]/45 hover:bg-white/10"
+                >
+                  Voir le plan
+                </a>
+              )}
+            </>
+          ) : (
+            <>
+              <Link
+                to="/creer-boutique"
+                className="inline-flex items-center gap-2 rounded-md bg-[var(--mj-saffron)] px-5 py-3 text-sm font-semibold text-[var(--mj-ink)] transition hover:brightness-110"
+              >
+                Créer ma boutique
+                <ArrowRight className="h-4 w-4" />
+              </Link>
+              <a
+                href="#tarifs"
+                className="inline-flex items-center gap-2 rounded-md border border-[var(--mj-foam)]/25 bg-white/5 px-5 py-3 text-sm font-semibold text-[var(--mj-foam)] backdrop-blur-sm transition hover:border-[var(--mj-foam)]/45 hover:bg-white/10"
+              >
+                Voir le plan
+              </a>
+              <Link
+                to="/admin"
+                className="inline-flex items-center gap-2 px-2 py-3 text-sm font-medium text-[var(--mj-foam)]/65 underline-offset-4 transition hover:text-[var(--mj-foam)] hover:underline"
+              >
+                Connexion admin
+              </Link>
+            </>
+          )}
         </div>
       </section>
 
@@ -348,19 +395,42 @@ const MatjaronaHome = () => {
             Créez votre boutique en quelques minutes, ou connectez-vous si elle existe déjà.
           </p>
           <div className="mt-10 flex flex-wrap items-center justify-center gap-3">
-            <Link
-              to="/creer-boutique"
-              className="inline-flex items-center gap-2 rounded-md bg-[var(--mj-lagoon)] px-6 py-3 text-sm font-semibold text-white transition hover:bg-[var(--mj-lagoon-deep)]"
-            >
-              Créer ma boutique
-              <ArrowRight className="h-4 w-4" />
-            </Link>
-            <Link
-              to="/admin"
-              className="inline-flex items-center gap-2 rounded-md border border-[var(--mj-foam)]/25 px-6 py-3 text-sm font-semibold text-[var(--mj-foam)] transition hover:bg-white/5"
-            >
-              Connexion admin
-            </Link>
+            {isAuthenticated ? (
+              <>
+                <Link
+                  to="/admin"
+                  className="inline-flex items-center gap-2 rounded-md bg-[var(--mj-lagoon)] px-6 py-3 text-sm font-semibold text-white transition hover:bg-[var(--mj-lagoon-deep)]"
+                >
+                  Tableau de bord
+                  <ArrowRight className="h-4 w-4" />
+                </Link>
+                {storefrontUrl ? (
+                  <a
+                    href={storefrontUrl}
+                    className="inline-flex items-center gap-2 rounded-md border border-[var(--mj-foam)]/25 px-6 py-3 text-sm font-semibold text-[var(--mj-foam)] transition hover:bg-white/5"
+                  >
+                    Voir ma boutique
+                    <ExternalLink className="h-4 w-4" />
+                  </a>
+                ) : null}
+              </>
+            ) : (
+              <>
+                <Link
+                  to="/creer-boutique"
+                  className="inline-flex items-center gap-2 rounded-md bg-[var(--mj-lagoon)] px-6 py-3 text-sm font-semibold text-white transition hover:bg-[var(--mj-lagoon-deep)]"
+                >
+                  Créer ma boutique
+                  <ArrowRight className="h-4 w-4" />
+                </Link>
+                <Link
+                  to="/admin"
+                  className="inline-flex items-center gap-2 rounded-md border border-[var(--mj-foam)]/25 px-6 py-3 text-sm font-semibold text-[var(--mj-foam)] transition hover:bg-white/5"
+                >
+                  Connexion admin
+                </Link>
+              </>
+            )}
           </div>
         </div>
       </section>

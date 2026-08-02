@@ -10,6 +10,7 @@ import { homeHeroApi } from '@/services/api/homeHero';
 import { getImageUrl } from '@/services/api/upload';
 import { staticCatalogQueryOptions } from '@/config/queryOptions';
 import { useStoreBrand } from '@/hooks/useStoreBrand';
+import { useLocale } from '@/contexts/LocaleContext';
 
 /**
  * Photo packaging claire (atelier / kraft) — fond edge-to-edge,
@@ -25,8 +26,9 @@ const HeroSection = () => {
   const ken = ANIMATIONS.heroKenBurns;
   const shine = ANIMATIONS.ctaShineOnHover;
   const { siteName: brandName, store } = useStoreBrand();
-  const headline = store?.tagline?.trim() || 'Bienvenue dans notre boutique';
-  const subtext = store?.aboutText?.trim() || 'Découvrez nos produits.';
+  const { t } = useLocale();
+  const headline = store?.tagline?.trim() || t('welcomeStore');
+  const subtext = store?.aboutText?.trim() || t('discoverProducts');
   const surMesureOn = store?.surMesureEnabled !== false;
 
   const { data: homeHero } = useQuery({
@@ -61,7 +63,7 @@ const HeroSection = () => {
   return (
     <section
       className="hero-surface relative flex min-h-[min(100dvh,760px)] w-full items-end overflow-hidden max-md:min-h-[560px] md:items-center"
-      aria-label={`Accueil ${brandName}`}
+      aria-label={`${t('home')} ${brandName}`}
     >
       {/* Couche 1 — atmosphère pilotée par les couleurs boutique */}
       <div className="absolute inset-0 bg-[hsl(var(--background))]" />
@@ -93,7 +95,7 @@ const HeroSection = () => {
               style={{ backgroundImage: `url('${photo}')` }}
               role="img"
               aria-hidden={!isActive}
-              aria-label={isActive ? `Boutique ${brandName}` : undefined}
+              aria-label={isActive ? `${t('shop')} ${brandName}` : undefined}
             />
           );
         })}
@@ -172,7 +174,7 @@ const HeroSection = () => {
                 )}
               >
                 <Link to="/boutique" className="inline-flex items-center justify-center gap-2.5">
-                  <span className="text-sm font-semibold tracking-wide">Notre boutique</span>
+                  <span className="text-sm font-semibold tracking-wide">{t('ourShop')}</span>
                   <ArrowRight className="h-4 w-4 shrink-0" aria-hidden />
                 </Link>
               </Button>
@@ -184,7 +186,7 @@ const HeroSection = () => {
                   className="h-12 min-w-[10.5rem] rounded-2xl border-border/80 bg-card/70 px-7 backdrop-blur-sm hover:border-primary/35 hover:bg-card sm:h-14 sm:min-w-[12rem] sm:px-8"
                 >
                   <Link to="/sur-mesure" className="inline-flex items-center justify-center">
-                    <span className="text-sm font-semibold tracking-wide">Sur-mesure</span>
+                    <span className="text-sm font-semibold tracking-wide">{t('surMesure')}</span>
                   </Link>
                 </Button>
               ) : (
@@ -195,7 +197,7 @@ const HeroSection = () => {
                   className="h-12 min-w-[10.5rem] rounded-2xl border-border/80 bg-card/70 px-7 backdrop-blur-sm hover:border-primary/35 hover:bg-card sm:h-14 sm:min-w-[12rem] sm:px-8"
                 >
                   <Link to="/contact" className="inline-flex items-center justify-center">
-                    <span className="text-sm font-semibold tracking-wide">Nous contacter</span>
+                    <span className="text-sm font-semibold tracking-wide">{t('contactUs')}</span>
                   </Link>
                 </Button>
               )}

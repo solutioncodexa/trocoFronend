@@ -21,6 +21,7 @@ import { cn } from '@/lib/utils';
 import TrackingPixels from '@/components/storefront/TrackingPixels';
 import CookieConsentBanner from '@/components/storefront/CookieConsentBanner';
 import StickyCta from '@/components/layout/StickyCta';
+import NeutralBootLoader from '@/components/layout/NeutralBootLoader';
 
 interface LayoutProps {
   children: ReactNode;
@@ -39,7 +40,7 @@ interface LayoutProps {
 
 const Layout = ({ children, forceThemeKey, forceBrand }: LayoutProps) => {
   const { pathname } = useLocation();
-  const { store } = useTenant();
+  const { store, isLoading } = useTenant();
   const demo = useDesignDemo();
   const pageFade = ANIMATIONS.pageFadeOnRouteChange;
   const shellRef = useRef<HTMLDivElement>(null);
@@ -83,6 +84,26 @@ const Layout = ({ children, forceThemeKey, forceBrand }: LayoutProps) => {
     };
   }, [brand]);
 
+  // Scrollbar page (html) : vars sur documentElement uniquement en vitrine tenant.
+  useEffect(() => {
+    if (!onTenantStorefront) return;
+    const root = document.documentElement.style;
+    const track = appearance.scrollbarTrackColor.trim();
+    const thumb = appearance.scrollbarThumbColor.trim();
+    if (track) root.setProperty('--scrollbar-track', track);
+    else root.removeProperty('--scrollbar-track');
+    if (thumb) root.setProperty('--scrollbar-thumb', thumb);
+    else root.removeProperty('--scrollbar-thumb');
+    return () => {
+      root.removeProperty('--scrollbar-track');
+      root.removeProperty('--scrollbar-thumb');
+    };
+  }, [
+    onTenantStorefront,
+    appearance.scrollbarTrackColor,
+    appearance.scrollbarThumbColor,
+  ]);
+
   useEffect(() => {
     const el = shellRef.current;
     if (!el) return;
@@ -102,6 +123,11 @@ const Layout = ({ children, forceThemeKey, forceBrand }: LayoutProps) => {
       document.documentElement.style.removeProperty('--layout-top-offset');
     };
   }, [demoChromePx]);
+
+  // Première visite sans cache : ne pas peindre le chrome Matjarona (rose / classic).
+  if (onTenantStorefront && !forceBrand && !brand && isLoading) {
+    return <NeutralBootLoader />;
+  }
 
   return (
     <StorefrontBrandOverrideProvider value={forceBrand ?? null}>
@@ -141,6 +167,12 @@ const Layout = ({ children, forceThemeKey, forceBrand }: LayoutProps) => {
             : {}),
           ...(appearance.footerTextColor
             ? ({ '--footer-fg': appearance.footerTextColor } as CSSProperties)
+            : {}),
+          ...(appearance.scrollbarTrackColor
+            ? ({ '--scrollbar-track': appearance.scrollbarTrackColor } as CSSProperties)
+            : {}),
+          ...(appearance.scrollbarThumbColor
+            ? ({ '--scrollbar-thumb': appearance.scrollbarThumbColor } as CSSProperties)
             : {}),
           ...(appearance.pageBgColor
             ? ({ backgroundColor: appearance.pageBgColor } as CSSProperties)

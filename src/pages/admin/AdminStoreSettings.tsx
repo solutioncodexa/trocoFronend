@@ -1,7 +1,7 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation, useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Copy, ExternalLink, Save, Settings2 } from 'lucide-react';
+import { Copy, ExternalLink, Eye, EyeOff, Loader2, Save, Settings2 } from 'lucide-react';
 import AdminLayout from '@/components/admin/AdminLayout';
 import { AppearanceWorkspace } from '@/components/admin/appearance/AppearanceWorkspace';
 import { toStorePageLinkOptions } from '@/components/admin/StorePageHrefSelect';
@@ -14,8 +14,10 @@ import { platformApi } from '@/services/api/platform';
 import { storeGlobalSectionsApi } from '@/services/api/storeGlobalSections';
 import { storePagesApi } from '@/services/api/storePages';
 import { uploadImage } from '@/services/api/upload';
-import type { UpdateStoreSettingsRequest } from '@/types/api';
+import type { StoreSettingsDTO, UpdateStoreSettingsRequest } from '@/types/api';
+import { cn } from '@/lib/utils';
 import { useTenant } from '@/contexts/TenantContext';
+import { useUnsavedChangesGuard } from '@/hooks/useUnsavedChangesGuard';
 import { toast } from 'sonner';
 import { toastError } from '@/utils/toastMessages';
 import { buildFreshStorefrontUrl, buildStorefrontUrl } from '@/utils/storefrontUrl';
@@ -35,6 +37,8 @@ import {
   themeAppearanceDefaults,
   type StoreThemeKey,
 } from '@/config/storeThemes';
+import { localeStorageKey } from '@/i18n/localeStorage';
+import { normalizeLocale, parseSupportedLocales } from '@/i18n/messages';
 
 function isHexColor(value: string): boolean {
   return /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(value.trim());
@@ -79,6 +83,21 @@ type FormState = {
   paymentCmiEnabled: boolean;
   paymentBnplEnabled: boolean;
   bnplProvider: string;
+  paymentStripeEnabled: boolean;
+  stripePublishableKey: string;
+  stripeSecretKey: string;
+  stripeSecretKeyConfigured: boolean;
+  stripeReady: boolean;
+  paymentPaypalEnabled: boolean;
+  paypalClientId: string;
+  paypalClientSecret: string;
+  paypalClientSecretConfigured: boolean;
+  paypalMode: string;
+  paypalReady: boolean;
+  cmiClientId: string;
+  cmiStoreKey: string;
+  cmiStoreKeyConfigured: boolean;
+  cmiReady: boolean;
   loyaltyEnabled: boolean;
   loyaltyPointsPerMad: string;
   loyaltyMadPerPoint: string;
@@ -88,6 +107,10 @@ type FormState = {
   cndpNoticeVersion: string;
   shippingDefaultCarrier: string;
 };
+
+function formFingerprint(f: FormState): string {
+  return JSON.stringify(f);
+}
 
 const emptyForm: FormState = {
   siteName: '',
@@ -128,6 +151,21 @@ const emptyForm: FormState = {
   paymentCmiEnabled: false,
   paymentBnplEnabled: false,
   bnplProvider: '',
+  paymentStripeEnabled: false,
+  stripePublishableKey: '',
+  stripeSecretKey: '',
+  stripeSecretKeyConfigured: false,
+  stripeReady: false,
+  paymentPaypalEnabled: false,
+  paypalClientId: '',
+  paypalClientSecret: '',
+  paypalClientSecretConfigured: false,
+  paypalMode: 'sandbox',
+  paypalReady: false,
+  cmiClientId: '',
+  cmiStoreKey: '',
+  cmiStoreKeyConfigured: false,
+  cmiReady: false,
   loyaltyEnabled: false,
   loyaltyPointsPerMad: '1',
   loyaltyMadPerPoint: '0.10',
@@ -147,11 +185,45 @@ const AdminStoreSettings = () => {
   const [form, setForm] = useState<FormState>(emptyForm);
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const [uploadingFavicon, setUploadingFavicon] = useState(false);
+  const [testingGateway, setTestingGateway] = useState<'stripe' | 'paypal' | 'cmi' | null>(null);
+  const [showStripeSecret, setShowStripeSecret] = useState(false);
+  const [showPaypalSecret, setShowPaypalSecret] = useState(false);
+  const [showCmiSecret, setShowCmiSecret] = useState(false);
   const [previewTick, setPreviewTick] = useState(0);
   const logoInputRef = useRef<HTMLInputElement>(null);
   const faviconInputRef = useRef<HTMLInputElement>(null);
   const applyThemeHandled = useRef(false);
   const applyingThemeRef = useRef(false);
+  /** Évite que l’auto-save couleurs (setQueryData) réécrase le formulaire (ex. langue). */
+  const hydratedBoutiqueKey = useRef<string | null>(null);
+  /** Empreinte du formulaire tel qu’enregistré (hydrate / save / auto-save partiel). */
+  const savedSnapshotRef = useRef<string | null>(null);
+  const [cleanEpoch, setCleanEpoch] = useState(0);
+
+  const markFormClean = (next: FormState) => {
+    savedSnapshotRef.current = formFingerprint(next);
+    setCleanEpoch((n) => n + 1);
+  };
+
+  const patchSavedSnapshot = (partial: Partial<FormState>) => {
+    if (!savedSnapshotRef.current) return;
+    try {
+      const base = JSON.parse(savedSnapshotRef.current) as FormState;
+      savedSnapshotRef.current = formFingerprint({ ...base, ...partial });
+      setCleanEpoch((n) => n + 1);
+    } catch {
+      /* ignore */
+    }
+  };
+
+  const isDirty = useMemo(
+    () =>
+      savedSnapshotRef.current != null &&
+      formFingerprint(form) !== savedSnapshotRef.current,
+    [form, cleanEpoch],
+  );
+
+  const { dialog: unsavedDialog } = useUnsavedChangesGuard({ isDirty });
 
   const { data, isLoading, error } = useQuery({
     queryKey: ['store-settings', 'me'],
@@ -196,7 +268,10 @@ const AdminStoreSettings = () => {
     if (!data) return;
     // Pendant un changement de thème, applyThemeNow pousse déjà le form — éviter un écrasement.
     if (applyingThemeRef.current) return;
-    setForm({
+    const key = `${data.fournisseurId ?? ''}:${data.slug ?? ''}`;
+    if (hydratedBoutiqueKey.current === key) return;
+    hydratedBoutiqueKey.current = key;
+    const next: FormState = {
       siteName: data.siteName ?? '',
       tagline: data.tagline ?? '',
       aboutText: data.aboutText ?? '',
@@ -229,14 +304,29 @@ const AdminStoreSettings = () => {
       abandonedCartDelayMinutes:
         data.abandonedCartDelayMinutes != null ? String(data.abandonedCartDelayMinutes) : '60',
       whatsappOrderTemplate: data.whatsappOrderTemplate ?? '',
-      defaultLocale: data.defaultLocale ?? 'fr',
-      supportedLocales: data.supportedLocales ?? 'fr,ar,en',
+      defaultLocale: normalizeLocale(data.defaultLocale),
+      supportedLocales: parseSupportedLocales(data.supportedLocales).join(','),
       currency: data.currency ?? 'MAD',
       currencyRatesJson: data.currencyRatesJson ?? '',
       paymentCodEnabled: data.paymentCodEnabled ?? true,
       paymentCmiEnabled: data.paymentCmiEnabled ?? false,
       paymentBnplEnabled: data.paymentBnplEnabled ?? false,
       bnplProvider: data.bnplProvider ?? '',
+      paymentStripeEnabled: data.paymentStripeEnabled ?? false,
+      stripePublishableKey: data.stripePublishableKey ?? '',
+      stripeSecretKey: '',
+      stripeSecretKeyConfigured: data.stripeSecretKeyConfigured ?? false,
+      stripeReady: data.stripeReady ?? false,
+      paymentPaypalEnabled: data.paymentPaypalEnabled ?? false,
+      paypalClientId: data.paypalClientId ?? '',
+      paypalClientSecret: '',
+      paypalClientSecretConfigured: data.paypalClientSecretConfigured ?? false,
+      paypalMode: data.paypalMode === 'live' ? 'live' : 'sandbox',
+      paypalReady: data.paypalReady ?? false,
+      cmiClientId: data.cmiClientId ?? '',
+      cmiStoreKey: '',
+      cmiStoreKeyConfigured: data.cmiStoreKeyConfigured ?? false,
+      cmiReady: data.cmiReady ?? false,
       loyaltyEnabled: data.loyaltyEnabled ?? false,
       loyaltyPointsPerMad:
         data.loyaltyPointsPerMad != null ? String(data.loyaltyPointsPerMad) : '1',
@@ -248,7 +338,9 @@ const AdminStoreSettings = () => {
         data.dataRetentionDays != null ? String(data.dataRetentionDays) : '365',
       cndpNoticeVersion: data.cndpNoticeVersion ?? '1',
       shippingDefaultCarrier: data.shippingDefaultCarrier ?? '',
-    });
+    };
+    markFormClean(next);
+    setForm(next);
   }, [data]);
 
   // Depuis la démo : ?applyTheme=minimal → sélectionne le design (à enregistrer).
@@ -287,7 +379,35 @@ const AdminStoreSettings = () => {
             secondaryColor: secondary,
           });
           if (applyingThemeRef.current) return;
-          queryClient.setQueryData(['store-settings', 'me'], updated);
+          queryClient.setQueryData(['store-settings', 'me'], (old: StoreSettingsDTO | undefined) =>
+            old
+              ? {
+                  ...old,
+                  primaryColor: updated.primaryColor,
+                  secondaryColor: updated.secondaryColor,
+                }
+              : updated,
+          );
+          setForm((prev) => {
+            const next = {
+              ...prev,
+              primaryColor: updated.primaryColor ?? prev.primaryColor,
+              secondaryColor: updated.secondaryColor ?? prev.secondaryColor,
+            };
+            if (savedSnapshotRef.current) {
+              try {
+                const base = JSON.parse(savedSnapshotRef.current) as FormState;
+                savedSnapshotRef.current = formFingerprint({
+                  ...base,
+                  primaryColor: next.primaryColor,
+                  secondaryColor: next.secondaryColor,
+                });
+              } catch {
+                /* ignore */
+              }
+            }
+            return next;
+          });
           await loadFromAdminSession();
         } catch {
           /* l’utilisateur peut encore cliquer Enregistrer */
@@ -302,17 +422,55 @@ const AdminStoreSettings = () => {
       platformApi.updateMyStoreSettings(payload),
     onSuccess: async (updated) => {
       queryClient.setQueryData(['store-settings', 'me'], updated);
+      hydratedBoutiqueKey.current = `${updated.fournisseurId ?? ''}:${updated.slug ?? ''}`;
+      setForm((prev) => {
+        const clean: FormState = {
+          ...prev,
+          defaultLocale: normalizeLocale(updated.defaultLocale),
+          supportedLocales: parseSupportedLocales(updated.supportedLocales).join(','),
+          currency: updated.currency ?? prev.currency,
+          stripeSecretKey: '',
+          paypalClientSecret: '',
+          cmiStoreKey: '',
+          stripeSecretKeyConfigured:
+            updated.stripeSecretKeyConfigured ?? prev.stripeSecretKeyConfigured,
+          paypalClientSecretConfigured:
+            updated.paypalClientSecretConfigured ?? prev.paypalClientSecretConfigured,
+          cmiStoreKeyConfigured:
+            updated.cmiStoreKeyConfigured ?? prev.cmiStoreKeyConfigured,
+        };
+        savedSnapshotRef.current = formFingerprint(clean);
+        return clean;
+      });
+      setCleanEpoch((n) => n + 1);
       const rev = Date.now();
       setPreviewTick(rev);
+      // Appliquer immédiatement la langue principale sur la vitrine ouverte
+      const slug = updated.slug || data?.slug;
+      const primary = normalizeLocale(updated.defaultLocale);
+      if (slug) {
+        try {
+          localStorage.setItem(localeStorageKey(slug), primary);
+        } catch {
+          /* ignore */
+        }
+      }
       await refreshTenant();
       await loadFromAdminSession();
       queryClient.invalidateQueries({ queryKey: ['store-settings'] });
 
-      const slug = updated.slug || data?.slug;
       if (slug) {
         const url = buildFreshStorefrontUrl(slug, rev);
-        window.open(url, 'troco-storefront');
-        toast.success('Enregistré — vitrine ouverte avec vos changements');
+        // Force ?lang= pour la langue principale (sauf FR = défaut sans param)
+        try {
+          const u = new URL(url);
+          if (primary === 'fr') u.searchParams.delete('lang');
+          else u.searchParams.set('lang', primary);
+          window.open(u.href, 'troco-storefront');
+        } catch {
+          window.open(url, 'troco-storefront');
+        }
+        toast.success('Enregistré — vitrine ouverte dans la langue principale');
       } else {
         toast.success('Paramètres boutique enregistrés');
       }
@@ -335,6 +493,73 @@ const AdminStoreSettings = () => {
       ...prev,
       appearance: { ...prev.appearance, [key]: value },
     }));
+  };
+
+  const mergeAppearance = (partial: Partial<StoreAppearance>) => {
+    setForm((prev) => ({
+      ...prev,
+      appearance: normalizeAppearance({ ...prev.appearance, ...partial }),
+    }));
+  };
+
+  const replaceAppearance = (appearance: StoreAppearance) => {
+    setForm((prev) => ({
+      ...prev,
+      appearance: normalizeAppearance(appearance),
+    }));
+  };
+
+  const applyPaymentSettings = (s: StoreSettingsDTO) => {
+    queryClient.setQueryData(['store-settings', 'me'], s);
+    setForm((prev) => {
+      const next = {
+        ...prev,
+        paymentStripeEnabled: s.paymentStripeEnabled ?? false,
+        stripePublishableKey: s.stripePublishableKey ?? '',
+        stripeSecretKey: '',
+        stripeSecretKeyConfigured: s.stripeSecretKeyConfigured ?? false,
+        stripeReady: s.stripeReady ?? false,
+        paymentPaypalEnabled: s.paymentPaypalEnabled ?? false,
+        paypalClientId: s.paypalClientId ?? '',
+        paypalClientSecret: '',
+        paypalClientSecretConfigured: s.paypalClientSecretConfigured ?? false,
+        paypalMode: s.paypalMode === 'live' ? 'live' : 'sandbox',
+        paypalReady: s.paypalReady ?? false,
+        paymentCmiEnabled: s.paymentCmiEnabled ?? false,
+        cmiClientId: s.cmiClientId ?? '',
+        cmiStoreKey: '',
+        cmiStoreKeyConfigured: s.cmiStoreKeyConfigured ?? false,
+        cmiReady: s.cmiReady ?? false,
+      };
+      if (savedSnapshotRef.current) {
+        try {
+          const base = JSON.parse(savedSnapshotRef.current) as FormState;
+          savedSnapshotRef.current = formFingerprint({
+            ...base,
+            paymentStripeEnabled: next.paymentStripeEnabled,
+            stripePublishableKey: next.stripePublishableKey,
+            stripeSecretKey: '',
+            stripeSecretKeyConfigured: next.stripeSecretKeyConfigured,
+            stripeReady: next.stripeReady,
+            paymentPaypalEnabled: next.paymentPaypalEnabled,
+            paypalClientId: next.paypalClientId,
+            paypalClientSecret: '',
+            paypalClientSecretConfigured: next.paypalClientSecretConfigured,
+            paypalMode: next.paypalMode,
+            paypalReady: next.paypalReady,
+            paymentCmiEnabled: next.paymentCmiEnabled,
+            cmiClientId: next.cmiClientId,
+            cmiStoreKey: '',
+            cmiStoreKeyConfigured: next.cmiStoreKeyConfigured,
+            cmiReady: next.cmiReady,
+          });
+        } catch {
+          /* ignore */
+        }
+      }
+      return next;
+    });
+    setCleanEpoch((n) => n + 1);
   };
 
   const applyThemeNow = async (themeKey: StoreThemeKey) => {
@@ -401,48 +626,53 @@ const AdminStoreSettings = () => {
         typeof cachedSnap?.secondaryColor === 'string' ? cachedSnap.secondaryColor : undefined;
 
       // Appliquer immédiatement au formulaire (ne pas attendre useEffect).
-      setForm((prev) => ({
-        ...prev,
-        themeKey: normalizeThemeKey(updated.themeKey),
-        primaryColor:
-          updated.primaryColor ||
-          snapPrimary ||
-          (!hadPreset ? look.primaryColor : prev.primaryColor) ||
-          '',
-        secondaryColor:
-          updated.secondaryColor ||
-          snapSecondary ||
-          (!hadPreset ? look.secondaryColor : prev.secondaryColor) ||
-          '',
-        fontPair: normalizeFontPair(
-          updated.fontPair ||
-            (typeof cachedSnap?.fontPair === 'string' ? cachedSnap.fontPair : undefined) ||
-            look.fontPair,
-        ),
-        radiusPreset: normalizeRadiusPreset(
-          updated.radiusPreset ||
-            (typeof cachedSnap?.radiusPreset === 'string' ? cachedSnap.radiusPreset : undefined) ||
-            look.radiusPreset,
-        ),
-        appearance: normalizeAppearance(
-          updated.appearance ??
-            cachedSnap?.appearance ?? {
-              ...DEFAULT_APPEARANCE,
-              ...themeAppearanceDefaults(themeKey),
-            },
-        ),
-        heroEnabled:
-          updated.heroEnabled ??
-          (typeof cachedSnap?.heroEnabled === 'boolean' ? cachedSnap.heroEnabled : true),
-        categoriesEnabled:
-          updated.categoriesEnabled ??
-          (typeof cachedSnap?.categoriesEnabled === 'boolean'
-            ? cachedSnap.categoriesEnabled
-            : true),
-        surMesureEnabled:
-          updated.surMesureEnabled ??
-          (typeof cachedSnap?.surMesureEnabled === 'boolean' ? cachedSnap.surMesureEnabled : true),
-      }));
+      setForm((prev) => {
+        const next: FormState = {
+          ...prev,
+          themeKey: normalizeThemeKey(updated.themeKey),
+          primaryColor:
+            updated.primaryColor ||
+            snapPrimary ||
+            (!hadPreset ? look.primaryColor : prev.primaryColor) ||
+            '',
+          secondaryColor:
+            updated.secondaryColor ||
+            snapSecondary ||
+            (!hadPreset ? look.secondaryColor : prev.secondaryColor) ||
+            '',
+          fontPair: normalizeFontPair(
+            updated.fontPair ||
+              (typeof cachedSnap?.fontPair === 'string' ? cachedSnap.fontPair : undefined) ||
+              look.fontPair,
+          ),
+          radiusPreset: normalizeRadiusPreset(
+            updated.radiusPreset ||
+              (typeof cachedSnap?.radiusPreset === 'string' ? cachedSnap.radiusPreset : undefined) ||
+              look.radiusPreset,
+          ),
+          appearance: normalizeAppearance(
+            updated.appearance ??
+              cachedSnap?.appearance ?? {
+                ...DEFAULT_APPEARANCE,
+                ...themeAppearanceDefaults(themeKey),
+              },
+          ),
+          heroEnabled:
+            updated.heroEnabled ??
+            (typeof cachedSnap?.heroEnabled === 'boolean' ? cachedSnap.heroEnabled : true),
+          categoriesEnabled:
+            updated.categoriesEnabled ??
+            (typeof cachedSnap?.categoriesEnabled === 'boolean'
+              ? cachedSnap.categoriesEnabled
+              : true),
+          surMesureEnabled:
+            updated.surMesureEnabled ??
+            (typeof cachedSnap?.surMesureEnabled === 'boolean' ? cachedSnap.surMesureEnabled : true),
+        };
+        savedSnapshotRef.current = formFingerprint(next);
+        return next;
+      });
+      setCleanEpoch((n) => n + 1);
 
       const rev = Date.now();
       setPreviewTick(rev);
@@ -485,6 +715,7 @@ const AdminStoreSettings = () => {
       // Persiste tout de suite : sinon la vitrine garde le wordmark sans image.
       const updated = await platformApi.updateMyStoreSettings({ logoUrl: url });
       queryClient.setQueryData(['store-settings', 'me'], updated);
+      patchSavedSnapshot({ logoUrl: url });
       await refreshTenant();
       await loadFromAdminSession();
       toast.success('Logo enregistré');
@@ -504,6 +735,7 @@ const AdminStoreSettings = () => {
       patch('faviconUrl', url);
       const updated = await platformApi.updateMyStoreSettings({ faviconUrl: url });
       queryClient.setQueryData(['store-settings', 'me'], updated);
+      patchSavedSnapshot({ faviconUrl: url });
       await refreshTenant();
       await loadFromAdminSession();
       toast.success('Favicon enregistré');
@@ -566,14 +798,30 @@ const AdminStoreSettings = () => {
         return Number.isFinite(n) ? Math.max(15, Math.min(n, 7 * 24 * 60)) : 60;
       })(),
       whatsappOrderTemplate: form.whatsappOrderTemplate.trim() || undefined,
-      defaultLocale: form.defaultLocale.trim() || undefined,
-      supportedLocales: form.supportedLocales.trim() || undefined,
+      defaultLocale: normalizeLocale(form.defaultLocale),
+      supportedLocales: (() => {
+        const list = parseSupportedLocales(form.supportedLocales);
+        const primary = normalizeLocale(form.defaultLocale);
+        if (!list.includes(primary)) list.unshift(primary);
+        return list.join(',');
+      })(),
       currency: form.currency.trim() || undefined,
       currencyRatesJson: form.currencyRatesJson.trim() || undefined,
       paymentCodEnabled: form.paymentCodEnabled,
       paymentCmiEnabled: form.paymentCmiEnabled,
       paymentBnplEnabled: form.paymentBnplEnabled,
       bnplProvider: form.bnplProvider.trim() || undefined,
+      paymentStripeEnabled: form.paymentStripeEnabled,
+      stripePublishableKey: form.stripePublishableKey.trim() || undefined,
+      ...(form.stripeSecretKey.trim() ? { stripeSecretKey: form.stripeSecretKey.trim() } : {}),
+      paymentPaypalEnabled: form.paymentPaypalEnabled,
+      paypalClientId: form.paypalClientId.trim() || undefined,
+      ...(form.paypalClientSecret.trim()
+        ? { paypalClientSecret: form.paypalClientSecret.trim() }
+        : {}),
+      paypalMode: form.paypalMode === 'live' ? 'live' : 'sandbox',
+      cmiClientId: form.cmiClientId.trim() || undefined,
+      ...(form.cmiStoreKey.trim() ? { cmiStoreKey: form.cmiStoreKey.trim() } : {}),
       loyaltyEnabled: form.loyaltyEnabled,
       loyaltyPointsPerMad: (() => {
         const raw = form.loyaltyPointsPerMad.trim();
@@ -683,6 +931,8 @@ const AdminStoreSettings = () => {
           }}
           patch={patch}
           patchAppearance={patchAppearance}
+          mergeAppearance={mergeAppearance}
+          replaceAppearance={replaceAppearance}
           applyThemeNow={applyThemeNow}
           themePresets={data?.themePresets ?? null}
           megaMenuEnabled={megaMenuEnabled}
@@ -705,6 +955,7 @@ const AdminStoreSettings = () => {
           onSave={handleSave}
           saving={saveMutation.isPending}
         />
+        {unsavedDialog}
       </AdminLayout>
     );
   }
@@ -715,6 +966,7 @@ const AdminStoreSettings = () => {
       title="Paramètres"
       breadcrumbs={[{ label: 'Paramètres' }]}
     >
+      {unsavedDialog}
       <div className="space-y-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div>
@@ -1009,27 +1261,86 @@ const AdminStoreSettings = () => {
         </section>
 
         <section className="space-y-4 rounded-2xl border border-border bg-card p-5 sm:p-6">
-          <h2 className="font-display text-lg font-semibold">Langue &amp; devise</h2>
+          <h2 className="font-display text-lg font-semibold">Langue de la vitrine</h2>
+          <p className="text-sm text-muted-foreground">
+            Définissez la langue principale affichée aux visiteurs. Ils pourront toujours changer de
+            langue via le sélecteur du header (parmi les langues activées).
+          </p>
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
-              <Label htmlFor="defaultLocale">Langue par défaut</Label>
-              <Input
+              <Label htmlFor="defaultLocale">Langue principale</Label>
+              <select
                 id="defaultLocale"
-                className="mt-1.5"
-                value={form.defaultLocale}
-                onChange={(e) => patch('defaultLocale', e.target.value)}
-                placeholder="fr"
-              />
+                className="mt-1.5 flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                value={normalizeLocale(form.defaultLocale)}
+                onChange={(e) => {
+                  const next = normalizeLocale(e.target.value);
+                  setForm((prev) => {
+                    const list = parseSupportedLocales(prev.supportedLocales);
+                    if (!list.includes(next)) list.push(next);
+                    return {
+                      ...prev,
+                      defaultLocale: next,
+                      supportedLocales: list.join(','),
+                    };
+                  });
+                }}
+              >
+                <option value="fr">Français (FR)</option>
+                <option value="ar">العربية (AR)</option>
+                <option value="en">English (EN)</option>
+              </select>
             </div>
             <div>
-              <Label htmlFor="supportedLocales">Langues supportées</Label>
-              <Input
-                id="supportedLocales"
-                className="mt-1.5"
-                value={form.supportedLocales}
-                onChange={(e) => patch('supportedLocales', e.target.value)}
-                placeholder="fr,ar,en"
-              />
+              <Label>Langues proposées aux visiteurs</Label>
+              <div className="mt-2 flex flex-wrap gap-3">
+                {(
+                  [
+                    { code: 'fr' as const, label: 'Français' },
+                    { code: 'ar' as const, label: 'العربية' },
+                    { code: 'en' as const, label: 'English' },
+                  ]
+                ).map(({ code, label }) => {
+                  const primary = normalizeLocale(form.defaultLocale);
+                  const active = parseSupportedLocales(form.supportedLocales).includes(code);
+                  return (
+                    <label
+                      key={code}
+                      className="inline-flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={active}
+                        disabled={code === primary}
+                        onChange={() => {
+                          setForm((prev) => {
+                            const primaryLocale = normalizeLocale(prev.defaultLocale);
+                            const set = new Set(parseSupportedLocales(prev.supportedLocales));
+                            if (set.has(code)) {
+                              if (code === primaryLocale) return prev;
+                              set.delete(code);
+                            } else {
+                              set.add(code);
+                            }
+                            set.add(primaryLocale);
+                            return { ...prev, supportedLocales: [...set].join(',') };
+                          });
+                        }}
+                      />
+                      {label}
+                      {code === primary ? (
+                        <span className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                          principale
+                        </span>
+                      ) : null}
+                    </label>
+                  );
+                })}
+              </div>
+              <p className="mt-1.5 text-xs text-muted-foreground">
+                Les visiteurs peuvent changer de langue via le sélecteur du header. Après
+                Enregistrer, la vitrine s’ouvre dans la langue principale.
+              </p>
             </div>
             <div>
               <Label htmlFor="currency">Devise affichée</Label>
@@ -1055,49 +1366,320 @@ const AdminStoreSettings = () => {
         </section>
 
         <section className="space-y-4 rounded-2xl border border-border bg-card p-5 sm:p-6">
-          <h2 className="font-display text-lg font-semibold">Paiements</h2>
-          <div className="space-y-4">
-            {(
-              [
-                ['paymentCodEnabled', 'Paiement à la livraison (COD)'] as const,
-                ['paymentCmiEnabled', 'Carte bancaire CMI'] as const,
-                ['paymentBnplEnabled', 'Paiement fractionné (BNPL)'] as const,
-              ] as const
-            ).map(([key, label]) => (
-              <div
-                key={key}
-                className="flex items-center justify-between gap-4 rounded-xl border border-border/60 px-4 py-3"
-              >
-                <Label htmlFor={key} className="cursor-pointer font-medium">
-                  {label}
-                </Label>
-                <Switch
-                  id={key}
-                  checked={form[key]}
-                  onCheckedChange={(checked) => patch(key, checked)}
+          <div>
+            <h2 className="font-display text-lg font-semibold">Paiements</h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Ajoutez vos clés Stripe, CMI ou PayPal. Le paiement n&apos;apparaît sur votre boutique
+              qu&apos;après un test de connexion réussi.
+            </p>
+          </div>
+
+          <div className="flex items-center justify-between gap-4 rounded-xl border border-border/60 px-4 py-3">
+            <Label htmlFor="paymentCodEnabled" className="cursor-pointer font-medium">
+              Paiement à la livraison (COD)
+            </Label>
+            <Switch
+              id="paymentCodEnabled"
+              checked={form.paymentCodEnabled}
+              onCheckedChange={(checked) => patch('paymentCodEnabled', checked)}
+            />
+          </div>
+
+          {/* Stripe */}
+          <div className="space-y-3 rounded-xl border border-border/70 bg-muted/20 p-4">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+              <div>
+                <p className="text-sm font-semibold">Stripe</p>
+                <p className={cn('mt-0.5 flex items-center gap-2 text-xs font-medium', form.stripeReady ? 'text-emerald-600' : 'text-muted-foreground')}>
+                  <span className={cn('inline-block h-2 w-2 rounded-full', form.stripeReady ? 'bg-emerald-500' : 'bg-slate-400')} />
+                  {form.stripeReady
+                    ? 'Actif — paiement vérifié'
+                    : form.paymentStripeEnabled && (form.stripePublishableKey || form.stripeSecretKeyConfigured)
+                      ? 'Clés à vérifier (Tester & activer)'
+                      : 'Non configuré'}
+                </p>
+              </div>
+              <Switch
+                checked={form.paymentStripeEnabled}
+                onCheckedChange={(checked) => patch('paymentStripeEnabled', checked)}
+              />
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div>
+                <Label className="text-xs">Publishable key</Label>
+                <Input
+                  className="mt-1 font-mono text-xs"
+                  value={form.stripePublishableKey}
+                  onChange={(e) => patch('stripePublishableKey', e.target.value)}
+                  placeholder="pk_test_…"
+                  disabled={!form.paymentStripeEnabled}
                 />
               </div>
-            ))}
-            <div>
-              <Label htmlFor="bnplProvider">Fournisseur BNPL (libellé)</Label>
-              <Input
-                id="bnplProvider"
-                className="mt-1.5"
-                value={form.bnplProvider}
-                onChange={(e) => patch('bnplProvider', e.target.value)}
-                disabled={!form.paymentBnplEnabled}
+              <div>
+                <Label className="text-xs">Secret key</Label>
+                <div className="relative mt-1">
+                  <Input
+                    type={showStripeSecret ? 'text' : 'password'}
+                    className="font-mono text-xs pr-10"
+                    value={form.stripeSecretKey}
+                    onChange={(e) => patch('stripeSecretKey', e.target.value)}
+                    placeholder={
+                      form.stripeSecretKeyConfigured
+                        ? 'Enregistrée — saisir pour remplacer'
+                        : 'sk_test_…'
+                    }
+                    disabled={!form.paymentStripeEnabled}
+                  />
+                  <button
+                    type="button"
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground"
+                    onClick={() => setShowStripeSecret((v) => !v)}
+                  >
+                    {showStripeSecret ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
+              </div>
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={
+                !!testingGateway ||
+                !form.paymentStripeEnabled ||
+                (!form.stripePublishableKey.trim() && !form.stripeSecretKeyConfigured)
+              }
+              onClick={async () => {
+                setTestingGateway('stripe');
+                try {
+                  const res = await platformApi.testStoreStripe({
+                    stripePublishableKey: form.stripePublishableKey.trim() || undefined,
+                    stripeSecretKey: form.stripeSecretKey.trim() || undefined,
+                  });
+                  applyPaymentSettings(res.settings);
+                  toast.success(res.message);
+                } catch (err) {
+                  toastError(err, 'Test Stripe échoué');
+                } finally {
+                  setTestingGateway(null);
+                }
+              }}
+            >
+              {testingGateway === 'stripe' ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+              Tester & activer
+            </Button>
+          </div>
+
+          {/* CMI */}
+          <div className="space-y-3 rounded-xl border border-border/70 bg-muted/20 p-4">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+              <div>
+                <p className="text-sm font-semibold">CMI (carte bancaire Maroc)</p>
+                <p className={cn('mt-0.5 flex items-center gap-2 text-xs font-medium', form.cmiReady ? 'text-emerald-600' : 'text-muted-foreground')}>
+                  <span className={cn('inline-block h-2 w-2 rounded-full', form.cmiReady ? 'bg-emerald-500' : 'bg-slate-400')} />
+                  {form.cmiReady
+                    ? 'Actif — paiement vérifié'
+                    : form.paymentCmiEnabled && (form.cmiClientId || form.cmiStoreKeyConfigured)
+                      ? 'Clés à vérifier (Tester & activer)'
+                      : 'Non configuré'}
+                </p>
+              </div>
+              <Switch
+                checked={form.paymentCmiEnabled}
+                onCheckedChange={(checked) => patch('paymentCmiEnabled', checked)}
               />
             </div>
-            <div>
-              <Label htmlFor="shippingDefaultCarrier">Transporteur par défaut (code)</Label>
-              <Input
-                id="shippingDefaultCarrier"
-                className="mt-1.5 font-mono text-sm"
-                value={form.shippingDefaultCarrier}
-                onChange={(e) => patch('shippingDefaultCarrier', e.target.value)}
-                placeholder="standard"
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div>
+                <Label className="text-xs">Client ID</Label>
+                <Input
+                  className="mt-1 font-mono text-xs"
+                  value={form.cmiClientId}
+                  onChange={(e) => patch('cmiClientId', e.target.value)}
+                  disabled={!form.paymentCmiEnabled}
+                />
+              </div>
+              <div>
+                <Label className="text-xs">Store key</Label>
+                <div className="relative mt-1">
+                  <Input
+                    type={showCmiSecret ? 'text' : 'password'}
+                    className="font-mono text-xs pr-10"
+                    value={form.cmiStoreKey}
+                    onChange={(e) => patch('cmiStoreKey', e.target.value)}
+                    placeholder={
+                      form.cmiStoreKeyConfigured
+                        ? 'Enregistrée — saisir pour remplacer'
+                        : 'Store key NestPay'
+                    }
+                    disabled={!form.paymentCmiEnabled}
+                  />
+                  <button
+                    type="button"
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground"
+                    onClick={() => setShowCmiSecret((v) => !v)}
+                  >
+                    {showCmiSecret ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
+              </div>
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={
+                !!testingGateway ||
+                !form.paymentCmiEnabled ||
+                (!form.cmiClientId.trim() && !form.cmiStoreKeyConfigured)
+              }
+              onClick={async () => {
+                setTestingGateway('cmi');
+                try {
+                  const res = await platformApi.testStoreCmi({
+                    cmiClientId: form.cmiClientId.trim() || undefined,
+                    cmiStoreKey: form.cmiStoreKey.trim() || undefined,
+                  });
+                  applyPaymentSettings(res.settings);
+                  toast.success(res.message);
+                } catch (err) {
+                  toastError(err, 'Test CMI échoué');
+                } finally {
+                  setTestingGateway(null);
+                }
+              }}
+            >
+              {testingGateway === 'cmi' ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+              Tester & activer
+            </Button>
+          </div>
+
+          {/* PayPal */}
+          <div className="space-y-3 rounded-xl border border-border/70 bg-muted/20 p-4">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+              <div>
+                <p className="text-sm font-semibold">PayPal</p>
+                <p className={cn('mt-0.5 flex items-center gap-2 text-xs font-medium', form.paypalReady ? 'text-emerald-600' : 'text-muted-foreground')}>
+                  <span className={cn('inline-block h-2 w-2 rounded-full', form.paypalReady ? 'bg-emerald-500' : 'bg-slate-400')} />
+                  {form.paypalReady
+                    ? 'Actif — paiement vérifié'
+                    : form.paymentPaypalEnabled && (form.paypalClientId || form.paypalClientSecretConfigured)
+                      ? 'Clés à vérifier (Tester & activer)'
+                      : 'Non configuré'}
+                </p>
+              </div>
+              <Switch
+                checked={form.paymentPaypalEnabled}
+                onCheckedChange={(checked) => patch('paymentPaypalEnabled', checked)}
               />
             </div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div>
+                <Label className="text-xs">Client ID</Label>
+                <Input
+                  className="mt-1 font-mono text-xs"
+                  value={form.paypalClientId}
+                  onChange={(e) => patch('paypalClientId', e.target.value)}
+                  disabled={!form.paymentPaypalEnabled}
+                />
+              </div>
+              <div>
+                <Label className="text-xs">Client secret</Label>
+                <div className="relative mt-1">
+                  <Input
+                    type={showPaypalSecret ? 'text' : 'password'}
+                    className="font-mono text-xs pr-10"
+                    value={form.paypalClientSecret}
+                    onChange={(e) => patch('paypalClientSecret', e.target.value)}
+                    placeholder={
+                      form.paypalClientSecretConfigured
+                        ? 'Enregistré — saisir pour remplacer'
+                        : 'Secret PayPal'
+                    }
+                    disabled={!form.paymentPaypalEnabled}
+                  />
+                  <button
+                    type="button"
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground"
+                    onClick={() => setShowPaypalSecret((v) => !v)}
+                  >
+                    {showPaypalSecret ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div>
+              <Label className="text-xs">Mode</Label>
+              <select
+                className="mt-1 flex h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
+                value={form.paypalMode}
+                disabled={!form.paymentPaypalEnabled}
+                onChange={(e) => patch('paypalMode', e.target.value)}
+              >
+                <option value="sandbox">Sandbox (test)</option>
+                <option value="live">Live (production)</option>
+              </select>
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={
+                !!testingGateway ||
+                !form.paymentPaypalEnabled ||
+                (!form.paypalClientId.trim() && !form.paypalClientSecretConfigured)
+              }
+              onClick={async () => {
+                setTestingGateway('paypal');
+                try {
+                  const res = await platformApi.testStorePaypal({
+                    paypalClientId: form.paypalClientId.trim() || undefined,
+                    paypalClientSecret: form.paypalClientSecret.trim() || undefined,
+                    paypalMode: form.paypalMode,
+                  });
+                  applyPaymentSettings(res.settings);
+                  toast.success(res.message);
+                } catch (err) {
+                  toastError(err, 'Test PayPal échoué');
+                } finally {
+                  setTestingGateway(null);
+                }
+              }}
+            >
+              {testingGateway === 'paypal' ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+              Tester & activer
+            </Button>
+          </div>
+
+          <div className="flex items-center justify-between gap-4 rounded-xl border border-border/60 px-4 py-3">
+            <Label htmlFor="paymentBnplEnabled" className="cursor-pointer font-medium">
+              Paiement fractionné (BNPL)
+            </Label>
+            <Switch
+              id="paymentBnplEnabled"
+              checked={form.paymentBnplEnabled}
+              onCheckedChange={(checked) => patch('paymentBnplEnabled', checked)}
+            />
+          </div>
+          <div>
+            <Label htmlFor="bnplProvider">Fournisseur BNPL (libellé)</Label>
+            <Input
+              id="bnplProvider"
+              className="mt-1.5"
+              value={form.bnplProvider}
+              onChange={(e) => patch('bnplProvider', e.target.value)}
+              disabled={!form.paymentBnplEnabled}
+            />
+          </div>
+          <div>
+            <Label htmlFor="shippingDefaultCarrier">Transporteur par défaut (code)</Label>
+            <Input
+              id="shippingDefaultCarrier"
+              className="mt-1.5 font-mono text-sm"
+              value={form.shippingDefaultCarrier}
+              onChange={(e) => patch('shippingDefaultCarrier', e.target.value)}
+              placeholder="standard"
+            />
           </div>
         </section>
 

@@ -188,7 +188,7 @@ const AdminLayout = ({
   const { logout, isAuthenticated, isAdmin, isSuperAdmin, hasPermission, user } = useAdmin();
   const { store } = useTenant();
   const { siteName, logoUrl, slug } = useStoreBrand();
-  const storefrontUrl = buildFreshStorefrontUrl(slug);
+  const storefrontUrl = buildFreshStorefrontUrl(slug || store?.slug);
   const [sidebarOpenInternal, setSidebarOpenInternal] = useState(() => window.innerWidth >= 1024);
   const isSidebarOpen = sidebarOpenProp ?? sidebarOpenInternal;
   const setIsSidebarOpen = (open: boolean) => {

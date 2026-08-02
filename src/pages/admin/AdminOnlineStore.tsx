@@ -52,8 +52,8 @@ const homeClassicLinks = [
 ];
 
 const AdminOnlineStore = () => {
-  const { slug, siteName } = useStoreBrand();
-  const storefrontUrl = buildStorefrontUrl(slug);
+  const { slug, siteName, store } = useStoreBrand();
+  const storefrontUrl = buildStorefrontUrl(slug || store?.slug);
 
   const { data: globalSections = [] } = useQuery({
     queryKey: ['store-global-sections', 'admin'],

@@ -1,8 +1,11 @@
 import { Link } from 'react-router-dom';
 import { Palette, FileText, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useLocale } from '@/contexts/LocaleContext';
 
 const CustomOrderCTA = () => {
+  const { t } = useLocale();
+
   return (
     <section className="py-20 bg-gradient-hero relative overflow-hidden">
       <div className="absolute inset-0 opacity-30 pointer-events-none">
@@ -13,12 +16,11 @@ const CustomOrderCTA = () => {
       <div className="container mx-auto px-4 relative z-10">
         <div className="max-w-3xl mx-auto text-center animate-fade-in">
           <h2 className="font-display text-3xl md:text-4xl lg:text-5xl text-primary-foreground mb-6">
-            Sur mesure <span className="text-primary-foreground/50">&amp;</span>{' '}
-            <span className="text-primary-foreground italic">devis</span>
+            {t('customAndQuote')}
           </h2>
 
           <p className="font-body text-lg text-primary-foreground/80 mb-10 max-w-2xl mx-auto">
-            Personnalisez votre emballage avec logo, ou demandez un chiffrage pour vos volumes pro.
+            {t('customAndQuoteDesc')}
           </p>
 
           <div className="grid sm:grid-cols-2 gap-4 max-w-xl mx-auto">
@@ -29,7 +31,7 @@ const CustomOrderCTA = () => {
             >
               <Link to="/sur-mesure">
                 <Palette className="mr-2 w-5 h-5" />
-                Sur mesure
+                {t('surMesure')}
                 <ArrowRight className="ml-2 w-4 h-4" />
               </Link>
             </Button>
@@ -41,7 +43,7 @@ const CustomOrderCTA = () => {
             >
               <Link to="/devis">
                 <FileText className="mr-2 w-5 h-5" />
-                Demander un devis
+                {t('askQuote')}
                 <ArrowRight className="ml-2 w-4 h-4" />
               </Link>
             </Button>

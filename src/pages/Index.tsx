@@ -18,6 +18,7 @@ import { usePreloadImage } from '@/hooks/usePreloadImage';
 import { useStoreAppearance } from '@/hooks/useStoreAppearance';
 import { resolveStickyHomeAbVariant } from '@/utils/homeAbVariant';
 import type { DemoCategory } from '@/demo/mockCatalog';
+import { useLocale } from '@/contexts/LocaleContext';
 
 const FALLBACK_HERO =
   'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=2000&h=1400&fit=crop&q=85';
@@ -27,6 +28,7 @@ const Index = () => {
   const { siteName, tagline, aboutText } = useStoreBrand();
   const appearance = useStoreAppearance();
   const { lang, isAr } = useStoreLang();
+  const { t } = useLocale();
   const theme = normalizeThemeKey(store?.themeKey);
 
   const { data: publicHomes } = useQuery({
@@ -81,7 +83,7 @@ const Index = () => {
   if (loadingHome) {
     return (
       <Layout>
-        <div className="p-16 text-center text-muted-foreground">Chargement…</div>
+        <div className="p-16 text-center text-muted-foreground">{t('loading')}</div>
       </Layout>
     );
   }
@@ -115,8 +117,8 @@ const Index = () => {
       <ThemeHome
         themeKey={theme}
         siteName={siteName}
-        tagline={tagline || 'Bienvenue dans notre boutique'}
-        aboutText={aboutText || 'Découvrez nos produits.'}
+        tagline={tagline || t('welcomeStore')}
+        aboutText={aboutText || t('discoverProducts')}
         heroImage={heroImage}
         products={products}
         appearance={appearance}
@@ -128,7 +130,7 @@ const Index = () => {
             : [
                 {
                   id: 'all',
-                  name: 'Boutique',
+                  name: t('shop'),
                   slug: '',
                   image: heroImage,
                   count: products.length,

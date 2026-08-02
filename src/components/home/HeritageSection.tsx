@@ -8,9 +8,11 @@ import { cn } from '@/lib/utils';
 import { staticCatalogQueryOptions } from '@/config/queryOptions';
 import { getImageUrl } from '@/services/api/upload';
 import { useSocialNetworks } from '@/hooks/useSocialNetworks';
+import { useLocale } from '@/contexts/LocaleContext';
 
 const HeritageSection = () => {
   const { isEnabled, getUrl } = useSocialNetworks();
+  const { t } = useLocale();
   const { data: featuredProducts = [], isLoading, error } = useQuery({
     queryKey: ['featured-products', 'heritage'],
     queryFn: () => featuredProductsApi.getAllFeaturedProducts(),
@@ -52,7 +54,7 @@ const HeritageSection = () => {
                           displayProducts[0].product?.imageUrl ||
                           '/uploads/placeholder.jpg'
                       )}
-                      alt={displayProducts[0].title || displayProducts[0].product?.name || 'Produit sélectionné'}
+                      alt={displayProducts[0].title || displayProducts[0].product?.name || t('selectedProduct')}
                       className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
                       loading="lazy"
                       decoding="async"
@@ -78,7 +80,7 @@ const HeritageSection = () => {
           <div className="w-full min-w-0 lg:w-1/2 text-center lg:text-left max-sm:pt-1">
             <div className="flex flex-col items-center lg:items-start">
               <div className="w-12 sm:w-16 h-px bg-primary/60 mb-4 sm:mb-6"></div>
-              <h4 className="text-primary uppercase tracking-[0.2em] sm:tracking-[0.3em] text-xs sm:text-sm mb-3 sm:mb-4 font-semibold">Sélection</h4>
+              <h4 className="text-primary uppercase tracking-[0.2em] sm:tracking-[0.3em] text-xs sm:text-sm mb-3 sm:mb-4 font-semibold">{t('selection')}</h4>
               {displayProducts.length > 0 ? (
                 <>
                   {displayProducts[0].title && displayProducts[0].title.trim().split(' ').length === 1 ? (
@@ -89,24 +91,24 @@ const HeritageSection = () => {
                     </h2>
                   ) : (
                     <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-display text-foreground mb-4 sm:mb-6 break-words px-1 sm:px-0">
-                      Produits <br/>
+                      {t('shop')} <br/>
                       <span className="font-display text-primary text-3xl sm:text-4xl md:text-5xl lg:text-6xl">
-                        {displayProducts[0].title || 'Sélectionnés'}
+                        {displayProducts[0].title || t('selectedProducts')}
                       </span>
                     </h2>
                   )}
                   <p className="text-muted-foreground leading-relaxed mb-6 sm:mb-8 font-light text-[0.9375rem] sm:text-base md:text-lg max-w-full break-words px-0.5 sm:px-0">
-                    {displayProducts[0].description || 'Une sélection mise en avant pour nos clients — qualité et soin du détail.'}
+                    {displayProducts[0].description || t('featuredIntro')}
                   </p>
                 </>
               ) : (
                 <>
                   <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-display text-foreground mb-4 sm:mb-6 break-words px-1 sm:px-0">
-                    Produits <br/>
-                    <span className="font-display text-primary text-3xl sm:text-4xl md:text-5xl lg:text-6xl">Sélectionnés</span>
+                    {t('shop')} <br/>
+                    <span className="font-display text-primary text-3xl sm:text-4xl md:text-5xl lg:text-6xl">{t('selectedProducts')}</span>
                   </h2>
                   <p className="text-muted-foreground leading-relaxed mb-6 sm:mb-8 font-light text-[0.9375rem] sm:text-base md:text-lg max-w-full break-words px-0.5 sm:px-0">
-                    Une sélection mise en avant pour nos clients — qualité et soin du détail.
+                    {t('featuredIntro')}
                   </p>
                 </>
               )}
@@ -120,7 +122,7 @@ const HeritageSection = () => {
                     ANIMATIONS.ctaShineOnHover && 'cta-shine-hover'
                   )}
                 >
-                  <span className="relative z-10">Voir Le Produit</span>
+                  <span className="relative z-10">{t('seeTheProduct')}</span>
                   <div className="absolute inset-0 bg-white/10 transform -translate-x-full group-hover:translate-x-0 transition-transform duration-300"></div>
                 </Link>
               ) : (
@@ -131,7 +133,7 @@ const HeritageSection = () => {
                     ANIMATIONS.ctaShineOnHover && 'cta-shine-hover'
                   )}
                 >
-                  <span className="relative z-10">Voir Tous Les Produits</span>
+                  <span className="relative z-10">{t('seeAllProducts')}</span>
                   <div className="absolute inset-0 bg-white/10 transform -translate-x-full group-hover:translate-x-0 transition-transform duration-300"></div>
                 </Link>
               )}
@@ -188,7 +190,7 @@ const HeritageSection = () => {
                 </div>
                 <span className="text-xs sm:text-sm italic text-muted-foreground flex items-center justify-center gap-1.5 text-center max-w-[16rem] sm:max-w-none leading-snug">
                   <Users className="w-4 h-4 shrink-0" />
-                  Découvrir nos plateformes
+                  {t('discoverPlatforms')}
                 </span>
               </div>
             </div>

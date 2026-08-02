@@ -7,6 +7,7 @@ import { heroCategoryDisplaySrc } from '@/components/home/heroCategoryImage';
 import { orderHeroCategoriesForDisplay } from '@/components/home/heroCategoryOrder';
 import { Button } from '@/components/ui/button';
 import type { CategoryHeroDTO } from '@/types/api';
+import { useLocale } from '@/contexts/LocaleContext';
 
 const FALLBACK_ROOT_SLUGS = [
   'sachets-pochettes',
@@ -27,6 +28,7 @@ const categoriesQueryOptions = {
  * dans Admin → Accueil (catégories) : affichage, ordre et image.
  */
 const CategoriesSection = () => {
+  const { t } = useLocale();
   const { data: heroList = [], isLoading: loadingHero } = useQuery({
     queryKey: ['heroCategories'],
     queryFn: () => categoriesApi.getHeroCategories(),
@@ -60,10 +62,10 @@ const CategoriesSection = () => {
       <div className="container mx-auto px-4">
         <div className="mb-10 text-center sm:mb-12">
           <h2 className="mb-3 font-display text-3xl font-semibold tracking-tight text-foreground md:text-4xl">
-            Nos catégories
+            {t('ourCategories')}
           </h2>
           <p className="mx-auto max-w-xl font-body text-muted-foreground">
-            Tout l&apos;essentiel pour emballer, protéger et valoriser vos envois
+            {t('categoriesIntro')}
           </p>
         </div>
 
@@ -96,7 +98,7 @@ const CategoriesSection = () => {
         <div className="mt-10 flex justify-center sm:mt-12">
           <Button asChild variant="outline" size="lg" className="rounded-2xl px-6">
             <Link to="/boutique" className="inline-flex items-center gap-2">
-              Voir toutes les catégories
+              {t('seeAllCategories')}
               <ArrowRight className="h-4 w-4" aria-hidden />
             </Link>
           </Button>

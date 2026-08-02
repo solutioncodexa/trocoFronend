@@ -6,6 +6,7 @@ import { useGlobalSections } from '@/hooks/useGlobalSections';
 import { useStorefrontPath } from '@/hooks/useStorefrontPath';
 import { useStoreLang } from '@/hooks/useStoreLang';
 import { resolveTenantSlug } from '@/contexts/TenantContext';
+import { useLocale } from '@/contexts/LocaleContext';
 import { cn } from '@/lib/utils';
 
 function dismissStorageKey(slug: string | null) {
@@ -16,6 +17,7 @@ const StickyCta = () => {
   const { stickyCtaConfig, isLoading } = useGlobalSections();
   const { to, isDemo } = useStorefrontPath();
   const { withLang } = useStoreLang();
+  const { t } = useLocale();
   const slug = resolveTenantSlug();
   const [dismissed, setDismissed] = useState(false);
 
@@ -76,7 +78,7 @@ const StickyCta = () => {
       type="button"
       className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
       onClick={dismiss}
-      aria-label="Masquer"
+      aria-label={t('hideCta')}
     >
       <X className="h-4 w-4" />
     </button>
@@ -90,7 +92,7 @@ const StickyCta = () => {
           bottomRight ? 'bottom-4 right-4 left-auto' : 'inset-x-0 bottom-0 flex justify-center',
         )}
         role="complementary"
-        aria-label="Appel à l’action"
+        aria-label={t('callToAction')}
       >
         <div className="flex max-w-lg flex-wrap items-center gap-3 rounded-full border border-border bg-card/95 px-4 py-2.5 shadow-elegant backdrop-blur-sm">
           <p className="text-sm font-medium text-foreground">{stickyCtaConfig.text}</p>
@@ -109,7 +111,7 @@ const StickyCta = () => {
           'bottom-[max(1rem,env(safe-area-inset-bottom))] right-4',
         )}
         role="complementary"
-        aria-label="Appel à l’action"
+        aria-label={t('callToAction')}
       >
         <div className="flex items-start gap-2">
           <p className="flex-1 text-sm font-medium text-foreground">{stickyCtaConfig.text}</p>
@@ -127,7 +129,7 @@ const StickyCta = () => {
         'pb-[max(0.75rem,env(safe-area-inset-bottom))]',
       )}
       role="complementary"
-      aria-label="Appel à l’action"
+      aria-label={t('callToAction')}
     >
       <div className="container mx-auto flex flex-wrap items-center justify-center gap-3 px-4 py-3 sm:justify-between">
         <p className="text-center text-sm font-medium text-foreground sm:text-left">

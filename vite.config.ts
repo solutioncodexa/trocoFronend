@@ -43,11 +43,32 @@ export default defineConfig(() => ({
         secure: false,
         xfwd: false,
         configure(proxy) {
-          proxy.on("proxyReq", (proxyReq) => {
+          proxy.on("proxyReq", (proxyReq, req) => {
             proxyReq.removeHeader("forwarded");
             proxyReq.removeHeader("x-forwarded-proto");
             proxyReq.removeHeader("x-forwarded-host");
             proxyReq.removeHeader("x-forwarded-port");
+            // changeOrigin remplace Host → le backend ne voit plus troco.localhost.
+            // Injecte le slug depuis le Host navigateur si le header n'est pas déjà posé.
+            try {
+              const existing = proxyReq.getHeader("X-Fournisseur-Slug");
+              if (!existing) {
+                const rawHost = String(
+                  (req as { headers?: { host?: string } }).headers?.host ?? "",
+                ).split(":")[0].toLowerCase();
+                let slug: string | null = null;
+                if (rawHost.endsWith(".localhost")) {
+                  const sub = rawHost.slice(0, -".localhost".length);
+                  if (sub && !sub.includes(".") && sub !== "www") slug = sub;
+                } else {
+                  const m = rawHost.match(/^([a-z0-9-]+)\.matjarona\./i);
+                  if (m?.[1] && m[1] !== "www") slug = m[1];
+                }
+                if (slug) proxyReq.setHeader("X-Fournisseur-Slug", slug);
+              }
+            } catch {
+              /* ignore */
+            }
           });
         },
       },

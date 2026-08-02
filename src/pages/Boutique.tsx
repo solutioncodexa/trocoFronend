@@ -34,18 +34,13 @@ import { staticCatalogQueryOptions } from '@/config/queryOptions';
 import { cn } from '@/lib/utils';
 import { useStoreBrand } from '@/hooks/useStoreBrand';
 import { useStorefrontTheme } from '@/hooks/useStorefrontTheme';
+import { useLocale } from '@/contexts/LocaleContext';
+import { DEFAULT_APPEARANCE } from '@/config/storeAppearance';
 
 const PRODUCTS_PER_PAGE = 12;
 const PRICE_MAX = 2000;
 
 type SortOption = 'newest' | 'price-asc' | 'price-desc' | 'popularity';
-
-const sortOptions = [
-  { value: 'newest', label: 'Les plus récents' },
-  { value: 'price-asc', label: 'Prix croissant' },
-  { value: 'price-desc', label: 'Prix décroissant' },
-  { value: 'popularity', label: 'Meilleures ventes' },
-];
 
 function buildVisiblePageNumbers(current: number, total: number): (number | 'gap')[] {
   if (total <= 1) return [1];
@@ -70,8 +65,37 @@ function buildVisiblePageNumbers(current: number, total: number): (number | 'gap
 }
 
 const Boutique = () => {
-  const { siteName } = useStoreBrand();
+  const { siteName, store, slug } = useStoreBrand();
+  const { t, locale } = useLocale();
+  const sortOptions = useMemo(
+    () => [
+      { value: 'newest' as const, label: t('sortNewest') },
+      { value: 'price-asc' as const, label: t('sortPriceAsc') },
+      { value: 'price-desc' as const, label: t('sortPriceDesc') },
+      { value: 'popularity' as const, label: t('sortPopular') },
+    ],
+    [t],
+  );
   const theme = useStorefrontTheme();
+  const appearance = theme.appearance;
+
+  const shopTitle =
+    locale === 'fr' &&
+    appearance.shopTitle?.trim() &&
+    appearance.shopTitle !== DEFAULT_APPEARANCE.shopTitle
+      ? appearance.shopTitle
+      : t('shopDefaultTitle');
+  const shopSubtitle =
+    locale === 'fr' &&
+    appearance.shopSubtitle?.trim() &&
+    appearance.shopSubtitle !== DEFAULT_APPEARANCE.shopSubtitle
+      ? appearance.shopSubtitle
+      : t('shopDefaultSubtitle');
+  const filterLayout = appearance.shopFilterLayout;
+  const filterMobile = appearance.shopFilterMobile;
+  const showFilters = appearance.shopShowFilters;
+  const showSort = appearance.shopShowSort;
+  const tenantSlug = store?.slug ?? slug;
   const [searchParams, setSearchParams] = useSearchParams();
   const categoryParam = searchParams.get('category');
   const [selectedCategory, setSelectedCategory] = useState<string | null>(categoryParam);
@@ -168,6 +192,7 @@ const Boutique = () => {
     () => [
       'products',
       'boutique',
+      tenantSlug ?? null,
       currentPage,
       sortApi.sortBy,
       sortApi.sortDir,
@@ -180,6 +205,7 @@ const Boutique = () => {
       PRODUCTS_PER_PAGE,
     ],
     [
+      tenantSlug,
       currentPage,
       sortApi.sortBy,
       sortApi.sortDir,
@@ -206,6 +232,7 @@ const Boutique = () => {
         keyword: searchQuery.trim() || undefined,
         facetSize: selectedFacetSize ?? undefined,
       }),
+    enabled: !!tenantSlug,
     retry: 1,
     placeholderData: keepPreviousData,
   });
@@ -335,7 +362,7 @@ const Boutique = () => {
   const searchFilterBlock = (
     <div className="flex w-full flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
       <span className="text-xs text-muted-foreground uppercase tracking-widest shrink-0">
-        Recherche :
+        {t('search')} :
       </span>
       <input
         type="search"
@@ -353,7 +380,7 @@ const Boutique = () => {
             return next;
           });
         }}
-        placeholder="Nom ou description…"
+        placeholder={t('searchNameDesc')}
         className="w-full min-w-0 flex-1 rounded-xl border border-border bg-card px-3 py-2 text-sm text-foreground shadow-soft placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
       />
     </div>
@@ -369,7 +396,7 @@ const Boutique = () => {
         }}
         className="rounded border-border text-primary focus:ring-primary size-4"
       />
-      En stock uniquement
+      {t('inStockOnly')}
     </label>
   );
 
@@ -396,7 +423,7 @@ const Boutique = () => {
         ))}
       </ul>
     ) : (
-      <p className="text-xs text-muted-foreground">Aucune taille disponible</p>
+      <p className="text-xs text-muted-foreground">{t('noSizes')}</p>
     );
 
   const activeFilterCount = useMemo(() => {
@@ -416,12 +443,12 @@ const Boutique = () => {
         defaultValue={['category']}
       >
         <AccordionItem value="category" className="border-border/60 border-b-0">
-          <AccordionTrigger className={accordionTriggerClass}>Catégorie</AccordionTrigger>
+          <AccordionTrigger className={accordionTriggerClass}>{t('category')}</AccordionTrigger>
           <AccordionContent>{categoryFilterList}</AccordionContent>
         </AccordionItem>
         {facets?.sizes && facets.sizes.length > 0 ? (
           <AccordionItem value="size" className="border-border/60 border-b-0">
-            <AccordionTrigger className={accordionTriggerClass}>Taille</AccordionTrigger>
+            <AccordionTrigger className={accordionTriggerClass}>{t('size')}</AccordionTrigger>
             <AccordionContent>{sizeFilterList}</AccordionContent>
           </AccordionItem>
         ) : null}
@@ -429,7 +456,7 @@ const Boutique = () => {
 
       <div className="border-t border-border pt-6 px-0">
         <h3 className={`${filterSectionTitleClass} mb-6 flex items-center gap-2`}>
-          Prix (DH)
+          {t('priceMad')}
           <div className="h-px flex-grow bg-border" />
         </h3>
         {priceFilterBlock}
@@ -446,7 +473,7 @@ const Boutique = () => {
           }}
           className="mt-6 w-full inline-flex items-center justify-center rounded-xl border border-primary px-6 py-2.5 text-xs font-bold uppercase tracking-widest text-primary hover:bg-primary hover:text-primary-foreground transition-colors"
         >
-          Réinitialiser les filtres
+          {t('resetFilters')}
         </button>
       )}
     </div>
@@ -468,40 +495,65 @@ const Boutique = () => {
         <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-card via-card/90 to-primary/10" aria-hidden />
         <div className="relative z-10 mx-auto max-w-[1400px] px-4 py-6 sm:px-6 sm:py-8 md:py-9">
           <div className="flex flex-col items-start gap-2 sm:items-center sm:text-center">
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">Boutique {siteName}</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">{t('shop')} {siteName}</p>
             <h1 className="font-display text-2xl font-semibold tracking-tight text-foreground sm:text-3xl md:text-4xl">
-              Solutions d&apos;emballage
+              {shopTitle}
             </h1>
             <p className="max-w-xl text-sm leading-relaxed text-muted-foreground sm:text-base">
-              Sachets, cartons, protections et consommables pour vos envois e-commerce.
+              {shopSubtitle}
             </p>
           </div>
         </div>
       </section>
 
       <main className={cn('mx-auto w-full min-w-0 max-w-[1400px] overflow-x-hidden px-0 py-5 sm:px-6 sm:py-6 md:py-8', theme.shell)}>
-        <div className="flex flex-col lg:flex-row gap-8 lg:gap-12 min-w-0">
+        <div
+          className={cn(
+            'min-w-0 gap-8 lg:gap-12',
+            filterLayout === 'top' || !showFilters
+              ? 'flex flex-col'
+              : 'flex flex-col lg:flex-row',
+          )}
+        >
 
-          {/* Desktop sidebar — hidden on mobile */}
-          <aside className="hidden lg:block w-72 shrink-0">
-            {filterPanelContent}
-          </aside>
+          {/* Desktop sidebar — sidebar layout only */}
+          {showFilters && filterLayout === 'sidebar' ? (
+            <aside className="hidden lg:block w-72 shrink-0">
+              {filterPanelContent}
+            </aside>
+          ) : null}
 
           <div className="flex-grow min-w-0 px-4 sm:px-0">
+            {showFilters && (filterLayout === 'top' || filterMobile === 'top') ? (
+              <div
+                className={cn(
+                  'mb-6 rounded-2xl border border-border bg-card/40 p-4 sm:p-5',
+                  filterLayout !== 'top' && filterMobile === 'top' && 'lg:hidden',
+                  filterLayout === 'top' && filterMobile !== 'top' && 'max-lg:hidden',
+                )}
+              >
+                {filterPanelContent}
+              </div>
+            ) : null}
+
             {/* Toolbar: Filter button (mobile) + Search + Sort */}
             <div className="flex flex-col gap-4 mb-6 border-b border-border pb-6">
               {/* Row 1: Filter button + Sort */}
               <div className="flex items-center gap-3">
-                {/* Mobile filter button */}
+                {/* Filter drawer — respect mobile + desktop layout */}
+                {showFilters && filterLayout !== 'top' && filterMobile !== 'top' ? (
                 <Sheet open={filtersOpen} onOpenChange={setFiltersOpen}>
                   <SheetTrigger asChild>
                     <Button
                       variant="outline"
                       size="sm"
-                      className="lg:hidden flex items-center gap-2 border-border text-foreground hover:border-primary hover:text-primary shrink-0"
+                      className={cn(
+                        'flex items-center gap-2 border-border text-foreground hover:border-primary hover:text-primary shrink-0',
+                        filterLayout === 'sidebar' && 'lg:hidden',
+                      )}
                     >
                       <SlidersHorizontal className="w-4 h-4" />
-                      <span className="text-xs font-bold uppercase tracking-widest">Filtres</span>
+                      <span className="text-xs font-bold uppercase tracking-widest">{t('filters')}</span>
                       {activeFilterCount > 0 && (
                         <span className="min-w-[18px] h-[18px] px-1 flex items-center justify-center rounded-full bg-primary text-primary-foreground text-[10px] font-bold">
                           {activeFilterCount}
@@ -509,12 +561,20 @@ const Boutique = () => {
                       )}
                     </Button>
                   </SheetTrigger>
-                  <SheetContent side="left" className="w-[320px] sm:w-[360px] overflow-y-auto scrollbar-app p-0">
+                  <SheetContent
+                    side="left"
+                    className={cn(
+                      'overflow-y-auto scrollbar-app p-0',
+                      filterMobile === 'sheet'
+                        ? 'w-full sm:max-w-full'
+                        : 'w-[320px] sm:w-[360px]',
+                    )}
+                  >
                     <SheetHeader className="px-5 pt-5 pb-4 border-b border-border sticky top-0 bg-background z-10">
                       <div className="flex items-center justify-between">
                         <SheetTitle className="text-sm font-bold uppercase tracking-widest text-foreground flex items-center gap-2">
                           <SlidersHorizontal className="w-4 h-4 text-primary" />
-                          Filtres
+                          {t('filters')}
                           {activeFilterCount > 0 && (
                             <span className="min-w-[18px] h-[18px] px-1 flex items-center justify-center rounded-full bg-primary text-primary-foreground text-[10px] font-bold">
                               {activeFilterCount}
@@ -532,17 +592,19 @@ const Boutique = () => {
                         onClick={() => setFiltersOpen(false)}
                         className="w-full bg-primary text-primary-foreground hover:bg-primary/90 text-xs font-bold uppercase tracking-widest rounded-xl"
                       >
-                        Voir les résultats
+                        {t('seeResults')}
                       </Button>
                     </div>
                   </SheetContent>
                 </Sheet>
+                ) : null}
 
                 <div className="flex-1" />
 
-                {/* Sort — always visible */}
+                {/* Sort */}
+                {showSort ? (
                 <div className="flex items-center gap-2 shrink-0">
-                  <span className="text-xs text-muted-foreground uppercase tracking-widest hidden sm:inline">Trier par :</span>
+                  <span className="text-xs text-muted-foreground uppercase tracking-widest hidden sm:inline">{t('sortBy')}</span>
                   <Select
                     value={sortBy}
                     onValueChange={(value) => {
@@ -562,6 +624,7 @@ const Boutique = () => {
                     </SelectContent>
                   </Select>
                 </div>
+                ) : null}
               </div>
 
               {/* Row 2: Search */}
@@ -584,7 +647,7 @@ const Boutique = () => {
                   )}
                   {inStockOnly && (
                     <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-primary/10 text-primary text-[11px] font-medium">
-                      En stock
+                      {t('inStock')}
                       <button type="button" onClick={() => setInStockOnly(false)} className="hover:text-primary/70"><X className="w-3 h-3" /></button>
                     </span>
                   )}
@@ -593,7 +656,7 @@ const Boutique = () => {
                     onClick={resetBrowseFilters}
                     className="text-[11px] text-muted-foreground hover:text-primary underline underline-offset-2 transition-colors"
                   >
-                    Tout effacer
+                    {t('clearAll')}
                   </button>
                 </div>
               )}
@@ -608,15 +671,27 @@ const Boutique = () => {
                 icon={hasActiveFilters ? SlidersHorizontal : Package}
                 title={
                   hasActiveFilters
-                    ? 'Aucun produit ne correspond à ces critères'
-                    : 'Catalogue en préparation'
+                    ? t('noProducts')
+                    : !appearance.shopEmptyTitle?.trim() ||
+                        appearance.shopEmptyTitle === 'Catalogue en préparation'
+                      ? t('catalogPreparing')
+                      : appearance.shopEmptyTitle
                 }
                 description={
                   hasActiveFilters
-                    ? 'Retirez une catégorie, élargissez la fourchette de prix ou videz la recherche.'
-                    : 'Les produits de cette boutique seront bientôt disponibles.'
+                    ? t('noProductsHint')
+                    : !appearance.shopEmptyDescription?.trim() ||
+                        appearance.shopEmptyDescription ===
+                          'Les produits de cette boutique seront bientôt disponibles.'
+                      ? t('catalogSoon')
+                      : appearance.shopEmptyDescription
                 }
-                className="my-6"
+                className={cn(
+                  'my-6',
+                  appearance.shopEmptyStyle === 'branded' && 'rounded-2xl bg-primary/10 px-4 py-8',
+                  appearance.shopEmptyStyle === 'illustrated' &&
+                    'rounded-2xl bg-gradient-to-br from-muted/80 to-primary/5 px-4 py-8',
+                )}
               >
                 {hasActiveFilters ? (
                   <Button
@@ -624,11 +699,16 @@ const Boutique = () => {
                     onClick={resetBrowseFilters}
                     className="mt-6 rounded-xl border-primary text-primary hover:bg-primary hover:text-primary-foreground"
                   >
-                    Réinitialiser les filtres
+                    {t('resetFilters')}
                   </Button>
                 ) : (
                   <Button variant="outline" className="mt-6 rounded-xl" asChild>
-                    <Link to="/contact">Nous contacter</Link>
+                    <Link to="/contact">
+                      {!appearance.shopEmptyCtaLabel?.trim() ||
+                      appearance.shopEmptyCtaLabel === 'Nous contacter'
+                        ? t('contactUs')
+                        : appearance.shopEmptyCtaLabel}
+                    </Link>
                   </Button>
                 )}
               </EmptyState>
@@ -650,14 +730,14 @@ const Boutique = () => {
             {totalPages > 1 && (
               <nav
                 className="mt-20 flex flex-wrap justify-center items-center gap-2"
-                aria-label="Pagination des produits"
+                aria-label={t('productsPagination')}
               >
                 <button
                   type="button"
                   onClick={() => handlePageChange(currentPage - 1)}
                   disabled={currentPage <= 1 || isLoading}
                   className="size-10 border border-border flex items-center justify-center text-muted-foreground hover:border-primary hover:text-primary transition-colors disabled:opacity-40 disabled:pointer-events-none rounded-xl"
-                  aria-label="Page précédente"
+                  aria-label={t('prevPage')}
                 >
                   <ChevronLeft className="w-5 h-5" />
                 </button>
@@ -687,7 +767,7 @@ const Boutique = () => {
                   onClick={() => handlePageChange(currentPage + 1)}
                   disabled={currentPage >= totalPages || isLoading}
                   className="size-10 border border-border flex items-center justify-center text-muted-foreground hover:border-primary hover:text-primary transition-colors disabled:opacity-40 disabled:pointer-events-none rounded-xl"
-                  aria-label="Page suivante"
+                  aria-label={t('nextPage')}
                 >
                   <ChevronRight className="w-5 h-5" />
                 </button>

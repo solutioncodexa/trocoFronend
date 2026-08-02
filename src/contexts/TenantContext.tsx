@@ -11,6 +11,11 @@ import { setStoredTenantSlug } from '@/config/api';
 import { platformApi } from '@/services/api/platform';
 import type { TenantStoreDTO } from '@/types/api';
 import { clearRootStoreTheme } from '@/utils/storeTheme';
+import {
+  clearStorefrontThemeCache,
+  readStorefrontThemeCache,
+  writeStorefrontThemeCache,
+} from '@/utils/storefrontThemeCache';
 
 interface TenantContextType {
   store: TenantStoreDTO | null;
@@ -58,39 +63,85 @@ export function resolveTenantSlug(): string | null {
   return null;
 }
 
+function readInitialTenant(): {
+  slug: string | null;
+  store: TenantStoreDTO | null;
+  isLoading: boolean;
+} {
+  if (typeof window === 'undefined') {
+    return { slug: null, store: null, isLoading: true };
+  }
+  const resolved = resolveTenantSlug();
+  if (!resolved) {
+    return { slug: null, store: null, isLoading: false };
+  }
+  const cached = readStorefrontThemeCache(resolved);
+  return {
+    slug: resolved,
+    store: cached,
+    // Cache → peindre tout de suite ; sinon attendre l’API (loader neutre).
+    isLoading: !cached,
+  };
+}
+
 export const TenantProvider = ({ children }: { children: ReactNode }) => {
-  const [store, setStore] = useState<TenantStoreDTO | null>(null);
-  const [slug, setSlug] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const initial = useMemo(() => readInitialTenant(), []);
+  const [store, setStore] = useState<TenantStoreDTO | null>(initial.store);
+  const [slug, setSlug] = useState<string | null>(initial.slug);
+  const [isLoading, setIsLoading] = useState(initial.isLoading);
   const [storeUnavailableMessage, setStoreUnavailableMessage] = useState<string | null>(null);
 
   const isPlatformHost = useMemo(() => isPlatformHostname(), []);
 
   const refresh = useCallback(async () => {
     const resolved = resolveTenantSlug();
-    setSlug(resolved);
-    setStoredTenantSlug(resolved);
     // Couleurs boutique : uniquement via Layout vitrine (jamais sur :root / admin / Matjarona).
     clearRootStoreTheme();
 
     if (!resolved) {
-      setStore(null);
+      // Sur /admin, le store vient de la session (loadFromAdminSession) — ne pas l’effacer.
+      // Sinon « Voir ma boutique » perd le slug et ouvre la landing Matjarona.
+      const onAdminSurface = window.location.pathname.startsWith('/admin');
+      if (!onAdminSurface) {
+        setSlug(null);
+        setStoredTenantSlug(null);
+        setStore(null);
+      }
       setStoreUnavailableMessage(null);
       setIsLoading(false);
       return;
     }
 
-    setIsLoading(true);
+    setSlug(resolved);
+    setStoredTenantSlug(resolved);
+
+    const cached = readStorefrontThemeCache(resolved);
+    // Hydrate immédiatement pour éviter le flash Matjarona / thème classic.
+    if (cached) {
+      setStore((prev) => prev ?? cached);
+      setIsLoading(false);
+    } else {
+      setIsLoading(true);
+    }
+
     try {
       const data = await platformApi.getStore(resolved);
       setStore(data);
+      writeStorefrontThemeCache(resolved, data);
       setStoreUnavailableMessage(null);
       if (data.slug) {
         setSlug(data.slug);
         setStoredTenantSlug(data.slug);
+        if (data.slug !== resolved) {
+          writeStorefrontThemeCache(data.slug, data);
+        }
       }
     } catch (err) {
-      setStore(null);
+      // Garde le cache si l’API échoue temporairement.
+      if (!cached) {
+        setStore(null);
+        clearStorefrontThemeCache(resolved);
+      }
       const msg = err instanceof Error ? err.message : '';
       setStoreUnavailableMessage(
         msg && /attente|indisponible|suspend|activation/i.test(msg)
@@ -118,6 +169,12 @@ export const TenantProvider = ({ children }: { children: ReactNode }) => {
       if (data.slug) {
         setSlug(data.slug);
         setStoredTenantSlug(data.slug);
+        writeStorefrontThemeCache(data.slug, {
+          ...data,
+          heroEnabled: true,
+          categoriesEnabled: true,
+          surMesureEnabled: true,
+        });
       }
     } catch {
       /* ignore — pas de session admin boutique */
@@ -126,8 +183,11 @@ export const TenantProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     clearRootStoreTheme();
+    if (initial.slug) {
+      setStoredTenantSlug(initial.slug);
+    }
     void refresh();
-  }, [refresh]);
+  }, [refresh, initial.slug]);
 
   const value = useMemo(
     () => ({

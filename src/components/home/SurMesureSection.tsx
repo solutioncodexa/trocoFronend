@@ -1,17 +1,18 @@
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { featuredProductsApi } from '@/services/api/featuredProducts';
-import { FeaturedProductDTO } from '@/types/featured-products';
 import { RevealOnScroll } from '@/components/animations';
 import { ANIMATIONS } from '@/config/animations';
 import { cn } from '@/lib/utils';
 import { staticCatalogQueryOptions } from '@/config/queryOptions';
 import { getImageUrl } from '@/services/api/upload';
 import { useStoreBrand } from '@/hooks/useStoreBrand';
+import { useLocale } from '@/contexts/LocaleContext';
 
 const SurMesureSection = () => {
   const { siteName } = useStoreBrand();
-  const { data: featuredProducts = [], isLoading, error } = useQuery({
+  const { t } = useLocale();
+  const { data: featuredProducts = [] } = useQuery({
     queryKey: ['featured-products', 'sur-mesure'],
     queryFn: () => featuredProductsApi.getAllFeaturedProducts(),
     select: (data) => data.filter((product) => product.section === 'sur-mesure'),
@@ -42,7 +43,7 @@ const SurMesureSection = () => {
                           activeProducts[0].product?.imageUrl ||
                           'https://picsum.photos/400/600?random=1'
                       )}
-                      alt={activeProducts[0].title || activeProducts[0].product?.name || 'Produit sélectionné'}
+                      alt={activeProducts[0].title || activeProducts[0].product?.name || t('selectedProduct')}
                       className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
                       loading="lazy"
                       decoding="async"
@@ -72,30 +73,27 @@ const SurMesureSection = () => {
           <div className="w-full min-w-0 lg:w-1/2 text-center lg:text-left max-sm:pt-1">
             <div className="flex flex-col items-center lg:items-start">
               <div className="w-12 sm:w-16 h-px bg-primary/60 mb-4 sm:mb-6"></div>
-              <h4 className="text-primary uppercase tracking-[0.2em] sm:tracking-[0.3em] text-xs sm:text-sm mb-3 sm:mb-4 font-semibold">Personnalisation</h4>
+              <h4 className="text-primary uppercase tracking-[0.2em] sm:tracking-[0.3em] text-xs sm:text-sm mb-3 sm:mb-4 font-semibold">{t('personalization')}</h4>
               {activeProducts.length > 0 ? (
                 <>
                   <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-display text-foreground mb-4 sm:mb-6 break-words px-1 sm:px-0">
-                    L&apos;Art du <br/>
+                    {t('artOf')} <br/>
                     <span className="font-display text-primary text-3xl sm:text-4xl md:text-5xl lg:text-6xl">
-                      {activeProducts[0].title?.trim() || 'Sur-Mesure'}
+                      {activeProducts[0].title?.trim() || t('surMesureTitle')}
                     </span>
                   </h2>
                   <p className="text-muted-foreground leading-relaxed mb-6 sm:mb-8 font-light text-[0.9375rem] sm:text-base md:text-lg max-w-full break-words px-0.5 sm:px-0">
-                    {activeProducts[0].description || `"Personnalisez avec ${siteName} — formats et finitions sur mesure."`}
+                    {activeProducts[0].description || t('smHomeDesc', { name: siteName })}
                   </p>
                 </>
               ) : (
                 <>
                   <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-display text-foreground mb-4 sm:mb-6 break-words px-1 sm:px-0">
-                    L&apos;Art du <br/>
-                    <span className="font-display text-primary text-3xl sm:text-4xl md:text-5xl lg:text-6xl">Sur-Mesure</span>
+                    {t('artOf')} <br/>
+                    <span className="font-display text-primary text-3xl sm:text-4xl md:text-5xl lg:text-6xl">{t('surMesureTitle')}</span>
                   </h2>
-                  <p className="text-muted-foreground leading-relaxed mb-4 sm:mb-6 font-light text-[0.9375rem] sm:text-base md:text-lg max-w-full break-words px-0.5 sm:px-0">
-                    &quot;Votre marque, votre style — formats et finitions sur mesure.&quot;
-                  </p>
                   <p className="text-muted-foreground leading-relaxed mb-6 sm:mb-8 font-light text-[0.9375rem] sm:text-base md:text-lg max-w-full break-words px-0.5 sm:px-0">
-                    Besoin d&apos;un format spécifique, d&apos;un logo ou d&apos;une série personnalisée ? {siteName} vous accompagne.
+                    {t('smHomeFallback')}
                   </p>
                 </>
               )}
@@ -108,7 +106,7 @@ const SurMesureSection = () => {
                       ANIMATIONS.ctaShineOnHover && 'cta-shine-hover'
                     )}
                   >
-                    <span className="relative z-10">Voir le Produit</span>
+                    <span className="relative z-10">{t('seeTheProduct')}</span>
                     <div className="absolute inset-0 bg-white/10 transform -translate-x-full group-hover:translate-x-0 transition-transform duration-300"></div>
                   </Link>
                 ) : (
@@ -119,7 +117,7 @@ const SurMesureSection = () => {
                       ANIMATIONS.ctaShineOnHover && 'cta-shine-hover'
                     )}
                   >
-                    <span className="relative z-10">Démarrer un Projet</span>
+                    <span className="relative z-10">{t('startProject')}</span>
                     <div className="absolute inset-0 bg-white/10 transform -translate-x-full group-hover:translate-x-0 transition-transform duration-300"></div>
                   </Link>
                 )}

@@ -1,25 +1,27 @@
 import { Package, Truck, ShieldCheck } from 'lucide-react';
 import { useStoreBrand } from '@/hooks/useStoreBrand';
+import { useLocale } from '@/contexts/LocaleContext';
 
 const ValuePropsSection = () => {
-  const { freeShippingThreshold, siteName } = useStoreBrand();
+  const { freeShippingThreshold } = useStoreBrand();
+  const { t } = useLocale();
   const threshold = Number.isFinite(freeShippingThreshold) ? freeShippingThreshold : 750;
 
   const items = [
     {
       icon: Truck,
-      title: 'Livraison rapide',
-      text: `Livraison gratuite à partir de ${threshold} DH sur tout le Maroc.`,
+      title: t('fastDelivery'),
+      text: t('fastDeliveryDesc', { n: threshold }),
     },
     {
       icon: ShieldCheck,
-      title: 'Paiement sécurisé',
-      text: 'Commandez en confiance avec un suivi clair de vos colis.',
+      title: t('securePayment'),
+      text: t('securePaymentDesc'),
     },
     {
       icon: Package,
-      title: 'Qualité garantie',
-      text: `Des produits soignés, sélectionnés pour votre expérience ${siteName}.`,
+      title: t('qualityGuaranteed'),
+      text: t('qualityGuaranteedDesc'),
     },
   ];
 

@@ -13,6 +13,7 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { ordersApi, getImageUrl } from '@/services/api';
 import { OrderDTO, OrderListItemDTO } from '@/types/api';
 import { formatPrice } from '@/utils/formatPrice';
+import { formatDateTime } from '@/utils/formatDateTime';
 import { toast } from 'sonner';
 import { toastError, toastInfo } from '@/utils/toastMessages';
 import { cn } from '@/lib/utils';
@@ -91,6 +92,25 @@ const AdminOrders = () => {
     return labels[status] ?? status;
   };
 
+  const getPaymentLabel = (method?: string | null) => {
+    switch ((method ?? '').toLowerCase()) {
+      case 'card_stripe':
+      case 'stripe':
+        return 'Stripe';
+      case 'card_cmi':
+      case 'online':
+        return 'CMI';
+      case 'paypal':
+        return 'PayPal';
+      case 'bnpl':
+        return 'BNPL';
+      case 'cash_on_delivery':
+        return 'COD';
+      default:
+        return method?.trim() || '—';
+    }
+  };
+
   const openOrderDetail = async (orderId: string) => {
     setIsDetailOpen(true);
     setIsLoadingDetail(true);
@@ -134,15 +154,7 @@ const AdminOrders = () => {
     }
   };
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('fr-FR', {
-      day: 'numeric',
-      month: 'long',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  };
+  const formatDate = (dateString: string) => formatDateTime(dateString);
 
   if (isLoading) {
     return (
@@ -195,6 +207,10 @@ const AdminOrders = () => {
                 <p className="font-body font-medium text-sm">{order.customer?.fullName}</p>
                 <p className="font-body text-xs text-muted-foreground">{order.customer?.phone}</p>
                 <p className="font-body text-xs text-muted-foreground">{order.customer?.city ?? '—'}</p>
+                <p className="font-body text-[10px] text-muted-foreground mt-0.5">
+                  Paiement : {getPaymentLabel(order.paymentMethod)}
+                  {order.paymentStatus ? ` · ${order.paymentStatus}` : ''}
+                </p>
               </div>
               <Badge className={cn('shrink-0 text-[10px]', getStatusStyle(order.status))}>
                 {getStatusLabel(order.status)}
@@ -266,6 +282,7 @@ const AdminOrders = () => {
                 <th className="px-4 py-3 text-left font-body text-sm font-medium text-muted-foreground">Ville</th>
                 <th className="px-4 py-3 text-left font-body text-sm font-medium text-muted-foreground">Produit</th>
                 <th className="px-4 py-3 text-left font-body text-sm font-medium text-muted-foreground">Total</th>
+                <th className="px-4 py-3 text-left font-body text-sm font-medium text-muted-foreground">Paiement</th>
                 <th className="px-4 py-3 text-left font-body text-sm font-medium text-muted-foreground">Date</th>
                 <th className="px-4 py-3 text-left font-body text-sm font-medium text-muted-foreground">Statut</th>
                 <th className="px-4 py-3 text-right font-body text-sm font-medium text-muted-foreground">Actions</th>
@@ -306,6 +323,14 @@ const AdminOrders = () => {
                     )}
                   </td>
                   <td className="px-4 py-3 font-body font-medium">{formatPrice(order.total ?? 0)}</td>
+                  <td className="px-4 py-3">
+                    <p className="font-body text-sm">{getPaymentLabel(order.paymentMethod)}</p>
+                    {order.paymentStatus ? (
+                      <p className="font-body text-[10px] text-muted-foreground uppercase tracking-wide">
+                        {order.paymentStatus}
+                      </p>
+                    ) : null}
+                  </td>
                   <td className="px-4 py-3 font-body text-sm text-muted-foreground">
                     {order.createdAt ? formatDate(order.createdAt) : '—'}
                   </td>

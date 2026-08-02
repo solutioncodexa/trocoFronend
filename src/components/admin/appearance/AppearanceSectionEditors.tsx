@@ -1,6 +1,19 @@
 import { Link } from 'react-router-dom';
-import type { ReactNode, RefObject } from 'react';
-import { Eye, FileText, ImagePlus, Loader2 } from 'lucide-react';
+import type { CSSProperties, ReactNode, RefObject } from 'react';
+import {
+  Eye,
+  FileText,
+  Heart,
+  ImagePlus,
+  LayoutGrid,
+  Loader2,
+  Menu,
+  PanelsTopLeft,
+  Ruler,
+  Search,
+  ShoppingBag,
+  Sparkles,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -10,13 +23,57 @@ import {
   StorePageHrefSelect,
   type StorePageLinkOption,
 } from '@/components/admin/StorePageHrefSelect';
+import {
+  CartDensitySketch,
+  CartEmptySketch,
+  CheckoutLayoutSketch,
+  CheckoutSummaryPositionSketch,
+  FooterLayoutSketch,
+  FormsLayoutSketch,
+  HeaderLayoutSketch,
+  HeroLayoutSketch,
+  ProductGallerySketch,
+  ShopFilterLayoutSketch,
+} from '@/components/admin/appearance/AppearanceChoiceSketches';
 import { COLOR_PRESETS } from '@/components/admin/page-builder/blockAppearance';
 import {
+  APPEARANCE_LOOK_PRESETS,
+  COLOR_SCHEMES,
+  HEADER_CHROME_PRESETS,
+  SURFACE_PRESETS,
+} from '@/config/appearancePresets';
+import {
   BUTTON_STYLES,
+  CARD_HOVER_EFFECTS,
+  CARD_IMAGE_RATIOS,
+  CARD_INFO_ALIGNS,
   CARD_STYLES,
+  CART_DENSITIES,
+  CART_EMPTY_STYLES,
+  CHECKOUT_CTA_EMPHASIS,
+  CHECKOUT_DENSITIES,
+  CHECKOUT_FORM_STYLES,
+  CHECKOUT_HEADING_ALIGNS,
+  CHECKOUT_LAYOUTS,
+  CHECKOUT_PAYMENT_STYLES,
+  CHECKOUT_SUMMARY_POSITIONS,
   FOOTER_LAYOUTS,
+  FORMS_LAYOUTS,
+  FORMS_STYLES,
+  HEADER_LAYOUTS,
   HEADER_NAV_ITEMS,
   HERO_STYLES,
+  HOME_DENSITIES,
+  PRODUCT_GALLERY_LAYOUTS,
+  PRODUCT_GALLERY_MOBILES,
+  PRODUCT_INFO_POSITIONS,
+  SHOP_DENSITIES,
+  SHOP_EMPTY_STYLES,
+  SHOP_FILTER_LAYOUTS,
+  SHOP_FILTER_MOBILES,
+  SHOP_GRID_COLUMNS,
+  WISHLIST_EMPTY_STYLES,
+  WISHLIST_GRID_COLUMNS,
   appearanceButtonClass,
   appearanceCardClass,
   type HeaderNavEnabledKey,
@@ -53,6 +110,7 @@ export type AppearanceSectionEditorsProps = {
   form: AppearanceFormSlice;
   patch: <K extends keyof AppearanceFormSlice>(key: K, value: AppearanceFormSlice[K]) => void;
   patchAppearance: <K extends keyof StoreAppearance>(key: K, value: StoreAppearance[K]) => void;
+  mergeAppearance?: (partial: Partial<StoreAppearance>) => void;
   applyThemeNow: (themeKey: StoreThemeKey) => void;
   themePresets?: Record<string, unknown> | null;
   megaMenuEnabled: boolean;
@@ -75,6 +133,11 @@ export type AppearanceSectionEditorsProps = {
   publishedHomePage?: { id: number; title: string } | null;
   /** Mêmes messages que la page Bandeau (admin). */
   topBarMessages?: TopBarMessageDTO[];
+  /** Aperçu panier vide / rempli. */
+  cartPreviewMode?: 'empty' | 'filled';
+  onCartPreviewModeChange?: (mode: 'empty' | 'filled') => void;
+  wishlistPreviewMode?: 'empty' | 'filled';
+  onWishlistPreviewModeChange?: (mode: 'empty' | 'filled') => void;
 };
 
 function Hint({ children }: { children: ReactNode }) {
@@ -245,15 +308,44 @@ export function AppearanceSectionEditors({
   faviconInputRef,
   publishedHomePage,
   topBarMessages = [],
+  cartPreviewMode = 'empty',
+  onCartPreviewModeChange,
+  wishlistPreviewMode = 'empty',
+  onWishlistPreviewModeChange,
+  mergeAppearance,
 }: AppearanceSectionEditorsProps) {
   switch (section) {
     case 'themes':
       return (
-        <div className="space-y-3">
+        <div className="space-y-4">
           <Hint>
             Chaque thème conserve ses couleurs et réglages. Changer de thème sauvegarde l’actuel ;
             y revenir le restaure.
           </Hint>
+          {mergeAppearance ? (
+            <div className="space-y-2">
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                Looks complets
+              </p>
+              <Hint>1 clic applique styles boutique + layout (sans changer le thème de base).</Hint>
+              <div className="grid grid-cols-2 gap-2">
+                {APPEARANCE_LOOK_PRESETS.map((preset) => (
+                  <OptionTile
+                    key={preset.key}
+                    selected={false}
+                    onClick={() => {
+                      if (preset.primaryColor) patch('primaryColor', preset.primaryColor);
+                      if (preset.secondaryColor) patch('secondaryColor', preset.secondaryColor);
+                      mergeAppearance(preset.appearance);
+                    }}
+                  >
+                    <p className="text-xs font-semibold">{preset.label}</p>
+                    <p className="text-[10px] text-muted-foreground">{preset.description}</p>
+                  </OptionTile>
+                ))}
+              </div>
+            </div>
+          ) : null}
           <div className="space-y-2">
             {STORE_THEMES.map((theme) => {
               const selected = form.themeKey === theme.key;
@@ -323,7 +415,7 @@ export function AppearanceSectionEditors({
     case 'typography':
       return (
         <div className="space-y-4">
-          <Hint>Polices et arrondis appliqués à toute la vitrine.</Hint>
+          <Hint>Choisissez une paire Display / Body — aperçu live à gauche.</Hint>
           <div className="space-y-2">
             <GroupTitle>Paires de polices</GroupTitle>
             {FONT_PAIRS.map((pair) => (
@@ -332,39 +424,65 @@ export function AppearanceSectionEditors({
                 selected={form.fontPair === pair.key}
                 onClick={() => patch('fontPair', pair.key)}
               >
-                <p className="text-sm font-semibold" style={{ fontFamily: pair.display }}>
-                  {pair.label}
-                </p>
-                <p className="mt-0.5 text-[11px] text-muted-foreground" style={{ fontFamily: pair.body }}>
-                  {pair.description}
-                </p>
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="text-base font-semibold leading-tight" style={{ fontFamily: pair.display }}>
+                      Aa — {pair.label}
+                    </p>
+                    <p className="mt-1 text-[11px] leading-snug text-muted-foreground" style={{ fontFamily: pair.body }}>
+                      Corps : {pair.description}
+                    </p>
+                  </div>
+                  <div className="shrink-0 rounded-md border border-border/70 bg-background px-2 py-1 text-center">
+                    <p className="text-lg leading-none" style={{ fontFamily: pair.display }}>
+                      Ag
+                    </p>
+                    <p className="mt-0.5 text-[9px] text-muted-foreground" style={{ fontFamily: pair.body }}>
+                      body
+                    </p>
+                  </div>
+                </div>
               </OptionTile>
             ))}
           </div>
           <div className="space-y-2">
             <GroupTitle>Arrondis</GroupTitle>
-            {RADIUS_PRESETS.map((preset) => (
-              <OptionTile
-                key={preset.key}
-                selected={form.radiusPreset === preset.key}
-                onClick={() => patch('radiusPreset', preset.key)}
-                className={preset.card}
-              >
-                <div className="flex items-center justify-between gap-2">
-                  <div className="min-w-0">
-                    <p className="text-sm font-semibold">{preset.label}</p>
-                    <p className="text-[11px] text-muted-foreground">{preset.description}</p>
+            <div className="grid grid-cols-1 gap-2">
+              {RADIUS_PRESETS.map((preset) => (
+                <OptionTile
+                  key={preset.key}
+                  selected={form.radiusPreset === preset.key}
+                  onClick={() => patch('radiusPreset', preset.key)}
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold">{preset.label}</p>
+                      <p className="text-[11px] text-muted-foreground">{preset.description}</p>
+                    </div>
+                    <div className="flex shrink-0 items-end gap-1.5" aria-hidden>
+                      <span
+                        className={cn(
+                          'h-9 w-11 border border-sky-500/35 bg-sky-500/10',
+                          preset.card,
+                        )}
+                      />
+                      <span
+                        className={cn(
+                          'h-6 w-10 border border-sky-500/40 bg-sky-500/20',
+                          preset.button,
+                        )}
+                      />
+                      <span
+                        className={cn(
+                          'h-4 w-4 border border-sky-500/40 bg-sky-500/30',
+                          preset.chip,
+                        )}
+                      />
+                    </div>
                   </div>
-                  <span
-                    className={cn(
-                      'h-8 w-12 shrink-0 border-2 border-sky-500/40 bg-sky-500/10',
-                      preset.card,
-                    )}
-                    aria-hidden
-                  />
-                </div>
-              </OptionTile>
-            ))}
+                </OptionTile>
+              ))}
+            </div>
           </div>
         </div>
       );
@@ -372,18 +490,27 @@ export function AppearanceSectionEditors({
     case 'buttons':
       return (
         <div className="space-y-3">
-          <Hint>Style des boutons CTA sur la vitrine.</Hint>
-          <div className="space-y-2">
+          <Hint>Style des boutons CTA — cliquez une carte pour appliquer.</Hint>
+          <div className="grid grid-cols-2 gap-2">
             {BUTTON_STYLES.map((opt) => (
               <OptionTile
                 key={opt.key}
                 selected={form.appearance.buttonStyle === opt.key}
                 onClick={() => patchAppearance('buttonStyle', opt.key)}
+                className="flex flex-col items-start"
               >
-                <span className={appearanceButtonClass(opt.key, 'mb-1.5 inline-flex text-[11px]')}>
+                <span
+                  className={appearanceButtonClass(
+                    opt.key,
+                    cn(
+                      'mb-2 inline-flex text-[11px]',
+                      RADIUS_PRESETS.find((p) => p.key === form.radiusPreset)?.button,
+                    ),
+                  )}
+                >
                   {opt.label}
                 </span>
-                <p className="text-[11px] text-muted-foreground">{opt.description}</p>
+                <p className="text-[10px] leading-snug text-muted-foreground">{opt.description}</p>
               </OptionTile>
             ))}
           </div>
@@ -392,23 +519,120 @@ export function AppearanceSectionEditors({
 
     case 'cards':
       return (
-        <div className="space-y-3">
-          <Hint>Apparence des fiches produit.</Hint>
+        <div className="space-y-4">
+          <Hint>Apparence des fiches produit — style, image, badges, hover.</Hint>
+          <div>
+            <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+              Style carte
+            </p>
+            <div className="grid grid-cols-2 gap-2">
+              {CARD_STYLES.map((opt) => (
+                <OptionTile
+                  key={opt.key}
+                  selected={form.appearance.cardStyle === opt.key}
+                  onClick={() => patchAppearance('cardStyle', opt.key)}
+                >
+                  <div
+                    className={cn(
+                      appearanceCardClass(opt.key, 'mb-2 flex gap-1.5 p-1.5'),
+                      RADIUS_PRESETS.find((p) => p.key === form.radiusPreset)?.card,
+                    )}
+                  >
+                    <div
+                      className={cn(
+                        'h-8 w-8 shrink-0 bg-sky-500/25',
+                        RADIUS_PRESETS.find((p) => p.key === form.radiusPreset)?.chip,
+                      )}
+                    />
+                    <div className="min-w-0 flex-1 space-y-1 self-center">
+                      <div className="h-1.5 w-full rounded-full bg-foreground/40" />
+                      <div className="h-1 w-[66%] rounded-full bg-foreground/20" />
+                    </div>
+                  </div>
+                  <p className="text-xs font-semibold">{opt.label}</p>
+                  <p className="text-[10px] text-muted-foreground">{opt.description}</p>
+                </OptionTile>
+              ))}
+            </div>
+          </div>
+          <div>
+            <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+              Ratio image
+            </p>
+            <div className="grid grid-cols-3 gap-2">
+              {CARD_IMAGE_RATIOS.map((opt) => (
+                <OptionTile
+                  key={opt.key}
+                  selected={form.appearance.cardImageRatio === opt.key}
+                  onClick={() => patchAppearance('cardImageRatio', opt.key)}
+                >
+                  <div
+                    className={cn(
+                      'mx-auto mb-1.5 w-full max-w-[3.5rem] bg-sky-500/30',
+                      opt.key === 'square' && 'aspect-square',
+                      opt.key === 'portrait' && 'aspect-[4/5]',
+                      opt.key === 'landscape' && 'aspect-[4/3]',
+                    )}
+                  />
+                  <p className="text-center text-[11px] font-semibold">{opt.label}</p>
+                </OptionTile>
+              ))}
+            </div>
+          </div>
+          <div>
+            <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+              Alignement infos
+            </p>
+            <div className="grid grid-cols-2 gap-2">
+              {CARD_INFO_ALIGNS.map((opt) => (
+                <OptionTile
+                  key={opt.key}
+                  selected={form.appearance.cardInfoAlign === opt.key}
+                  onClick={() => patchAppearance('cardInfoAlign', opt.key)}
+                >
+                  <p className="text-xs font-semibold">{opt.label}</p>
+                  <p className="text-[10px] text-muted-foreground">{opt.description}</p>
+                </OptionTile>
+              ))}
+            </div>
+          </div>
+          <div>
+            <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+              Effet survol
+            </p>
+            <div className="grid grid-cols-3 gap-2">
+              {CARD_HOVER_EFFECTS.map((opt) => (
+                <OptionTile
+                  key={opt.key}
+                  selected={form.appearance.cardHoverEffect === opt.key}
+                  onClick={() => patchAppearance('cardHoverEffect', opt.key)}
+                >
+                  <p className="text-xs font-semibold">{opt.label}</p>
+                  <p className="text-[10px] text-muted-foreground">{opt.description}</p>
+                </OptionTile>
+              ))}
+            </div>
+          </div>
           <div className="space-y-2">
-            {CARD_STYLES.map((opt) => (
+            {(
+              [
+                ['cardShowBadges', 'Badges', form.appearance.cardShowBadges],
+                ['cardShowWishlist', 'Favoris sur carte', form.appearance.cardShowWishlist],
+                ['cardShowQuickAdd', 'Aperçu rapide / Voir', form.appearance.cardShowQuickAdd],
+              ] as const
+            ).map(([key, label, selected]) => (
               <OptionTile
-                key={opt.key}
-                selected={form.appearance.cardStyle === opt.key}
-                onClick={() => patchAppearance('cardStyle', opt.key)}
+                key={key}
+                selected={selected}
+                onClick={() => patchAppearance(key, !selected)}
+                className="flex items-center justify-between gap-2"
               >
-                <div
-                  className={cn(
-                    appearanceCardClass(opt.key, 'mb-2 h-10 w-full'),
-                    RADIUS_PRESETS.find((p) => p.key === form.radiusPreset)?.card,
-                  )}
+                <p className="text-sm font-semibold">{label}</p>
+                <Switch
+                  checked={selected}
+                  onCheckedChange={(v) => patchAppearance(key, v)}
+                  onClick={(e) => e.stopPropagation()}
                 />
-                <p className="text-sm font-semibold">{opt.label}</p>
-                <p className="text-[11px] text-muted-foreground">{opt.description}</p>
               </OptionTile>
             ))}
           </div>
@@ -418,16 +642,18 @@ export function AppearanceSectionEditors({
     case 'hero':
       return (
         <div className="space-y-4">
-          <Hint>Style du bandeau d’accueil classique.</Hint>
-          <div className="space-y-2">
+          <Hint>Disposition du bandeau d’accueil — comme les layouts Shopify.</Hint>
+          <div className="grid grid-cols-2 gap-2">
             {HERO_STYLES.map((opt) => (
               <OptionTile
                 key={opt.key}
                 selected={form.appearance.heroStyle === opt.key}
                 onClick={() => patchAppearance('heroStyle', opt.key)}
+                className="p-2"
               >
-                <p className="text-sm font-semibold">{opt.label}</p>
-                <p className="text-[11px] text-muted-foreground">{opt.description}</p>
+                <HeroLayoutSketch style={opt.key} />
+                <p className="mt-1.5 text-xs font-semibold">{opt.label}</p>
+                <p className="text-[10px] leading-snug text-muted-foreground">{opt.description}</p>
               </OptionTile>
             ))}
           </div>
@@ -451,7 +677,56 @@ export function AppearanceSectionEditors({
     case 'backgrounds':
       return (
         <div className="space-y-4">
-          <Hint>« Auto » utilise la couleur du thème actif.</Hint>
+          <Hint>« Auto » utilise la couleur du thème actif. Ou choisissez une surface prête.</Hint>
+          <GroupTitle>Surfaces rapides</GroupTitle>
+          <div className="grid grid-cols-2 gap-2">
+            {SURFACE_PRESETS.map((preset) => {
+              const selected =
+                form.appearance.pageBgColor === preset.pageBgColor &&
+                form.appearance.headerBgColor === preset.headerBgColor &&
+                form.appearance.footerBgColor === preset.footerBgColor &&
+                form.appearance.headerTextColor === preset.headerTextColor &&
+                form.appearance.footerTextColor === preset.footerTextColor;
+              return (
+                <OptionTile
+                  key={preset.key}
+                  selected={selected}
+                  onClick={() => {
+                    patchAppearance('pageBgColor', preset.pageBgColor);
+                    patchAppearance('headerBgColor', preset.headerBgColor);
+                    patchAppearance('footerBgColor', preset.footerBgColor);
+                    patchAppearance('headerTextColor', preset.headerTextColor);
+                    patchAppearance('footerTextColor', preset.footerTextColor);
+                  }}
+                  className="p-2"
+                >
+                  <div
+                    className="overflow-hidden rounded-md border border-border/60"
+                    aria-hidden
+                  >
+                    <div
+                      className="h-3"
+                      style={{
+                        backgroundColor: preset.headerBgColor || form.primaryColor || '#171717',
+                      }}
+                    />
+                    <div
+                      className="h-7"
+                      style={{ backgroundColor: preset.pageBgColor || '#ffffff' }}
+                    />
+                    <div
+                      className="h-3"
+                      style={{
+                        backgroundColor: preset.footerBgColor || '#1a1a1a',
+                      }}
+                    />
+                  </div>
+                  <p className="mt-1.5 text-xs font-semibold">{preset.label}</p>
+                  <p className="text-[10px] text-muted-foreground">{preset.description}</p>
+                </OptionTile>
+              );
+            })}
+          </div>
           <GroupTitle>Fonds</GroupTitle>
           {(
             [
@@ -484,6 +759,58 @@ export function AppearanceSectionEditors({
             allowAuto
             onChange={(v) => patchAppearance('footerTextColor', v)}
           />
+          <GroupTitle>Scrollbar</GroupTitle>
+          <Hint>
+            Couleurs de la barre de défilement (page et zones internes). « Auto » = thème. Faites
+            défiler la zone ci-dessous ou l’aperçu live pour juger le rendu.
+          </Hint>
+          <ColorControl
+            label="Piste"
+            value={form.appearance.scrollbarTrackColor}
+            fallback="#e5e7eb"
+            allowAuto
+            onChange={(v) => patchAppearance('scrollbarTrackColor', v)}
+          />
+          <ColorControl
+            label="Curseur"
+            value={form.appearance.scrollbarThumbColor}
+            fallback="#0d9488"
+            allowAuto
+            onChange={(v) => patchAppearance('scrollbarThumbColor', v)}
+          />
+          <div
+            className="h-28 overflow-y-scroll rounded-lg border border-border/70 p-2 scrollbar-app"
+            style={{
+              ...(form.appearance.scrollbarTrackColor
+                ? ({
+                    '--scrollbar-track': form.appearance.scrollbarTrackColor,
+                  } as CSSProperties)
+                : {}),
+              ...(form.appearance.scrollbarThumbColor
+                ? ({
+                    '--scrollbar-thumb': form.appearance.scrollbarThumbColor,
+                  } as CSSProperties)
+                : {}),
+            }}
+          >
+            <p className="text-[11px] text-muted-foreground">
+              Démo scrollbar — faites défiler pour voir piste et curseur.
+            </p>
+            <div className="mt-2 space-y-2">
+              {Array.from({ length: 8 }).map((_, i) => (
+                <div
+                  key={i}
+                  className="h-6 rounded-md bg-muted/60"
+                  style={{
+                    background:
+                      i % 2 === 0
+                        ? 'hsl(var(--muted) / 0.7)'
+                        : 'hsl(var(--primary) / 0.12)',
+                  }}
+                />
+              ))}
+            </div>
+          </div>
         </div>
       );
 
@@ -501,6 +828,57 @@ export function AppearanceSectionEditors({
             </Link>
             .
           </Hint>
+          <GroupTitle>Disposition</GroupTitle>
+          <div className="grid grid-cols-1 gap-2">
+            {HEADER_LAYOUTS.map((opt) => (
+              <OptionTile
+                key={opt.key}
+                selected={form.appearance.headerLayout === opt.key}
+                onClick={() => patchAppearance('headerLayout', opt.key)}
+                className="p-2"
+              >
+                <HeaderLayoutSketch layout={opt.key} />
+                <p className="mt-1.5 text-xs font-semibold">{opt.label}</p>
+                <p className="text-[10px] text-muted-foreground">{opt.description}</p>
+              </OptionTile>
+            ))}
+          </div>
+          <GroupTitle>Style header</GroupTitle>
+          <div className="grid grid-cols-2 gap-2">
+            {HEADER_CHROME_PRESETS.map((preset) => {
+              const selected =
+                form.appearance.headerBgColor === preset.headerBgColor &&
+                form.appearance.headerTextColor === preset.headerTextColor;
+              const swatchBg =
+                preset.key === 'brand'
+                  ? form.primaryColor || '#0F766E'
+                  : preset.headerBgColor || '#E5E7EB';
+              const swatchFg =
+                preset.headerTextColor || (preset.key === 'auto' ? '#171717' : '#FFFFFF');
+              return (
+                <OptionTile
+                  key={preset.key}
+                  selected={selected}
+                  onClick={() => {
+                    patchAppearance('headerBgColor', preset.headerBgColor);
+                    patchAppearance('headerTextColor', preset.headerTextColor);
+                  }}
+                  className="p-2"
+                >
+                  <div
+                    className="flex h-8 items-center justify-between rounded-md px-2 text-[10px] font-semibold"
+                    style={{ backgroundColor: swatchBg, color: swatchFg }}
+                    aria-hidden
+                  >
+                    <span>Logo</span>
+                    <span className="opacity-80">···</span>
+                  </div>
+                  <p className="mt-1.5 text-xs font-semibold">{preset.label}</p>
+                  <p className="text-[10px] text-muted-foreground">{preset.description}</p>
+                </OptionTile>
+              );
+            })}
+          </div>
           {megaMenuEnabled ? (
             <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-2.5 py-2 text-[11px] leading-snug text-amber-950">
               Mega menu actif : il remplace cette navigation. Éditez dans{' '}
@@ -511,25 +889,62 @@ export function AppearanceSectionEditors({
             </div>
           ) : null}
           <GroupTitle>Éléments</GroupTitle>
-          <div className="space-y-1.5">
+          <div className="grid grid-cols-2 gap-2">
             {(
               [
-                ['headerShowLogo', 'Logo'],
-                ['headerShowNav', 'Navigation'],
-                ['headerShowSearch', 'Recherche'],
-                ['headerShowWishlist', 'Favoris'],
-                ['headerShowCart', 'Panier'],
+                ['headerShowLogo', 'Logo', ImagePlus],
+                ['headerShowNav', 'Navigation', Menu],
+                ['headerShowSearch', 'Recherche', Search],
+                ['headerShowWishlist', 'Favoris', Heart],
+                ['headerShowCart', 'Panier', ShoppingBag],
               ] as const
-            ).map(([key, label]) => (
-              <ToggleRow
+            ).map(([key, label, Icon]) => (
+              <OptionTile
                 key={key}
-                id={key}
-                label={label}
-                checked={form.appearance[key]}
-                onCheckedChange={(v) => patchAppearance(key, v)}
-              />
+                selected={form.appearance[key]}
+                onClick={() => patchAppearance(key, !form.appearance[key])}
+                className="flex items-center gap-2 p-2"
+              >
+                <span
+                  className={cn(
+                    'flex h-7 w-7 shrink-0 items-center justify-center rounded-md border',
+                    form.appearance[key]
+                      ? 'border-sky-500/40 bg-sky-500/10 text-sky-700'
+                      : 'border-border bg-muted/40 text-muted-foreground',
+                  )}
+                >
+                  <Icon className="h-3.5 w-3.5" />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs font-semibold">{label}</p>
+                  <p className="text-[10px] text-muted-foreground">
+                    {form.appearance[key] ? 'Visible' : 'Masqué'}
+                  </p>
+                </div>
+                <Switch
+                  checked={form.appearance[key]}
+                  onCheckedChange={(v) => patchAppearance(key, v)}
+                  onClick={(e) => e.stopPropagation()}
+                />
+              </OptionTile>
             ))}
           </div>
+
+          <OptionTile
+            selected={form.appearance.headerSticky}
+            onClick={() => patchAppearance('headerSticky', !form.appearance.headerSticky)}
+            className="mt-2 flex items-center justify-between gap-2"
+          >
+            <div>
+              <p className="text-sm font-semibold">Header sticky</p>
+              <p className="text-[10px] text-muted-foreground">Reste visible au scroll.</p>
+            </div>
+            <Switch
+              checked={form.appearance.headerSticky}
+              onCheckedChange={(v) => patchAppearance('headerSticky', v)}
+              onClick={(e) => e.stopPropagation()}
+            />
+          </OptionTile>
 
           <div className="space-y-2 border-t border-border/60 pt-3">
             <div className="flex items-center justify-between gap-2">
@@ -751,33 +1166,44 @@ export function AppearanceSectionEditors({
       return (
         <div className="space-y-3">
           <Hint>Blocs visibles et structure du pied de page.</Hint>
-          <div className="space-y-1.5">
+          <div className="grid grid-cols-1 gap-2">
             {(
               [
-                ['footerShowBrand', 'Brand'],
-                ['footerShowNewsletter', 'Newsletter'],
-                ['footerShowSocials', 'Réseaux'],
+                ['footerShowBrand', 'Brand', 'Logo et accroche'],
+                ['footerShowNewsletter', 'Newsletter', 'Champ d’inscription'],
+                ['footerShowSocials', 'Réseaux', 'Icônes sociales'],
               ] as const
-            ).map(([key, label]) => (
-              <ToggleRow
+            ).map(([key, label, description]) => (
+              <OptionTile
                 key={key}
-                id={key}
-                label={label}
-                checked={form.appearance[key]}
-                onCheckedChange={(v) => patchAppearance(key, v)}
-              />
+                selected={form.appearance[key]}
+                onClick={() => patchAppearance(key, !form.appearance[key])}
+                className="flex items-center justify-between gap-2"
+              >
+                <div className="min-w-0">
+                  <p className="text-xs font-semibold">{label}</p>
+                  <p className="text-[10px] text-muted-foreground">{description}</p>
+                </div>
+                <Switch
+                  checked={form.appearance[key]}
+                  onCheckedChange={(v) => patchAppearance(key, v)}
+                  onClick={(e) => e.stopPropagation()}
+                />
+              </OptionTile>
             ))}
           </div>
           <GroupTitle>Disposition</GroupTitle>
-          <div className="space-y-2">
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-1">
             {FOOTER_LAYOUTS.map((opt) => (
               <OptionTile
                 key={opt.key}
                 selected={form.appearance.footerLayout === opt.key}
                 onClick={() => patchAppearance('footerLayout', opt.key)}
+                className="p-2"
               >
-                <p className="text-sm font-semibold">{opt.label}</p>
-                <p className="text-[11px] text-muted-foreground">{opt.description}</p>
+                <FooterLayoutSketch layout={opt.key} />
+                <p className="mt-1.5 text-xs font-semibold">{opt.label}</p>
+                <p className="text-[10px] text-muted-foreground">{opt.description}</p>
               </OptionTile>
             ))}
           </div>
@@ -924,7 +1350,36 @@ export function AppearanceSectionEditors({
             ) : null}
           </div>
 
-          <GroupTitle>Couleurs</GroupTitle>
+          <GroupTitle>Schémas de couleurs</GroupTitle>
+          <Hint>Un clic applique primaire + secondaire (comme les color schemes Shopify).</Hint>
+          <div className="grid grid-cols-2 gap-2">
+            {COLOR_SCHEMES.map((scheme) => {
+              const selected =
+                form.primaryColor.toUpperCase() === scheme.primaryColor.toUpperCase() &&
+                form.secondaryColor.toUpperCase() === scheme.secondaryColor.toUpperCase();
+              return (
+                <OptionTile
+                  key={scheme.key}
+                  selected={selected}
+                  onClick={() => {
+                    patch('primaryColor', scheme.primaryColor);
+                    patch('secondaryColor', scheme.secondaryColor);
+                  }}
+                  className="p-2"
+                >
+                  <div className="flex h-8 overflow-hidden rounded-md border border-border/60" aria-hidden>
+                    <div className="w-2/3" style={{ backgroundColor: scheme.primaryColor }} />
+                    <div className="w-1/3" style={{ backgroundColor: scheme.secondaryColor }} />
+                  </div>
+                  <p className="mt-1.5 text-xs font-semibold">{scheme.label}</p>
+                  <p className="text-[10px] leading-snug text-muted-foreground">
+                    {scheme.description}
+                  </p>
+                </OptionTile>
+              );
+            })}
+          </div>
+          <GroupTitle>Personnaliser</GroupTitle>
           <ColorControl
             label="Primaire"
             value={form.primaryColor}
@@ -937,6 +1392,725 @@ export function AppearanceSectionEditors({
             fallback="#0a1628"
             onChange={(v) => patch('secondaryColor', v)}
           />
+        </div>
+      );
+
+    case 'cart':
+      return (
+        <div className="space-y-4">
+          <Hint>Mise en page de la page panier — aperçu live au centre.</Hint>
+          <GroupTitle>Aperçu</GroupTitle>
+          <div className="grid grid-cols-2 gap-2">
+            {(
+              [
+                ['empty', 'Panier vide', 'Voir l’état vide'],
+                ['filled', 'Panier rempli', 'Voir densité & CTA'],
+              ] as const
+            ).map(([mode, label, description]) => (
+              <OptionTile
+                key={mode}
+                selected={cartPreviewMode === mode}
+                onClick={() => onCartPreviewModeChange?.(mode)}
+                className="p-2"
+              >
+                <p className="text-xs font-semibold">{label}</p>
+                <p className="text-[10px] text-muted-foreground">{description}</p>
+              </OptionTile>
+            ))}
+          </div>
+          <GroupTitle>Densité</GroupTitle>
+          <div className="grid grid-cols-1 gap-2">
+            {CART_DENSITIES.map((opt) => (
+              <OptionTile
+                key={opt.key}
+                selected={form.appearance.cartDensity === opt.key}
+                onClick={() => {
+                  onCartPreviewModeChange?.('filled');
+                  patchAppearance('cartDensity', opt.key);
+                }}
+                className="p-2"
+              >
+                <CartDensitySketch density={opt.key} />
+                <p className="mt-1.5 text-xs font-semibold">{opt.label}</p>
+                <p className="text-[10px] text-muted-foreground">{opt.description}</p>
+              </OptionTile>
+            ))}
+          </div>
+          <GroupTitle>Panier vide</GroupTitle>
+          <Hint>Cliquez un style — l’aperçu passe automatiquement en « Vide ».</Hint>
+          <div className="grid grid-cols-3 gap-2">
+            {CART_EMPTY_STYLES.map((opt) => (
+              <OptionTile
+                key={opt.key}
+                selected={form.appearance.cartEmptyStyle === opt.key}
+                onClick={() => {
+                  onCartPreviewModeChange?.('empty');
+                  patchAppearance('cartEmptyStyle', opt.key);
+                }}
+                className="p-2"
+              >
+                <CartEmptySketch style={opt.key} />
+                <p className="mt-1.5 text-[11px] font-semibold">{opt.label}</p>
+              </OptionTile>
+            ))}
+          </div>
+          <OptionTile
+            selected={form.appearance.cartShowCrossSell}
+            onClick={() =>
+              patchAppearance('cartShowCrossSell', !form.appearance.cartShowCrossSell)
+            }
+            className="flex items-center justify-between gap-2"
+          >
+            <div>
+              <p className="text-xs font-semibold">Cross-sell</p>
+              <p className="text-[10px] text-muted-foreground">
+                Produits complémentaires sous le panier
+              </p>
+            </div>
+            <Switch
+              checked={form.appearance.cartShowCrossSell}
+              onCheckedChange={(v) => patchAppearance('cartShowCrossSell', v)}
+              onClick={(e) => e.stopPropagation()}
+            />
+          </OptionTile>
+          <Field label="Libellé CTA" htmlFor="cartCtaLabel">
+            <Input
+              id="cartCtaLabel"
+              className="h-9"
+              value={form.appearance.cartCtaLabel}
+              onChange={(e) => patchAppearance('cartCtaLabel', e.target.value)}
+            />
+          </Field>
+        </div>
+      );
+
+    case 'checkout':
+      return (
+        <div className="space-y-4">
+          <Hint>Parcours de commande — visible dans l’aperçu Checkout.</Hint>
+          <GroupTitle>Disposition</GroupTitle>
+          <div className="grid grid-cols-2 gap-2">
+            {CHECKOUT_LAYOUTS.map((opt) => (
+              <OptionTile
+                key={opt.key}
+                selected={form.appearance.checkoutLayout === opt.key}
+                onClick={() => patchAppearance('checkoutLayout', opt.key)}
+                className="p-2"
+              >
+                <CheckoutLayoutSketch layout={opt.key} />
+                <p className="mt-1.5 text-xs font-semibold">{opt.label}</p>
+                <p className="text-[10px] text-muted-foreground">{opt.description}</p>
+              </OptionTile>
+            ))}
+          </div>
+          <GroupTitle>Position du récap</GroupTitle>
+          <div className="grid grid-cols-3 gap-2">
+            {CHECKOUT_SUMMARY_POSITIONS.map((opt) => (
+              <OptionTile
+                key={opt.key}
+                selected={form.appearance.checkoutSummaryPosition === opt.key}
+                onClick={() => patchAppearance('checkoutSummaryPosition', opt.key)}
+                className="p-2"
+              >
+                <CheckoutSummaryPositionSketch position={opt.key} />
+                <p className="mt-1.5 text-[11px] font-semibold">{opt.label}</p>
+              </OptionTile>
+            ))}
+          </div>
+          <GroupTitle>Densité</GroupTitle>
+          <div className="grid grid-cols-3 gap-2">
+            {CHECKOUT_DENSITIES.map((opt) => (
+              <OptionTile
+                key={opt.key}
+                selected={form.appearance.checkoutDensity === opt.key}
+                onClick={() => patchAppearance('checkoutDensity', opt.key)}
+                className="p-2"
+              >
+                <p className="text-xs font-semibold">{opt.label}</p>
+                <p className="text-[10px] text-muted-foreground">{opt.description}</p>
+              </OptionTile>
+            ))}
+          </div>
+          <GroupTitle>Style formulaire</GroupTitle>
+          <div className="grid grid-cols-3 gap-2">
+            {CHECKOUT_FORM_STYLES.map((opt) => (
+              <OptionTile
+                key={opt.key}
+                selected={form.appearance.checkoutFormStyle === opt.key}
+                onClick={() => patchAppearance('checkoutFormStyle', opt.key)}
+                className="p-2"
+              >
+                <div
+                  className={cn(
+                    'h-8 rounded-md',
+                    opt.key === 'card' && 'border border-border/70 bg-card shadow-sm',
+                    opt.key === 'flat' && 'bg-muted/40',
+                    opt.key === 'bordered' && 'border-2 border-border bg-card',
+                  )}
+                />
+                <p className="mt-1.5 text-[11px] font-semibold">{opt.label}</p>
+              </OptionTile>
+            ))}
+          </div>
+          <GroupTitle>Style paiements</GroupTitle>
+          <div className="grid grid-cols-3 gap-2">
+            {CHECKOUT_PAYMENT_STYLES.map((opt) => (
+              <OptionTile
+                key={opt.key}
+                selected={form.appearance.checkoutPaymentStyle === opt.key}
+                onClick={() => patchAppearance('checkoutPaymentStyle', opt.key)}
+                className="p-2"
+              >
+                <p className="text-xs font-semibold">{opt.label}</p>
+                <p className="text-[10px] text-muted-foreground">{opt.description}</p>
+              </OptionTile>
+            ))}
+          </div>
+          <GroupTitle>Titre</GroupTitle>
+          <div className="grid grid-cols-2 gap-2">
+            {CHECKOUT_HEADING_ALIGNS.map((opt) => (
+              <OptionTile
+                key={opt.key}
+                selected={form.appearance.checkoutHeadingAlign === opt.key}
+                onClick={() => patchAppearance('checkoutHeadingAlign', opt.key)}
+                className="p-2"
+              >
+                <p
+                  className={cn(
+                    'text-xs font-semibold',
+                    opt.key === 'center' && 'text-center',
+                  )}
+                >
+                  {opt.label}
+                </p>
+                <p
+                  className={cn(
+                    'text-[10px] text-muted-foreground',
+                    opt.key === 'center' && 'text-center',
+                  )}
+                >
+                  {opt.description}
+                </p>
+              </OptionTile>
+            ))}
+          </div>
+          <GroupTitle>Bouton de paiement</GroupTitle>
+          <div className="grid grid-cols-2 gap-2">
+            {CHECKOUT_CTA_EMPHASIS.map((opt) => (
+              <OptionTile
+                key={opt.key}
+                selected={form.appearance.checkoutCtaEmphasis === opt.key}
+                onClick={() => patchAppearance('checkoutCtaEmphasis', opt.key)}
+                className="p-2"
+              >
+                <div
+                  className={cn(
+                    'flex h-8 items-center justify-center text-[10px] font-bold uppercase',
+                    opt.key === 'soft' && 'rounded-md bg-sky-500/15 text-sky-700',
+                    opt.key === 'pill' && 'rounded-full bg-sky-600 text-white',
+                    opt.key === 'bold' && 'rounded-md bg-sky-700 text-white shadow-md',
+                    opt.key === 'default' && 'rounded-md bg-sky-600 text-white',
+                  )}
+                >
+                  Payer
+                </div>
+                <p className="mt-1.5 text-xs font-semibold">{opt.label}</p>
+                <p className="text-[10px] text-muted-foreground">{opt.description}</p>
+              </OptionTile>
+            ))}
+          </div>
+          <GroupTitle>Options</GroupTitle>
+          {(
+            [
+              [
+                'checkoutStickySummary',
+                'Récapitulatif collant',
+                'Reste visible au scroll',
+              ],
+              [
+                'checkoutShowTrustBadges',
+                'Badges confiance',
+                'Sécurité / livraison sous le CTA',
+              ],
+              [
+                'checkoutShowPromoField',
+                'Code promo',
+                'Champ promo dans le récap',
+              ],
+              [
+                'checkoutShowNotes',
+                'Notes de commande',
+                'Champ notes optionnel',
+              ],
+            ] as const
+          ).map(([key, label, description]) => (
+            <OptionTile
+              key={key}
+              selected={form.appearance[key]}
+              onClick={() => patchAppearance(key, !form.appearance[key])}
+              className="flex items-center justify-between gap-2"
+            >
+              <div className="min-w-0">
+                <p className="text-xs font-semibold">{label}</p>
+                <p className="text-[10px] text-muted-foreground">{description}</p>
+              </div>
+              <Switch
+                checked={form.appearance[key]}
+                onCheckedChange={(v) => patchAppearance(key, v)}
+                onClick={(e) => e.stopPropagation()}
+              />
+            </OptionTile>
+          ))}
+          <Field label="Libellé CTA (vide = auto selon paiement)" htmlFor="checkoutCtaLabel">
+            <Input
+              id="checkoutCtaLabel"
+              className="h-9"
+              placeholder="Ex: Confirmer ma commande"
+              value={form.appearance.checkoutCtaLabel}
+              onChange={(e) => patchAppearance('checkoutCtaLabel', e.target.value)}
+            />
+          </Field>
+        </div>
+      );
+
+    case 'shop':
+      return (
+        <div className="space-y-4">
+          <Hint>Catalogue boutique — filtres, grille, densité, état vide.</Hint>
+          <div>
+            <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+              Disposition filtres
+            </p>
+            <div className="grid grid-cols-3 gap-2">
+              {SHOP_FILTER_LAYOUTS.map((opt) => (
+                <OptionTile
+                  key={opt.key}
+                  selected={form.appearance.shopFilterLayout === opt.key}
+                  onClick={() => patchAppearance('shopFilterLayout', opt.key)}
+                  className="p-2"
+                >
+                  <ShopFilterLayoutSketch layout={opt.key} />
+                  <p className="mt-1.5 text-xs font-semibold">{opt.label}</p>
+                  <p className="text-[10px] text-muted-foreground">{opt.description}</p>
+                </OptionTile>
+              ))}
+            </div>
+          </div>
+          <div>
+            <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+              Colonnes grille
+            </p>
+            <div className="grid grid-cols-3 gap-2">
+              {SHOP_GRID_COLUMNS.map((opt) => (
+                <OptionTile
+                  key={opt.key}
+                  selected={form.appearance.shopGridColumns === opt.key}
+                  onClick={() => patchAppearance('shopGridColumns', opt.key)}
+                >
+                  <p className="text-xs font-semibold">{opt.label}</p>
+                  <p className="text-[10px] text-muted-foreground">{opt.description}</p>
+                </OptionTile>
+              ))}
+            </div>
+          </div>
+          <div>
+            <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+              Densité
+            </p>
+            <div className="grid grid-cols-3 gap-2">
+              {SHOP_DENSITIES.map((opt) => (
+                <OptionTile
+                  key={opt.key}
+                  selected={form.appearance.shopDensity === opt.key}
+                  onClick={() => patchAppearance('shopDensity', opt.key)}
+                >
+                  <p className="text-xs font-semibold">{opt.label}</p>
+                  <p className="text-[10px] text-muted-foreground">{opt.description}</p>
+                </OptionTile>
+              ))}
+            </div>
+          </div>
+          <div>
+            <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+              Catalogue vide
+            </p>
+            <div className="grid grid-cols-3 gap-2">
+              {SHOP_EMPTY_STYLES.map((opt) => (
+                <OptionTile
+                  key={opt.key}
+                  selected={form.appearance.shopEmptyStyle === opt.key}
+                  onClick={() => patchAppearance('shopEmptyStyle', opt.key)}
+                >
+                  <CartEmptySketch style={opt.key} />
+                  <p className="mt-1.5 text-xs font-semibold">{opt.label}</p>
+                </OptionTile>
+              ))}
+            </div>
+          </div>
+          <div className="space-y-2">
+            {(
+              [
+                ['shopShowFilters', 'Afficher les filtres', form.appearance.shopShowFilters],
+                ['shopShowSort', 'Afficher le tri', form.appearance.shopShowSort],
+              ] as const
+            ).map(([key, label, selected]) => (
+              <OptionTile
+                key={key}
+                selected={selected}
+                onClick={() => patchAppearance(key, !selected)}
+                className="flex items-center justify-between gap-2"
+              >
+                <p className="text-sm font-semibold">{label}</p>
+                <Switch
+                  checked={selected}
+                  onCheckedChange={(v) => patchAppearance(key, v)}
+                  onClick={(e) => e.stopPropagation()}
+                />
+              </OptionTile>
+            ))}
+          </div>
+          <div>
+            <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+              Filtres mobile
+            </p>
+            <div className="grid grid-cols-3 gap-2">
+              {SHOP_FILTER_MOBILES.map((opt) => (
+                <OptionTile
+                  key={opt.key}
+                  selected={form.appearance.shopFilterMobile === opt.key}
+                  onClick={() => patchAppearance('shopFilterMobile', opt.key)}
+                >
+                  <p className="text-xs font-semibold">{opt.label}</p>
+                  <p className="text-[10px] text-muted-foreground">{opt.description}</p>
+                </OptionTile>
+              ))}
+            </div>
+          </div>
+          <Field label="Titre boutique" htmlFor="shopTitle">
+            <Input
+              id="shopTitle"
+              className="h-9"
+              value={form.appearance.shopTitle}
+              onChange={(e) => patchAppearance('shopTitle', e.target.value)}
+            />
+          </Field>
+          <Field label="Sous-titre" htmlFor="shopSubtitle">
+            <Textarea
+              id="shopSubtitle"
+              className="min-h-[64px] text-sm"
+              value={form.appearance.shopSubtitle}
+              onChange={(e) => patchAppearance('shopSubtitle', e.target.value)}
+            />
+          </Field>
+          <Field label="Titre catalogue vide" htmlFor="shopEmptyTitle">
+            <Input
+              id="shopEmptyTitle"
+              className="h-9"
+              value={form.appearance.shopEmptyTitle}
+              onChange={(e) => patchAppearance('shopEmptyTitle', e.target.value)}
+            />
+          </Field>
+          <Field label="Description vide" htmlFor="shopEmptyDescription">
+            <Textarea
+              id="shopEmptyDescription"
+              className="min-h-[64px] text-sm"
+              value={form.appearance.shopEmptyDescription}
+              onChange={(e) => patchAppearance('shopEmptyDescription', e.target.value)}
+            />
+          </Field>
+          <Field label="CTA catalogue vide" htmlFor="shopEmptyCtaLabel">
+            <Input
+              id="shopEmptyCtaLabel"
+              className="h-9"
+              value={form.appearance.shopEmptyCtaLabel}
+              onChange={(e) => patchAppearance('shopEmptyCtaLabel', e.target.value)}
+            />
+          </Field>
+        </div>
+      );
+
+    case 'product':
+      return (
+        <div className="space-y-4">
+          <Hint>Fiche produit — galerie, buy box, produits liés.</Hint>
+          <div>
+            <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+              Galerie
+            </p>
+            <div className="grid grid-cols-3 gap-2">
+              {PRODUCT_GALLERY_LAYOUTS.map((opt) => (
+                <OptionTile
+                  key={opt.key}
+                  selected={form.appearance.productGalleryLayout === opt.key}
+                  onClick={() => patchAppearance('productGalleryLayout', opt.key)}
+                  className="p-2"
+                >
+                  <ProductGallerySketch layout={opt.key} />
+                  <p className="mt-1.5 text-xs font-semibold">{opt.label}</p>
+                  <p className="text-[10px] text-muted-foreground">{opt.description}</p>
+                </OptionTile>
+              ))}
+            </div>
+          </div>
+          <div>
+            <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+              Galerie mobile
+            </p>
+            <div className="grid grid-cols-3 gap-2">
+              {PRODUCT_GALLERY_MOBILES.map((opt) => (
+                <OptionTile
+                  key={opt.key}
+                  selected={form.appearance.productGalleryMobile === opt.key}
+                  onClick={() => patchAppearance('productGalleryMobile', opt.key)}
+                >
+                  <p className="text-xs font-semibold">{opt.label}</p>
+                  <p className="text-[10px] text-muted-foreground">{opt.description}</p>
+                </OptionTile>
+              ))}
+            </div>
+          </div>
+          <div>
+            <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+              Position infos
+            </p>
+            <div className="grid grid-cols-2 gap-2">
+              {PRODUCT_INFO_POSITIONS.map((opt) => (
+                <OptionTile
+                  key={opt.key}
+                  selected={form.appearance.productInfoPosition === opt.key}
+                  onClick={() => patchAppearance('productInfoPosition', opt.key)}
+                >
+                  <p className="text-xs font-semibold">{opt.label}</p>
+                  <p className="text-[10px] text-muted-foreground">{opt.description}</p>
+                </OptionTile>
+              ))}
+            </div>
+          </div>
+          <div className="space-y-2">
+            {(
+              [
+                ['productStickyBuyBox', 'Buy box sticky', form.appearance.productStickyBuyBox],
+                ['productShowRelated', 'Produits similaires', form.appearance.productShowRelated],
+                ['productShowTrust', 'Badges confiance', form.appearance.productShowTrust],
+              ] as const
+            ).map(([key, label, selected]) => (
+              <OptionTile
+                key={key}
+                selected={selected}
+                onClick={() => patchAppearance(key, !selected)}
+                className="flex items-center justify-between gap-2"
+              >
+                <p className="text-sm font-semibold">{label}</p>
+                <Switch
+                  checked={selected}
+                  onCheckedChange={(v) => patchAppearance(key, v)}
+                  onClick={(e) => e.stopPropagation()}
+                />
+              </OptionTile>
+            ))}
+          </div>
+          <Field label="Libellé CTA principal" htmlFor="productCtaLabel">
+            <Input
+              id="productCtaLabel"
+              className="h-9"
+              value={form.appearance.productCtaLabel}
+              onChange={(e) => patchAppearance('productCtaLabel', e.target.value)}
+            />
+          </Field>
+        </div>
+      );
+
+    case 'wishlist':
+      return (
+        <div className="space-y-4">
+          <Hint>Page favoris — grille et état vide.</Hint>
+          {onWishlistPreviewModeChange ? (
+            <div>
+              <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                Aperçu
+              </p>
+              <div className="grid grid-cols-2 gap-2">
+                {(
+                  [
+                    ['empty', 'Vide'],
+                    ['filled', 'Rempli'],
+                  ] as const
+                ).map(([mode, label]) => (
+                  <OptionTile
+                    key={mode}
+                    selected={wishlistPreviewMode === mode}
+                    onClick={() => onWishlistPreviewModeChange(mode)}
+                  >
+                    <p className="text-xs font-semibold">{label}</p>
+                  </OptionTile>
+                ))}
+              </div>
+            </div>
+          ) : null}
+          <div>
+            <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+              Colonnes
+            </p>
+            <div className="grid grid-cols-3 gap-2">
+              {WISHLIST_GRID_COLUMNS.map((opt) => (
+                <OptionTile
+                  key={opt.key}
+                  selected={form.appearance.wishlistGridColumns === opt.key}
+                  onClick={() => patchAppearance('wishlistGridColumns', opt.key)}
+                >
+                  <p className="text-xs font-semibold">{opt.label}</p>
+                  <p className="text-[10px] text-muted-foreground">{opt.description}</p>
+                </OptionTile>
+              ))}
+            </div>
+          </div>
+          <div>
+            <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+              Liste vide
+            </p>
+            <div className="grid grid-cols-3 gap-2">
+              {WISHLIST_EMPTY_STYLES.map((opt) => (
+                <OptionTile
+                  key={opt.key}
+                  selected={form.appearance.wishlistEmptyStyle === opt.key}
+                  onClick={() => patchAppearance('wishlistEmptyStyle', opt.key)}
+                >
+                  <CartEmptySketch style={opt.key} />
+                  <p className="mt-1.5 text-xs font-semibold">{opt.label}</p>
+                </OptionTile>
+              ))}
+            </div>
+          </div>
+          <Field label="Titre état vide" htmlFor="wishlistEmptyTitle">
+            <Input
+              id="wishlistEmptyTitle"
+              className="h-9"
+              value={form.appearance.wishlistEmptyTitle}
+              onChange={(e) => patchAppearance('wishlistEmptyTitle', e.target.value)}
+            />
+          </Field>
+          <Field label="Libellé CTA vide" htmlFor="wishlistEmptyCtaLabel">
+            <Input
+              id="wishlistEmptyCtaLabel"
+              className="h-9"
+              value={form.appearance.wishlistEmptyCtaLabel}
+              onChange={(e) => patchAppearance('wishlistEmptyCtaLabel', e.target.value)}
+            />
+          </Field>
+        </div>
+      );
+
+    case 'forms':
+      return (
+        <div className="space-y-4">
+          <Hint>Contact, Sur-mesure et Devis — même logique visuelle.</Hint>
+          <div>
+            <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+              Disposition
+            </p>
+            <div className="grid grid-cols-3 gap-2">
+              {FORMS_LAYOUTS.map((opt) => (
+                <OptionTile
+                  key={opt.key}
+                  selected={form.appearance.formsLayout === opt.key}
+                  onClick={() => patchAppearance('formsLayout', opt.key)}
+                  className="p-2"
+                >
+                  <FormsLayoutSketch layout={opt.key} />
+                  <p className="mt-1.5 text-xs font-semibold">{opt.label}</p>
+                  <p className="text-[10px] text-muted-foreground">{opt.description}</p>
+                </OptionTile>
+              ))}
+            </div>
+          </div>
+          <div>
+            <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+              Style panneau
+            </p>
+            <div className="grid grid-cols-3 gap-2">
+              {FORMS_STYLES.map((opt) => (
+                <OptionTile
+                  key={opt.key}
+                  selected={form.appearance.formsStyle === opt.key}
+                  onClick={() => patchAppearance('formsStyle', opt.key)}
+                >
+                  <p className="text-xs font-semibold">{opt.label}</p>
+                  <p className="text-[10px] text-muted-foreground">{opt.description}</p>
+                </OptionTile>
+              ))}
+            </div>
+          </div>
+          <div className="space-y-2">
+            {(
+              [
+                ['formsShowHero', 'Bandeau hero', form.appearance.formsShowHero],
+                ['formsShowSidebar', 'Panneau latéral / infos', form.appearance.formsShowSidebar],
+              ] as const
+            ).map(([key, label, selected]) => (
+              <OptionTile
+                key={key}
+                selected={selected}
+                onClick={() => patchAppearance(key, !selected)}
+                className="flex items-center justify-between gap-2"
+              >
+                <p className="text-sm font-semibold">{label}</p>
+                <Switch
+                  checked={selected}
+                  onCheckedChange={(v) => patchAppearance(key, v)}
+                  onClick={(e) => e.stopPropagation()}
+                />
+              </OptionTile>
+            ))}
+          </div>
+          <Field label="Libellé CTA (vide = défaut page)" htmlFor="formsCtaLabel">
+            <Input
+              id="formsCtaLabel"
+              className="h-9"
+              placeholder="Ex: Envoyer ma demande"
+              value={form.appearance.formsCtaLabel}
+              onChange={(e) => patchAppearance('formsCtaLabel', e.target.value)}
+            />
+          </Field>
+        </div>
+      );
+
+    case 'notFound':
+      return (
+        <div className="space-y-4">
+          <Hint>Page 404 — titres et CTA de secours.</Hint>
+          <Field label="Titre" htmlFor="notFoundTitle">
+            <Input
+              id="notFoundTitle"
+              className="h-9"
+              value={form.appearance.notFoundTitle}
+              onChange={(e) => patchAppearance('notFoundTitle', e.target.value)}
+            />
+          </Field>
+          <Field label="Message" htmlFor="notFoundMessage">
+            <Textarea
+              id="notFoundMessage"
+              className="min-h-[72px] text-sm"
+              value={form.appearance.notFoundMessage}
+              onChange={(e) => patchAppearance('notFoundMessage', e.target.value)}
+            />
+          </Field>
+          <Field label="Libellé CTA" htmlFor="notFoundCtaLabel">
+            <Input
+              id="notFoundCtaLabel"
+              className="h-9"
+              value={form.appearance.notFoundCtaLabel}
+              onChange={(e) => patchAppearance('notFoundCtaLabel', e.target.value)}
+            />
+          </Field>
+          <Field label="Lien CTA" htmlFor="notFoundCtaHref">
+            <Input
+              id="notFoundCtaHref"
+              className="h-9"
+              placeholder="/"
+              value={form.appearance.notFoundCtaHref}
+              onChange={(e) => patchAppearance('notFoundCtaHref', e.target.value)}
+            />
+          </Field>
         </div>
       );
 
@@ -955,23 +2129,84 @@ export function AppearanceSectionEditors({
             </div>
           ) : (
             <>
-              <Hint>Afficher ou masquer les blocs d’accueil classiques.</Hint>
-              <div className="space-y-1.5">
+              <Hint>Activez les blocs d’accueil classiques — un clic suffit.</Hint>
+              <div>
+                <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  Densité sections
+                </p>
+                <div className="grid grid-cols-3 gap-2">
+                  {HOME_DENSITIES.map((opt) => (
+                    <OptionTile
+                      key={opt.key}
+                      selected={form.appearance.homeDensity === opt.key}
+                      onClick={() => patchAppearance('homeDensity', opt.key)}
+                    >
+                      <p className="text-xs font-semibold">{opt.label}</p>
+                      <p className="text-[10px] text-muted-foreground">{opt.description}</p>
+                    </OptionTile>
+                  ))}
+                </div>
+              </div>
+              <div className="space-y-2">
                 {(
                   [
-                    ['heroEnabled', 'Hero'] as const,
-                    ['categoriesEnabled', 'Catégories'] as const,
-                    ['surMesureEnabled', 'Sur mesure'] as const,
+                    {
+                      key: 'heroEnabled' as const,
+                      label: 'Hero',
+                      description: 'Bandeau principal + CTA.',
+                      Icon: PanelsTopLeft,
+                    },
+                    {
+                      key: 'categoriesEnabled' as const,
+                      label: 'Catégories',
+                      description: 'Grille des catégories mises en avant.',
+                      Icon: LayoutGrid,
+                    },
+                    {
+                      key: 'surMesureEnabled' as const,
+                      label: 'Sur mesure',
+                      description: 'Lien nav + accès Sur-mesure / Devis.',
+                      Icon: Ruler,
+                    },
                   ] as const
-                ).map(([key, label]) => (
-                  <ToggleRow
+                ).map(({ key, label, description, Icon }) => (
+                  <OptionTile
                     key={key}
-                    id={key}
-                    label={`Afficher « ${label} »`}
-                    checked={form[key]}
-                    onCheckedChange={(checked) => patch(key, checked)}
-                  />
+                    selected={form[key]}
+                    onClick={() => patch(key, !form[key])}
+                    className="flex items-start gap-2.5"
+                  >
+                    <span
+                      className={cn(
+                        'mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border',
+                        form[key]
+                          ? 'border-sky-500/40 bg-sky-500/10 text-sky-700'
+                          : 'border-border bg-muted/40 text-muted-foreground',
+                      )}
+                    >
+                      <Icon className="h-4 w-4" />
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="text-sm font-semibold">{label}</p>
+                        <Switch
+                          checked={form[key]}
+                          onCheckedChange={(checked) => patch(key, checked)}
+                          onClick={(e) => e.stopPropagation()}
+                        />
+                      </div>
+                      <p className="mt-0.5 text-[11px] text-muted-foreground">{description}</p>
+                    </div>
+                  </OptionTile>
                 ))}
+              </div>
+              <div className="rounded-lg border border-dashed border-border/80 bg-muted/15 px-2.5 py-2 text-[11px] text-muted-foreground">
+                <Sparkles className="mb-1 inline h-3.5 w-3.5 text-sky-600" /> Pour une page
+                d’accueil avancée (sections, ordre, blocs), utilisez le{' '}
+                <Link to="/admin/pages" className="font-medium text-sky-700 hover:underline">
+                  page builder
+                </Link>
+                .
               </div>
             </>
           )}

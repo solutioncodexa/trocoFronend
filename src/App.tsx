@@ -12,6 +12,8 @@ import ScrollToTop from "@/components/ui/ScrollToTop";
 import WhatsAppButton from "@/components/ui/WhatsAppButton";
 import { ProtectedAdminRoute } from "@/components/ProtectedAdminRoute";
 import PageLoader from "@/components/layout/PageLoader";
+import NeutralBootLoader from "@/components/layout/NeutralBootLoader";
+import { resolveTenantSlug } from "@/contexts/TenantContext";
 import { PERMISSIONS } from "@/config/permissions";
 
 const HomeRoute = lazy(() => import("./pages/HomeRoute"));
@@ -127,7 +129,15 @@ const App = () => (
                 <LocaleProvider>
                 <ScrollToTop />
                 <WhatsAppButton />
-                <Suspense fallback={<PageLoader />}>
+                <Suspense
+                  fallback={
+                    typeof window !== "undefined" && resolveTenantSlug() ? (
+                      <NeutralBootLoader />
+                    ) : (
+                      <PageLoader />
+                    )
+                  }
+                >
                   <Routes>
                     <Route path="/" element={<HomeRoute />} />
                     <Route path="/accueil" element={<Index />} />

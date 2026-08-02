@@ -5,8 +5,10 @@ import { Link } from 'react-router-dom';
 import Layout from '@/components/layout/Layout';
 import { promoCodesApi } from '@/services/api/promoCodes';
 import { formatPrice } from '@/utils/formatPrice';
+import { useLocale } from '@/contexts/LocaleContext';
 
 const PromoCodes = () => {
+  const { t, locale } = useLocale();
   const { data: codes = [], isLoading } = useQuery({
     queryKey: ['public-promo-codes'],
     queryFn: promoCodesApi.getPublicCodes,
@@ -20,6 +22,8 @@ const PromoCodes = () => {
     setTimeout(() => setCopiedCode(null), 2000);
   };
 
+  const dateLocale = locale === 'ar' ? 'ar-MA' : locale === 'en' ? 'en-GB' : 'fr-FR';
+
   return (
     <Layout>
       <main className="max-w-[900px] mx-auto px-6 py-12">
@@ -29,7 +33,7 @@ const PromoCodes = () => {
             className="inline-flex items-center gap-1.5 text-sm text-accent-beige hover:text-primary transition-colors"
           >
             <ArrowLeft className="w-4 h-4" />
-            Retour au checkout
+            {t('backToCheckout')}
           </Link>
         </div>
 
@@ -37,23 +41,23 @@ const PromoCodes = () => {
           <div className="inline-flex items-center gap-2 mb-3">
             <Sparkles className="w-6 h-6 text-primary" />
             <h1 className="text-3xl font-display text-secondary-dark dark:text-white">
-              Codes Promo
+              {t('promoCodesTitle')}
             </h1>
             <Sparkles className="w-6 h-6 text-primary" />
           </div>
           <p className="text-accent-beige font-body max-w-md mx-auto">
-            Copiez un code promo ci-dessous et utilisez-le lors de votre commande pour profiter de la réduction.
+            {t('promoCodesIntro')}
           </p>
         </div>
 
         {isLoading ? (
-          <div className="text-center py-12 text-accent-beige">Chargement...</div>
+          <div className="text-center py-12 text-accent-beige">{t('loading')}</div>
         ) : codes.length === 0 ? (
           <div className="text-center py-16">
             <Tag className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-            <h2 className="text-xl font-display mb-2">Aucun code promo disponible</h2>
+            <h2 className="text-xl font-display mb-2">{t('noPromoCodes')}</h2>
             <p className="text-sm text-muted-foreground">
-              Revenez plus tard pour découvrir nos offres !
+              {t('comeBackLater')}
             </p>
           </div>
         ) : (
@@ -73,16 +77,16 @@ const PromoCodes = () => {
 
                 <div className="mb-4">
                   <p className="text-xs text-accent-beige uppercase tracking-widest mb-1">
-                    Commande minimum
+                    {t('minOrder')}
                   </p>
                   <p className="text-lg font-display text-secondary-dark dark:text-white">
-                    {promo.minOrderAmount ? formatPrice(promo.minOrderAmount) : 'Aucun minimum'}
+                    {promo.minOrderAmount ? formatPrice(promo.minOrderAmount) : t('noMinimum')}
                   </p>
                 </div>
 
                 <div className="mb-4">
                   <p className="text-xs text-accent-beige uppercase tracking-widest mb-1">
-                    Réduction
+                    {t('discount')}
                   </p>
                   <p className="text-2xl font-display text-primary font-bold">
                     {promo.discountType === 'percentage'
@@ -93,11 +97,12 @@ const PromoCodes = () => {
 
                 {promo.expiresAt && (
                   <p className="text-[10px] text-accent-beige mb-3">
-                    Expire le{' '}
-                    {new Date(promo.expiresAt).toLocaleDateString('fr-FR', {
-                      day: 'numeric',
-                      month: 'long',
-                      year: 'numeric',
+                    {t('expiresOn', {
+                      date: new Date(promo.expiresAt).toLocaleDateString(dateLocale, {
+                        day: 'numeric',
+                        month: 'long',
+                        year: 'numeric',
+                      }),
                     })}
                   </p>
                 )}
@@ -109,7 +114,7 @@ const PromoCodes = () => {
                   {copiedCode === promo.code ? (
                     <>
                       <Check className="w-4 h-4 text-green-600" />
-                      <span className="text-sm font-bold text-green-600">Copié !</span>
+                      <span className="text-sm font-bold text-green-600">{t('copied')}</span>
                     </>
                   ) : (
                     <>
@@ -130,7 +135,7 @@ const PromoCodes = () => {
             to="/checkout"
             className="inline-flex items-center gap-2 bg-primary text-primary-foreground px-8 py-3 rounded-sm font-bold text-sm uppercase tracking-wider hover:bg-[#d9a50b] transition-all shadow-lg"
           >
-            Utiliser dans le checkout
+            {t('useInCheckout')}
           </Link>
         </div>
       </main>

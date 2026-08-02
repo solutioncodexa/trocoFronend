@@ -336,6 +336,45 @@
 .store-theme[data-button-style='pill'] .rounded-xl {
   border-radius: 9999px !important;
 }
+.store-theme[data-button-style='ghost'] .sf-btn,
+.store-theme[data-button-style='ghost'] a.bg-primary,
+.store-theme[data-button-style='ghost'] button.bg-primary {
+  background: transparent !important;
+  color: hsl(var(--primary)) !important;
+  box-shadow: none !important;
+  border: none !important;
+}
+.store-theme[data-button-style='gradient'] .sf-btn,
+.store-theme[data-button-style='gradient'] a.bg-primary,
+.store-theme[data-button-style='gradient'] button.bg-primary {
+  background: linear-gradient(
+    90deg,
+    hsl(var(--primary)),
+    hsl(var(--secondary))
+  ) !important;
+  color: hsl(var(--primary-foreground)) !important;
+  border: none !important;
+}
+.store-theme[data-button-style='inverse'] .sf-btn,
+.store-theme[data-button-style='inverse'] a.bg-primary,
+.store-theme[data-button-style='inverse'] button.bg-primary {
+  background: hsl(var(--foreground)) !important;
+  color: hsl(var(--background)) !important;
+  border: none !important;
+}
+
+.store-theme[data-footer-layout='centered'] footer .page-padding > div:first-child {
+  text-align: center;
+}
+.store-theme[data-radius-preset='subtle'] .rounded-2xl,
+.store-theme[data-radius-preset='subtle'] .rounded-3xl {
+  border-radius: var(--theme-radius-card) !important;
+}
+.store-theme[data-radius-preset='pill'] .rounded-xl,
+.store-theme[data-radius-preset='pill'] .rounded-2xl,
+.store-theme[data-radius-preset='pill'] .rounded-3xl {
+  border-radius: var(--theme-radius-card) !important;
+}
 
 .store-theme[data-page-custom='1'],
 .store-theme[data-page-custom='1'] main {
@@ -379,9 +418,10 @@
     overflow-x: hidden;
     width: 100%;
     max-width: 100%;
-    /* Firefox — piste / curseur (couleurs du thème) */
+    /* Firefox — piste / curseur (custom apparence ou thème) */
     scrollbar-width: thin;
-    scrollbar-color: hsl(var(--primary) / 0.5) hsl(var(--muted));
+    scrollbar-color: var(--scrollbar-thumb, hsl(var(--primary) / 0.5))
+      var(--scrollbar-track, hsl(var(--muted)));
   }
 
   @media (prefers-reduced-motion: no-preference) {
@@ -396,22 +436,22 @@
   }
 
   html::-webkit-scrollbar-track {
-    background: hsl(var(--muted));
+    background: var(--scrollbar-track, hsl(var(--muted)));
     border-radius: 9999px;
   }
 
   html::-webkit-scrollbar-thumb {
-    background: hsl(var(--primary) / 0.45);
+    background: var(--scrollbar-thumb, hsl(var(--primary) / 0.45));
     border-radius: 9999px;
-    border: 2px solid hsl(var(--muted));
+    border: 2px solid var(--scrollbar-track, hsl(var(--muted)));
   }
 
   html::-webkit-scrollbar-thumb:hover {
-    background: hsl(var(--primary) / 0.72);
+    filter: brightness(0.92);
   }
 
   html::-webkit-scrollbar-corner {
-    background: hsl(var(--muted));
+    background: var(--scrollbar-track, hsl(var(--muted)));
   }
 
   body {
@@ -674,11 +714,12 @@
 
   /**
    * Scrollbars des zones internes (menus, admin, carrousels…)
-   * Même palette que la scrollbar document : primary + muted.
+   * Custom apparence (--scrollbar-*) ou primary + muted.
    */
   .scrollbar-app {
     scrollbar-width: thin;
-    scrollbar-color: hsl(var(--primary) / 0.5) hsl(var(--muted));
+    scrollbar-color: var(--scrollbar-thumb, hsl(var(--primary) / 0.5))
+      var(--scrollbar-track, hsl(var(--muted)));
   }
 
   .scrollbar-app::-webkit-scrollbar {
@@ -687,18 +728,18 @@
   }
 
   .scrollbar-app::-webkit-scrollbar-track {
-    background: hsl(var(--muted));
+    background: var(--scrollbar-track, hsl(var(--muted)));
     border-radius: 9999px;
   }
 
   .scrollbar-app::-webkit-scrollbar-thumb {
-    background: hsl(var(--primary) / 0.4);
+    background: var(--scrollbar-thumb, hsl(var(--primary) / 0.4));
     border-radius: 9999px;
-    border: 2px solid hsl(var(--muted));
+    border: 2px solid var(--scrollbar-track, hsl(var(--muted)));
   }
 
   .scrollbar-app::-webkit-scrollbar-thumb:hover {
-    background: hsl(var(--primary) / 0.7);
+    filter: brightness(0.92);
   }
 
   /* Soft inset border for panels */
