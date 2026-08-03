@@ -26,6 +26,15 @@ export default {
         xs: "390px",
         lg: "1025px",
       },
+      // Alignés sur les screens viewport : l’aperçu Apparence utilise @container
+      // avec une largeur device réelle (390 / 768 / 1200).
+      containers: {
+        sm: "640px",
+        md: "768px",
+        lg: "1025px",
+        xl: "1280px",
+        "2xl": "1400px",
+      },
       colors: {
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
@@ -201,5 +210,8 @@ export default {
       },
     },
   },
-  plugins: [require("tailwindcss-animate")],
+  plugins: [
+    require("tailwindcss-animate"),
+    require("@tailwindcss/container-queries"),
+  ],
 } satisfies Config;

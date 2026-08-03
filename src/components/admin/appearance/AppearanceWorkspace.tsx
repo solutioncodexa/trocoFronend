@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, type RefObject } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type RefObject } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import {
@@ -29,11 +29,24 @@ import {
 import { StoreAppearanceLivePreview } from '@/components/admin/StoreAppearanceLivePreview';
 import { Button } from '@/components/ui/button';
 import type { StoreAppearance } from '@/config/storeAppearance';
+import { staticCatalogQueryOptions } from '@/config/queryOptions';
 import type { StoreThemeKey } from '@/config/storeThemes';
+import type { DemoCategory } from '@/demo/mockCatalog';
+import { useTenant } from '@/contexts/TenantContext';
+import { categoriesApi, productsApi } from '@/services/api';
+import { homeHeroApi } from '@/services/api/homeHero';
+import { getImageUrl } from '@/services/api/upload';
 import { topBarMessagesApi } from '@/services/api/topBarMessages';
+import { mapProductListItemListToProducts } from '@/utils/productMapper';
 import { cn } from '@/lib/utils';
 
 type Device = 'desktop' | 'tablet' | 'mobile';
+
+/** Largeurs device pour mobile / tablette. Le bureau utilise toute la largeur du panneau. */
+const DEVICE_WIDTH_PX: Record<'mobile' | 'tablet', number> = {
+  mobile: 390,
+  tablet: 768,
+};
 
 type Props = {
   form: AppearanceFormSlice;
@@ -100,12 +113,63 @@ export function AppearanceWorkspace({
   const redoStackRef = useRef<StoreAppearance[]>([]);
   const skipHistoryRef = useRef(false);
   const previewFrameRef = useRef<HTMLDivElement>(null);
+  const previewShellRef = useRef<HTMLDivElement>(null);
+  const [previewScale, setPreviewScale] = useState(1);
+  /** Largeur CSS réelle du cadre (bureau = largeur dispo du panneau). */
+  const [frameWidth, setFrameWidth] = useState(960);
 
   const { data: topBarMessages = [] } = useQuery({
     queryKey: ['top-bar-messages'],
     queryFn: () => topBarMessagesApi.getAllMessages(),
   });
   const activeTopBarMessages = topBarMessages.filter((m) => m.isActive);
+
+  const { store } = useTenant();
+  const tenantSlug = store?.slug;
+
+  const { data: homeHero } = useQuery({
+    queryKey: ['homeHero', 'appearance-preview', tenantSlug],
+    queryFn: () => homeHeroApi.getPublic(),
+    ...staticCatalogQueryOptions,
+  });
+
+  const { data: categoriesDto = [] } = useQuery({
+    queryKey: ['categories', 'cards', 'appearance-preview', tenantSlug],
+    queryFn: () => categoriesApi.getCardCategories(),
+    ...staticCatalogQueryOptions,
+  });
+
+  const { data: productsPage } = useQuery({
+    queryKey: ['products', 'appearance-preview', tenantSlug],
+    queryFn: () => productsApi.getAllProducts({ page: 0, size: 12 }),
+    ...staticCatalogQueryOptions,
+  });
+
+  const catalogProducts = useMemo(
+    () => mapProductListItemListToProducts(productsPage?.content ?? []),
+    [productsPage?.content],
+  );
+
+  const catalogCategories: DemoCategory[] = useMemo(
+    () =>
+      categoriesDto
+        .filter((c) => !c.parentId)
+        .slice(0, 5)
+        .map((c) => ({
+          id: String(c.id),
+          name: c.name,
+          slug: c.slug,
+          image: c.heroImageUrl ? getImageUrl(c.heroImageUrl) : '',
+          count: 0,
+        })),
+    [categoriesDto],
+  );
+
+  const heroImageUrl = useMemo(() => {
+    if (homeHero?.imageUrls?.[0]) return getImageUrl(homeHero.imageUrls[0]);
+    if (homeHero?.imageUrl) return getImageUrl(homeHero.imageUrl);
+    return null;
+  }, [homeHero?.imageUrls, homeHero?.imageUrl]);
 
   /** Ramène l’aperçu sur la page où la section est visible. */
   const syncPreviewToSection = useCallback((section: AppearanceSectionId) => {
@@ -213,8 +277,26 @@ export function AppearanceWorkspace({
     return () => window.clearTimeout(timer);
   }, [activeSection, previewPage, showEditor]);
 
-  const deviceMax =
-    device === 'mobile' ? 'max-w-[390px]' : device === 'tablet' ? 'max-w-[768px]' : 'max-w-[960px]';
+  // Bureau : remplit le milieu à 100 %. Mobile / tablette : largeur réelle + scale si besoin.
+  useEffect(() => {
+    const shell = previewShellRef.current;
+    if (!shell) return;
+    const update = () => {
+      const available = Math.max(280, shell.clientWidth - (device === 'desktop' ? 16 : 24));
+      if (device === 'desktop') {
+        setFrameWidth(available);
+        setPreviewScale(1);
+        return;
+      }
+      const target = DEVICE_WIDTH_PX[device];
+      setFrameWidth(target);
+      setPreviewScale(Math.min(1, available / target));
+    };
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(shell);
+    return () => ro.disconnect();
+  }, [device]);
 
   const activeLabel =
     APPEARANCE_OUTLINE.find((s) => s.id === activeSection)?.label ?? 'Section';
@@ -408,6 +490,9 @@ export function AppearanceWorkspace({
               ) : null}
               <span className="tabular-nums text-muted-foreground">
                 {device === 'desktop' ? 'Bureau' : device === 'tablet' ? 'Tablette' : 'Mobile'}
+                {' · '}
+                {Math.round(frameWidth)}px
+                {previewScale < 0.999 ? ` · ${Math.round(previewScale * 100)}%` : ''}
               </span>
             </div>
           </div>
@@ -430,12 +515,33 @@ export function AppearanceWorkspace({
             ))}
           </div>
 
-          <div className="flex justify-center px-3 py-6">
-            <div className={cn('w-full origin-top', deviceMax)}>
+          <div
+            ref={previewShellRef}
+            className={cn(
+              'flex justify-center overflow-x-hidden',
+              device === 'desktop' ? 'px-2 py-3' : 'px-3 py-6',
+            )}
+          >
+            <div
+              className="transition-[width,transform] duration-200"
+              style={{
+                width: frameWidth,
+                transform: previewScale < 0.999 ? `scale(${previewScale})` : undefined,
+                transformOrigin: 'top center',
+              }}
+            >
               <div
                 ref={previewFrameRef}
-                className="overflow-hidden rounded-xl border border-border/80 bg-white shadow-lg shadow-black/10"
+                className={cn(
+                  'overflow-hidden border border-border/80 bg-white shadow-lg shadow-black/10',
+                  device === 'mobile' ? 'rounded-[1.75rem]' : 'rounded-xl',
+                )}
               >
+                {device === 'mobile' ? (
+                  <div className="flex h-7 items-center justify-center bg-stone-900">
+                    <div className="h-1.5 w-16 rounded-full bg-stone-600" />
+                  </div>
+                ) : null}
                 <StoreAppearanceLivePreview
                   siteName={form.siteName}
                   tagline={form.tagline}
@@ -462,6 +568,13 @@ export function AppearanceWorkspace({
                   onCartPreviewModeChange={setCartPreviewMode}
                   wishlistPreviewMode={wishlistPreviewMode}
                   onWishlistPreviewModeChange={setWishlistPreviewMode}
+                  catalogProducts={catalogProducts}
+                  catalogCategories={catalogCategories}
+                  heroImageUrl={heroImageUrl}
+                  contactEmail={form.contactEmail}
+                  contactPhone={form.contactPhone}
+                  contactWhatsapp={form.contactWhatsapp}
+                  contactCity={form.contactCity}
                 />
               </div>
             </div>

@@ -1,5 +1,5 @@
-import { Banknote, CheckCircle, Heart, Search, ShoppingBag, Truck, Shield, ShieldCheck, Star } from 'lucide-react';
-import { useEffect, useState, type CSSProperties, type MouseEvent, type ReactNode } from 'react';
+import { Banknote, CheckCircle, CloudUpload, Heart, Search, ShoppingBag, Truck, Shield, ShieldCheck, Sparkles, Star } from 'lucide-react';
+import { useEffect, useMemo, useState, type CSSProperties, type MouseEvent, type ReactNode } from 'react';
 import { getImageUrl } from '@/services/api/upload';
 import {
   appearanceButtonClass,
@@ -19,6 +19,49 @@ import {
 import { storeThemeStyleVars } from '@/utils/storeTheme';
 import { cn } from '@/lib/utils';
 import type { TopBarMessageDTO } from '@/types/top-bar-messages';
+import type { Product } from '@/types/product';
+import type { DemoCategory } from '@/demo/mockCatalog';
+import { formatPrice } from '@/utils/formatPrice';
+import { useLocale } from '@/contexts/LocaleContext';
+
+/** Convertit les breakpoints viewport en container queries (aperçu device). */
+function cq(...parts: Array<string | false | null | undefined>): string {
+  return parts
+    .filter(Boolean)
+    .join(' ')
+    .replace(/\b((?:max-)?(?:sm|md|lg|xl|2xl)):/g, '@$1:');
+}
+
+function badgeLabel(badge: Product['badges'][number]): string {
+  if (badge === 'new') return 'Nouveau';
+  if (badge === 'bestseller') return 'Best-seller';
+  return 'Promo';
+}
+
+function PreviewProductImage({
+  src,
+  alt,
+  className,
+  fallbackStyle,
+}: {
+  src?: string | null;
+  alt?: string;
+  className?: string;
+  fallbackStyle?: CSSProperties;
+}) {
+  if (src) {
+    return (
+      <img
+        src={src}
+        alt={alt || ''}
+        className={cn('object-cover', className)}
+        loading="lazy"
+        decoding="async"
+      />
+    );
+  }
+  return <div className={cn('bg-muted', className)} style={fallbackStyle} />;
+}
 
 export type AppearancePreviewSection =
   | 'typography'
@@ -60,6 +103,14 @@ type Props = {
   onCartPreviewModeChange?: (mode: 'empty' | 'filled') => void;
   wishlistPreviewMode?: 'empty' | 'filled';
   onWishlistPreviewModeChange?: (mode: 'empty' | 'filled') => void;
+  /** Catalogue réel de la boutique (même source que la vitrine). */
+  catalogProducts?: Product[];
+  catalogCategories?: DemoCategory[];
+  heroImageUrl?: string | null;
+  contactEmail?: string;
+  contactPhone?: string;
+  contactWhatsapp?: string;
+  contactCity?: string;
 };
 
 function PreviewHotspot({
@@ -149,7 +200,15 @@ export function StoreAppearanceLivePreview({
   onCartPreviewModeChange,
   wishlistPreviewMode = 'empty',
   onWishlistPreviewModeChange,
+  catalogProducts = [],
+  catalogCategories = [],
+  heroImageUrl = null,
+  contactEmail = '',
+  contactPhone = '',
+  contactWhatsapp = '',
+  contactCity = '',
 }: Props) {
+  const { t } = useLocale();
   const radius = RADIUS_PRESETS.find((p) => p.key === normalizeRadiusPreset(radiusPreset)) ?? RADIUS_PRESETS[1];
   const name = siteName.trim() || 'Nom de la boutique';
   const tag = tagline.trim() || 'Votre accroche apparaîtra ici';
@@ -161,6 +220,85 @@ export function StoreAppearanceLivePreview({
   const activeBanners = topBarMessages.filter((m) => m.isActive && m.message?.trim());
   const [bannerIndex, setBannerIndex] = useState(0);
   const [checkoutPreviewStep, setCheckoutPreviewStep] = useState<1 | 2>(1);
+
+  const products = catalogProducts;
+  const categories = catalogCategories;
+  const shopLimit = appearance.shopGridColumns === '2' ? 4 : 6;
+  const shopProducts = useMemo(() => products.slice(0, shopLimit), [products, shopLimit]);
+  const featuredProduct = products[0] ?? null;
+  const cartProducts = useMemo(() => products.slice(0, 2), [products]);
+  const wishlistProducts = useMemo(() => {
+    const n =
+      appearance.wishlistGridColumns === '2'
+        ? 2
+        : appearance.wishlistGridColumns === '3'
+          ? 3
+          : 4;
+    return products.slice(0, n);
+  }, [products, appearance.wishlistGridColumns]);
+  const checkoutTotal = cartProducts.reduce((sum, p) => sum + (p.price || 0), 0);
+  const gradientFallback = useMemo(
+    () => ({
+      background: `linear-gradient(145deg, ${primaryColor || '#0d9488'}40, ${secondaryColor || '#0369a1'}25)`,
+    }),
+    [primaryColor, secondaryColor],
+  );
+  const heroMediaStyle = useMemo((): CSSProperties => {
+    if (heroImageUrl) {
+      return {
+        backgroundImage: `linear-gradient(135deg, rgba(0,0,0,0.25), rgba(0,0,0,0.05)), url(${heroImageUrl})`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+      };
+    }
+    return {
+      background: `linear-gradient(135deg, ${primaryColor || '#0d9488'}55, ${secondaryColor || '#0369a1'}33)`,
+    };
+  }, [heroImageUrl, primaryColor, secondaryColor]);
+
+  const packagingCfg = useMemo(() => {
+    const isSurMesure = previewPage === 'sur-mesure';
+    if (isSurMesure) {
+      return {
+        eyebrow: t('smEyebrow'),
+        title: t('smTitle'),
+        subtitle: t('smSubtitle'),
+        needLabel: t('smNeedLabel'),
+        needOptions: [t('smNeedLogo'), t('smNeedUnique'), t('smNeedDims')],
+        uploadTitle: t('smUploadTitle'),
+        uploadHint: t('smUploadHint'),
+        tip: t('smTip'),
+        submitLabel: t('smSubmit'),
+        processEyebrow: t('smProcessEyebrow'),
+        steps: [
+          { n: 1, title: t('smStep1Title'), desc: t('smStep1Desc') },
+          { n: 2, title: t('smStep2Title'), desc: t('smStep2Desc') },
+          { n: 3, title: t('smStep3Title'), desc: t('smStep3Desc') },
+        ],
+        altLabel: t('smAltLink'),
+        altPage: 'devis' as const,
+      };
+    }
+    return {
+      eyebrow: t('dvEyebrow'),
+      title: t('dvTitle'),
+      subtitle: t('dvSubtitle'),
+      needLabel: t('dvNeedLabel'),
+      needOptions: [t('dvNeedBulk'), t('dvNeedRestock'), t('dvNeedMulti')],
+      uploadTitle: t('dvUploadTitle'),
+      uploadHint: t('dvUploadHint'),
+      tip: t('dvTip'),
+      submitLabel: t('dvSubmit'),
+      processEyebrow: t('dvProcessEyebrow'),
+      steps: [
+        { n: 1, title: t('dvStep1Title'), desc: t('dvStep1Desc') },
+        { n: 2, title: t('dvStep2Title'), desc: t('dvStep2Desc') },
+        { n: 3, title: t('dvStep3Title'), desc: t('dvStep3Desc') },
+      ],
+      altLabel: t('dvAltLink'),
+      altPage: 'sur-mesure' as const,
+    };
+  }, [previewPage, t]);
 
   useEffect(() => {
     setCheckoutPreviewStep(1);
@@ -232,7 +370,7 @@ export function StoreAppearanceLivePreview({
 
   return (
     <div
-      className="storefront-skin store-theme border border-border transition-all duration-300"
+      className="@container storefront-skin store-theme border border-border transition-all duration-300"
       data-font-pair={normalizeFontPair(fontPair)}
       data-radius-preset={normalizeRadiusPreset(radiusPreset)}
       data-button-style={appearance.buttonStyle}
@@ -288,7 +426,7 @@ export function StoreAppearanceLivePreview({
         </span>
       </div>
 
-      <div className="max-h-[min(62vh,640px)] overflow-y-scroll scrollbar-app">
+      <div className="max-h-[min(78vh,900px)] overflow-y-scroll scrollbar-app">
       {hotspot(
         'header',
         'Header',
@@ -374,7 +512,7 @@ export function StoreAppearanceLivePreview({
               {appearance.headerShowNav && appearance.headerLayout !== 'stacked' ? (
                 <nav
                   className={cn(
-                    'hidden min-w-0 gap-2 text-[10px] font-semibold sm:flex',
+                    'hidden min-w-0 gap-2 text-[10px] font-semibold @sm:flex',
                     appearance.headerLayout === 'centered' && 'justify-center',
                   )}
                 >
@@ -637,24 +775,28 @@ export function StoreAppearanceLivePreview({
             ) : (
               <>
                 <p className="text-center font-display text-sm font-semibold">Votre panier</p>
-                {[0, 1].map((i) => (
+                {(cartProducts.length > 0 ? cartProducts : [null, null]).map((product, i) => (
                   <div
-                    key={i}
+                    key={product?.id ?? i}
                     className={cn(
                       appearanceCardClass(appearance.cardStyle, 'flex items-center gap-2'),
                       radius.card,
                       appearance.cartDensity === 'compact' ? 'p-2' : 'p-3',
                     )}
                   >
-                    <div
-                      className={cn('h-10 w-10 shrink-0 bg-muted', radius.chip)}
-                      style={{
-                        background: `linear-gradient(145deg, ${primaryColor || '#0d9488'}40, ${secondaryColor || '#0369a1'}25)`,
-                      }}
+                    <PreviewProductImage
+                      src={product?.images?.[0]}
+                      alt={product?.name}
+                      className={cn('h-10 w-10 shrink-0', radius.chip)}
+                      fallbackStyle={gradientFallback}
                     />
                     <div className="min-w-0 flex-1">
-                      <p className="truncate text-xs font-semibold">Produit {i + 1}</p>
-                      <p className="text-[10px] text-muted-foreground">99 DH</p>
+                      <p className="truncate text-xs font-semibold">
+                        {product?.name || `Produit ${i + 1}`}
+                      </p>
+                      <p className="text-[10px] text-muted-foreground">
+                        {product ? formatPrice(product.price) : '99 DH'}
+                      </p>
                     </div>
                   </div>
                 ))}
@@ -684,15 +826,15 @@ export function StoreAppearanceLivePreview({
         hotspot(
           'checkout',
           'Checkout',
-          'border-b border-border/40 bg-muted/10 p-3 sm:p-4',
+          'border-b border-border/40 bg-muted/10 p-3 @sm:p-4',
           <div
             className="space-y-3"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="text-center sm:text-left">
+            <div className="text-center @sm:text-left">
               <h2
                 className={cn(
-                  'font-display text-base font-semibold text-foreground sm:text-lg',
+                  'font-display text-base font-semibold text-foreground @sm:text-lg',
                   appearance.checkoutHeadingAlign === 'center' && 'text-center',
                 )}
               >
@@ -700,11 +842,11 @@ export function StoreAppearanceLivePreview({
               </h2>
               <p
                 className={cn(
-                  'mt-0.5 font-display text-lg text-primary sm:text-xl',
+                  'mt-0.5 font-display text-lg text-primary @sm:text-xl',
                   appearance.checkoutHeadingAlign === 'center' && 'text-center',
                 )}
               >
-                198 DH
+                {checkoutTotal > 0 ? formatPrice(checkoutTotal) : '198 DH'}
               </p>
             </div>
 
@@ -748,15 +890,15 @@ export function StoreAppearanceLivePreview({
                 'flex gap-3',
                 appearance.checkoutSummaryPosition === 'bottom'
                   ? 'flex-col'
-                  : 'flex-col lg:flex-row lg:items-start',
-                appearance.checkoutSummaryPosition === 'left' && 'lg:flex-row-reverse',
+                  : 'flex-col @lg:flex-row @lg:items-start',
+                appearance.checkoutSummaryPosition === 'left' && '@lg:flex-row-reverse',
                 appearance.checkoutDensity === 'compact' && 'gap-2',
                 appearance.checkoutDensity === 'spacious' && 'gap-4',
               )}
             >
               <div
                 className={cn(
-                  'min-w-0 flex-1 space-y-3 rounded-xl p-3 sm:p-4',
+                  'min-w-0 flex-1 space-y-3 rounded-xl p-3 @sm:p-4',
                   radius.card,
                   appearance.checkoutFormStyle === 'flat' && 'bg-transparent',
                   appearance.checkoutFormStyle === 'bordered' &&
@@ -769,7 +911,7 @@ export function StoreAppearanceLivePreview({
               >
                 {(appearance.checkoutLayout !== 'steps' || checkoutPreviewStep === 1) && (
                   <div className="space-y-2.5">
-                    <div className="grid gap-2 sm:grid-cols-2">
+                    <div className="grid gap-2 @sm:grid-cols-2">
                       {(
                         [
                           ['Nom Complet', 'Ex: Jean Dupont'],
@@ -913,9 +1055,11 @@ export function StoreAppearanceLivePreview({
 
                     <button
                       type="button"
-                      className={checkoutCtaClass(
-                        appearance.checkoutCtaEmphasis,
-                        'min-h-[2.5rem] py-2 text-[10px] sm:min-h-[2.75rem] sm:text-[11px]',
+                      className={cq(
+                        checkoutCtaClass(
+                          appearance.checkoutCtaEmphasis,
+                          'min-h-[2.5rem] py-2 text-[10px] sm:min-h-[2.75rem] sm:text-[11px]',
+                        ),
                       )}
                     >
                       <CheckCircle className="size-4 shrink-0" aria-hidden />
@@ -951,7 +1095,7 @@ export function StoreAppearanceLivePreview({
               <aside
                 className={cn(
                   'w-full shrink-0 rounded-xl border border-border bg-card p-3 shadow-soft',
-                  appearance.checkoutSummaryPosition === 'bottom' ? 'w-full' : 'lg:w-[38%]',
+                  appearance.checkoutSummaryPosition === 'bottom' ? 'w-full' : '@lg:w-[38%]',
                   radius.card,
                   appearance.checkoutStickySummary &&
                     appearance.checkoutSummaryPosition !== 'bottom' &&
@@ -970,24 +1114,23 @@ export function StoreAppearanceLivePreview({
                   ) : null}
                 </p>
                 <div className="mt-2.5 space-y-2.5">
-                  {[
-                    { name: 'Sachet kraft premium', qty: 1, price: '99 DH' },
-                    { name: 'Carton renforcé', qty: 1, price: '99 DH' },
-                  ].map((item) => (
-                    <div key={item.name} className="flex gap-2">
-                      <div
-                        className={cn('h-11 w-11 shrink-0 bg-muted', radius.chip)}
-                        style={{
-                          background: `linear-gradient(145deg, ${primaryColor || '#0d9488'}40, ${secondaryColor || '#0369a1'}25)`,
-                        }}
+                  {(cartProducts.length > 0 ? cartProducts : [null, null]).map((product, i) => (
+                    <div key={product?.id ?? i} className="flex gap-2">
+                      <PreviewProductImage
+                        src={product?.images?.[0]}
+                        alt={product?.name}
+                        className={cn('h-11 w-11 shrink-0', radius.chip)}
+                        fallbackStyle={gradientFallback}
                       />
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-[11px] font-semibold leading-tight">
-                          {item.name}
+                          {product?.name || (i === 0 ? 'Sachet kraft premium' : 'Carton renforcé')}
                         </p>
                         <div className="mt-1 flex justify-between text-[10px]">
-                          <span className="text-muted-foreground">Qté: {item.qty}</span>
-                          <span className="font-bold text-primary">{item.price}</span>
+                          <span className="text-muted-foreground">Qté: 1</span>
+                          <span className="font-bold text-primary">
+                            {product ? formatPrice(product.price) : '99 DH'}
+                          </span>
                         </div>
                       </div>
                     </div>
@@ -1007,7 +1150,7 @@ export function StoreAppearanceLivePreview({
                 <div className="mt-3 space-y-1 border-t border-border pt-2 text-[10px]">
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Sous-total</span>
-                    <span>198 DH</span>
+                    <span>{checkoutTotal > 0 ? formatPrice(checkoutTotal) : '198 DH'}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Livraison</span>
@@ -1015,7 +1158,9 @@ export function StoreAppearanceLivePreview({
                   </div>
                   <div className="flex justify-between pt-1 text-[11px] font-bold">
                     <span>Total</span>
-                    <span className="text-primary">198 DH</span>
+                    <span className="text-primary">
+                      {checkoutTotal > 0 ? formatPrice(checkoutTotal) : '198 DH'}
+                    </span>
                   </div>
                 </div>
               </aside>
@@ -1061,7 +1206,10 @@ export function StoreAppearanceLivePreview({
                   }}
                 >
                   {appearance.shopFilterLayout === 'top' ? (
-                    ['Catégorie', 'Prix', 'Stock'].map((f) => (
+                    (categories.length > 0
+                      ? categories.slice(0, 4).map((c) => c.name)
+                      : ['Catégorie', 'Prix', 'Stock']
+                    ).map((f) => (
                       <span
                         key={f}
                         className="rounded-full border border-border bg-background px-2 py-0.5 text-[9px]"
@@ -1085,30 +1233,55 @@ export function StoreAppearanceLivePreview({
                       Filtres
                     </span>
                   ) : (
-                    <span className="text-[10px] text-muted-foreground">12 produits</span>
+                    <span className="text-[10px] text-muted-foreground">
+                      {products.length > 0 ? `${products.length} produits` : '12 produits'}
+                    </span>
                   )}
                   {appearance.shopShowSort ? (
                     <span className="rounded-md border border-border px-2 py-1 text-[9px]">Tri : Nouveautés</span>
                   ) : null}
                 </div>
+                {categories.length > 0 ? (
+                  <div className="flex gap-1.5 overflow-x-auto pb-1">
+                    {categories.slice(0, 6).map((cat) => (
+                      <span
+                        key={cat.id}
+                        className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-border bg-background px-2 py-1 text-[9px] font-medium"
+                      >
+                        {cat.image ? (
+                          <img src={cat.image} alt="" className="h-4 w-4 rounded-full object-cover" />
+                        ) : null}
+                        {cat.name}
+                      </span>
+                    ))}
+                  </div>
+                ) : null}
                 <div
-                  className={cn('grid', shopGridClass(appearance.shopGridColumns, appearance.shopDensity))}
+                  className={cq('grid', shopGridClass(appearance.shopGridColumns, appearance.shopDensity))}
                   onClick={(e) => {
                     e.stopPropagation();
                     onSelectSection?.('cards');
                   }}
                 >
-                  {[0, 1, 2, 3, 4, 5].slice(0, appearance.shopGridColumns === '2' ? 4 : 6).map((i) => (
+                  {(shopProducts.length > 0
+                    ? shopProducts
+                    : Array.from({ length: shopLimit }, (_, i) => null)
+                  ).map((product, i) => (
                     <div
-                      key={i}
-                      className={cn(appearanceCardClass(appearance.cardStyle, 'p-1.5'), radius.card)}
+                      key={product?.id ?? i}
+                      className={cn(appearanceCardClass(appearance.cardStyle, 'overflow-hidden p-1.5'), radius.card)}
                     >
-                      <div
+                      <PreviewProductImage
+                        src={product?.images?.[0]}
+                        alt={product?.name}
                         className={cn(
-                          'mb-1.5 bg-gradient-to-br from-primary/30 to-secondary/20',
+                          'mb-1.5 w-full',
                           cardImageRatioClass(appearance.cardImageRatio),
                           radius.chip,
                         )}
+                        fallbackStyle={{
+                          background: `linear-gradient(145deg, ${primaryColor || '#0d9488'}55, ${secondaryColor || '#0369a1'}33)`,
+                        }}
                       />
                       <div
                         className={cn(
@@ -1116,8 +1289,12 @@ export function StoreAppearanceLivePreview({
                           appearance.cardInfoAlign === 'center' ? 'text-center' : 'text-left',
                         )}
                       >
-                        <p className="truncate font-display text-[11px] font-semibold">Produit {i + 1}</p>
-                        <p className="text-[10px] text-primary">99 DH</p>
+                        <p className="truncate font-display text-[11px] font-semibold">
+                          {product?.name || `Produit ${i + 1}`}
+                        </p>
+                        <p className="text-[10px] text-primary">
+                          {product ? formatPrice(product.price) : '99 DH'}
+                        </p>
                       </div>
                     </div>
                   ))}
@@ -1134,43 +1311,90 @@ export function StoreAppearanceLivePreview({
           <div
             className={cn(
               'gap-3',
-              appearance.productInfoPosition === 'below' ? 'flex flex-col' : 'grid sm:grid-cols-2',
+              appearance.productInfoPosition === 'below' ? 'flex flex-col' : 'grid @sm:grid-cols-2',
             )}
           >
             <div className="space-y-1.5">
               {appearance.productGalleryLayout === 'left_thumbs' ? (
                 <div className="grid grid-cols-[auto_1fr] gap-1.5">
                   <div className="flex flex-col gap-1">
-                    {[0, 1, 2].map((i) => (
-                      <div key={i} className="h-8 w-8 rounded bg-primary/20" />
+                    {(featuredProduct?.images?.length
+                      ? featuredProduct.images.slice(0, 3)
+                      : [null, null, null]
+                    ).map((src, i) => (
+                      <PreviewProductImage
+                        key={i}
+                        src={src}
+                        className="h-8 w-8 rounded"
+                        fallbackStyle={{ background: `${primaryColor || '#0d9488'}33` }}
+                      />
                     ))}
                   </div>
-                  <div className={cn('aspect-square bg-gradient-to-br from-primary/35 to-secondary/20', radius.card)} />
+                  <PreviewProductImage
+                    src={featuredProduct?.images?.[0]}
+                    alt={featuredProduct?.name}
+                    className={cn('aspect-square w-full', radius.card)}
+                    fallbackStyle={{
+                      background: `linear-gradient(145deg, ${primaryColor || '#0d9488'}55, ${secondaryColor || '#0369a1'}33)`,
+                    }}
+                  />
                 </div>
               ) : appearance.productGalleryLayout === 'bottom_thumbs' ? (
                 <div className="space-y-1.5">
-                  <div className={cn('aspect-square bg-gradient-to-br from-primary/35 to-secondary/20', radius.card)} />
+                  <PreviewProductImage
+                    src={featuredProduct?.images?.[0]}
+                    alt={featuredProduct?.name}
+                    className={cn('aspect-square w-full', radius.card)}
+                    fallbackStyle={{
+                      background: `linear-gradient(145deg, ${primaryColor || '#0d9488'}55, ${secondaryColor || '#0369a1'}33)`,
+                    }}
+                  />
                   <div className="flex gap-1">
-                    {[0, 1, 2].map((i) => (
-                      <div key={i} className="h-8 flex-1 rounded bg-primary/20" />
+                    {(featuredProduct?.images?.length
+                      ? featuredProduct.images.slice(0, 3)
+                      : [null, null, null]
+                    ).map((src, i) => (
+                      <PreviewProductImage
+                        key={i}
+                        src={src}
+                        className="h-8 flex-1 rounded"
+                        fallbackStyle={{ background: `${primaryColor || '#0d9488'}33` }}
+                      />
                     ))}
                   </div>
                 </div>
               ) : (
                 <div className="space-y-1.5">
-                  <div className={cn('aspect-[4/3] bg-gradient-to-br from-primary/35 to-secondary/20', radius.card)} />
-                  <div className={cn('aspect-[4/3] bg-gradient-to-br from-primary/25 to-muted', radius.card)} />
+                  <PreviewProductImage
+                    src={featuredProduct?.images?.[0]}
+                    alt={featuredProduct?.name}
+                    className={cn('aspect-[4/3] w-full', radius.card)}
+                    fallbackStyle={{
+                      background: `linear-gradient(145deg, ${primaryColor || '#0d9488'}55, ${secondaryColor || '#0369a1'}33)`,
+                    }}
+                  />
+                  <PreviewProductImage
+                    src={featuredProduct?.images?.[1] || featuredProduct?.images?.[0]}
+                    className={cn('aspect-[4/3] w-full', radius.card)}
+                    fallbackStyle={{
+                      background: `linear-gradient(145deg, ${secondaryColor || '#0369a1'}40, ${primaryColor || '#0d9488'}25)`,
+                    }}
+                  />
                 </div>
               )}
             </div>
             <div
               className={cn(
                 'space-y-2',
-                appearance.productStickyBuyBox && 'sm:sticky sm:top-2 sm:self-start',
+                appearance.productStickyBuyBox && '@sm:sticky @sm:top-2 @sm:self-start',
               )}
             >
-              <p className="font-display text-lg font-semibold">Produit exemple</p>
-              <p className="text-sm font-semibold text-primary">199 DH</p>
+              <p className="font-display text-lg font-semibold">
+                {featuredProduct?.name || 'Produit exemple'}
+              </p>
+              <p className="text-sm font-semibold text-primary">
+                {featuredProduct ? formatPrice(featuredProduct.price) : '199 DH'}
+              </p>
               <button
                 type="button"
                 className={cn(
@@ -1210,7 +1434,7 @@ export function StoreAppearanceLivePreview({
         hotspot(
           'wishlist',
           'Favoris',
-          'px-3 py-5 sm:px-4',
+          'px-3 py-5 @sm:px-4',
           <div className="space-y-4">
             <div
               className="flex justify-center gap-1"
@@ -1239,7 +1463,7 @@ export function StoreAppearanceLivePreview({
             </div>
 
             <div className="text-center">
-              <p className="font-display text-lg font-semibold sm:text-xl">Vos Favoris</p>
+              <p className="font-display text-lg font-semibold @sm:text-xl">Vos Favoris</p>
               <div className="mt-2 flex items-center justify-center gap-3">
                 <span className="h-px w-8 bg-border" />
                 <p className="text-[9px] uppercase tracking-[0.25em] text-muted-foreground">
@@ -1292,46 +1516,16 @@ export function StoreAppearanceLivePreview({
               </div>
             ) : (
               <>
-                <div className={cn('grid gap-3', wishlistGridClass(appearance.wishlistGridColumns))}>
-                  {(
-                    [
-                      {
-                        name: 'Sachet kraft mat 20×30',
-                        price: '49 DH',
-                        badge: 'Nouveau',
-                        tone: primaryColor || '#0d9488',
-                      },
-                      {
-                        name: 'Carton double cannelure',
-                        price: '89 DH',
-                        badge: 'Best-seller',
-                        tone: secondaryColor || '#0369a1',
-                      },
-                      {
-                        name: 'Film bulle premium',
-                        price: '35 DH',
-                        badge: null,
-                        tone: '#78716c',
-                      },
-                      {
-                        name: 'Boîte cadeau luxe',
-                        price: '120 DH',
-                        badge: 'Promo',
-                        tone: '#be123c',
-                      },
-                    ] as const
-                  )
-                    .slice(
-                      0,
-                      appearance.wishlistGridColumns === '2'
-                        ? 2
-                        : appearance.wishlistGridColumns === '3'
-                          ? 3
-                          : 4,
-                    )
-                    .map((item) => (
+                <div className={cq('grid gap-3', wishlistGridClass(appearance.wishlistGridColumns))}>
+                  {(wishlistProducts.length > 0
+                    ? wishlistProducts
+                    : Array.from({ length: appearance.wishlistGridColumns === '2' ? 2 : 4 }, () => null)
+                  ).map((product, i) => {
+                    const tone = primaryColor || '#0d9488';
+                    const badge = product?.badges?.[0];
+                    return (
                       <div
-                        key={item.name}
+                        key={product?.id ?? i}
                         className={cn(
                           appearanceCardClass(appearance.cardStyle, 'overflow-hidden p-2.5'),
                           radius.card,
@@ -1344,30 +1538,21 @@ export function StoreAppearanceLivePreview({
                             radius.chip,
                           )}
                         >
-                          <div
-                            className="absolute inset-0"
-                            style={{
-                              background: `linear-gradient(145deg, ${item.tone}55 0%, ${item.tone}22 55%, #f5f5f4 100%)`,
+                          <PreviewProductImage
+                            src={product?.images?.[0]}
+                            alt={product?.name}
+                            className="absolute inset-0 h-full w-full"
+                            fallbackStyle={{
+                              background: `linear-gradient(145deg, ${tone}55 0%, ${tone}22 55%, #f5f5f4 100%)`,
                             }}
                           />
-                          <div className="absolute inset-0 flex items-end justify-center pb-3 opacity-90">
-                            <div
-                              className="h-[55%] w-[62%] rounded-sm shadow-md"
-                              style={{
-                                background: `linear-gradient(160deg, ${item.tone}cc, ${item.tone}66)`,
-                              }}
-                            />
-                          </div>
-                          {item.badge ? (
+                          {badge ? (
                             <span className="absolute left-1.5 top-1.5 rounded bg-foreground/85 px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-wide text-background">
-                              {item.badge}
+                              {badgeLabel(badge)}
                             </span>
                           ) : null}
                           <span className="absolute right-1.5 top-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-background/90 text-primary shadow-sm">
                             <Heart className="h-3 w-3 fill-current" />
-                          </span>
-                          <span className="absolute inset-x-0 bottom-2 text-center text-[8px] font-bold uppercase tracking-wider text-foreground/70">
-                            Aperçu rapide
                           </span>
                         </div>
                         <div
@@ -1377,9 +1562,11 @@ export function StoreAppearanceLivePreview({
                           )}
                         >
                           <p className="line-clamp-2 font-display text-[11px] font-semibold leading-snug">
-                            {item.name}
+                            {product?.name || `Produit favori ${i + 1}`}
                           </p>
-                          <p className="text-xs font-semibold text-primary">{item.price}</p>
+                          <p className="text-xs font-semibold text-primary">
+                            {product ? formatPrice(product.price) : '49 DH'}
+                          </p>
                           <button
                             type="button"
                             className={cn(
@@ -1398,7 +1585,8 @@ export function StoreAppearanceLivePreview({
                           </button>
                         </div>
                       </div>
-                    ))}
+                    );
+                  })}
                 </div>
 
                 <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 border-t border-border/50 pt-3 text-[10px]">
@@ -1424,39 +1612,81 @@ export function StoreAppearanceLivePreview({
             )}
           </div>,
         )
-      ) : previewPage === 'contact' ||
-        previewPage === 'sur-mesure' ||
-        previewPage === 'devis' ? (
+      ) : previewPage === 'contact' ? (
         hotspot(
           'forms',
           'Formulaires',
           'px-3 py-4',
           <div className="space-y-3">
             {appearance.formsShowHero ? (
-              <div className="rounded-lg bg-gradient-to-r from-primary/10 to-secondary/10 px-3 py-4 text-center">
-                <p className="font-display text-base font-semibold">{previewPageLabel}</p>
-                <p className="mt-1 text-[10px] text-muted-foreground">Formulaire vitrine</p>
+              <div className="px-2 py-4 text-center">
+                <p className="text-[9px] font-semibold uppercase tracking-[0.25em] text-primary">
+                  {t('contactEyebrow')}
+                </p>
+                <p className="mt-1.5 font-display text-lg font-semibold">{t('contactTitle')}</p>
+                <div className="mx-auto my-2 flex max-w-[140px] items-center gap-2">
+                  <span className="h-px flex-1 bg-border" />
+                  <Sparkles className="h-3.5 w-3.5 text-primary" />
+                  <span className="h-px flex-1 bg-border" />
+                </div>
+                <p className="mx-auto max-w-xs text-[10px] leading-relaxed text-muted-foreground">
+                  {t('contactIntro')}
+                </p>
               </div>
             ) : null}
             <div
               className={cn(
                 'gap-2',
                 appearance.formsLayout === 'split' && appearance.formsShowSidebar
-                  ? 'grid sm:grid-cols-2'
+                  ? 'grid @sm:grid-cols-2'
                   : 'flex flex-col',
                 appearance.formsLayout === 'centered' && 'mx-auto max-w-sm',
               )}
             >
               {appearance.formsLayout === 'stacked' && appearance.formsShowSidebar ? (
                 <aside className={cn('rounded-xl p-3', formsPanelClass(appearance.formsStyle), radius.card)}>
-                  <p className="text-xs font-semibold">Infos contact</p>
-                  <p className="mt-1 text-[10px] text-muted-foreground">Réponse sous 24h</p>
+                  <p className="text-xs font-semibold">{t('contactQuickTitle')}</p>
+                  <p className="mt-1 text-[10px] text-muted-foreground">{t('contactQuickDesc')}</p>
                 </aside>
               ) : null}
               <div className={cn('space-y-2 rounded-xl p-3', formsPanelClass(appearance.formsStyle), radius.card)}>
-                <div className="h-7 rounded-md bg-muted/60" />
-                <div className="h-7 rounded-md bg-muted/60" />
-                <div className="h-14 rounded-md bg-muted/50" />
+                <p className="border-b border-border pb-2 text-sm font-display font-semibold">
+                  {t('yourRequest')}
+                </p>
+                <div className="grid gap-2 @sm:grid-cols-2">
+                  <div>
+                    <p className="mb-1 text-[9px] uppercase tracking-wider text-muted-foreground">
+                      {t('fullName')}
+                    </p>
+                    <div className="h-8 rounded-lg border border-border bg-background px-2 text-[10px] leading-8 text-muted-foreground">
+                      {t('phFullName')}
+                    </div>
+                  </div>
+                  <div>
+                    <p className="mb-1 text-[9px] uppercase tracking-wider text-muted-foreground">
+                      {t('emailAddress')}
+                    </p>
+                    <div className="h-8 rounded-lg border border-border bg-background px-2 text-[10px] leading-8 text-muted-foreground">
+                      {t('phEmail')}
+                    </div>
+                  </div>
+                </div>
+                <div>
+                  <p className="mb-1 text-[9px] uppercase tracking-wider text-muted-foreground">
+                    {t('phone')}
+                  </p>
+                  <div className="h-8 rounded-lg border border-border bg-background px-2 text-[10px] leading-8 text-muted-foreground">
+                    {t('phPhone')}
+                  </div>
+                </div>
+                <div>
+                  <p className="mb-1 text-[9px] uppercase tracking-wider text-muted-foreground">
+                    {t('message')}
+                  </p>
+                  <div className="h-16 rounded-lg border border-border bg-background px-2 py-1.5 text-[10px] text-muted-foreground">
+                    {t('phMessage')}
+                  </div>
+                </div>
                 <button
                   type="button"
                   className={cn(
@@ -1464,15 +1694,217 @@ export function StoreAppearanceLivePreview({
                     radius.button,
                   )}
                 >
-                  {appearance.formsCtaLabel || 'Envoyer'}
+                  {appearance.formsCtaLabel || t('sendMessage')}
                 </button>
               </div>
               {appearance.formsLayout === 'split' && appearance.formsShowSidebar ? (
-                <aside className={cn('rounded-xl p-3', formsPanelClass(appearance.formsStyle), radius.card)}>
-                  <p className="text-xs font-semibold">Une réponse rapide</p>
-                  <p className="mt-1 text-[10px] text-muted-foreground">Téléphone · Email · WhatsApp</p>
+                <aside className={cn('space-y-3 rounded-xl p-3', formsPanelClass(appearance.formsStyle), radius.card)}>
+                  <div className="border-b border-border pb-2">
+                    <p className="text-xs font-semibold">{t('contactQuickTitle')}</p>
+                    <p className="mt-1 text-[10px] text-muted-foreground">{t('contactQuickDescLong')}</p>
+                  </div>
+                  {contactPhone ? (
+                    <div>
+                      <p className="text-[9px] font-bold uppercase tracking-wider text-primary">
+                        {t('phone')}
+                      </p>
+                      <p className="mt-1 rounded-lg border border-border bg-muted/30 px-2 py-1.5 text-[11px] font-medium">
+                        {contactPhone}
+                      </p>
+                    </div>
+                  ) : null}
+                  {contactEmail ? (
+                    <div>
+                      <p className="text-[9px] font-bold uppercase tracking-wider text-primary">
+                        {t('emailAddress')}
+                      </p>
+                      <p className="mt-1 break-all rounded-lg border border-border bg-muted/30 px-2 py-1.5 text-[11px] font-medium">
+                        {contactEmail}
+                      </p>
+                    </div>
+                  ) : null}
+                  {contactWhatsapp || contactCity ? (
+                    <div>
+                      <p className="text-[9px] font-bold uppercase tracking-wider text-primary">
+                        {t('messaging')}
+                      </p>
+                      <p className="mt-1 text-[10px] text-muted-foreground">
+                        {[contactWhatsapp && `WhatsApp ${contactWhatsapp}`, contactCity]
+                          .filter(Boolean)
+                          .join(' · ')}
+                      </p>
+                    </div>
+                  ) : (
+                    <p className="text-[10px] text-muted-foreground">{t('messaging')}</p>
+                  )}
                 </aside>
               ) : null}
+            </div>
+          </div>,
+        )
+      ) : previewPage === 'sur-mesure' || previewPage === 'devis' ? (
+        hotspot(
+          'forms',
+          'Formulaires',
+          'px-3 py-4',
+          <div className="space-y-3">
+            {appearance.formsShowHero ? (
+              <div className="relative overflow-hidden rounded-xl border border-border px-3 py-4 text-center">
+                <div
+                  className="pointer-events-none absolute inset-0 opacity-20"
+                  style={{
+                    backgroundImage:
+                      "url('https://images.unsplash.com/photo-1605745341112-859dfc6dd42e?w=800&h=400&fit=crop&q=80')",
+                    backgroundSize: 'cover',
+                    backgroundPosition: 'center',
+                  }}
+                />
+                <div className="relative z-10">
+                  <p className="text-[9px] font-semibold uppercase tracking-[0.2em] text-primary">
+                    {packagingCfg.eyebrow}
+                  </p>
+                  <p className="mt-1 font-display text-lg font-semibold">{packagingCfg.title}</p>
+                  <p className="mx-auto mt-1 max-w-xs text-[10px] text-muted-foreground">
+                    {packagingCfg.subtitle}
+                  </p>
+                  <button
+                    type="button"
+                    className="mt-2 text-[10px] font-medium text-primary underline-offset-2 hover:underline"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onPreviewNavigate?.(packagingCfg.altPage);
+                    }}
+                  >
+                    {packagingCfg.altLabel}
+                  </button>
+                </div>
+              </div>
+            ) : null}
+
+            <div
+              className={cn(
+                'gap-2',
+                appearance.formsLayout === 'split' ? 'grid @sm:grid-cols-2' : 'flex flex-col',
+                appearance.formsLayout === 'centered' && 'mx-auto max-w-sm',
+              )}
+            >
+              <div
+                className={cn(
+                  'space-y-2 p-3',
+                  formsPanelClass(appearance.formsStyle),
+                  appearance.formsStyle !== 'flat' && radius.card,
+                  appearance.formsLayout === 'split' && 'order-2 @sm:order-1',
+                  appearance.formsLayout === 'stacked' && 'order-2',
+                )}
+              >
+                <p className="font-display text-sm font-semibold">{t('projectDetails')}</p>
+                <div className="grid gap-2 @sm:grid-cols-2">
+                  <div>
+                    <p className="mb-1 text-[9px] uppercase tracking-wider text-muted-foreground">
+                      {packagingCfg.needLabel}
+                    </p>
+                    <div className="h-8 rounded-lg border border-border bg-background px-2 text-[10px] leading-8 text-muted-foreground">
+                      {packagingCfg.needOptions[0]}
+                    </div>
+                  </div>
+                  <div>
+                    <p className="mb-1 text-[9px] uppercase tracking-wider text-muted-foreground">
+                      {t('category')}
+                    </p>
+                    <div className="h-8 rounded-lg border border-border bg-background px-2 text-[10px] leading-8 text-muted-foreground">
+                      {categories[0]?.name || '—'}
+                    </div>
+                  </div>
+                </div>
+                <div className="grid gap-2 @sm:grid-cols-2">
+                  <div>
+                    <p className="mb-1 text-[9px] uppercase tracking-wider text-muted-foreground">
+                      {t('dimensionsFormat')}
+                    </p>
+                    <div className="h-8 rounded-lg border border-border bg-background" />
+                  </div>
+                  <div>
+                    <p className="mb-1 text-[9px] uppercase tracking-wider text-muted-foreground">
+                      {t('estimatedQty')}
+                    </p>
+                    <div className="h-8 rounded-lg border border-border bg-background" />
+                  </div>
+                </div>
+                <div>
+                  <p className="mb-1 text-[9px] uppercase tracking-wider text-muted-foreground">
+                    {t('description')}
+                  </p>
+                  <div className="h-12 rounded-lg border border-border bg-background" />
+                </div>
+                <div className="grid gap-2 @sm:grid-cols-2">
+                  <div>
+                    <p className="mb-1 text-[9px] uppercase tracking-wider text-muted-foreground">
+                      {t('fullName')} *
+                    </p>
+                    <div className="h-8 rounded-lg border border-border bg-background" />
+                  </div>
+                  <div>
+                    <p className="mb-1 text-[9px] uppercase tracking-wider text-muted-foreground">
+                      {t('phone')} *
+                    </p>
+                    <div className="h-8 rounded-lg border border-border bg-background" />
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  className={cn(
+                    appearanceButtonClass(appearance.buttonStyle, 'w-full text-[11px]'),
+                    radius.button,
+                  )}
+                >
+                  {appearance.formsCtaLabel || packagingCfg.submitLabel}
+                </button>
+              </div>
+
+              <div
+                className={cn(
+                  'space-y-2 p-3',
+                  formsPanelClass(appearance.formsStyle),
+                  appearance.formsStyle !== 'flat' && radius.card,
+                  appearance.formsLayout === 'split' && 'order-1 @sm:order-2',
+                  appearance.formsLayout === 'stacked' && 'order-1',
+                  appearance.formsLayout === 'centered' && 'mt-1',
+                )}
+              >
+                <p className="font-display text-sm font-semibold">{packagingCfg.uploadTitle}</p>
+                <div className="flex min-h-[110px] flex-col items-center justify-center rounded-xl border-2 border-dashed border-border bg-card/50 px-3 py-4 text-center">
+                  <CloudUpload className="mb-2 h-7 w-7 text-primary" />
+                  <p className="text-[10px] font-semibold">{packagingCfg.uploadTitle}</p>
+                  <p className="mt-1 text-[9px] text-muted-foreground">{packagingCfg.uploadHint}</p>
+                </div>
+                {appearance.formsShowSidebar ? (
+                  <div className="rounded-xl border border-border bg-card p-2.5 shadow-soft">
+                    <p className="text-[10px] font-semibold uppercase tracking-wide">{t('tipTitle')}</p>
+                    <p className="mt-1 text-[10px] italic text-muted-foreground">{packagingCfg.tip}</p>
+                  </div>
+                ) : null}
+              </div>
+            </div>
+
+            <div className="rounded-xl border border-border bg-muted/20 px-3 py-3">
+              <p className="text-center font-display text-sm font-semibold">{t('processTitle')}</p>
+              <p className="mt-0.5 text-center text-[9px] uppercase tracking-wider text-primary">
+                {packagingCfg.processEyebrow}
+              </p>
+              <div className="mt-3 grid grid-cols-3 gap-2">
+                {packagingCfg.steps.map((step) => (
+                  <div
+                    key={step.n}
+                    className={cn('rounded-xl border border-border bg-card p-2 text-center', radius.card)}
+                  >
+                    <div className="mx-auto mb-1.5 flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-xs font-semibold text-primary-foreground">
+                      {step.n}
+                    </div>
+                    <p className="text-[10px] font-semibold leading-tight">{step.title}</p>
+                    <p className="mt-0.5 line-clamp-2 text-[8px] text-muted-foreground">{step.desc}</p>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>,
         )
@@ -1512,7 +1944,7 @@ export function StoreAppearanceLivePreview({
         undefined,
         <>
           {appearance.heroStyle === 'split' ? (
-            <div className="grid gap-3 p-4 sm:grid-cols-2">
+            <div className="grid gap-3 p-4 @sm:grid-cols-2">
               <div className="flex flex-col justify-center">
                 <button
                   type="button"
@@ -1549,10 +1981,8 @@ export function StoreAppearanceLivePreview({
                 </button>
               </div>
               <div
-                className={cn('aspect-[4/3] bg-gradient-to-br from-primary/30 to-muted', radius.card)}
-                style={{
-                  background: `linear-gradient(135deg, ${primaryColor || '#0d9488'}55, ${secondaryColor || '#0369a1'}33)`,
-                }}
+                className={cn('aspect-[4/3]', radius.card)}
+                style={heroMediaStyle}
               />
             </div>
           ) : appearance.heroStyle === 'minimal' ? (
@@ -1576,9 +2006,16 @@ export function StoreAppearanceLivePreview({
           ) : appearance.heroStyle === 'banner' ? (
             <div
               className="relative flex min-h-[120px] items-center px-4 py-6"
-              style={{
-                background: `linear-gradient(90deg, ${primaryColor || '#0d9488'}33, transparent)`,
-              }}
+              style={
+                heroImageUrl
+                  ? {
+                      ...heroMediaStyle,
+                      backgroundImage: `linear-gradient(90deg, rgba(0,0,0,0.45), transparent), url(${heroImageUrl})`,
+                    }
+                  : {
+                      background: `linear-gradient(90deg, ${primaryColor || '#0d9488'}33, transparent)`,
+                    }
+              }
             >
               <div>
                 <p className="font-display text-base font-semibold">{tag}</p>
@@ -1599,12 +2036,7 @@ export function StoreAppearanceLivePreview({
             </div>
           ) : appearance.heroStyle === 'stacked' ? (
             <div className="p-4">
-              <div
-                className={cn('aspect-[2.2/1] bg-gradient-to-br from-primary/30 to-muted', radius.card)}
-                style={{
-                  background: `linear-gradient(135deg, ${primaryColor || '#0d9488'}55, ${secondaryColor || '#0369a1'}33)`,
-                }}
-              />
+              <div className={cn('aspect-[2.2/1]', radius.card)} style={heroMediaStyle} />
               <div className="mt-3 text-center">
                 <p className="text-[10px] font-semibold uppercase tracking-wider text-primary">{name}</p>
                 <p className="mt-1 font-display text-lg font-semibold">{tag}</p>
@@ -1626,9 +2058,17 @@ export function StoreAppearanceLivePreview({
           ) : appearance.heroStyle === 'overlay' ? (
             <div
               className="relative flex min-h-[180px] items-center justify-center px-4 py-8 text-center text-primary-foreground"
-              style={{
-                background: `linear-gradient(135deg, ${primaryColor || '#0d9488'}cc, ${secondaryColor || '#0369a1'}99)`,
-              }}
+              style={
+                heroImageUrl
+                  ? {
+                      backgroundImage: `linear-gradient(135deg, rgba(0,0,0,0.55), rgba(0,0,0,0.35)), url(${heroImageUrl})`,
+                      backgroundSize: 'cover',
+                      backgroundPosition: 'center',
+                    }
+                  : {
+                      background: `linear-gradient(135deg, ${primaryColor || '#0d9488'}cc, ${secondaryColor || '#0369a1'}99)`,
+                    }
+              }
             >
               <div>
                 <p className="text-[10px] font-semibold uppercase tracking-wider opacity-90">{name}</p>
@@ -1650,8 +2090,8 @@ export function StoreAppearanceLivePreview({
               </div>
             </div>
           ) : appearance.heroStyle === 'asymmetric' ? (
-            <div className="relative grid gap-3 p-4 sm:grid-cols-12">
-              <div className="flex flex-col justify-end sm:col-span-5">
+            <div className="relative grid gap-3 p-4 @sm:grid-cols-12">
+              <div className="flex flex-col justify-end @sm:col-span-5">
                 <p className="text-[10px] font-semibold uppercase tracking-wider text-primary">{name}</p>
                 <p className="mt-1 font-display text-lg font-semibold leading-snug">{tag}</p>
                 <button
@@ -1669,21 +2109,24 @@ export function StoreAppearanceLivePreview({
                 </button>
               </div>
               <div
-                className={cn(
-                  'aspect-[5/4] bg-gradient-to-br from-primary/30 to-muted sm:col-span-7 sm:translate-x-2',
-                  radius.card,
-                )}
-                style={{
-                  background: `linear-gradient(145deg, ${primaryColor || '#0d9488'}55, ${secondaryColor || '#0369a1'}33)`,
-                }}
+                className={cn('aspect-[5/4] @sm:col-span-7 @sm:translate-x-2', radius.card)}
+                style={heroMediaStyle}
               />
             </div>
           ) : (
             <div
               className="relative flex min-h-[180px] items-end px-4 py-6"
-              style={{
-                background: `linear-gradient(135deg, ${primaryColor || '#0d9488'}88, ${secondaryColor || '#0369a1'}44)`,
-              }}
+              style={
+                heroImageUrl
+                  ? {
+                      backgroundImage: `linear-gradient(135deg, rgba(0,0,0,0.45), rgba(0,0,0,0.2)), url(${heroImageUrl})`,
+                      backgroundSize: 'cover',
+                      backgroundPosition: 'center',
+                    }
+                  : {
+                      background: `linear-gradient(135deg, ${primaryColor || '#0d9488'}88, ${secondaryColor || '#0369a1'}44)`,
+                    }
+              }
             >
               <div className="relative text-primary-foreground">
                 <p className="text-[10px] font-semibold uppercase tracking-wider opacity-90">{name}</p>
@@ -1723,44 +2166,88 @@ export function StoreAppearanceLivePreview({
         </>,
       )}
 
+      {categories.length > 0 ? (
+        <div className="border-b border-border/40 px-4 py-3">
+          <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+            Catégories
+          </p>
+          <div className="grid grid-cols-2 gap-2 @sm:grid-cols-4">
+            {categories.slice(0, 4).map((cat) => (
+              <button
+                key={cat.id}
+                type="button"
+                className={cn('overflow-hidden text-left', radius.card)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onPreviewNavigate?.('shop');
+                }}
+              >
+                <PreviewProductImage
+                  src={cat.image}
+                  alt={cat.name}
+                  className="aspect-[4/3] w-full"
+                  fallbackStyle={gradientFallback}
+                />
+                <p className="mt-1 truncate text-[10px] font-semibold">{cat.name}</p>
+              </button>
+            ))}
+          </div>
+        </div>
+      ) : null}
+
       {hotspot(
         'cards',
         'Cards',
         'p-4',
         <>
           <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-            Carte produit
+            Produits en vedette
           </p>
           <div
-            className={cn(
-              appearanceCardClass(appearance.cardStyle, 'flex gap-3 p-3'),
-              radius.card,
-              appearance.cardStyle !== 'minimal' && 'max-w-xs',
-            )}
+            className={cq('grid gap-2', shopGridClass(appearance.shopGridColumns, appearance.shopDensity))}
           >
-            <div
-              className={cn('h-16 w-16 shrink-0 bg-muted', radius.chip || radius.card)}
-              style={{
-                background: `linear-gradient(145deg, ${primaryColor || '#0d9488'}40, ${secondaryColor || '#0369a1'}25)`,
-              }}
-            />
-            <div className="min-w-0">
-              <p className="truncate font-display text-sm font-semibold">Produit exemple</p>
-              <p className="font-body text-xs text-muted-foreground">199 DH</p>
-              <button
-                type="button"
+            {(shopProducts.length > 0
+              ? shopProducts.slice(0, 4)
+              : Array.from({ length: 2 }, () => null)
+            ).map((product, i) => (
+              <div
+                key={product?.id ?? i}
                 className={cn(
-                  appearanceButtonClass(appearance.buttonStyle, 'mt-2 text-[10px] px-2.5 py-1'),
-                  radius.button,
+                  appearanceCardClass(appearance.cardStyle, 'overflow-hidden p-2'),
+                  radius.card,
                 )}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onSelectSection?.('buttons');
-                }}
               >
-                Ajouter
-              </button>
-            </div>
+                <PreviewProductImage
+                  src={product?.images?.[0]}
+                  alt={product?.name}
+                  className={cn(
+                    'mb-2 w-full',
+                    cardImageRatioClass(appearance.cardImageRatio),
+                    radius.chip,
+                  )}
+                  fallbackStyle={gradientFallback}
+                />
+                <p className="truncate font-display text-[11px] font-semibold">
+                  {product?.name || `Produit ${i + 1}`}
+                </p>
+                <p className="text-[10px] text-primary">
+                  {product ? formatPrice(product.price) : '199 DH'}
+                </p>
+                <button
+                  type="button"
+                  className={cn(
+                    appearanceButtonClass(appearance.buttonStyle, 'mt-2 text-[10px] px-2.5 py-1'),
+                    radius.button,
+                  )}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onSelectSection?.('buttons');
+                  }}
+                >
+                  Ajouter
+                </button>
+              </div>
+            ))}
           </div>
         </>,
       )}
@@ -1836,7 +2323,7 @@ export function StoreAppearanceLivePreview({
               'grid gap-3 text-[11px]',
               centeredFooter && 'justify-items-center text-center',
               stackedFooter && 'grid-cols-1',
-              !centeredFooter && !stackedFooter && (linksOnly ? 'grid-cols-2' : 'grid-cols-2 sm:grid-cols-3'),
+              !centeredFooter && !stackedFooter && (linksOnly ? 'grid-cols-2' : 'grid-cols-2 @sm:grid-cols-3'),
             )}
           >
             {appearance.footerShowBrand && !linksOnly ? (

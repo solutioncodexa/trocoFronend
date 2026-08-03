@@ -103,6 +103,10 @@ export type AppearanceFormSlice = {
   heroEnabled: boolean;
   categoriesEnabled: boolean;
   surMesureEnabled: boolean;
+  contactEmail?: string;
+  contactPhone?: string;
+  contactWhatsapp?: string;
+  contactCity?: string;
 };
 
 export type AppearanceSectionEditorsProps = {

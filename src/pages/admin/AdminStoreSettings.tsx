@@ -928,6 +928,10 @@ const AdminStoreSettings = () => {
             heroEnabled: form.heroEnabled,
             categoriesEnabled: form.categoriesEnabled,
             surMesureEnabled: form.surMesureEnabled,
+            contactEmail: form.contactEmail,
+            contactPhone: form.contactPhone,
+            contactWhatsapp: form.contactWhatsapp,
+            contactCity: form.contactCity,
           }}
           patch={patch}
           patchAppearance={patchAppearance}
