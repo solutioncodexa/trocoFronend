@@ -19,6 +19,32 @@ vi.mock('@/services/api/platform', () => ({
   },
 }));
 
+vi.mock('@/contexts/AdminContext', () => ({
+  useAdmin: () => ({
+    isAuthenticated: false,
+    isAdmin: false,
+    isSuperAdmin: false,
+    user: null,
+    permissions: [],
+    isLoading: false,
+    login: vi.fn(),
+    logout: vi.fn(),
+    hasPermission: () => false,
+  }),
+}));
+
+vi.mock('@/contexts/TenantContext', () => ({
+  useTenant: () => ({
+    store: null,
+    slug: null,
+    isPlatformHost: true,
+    isLoading: false,
+    storeUnavailableMessage: null,
+    refresh: vi.fn(),
+    loadFromAdminSession: vi.fn(),
+  }),
+}));
+
 describe('MatjaronaHome', () => {
   beforeEach(() => {
     vi.clearAllMocks();
