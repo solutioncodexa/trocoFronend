@@ -17,18 +17,30 @@ async function json(route: Route, body: unknown, status = 200) {
   });
 }
 
+const productAtlas = {
+  id: '1',
+  name: 'Sachet Kraft Atlas',
+  price: 12.5,
+  images: ['/uploads/demo.png'],
+  category: 'sachets',
+  inStock: true,
+  stockQuantity: 40,
+  description: 'Sachet kraft premium',
+};
+
 const basicPlan = {
   id: 1,
   code: 'basic',
   name: 'Basic',
   description: 'Plan Basic Matjarona',
-  priceMad: 150,
+  priceMad: 79,
   currency: 'MAD',
   billingPeriod: 'MONTHLY',
-  maxProducts: 500,
-  maxStaff: 5,
-  customDomain: true,
+  maxProducts: 50,
+  maxStaff: 1,
+  customDomain: false,
   active: true,
+  features: { themes: 'basic', whatsappBusiness: false, webhooks: 'none' },
 };
 
 const storeAtlas = {
@@ -48,6 +60,7 @@ const storeAtlas = {
   contactPhone: '+212600000000',
   contactWhatsapp: '+212612345678',
   whatsappOrderTemplate: 'Bonjour, je souhaite commander: {productName} ({url})',
+  cookieConsentRequired: false,
   planCode: 'basic',
   planName: 'Basic',
 };
@@ -118,7 +131,7 @@ export async function mockMatjaronaApi(page: Page) {
         status: 'ACTIVE',
         planCode: 'basic',
         planName: 'Basic',
-        planPriceMad: 150,
+        planPriceMad: 79,
       }));
     }
 
@@ -179,16 +192,7 @@ export async function mockMatjaronaApi(page: Page) {
 
     if (method === 'GET' && (path === '/products' || path === '/products/full-page')) {
       return json(route, ok({
-        content: [{
-          id: '1',
-          name: 'Sachet Kraft Atlas',
-          price: 12.5,
-          images: ['/uploads/demo.png'],
-          category: 'sachets',
-          inStock: true,
-          stockQuantity: 40,
-          description: 'Sachet kraft premium',
-        }],
+        content: [productAtlas],
         page: 0,
         size: 20,
         totalElements: 1,
@@ -198,16 +202,13 @@ export async function mockMatjaronaApi(page: Page) {
       }));
     }
 
+    if (method === 'GET' && path === '/products/by-ids') {
+      return json(route, ok([productAtlas]));
+    }
+
     if (method === 'GET' && path === '/products/1') {
       return json(route, ok({
-        id: '1',
-        name: 'Sachet Kraft Atlas',
-        price: 12.5,
-        images: ['/uploads/demo.png'],
-        category: 'sachets',
-        inStock: true,
-        stockQuantity: 40,
-        description: 'Sachet kraft premium',
+        ...productAtlas,
         variants: [{ id: '1', label: 'Standard', price: 12.5, stock: 40, isDefault: true }],
       }));
     }
@@ -308,7 +309,12 @@ export async function mockMatjaronaApi(page: Page) {
         productId: 1,
         averageRating: 5,
         reviewCount: 1,
-        reviews: [
+      }));
+    }
+
+    if (method === 'GET' && path === '/product-reviews/public/1/reviews') {
+      return json(route, ok({
+        content: [
           {
             id: 10,
             productId: 1,
@@ -320,6 +326,12 @@ export async function mockMatjaronaApi(page: Page) {
             createdAt: new Date().toISOString(),
           },
         ],
+        page: 0,
+        size: 10,
+        totalElements: 1,
+        totalPages: 1,
+        first: true,
+        last: true,
       }));
     }
 
@@ -434,7 +446,10 @@ export async function mockMatjaronaApi(page: Page) {
       }));
     }
 
-    if (method === 'GET' && (path.endsWith('/public') || path.includes('/public'))) {
+    // Fallback soft : évite de casser le front sur endpoints secondaires
+    // (ne pas avaler /product-reviews/public/... déjà gérés plus haut)
+    if (method === 'GET' && (path.endsWith('/public') || path.includes('/public'))
+        && !path.includes('/product-reviews/')) {
       return json(route, ok([]));
     }
 
@@ -511,7 +526,7 @@ export async function mockMatjaronaApi(page: Page) {
         status: 'ACTIVE',
         planCode: 'basic',
         planName: 'Basic',
-        planPriceMad: 150,
+        planPriceMad: 79,
       }]));
     }
 

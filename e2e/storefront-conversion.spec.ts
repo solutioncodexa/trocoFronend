@@ -1,10 +1,12 @@
 import { test, expect } from '@playwright/test';
 import { mockMatjaronaApi } from './helpers/apiMock';
+import { acceptCookies } from './helpers/consent';
 import { seedCart } from './helpers/seedCart';
 
 test.describe('Conversion vitrine (sticky, avis, upsell)', () => {
   test.beforeEach(async ({ page }) => {
     await mockMatjaronaApi(page);
+    await acceptCookies(page);
   });
 
   test('bandeau sticky CTA visible et masquable', async ({ page }) => {

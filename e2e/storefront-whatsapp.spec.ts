@@ -1,10 +1,12 @@
 import { test, expect } from '@playwright/test';
 import { mockMatjaronaApi } from './helpers/apiMock';
+import { acceptCookies } from './helpers/consent';
 import { seedCart } from './helpers/seedCart';
 
 test.describe('WhatsApp Business boutique', () => {
   test.beforeEach(async ({ page }) => {
     await mockMatjaronaApi(page);
+    await acceptCookies(page);
   });
 
   test('bouton flottant pointe vers le numéro de la boutique', async ({ page }) => {
@@ -36,9 +38,10 @@ test.describe('WhatsApp Business boutique', () => {
     await page.getByLabel(/email/i).fill('admin@maison-atlas.test');
     await page.locator('input[type="password"]').fill('Password123!');
     await page.getByRole('button', { name: /connexion|se connecter|connecter/i }).click();
-    await expect(page).toHaveURL(/\/admin\/dashboard/, { timeout: 15_000 });
+    await expect(page).toHaveURL(/\/admin\/(dashboard|onboarding)/, { timeout: 15_000 });
 
-    await page.goto('/admin/parametres');
+    // WhatsApp est dans /admin/reglages (parametres = Apparence)
+    await page.goto('/admin/reglages');
     await expect(page.getByRole('heading', { name: /WhatsApp Business/i })).toBeVisible({
       timeout: 15_000,
     });

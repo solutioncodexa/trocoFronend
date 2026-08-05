@@ -17,6 +17,7 @@ test.describe('Création de boutique', () => {
 
     await page.getByRole('button', { name: /Lancer ma boutique/i }).click();
 
-    await expect(page).toHaveURL(/\/admin\/dashboard/, { timeout: 15_000 });
+    // Après inscription : onboarding (plus de redirect direct dashboard)
+    await expect(page).toHaveURL(/\/admin\/(onboarding|dashboard)/, { timeout: 15_000 });
   });
 });

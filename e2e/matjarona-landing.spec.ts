@@ -10,7 +10,7 @@ test.describe('Landing Matjarona', () => {
     await page.goto('/matjarona');
     await expect(page.getByText('Matjarona').first()).toBeVisible();
     await expect(page.getByRole('link', { name: /Créer ma boutique/i }).first()).toBeVisible();
-    await expect(page.getByText(/150/)).toBeVisible();
+    await expect(page.getByText(/79\s*DH/i).first()).toBeVisible();
 
     await page.getByRole('link', { name: /Créer ma boutique/i }).first().click();
     await expect(page).toHaveURL(/\/creer-boutique/);
