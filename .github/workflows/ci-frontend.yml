@@ -239,11 +239,21 @@ jobs:
 
             cd "${DEPLOY_PATH}"
             if [ ! -f .env.troco ] || [ ! -f docker-compose.troco.yml ]; then
-              echo "ERROR: bootstrap Troco manquant (.env.troco / docker-compose.troco.yml)"
-              exit 1
+              echo "WARN: sidecar Troco pas encore bootstrappé — dist uploadée, restart container si présent"
+              if docker ps -a --format '{{.Names}}' | grep -qx troco-frontend; then
+                docker restart troco-frontend
+                echo "troco-frontend restarté (sans compose)"
+                exit 0
+              fi
+              echo "INFO: attendez le deploy backend (crée .env.troco + compose), puis re-run ce workflow"
+              exit 0
             fi
 
             mkdir -p docker
+            if [ ! -f docker/nginx-internal-troco.conf ]; then
+              echo "WARN: nginx-internal-troco.conf manquant — le container peut échouer au démarrage"
+            fi
+
             docker compose --env-file .env --env-file .env.troco \
               -f docker-compose.yml \
               -f docker-compose.artifacts.yml \
