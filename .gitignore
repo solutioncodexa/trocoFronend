@@ -28,3 +28,7 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+e2e/robot/last-*.json
+e2e/robot/run-console.txt
+
