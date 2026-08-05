@@ -51,7 +51,6 @@ import {
   ProductReviewsSection,
   useProductReviewJsonLd,
 } from '@/components/storefront/ProductReviewsSection';
-import ProductCard from '@/components/ui/ProductCard';
 import {
   buildProductWhatsAppMessage,
   buildWhatsAppMessageUrl,
