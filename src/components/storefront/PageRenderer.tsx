@@ -13,6 +13,8 @@ import { staticCatalogQueryOptions } from '@/config/queryOptions';
 import { useStorefrontPath } from '@/hooks/useStorefrontPath';
 import { usePreloadImage } from '@/hooks/usePreloadImage';
 import type { StorePage, StorePageBlock } from '@/types/store-pages';
+import { useLocale } from '@/contexts/LocaleContext';
+import { localizeKnownCopy } from '@/utils/localizeKnownCopy';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import {
@@ -119,11 +121,16 @@ export function PageRenderer({ page }: { page: StorePage }) {
       ))}
       {blocks.length === 0 ? (
         <div className="mx-auto max-w-xl px-4 py-20 text-center text-muted-foreground">
-          Cette page n’a pas encore de composants.
+          <EmptyPageHint />
         </div>
       ) : null}
     </div>
   );
+}
+
+function EmptyPageHint() {
+  const { t } = useLocale();
+  return <>{t('emptyPageBlocks')}</>;
 }
 
 /** Rendu d’un seul bloc (vitrine + atelier de design). */
@@ -174,10 +181,11 @@ export function PageBlockView({
 }
 
 function DemoBadge({ show }: { show?: boolean }) {
+  const { t } = useLocale();
   if (!show) return null;
   return (
     <span className="mb-3 inline-flex rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-800">
-      Exemple — ajoutez vos données
+      {t('mockCatalogHint')}
     </span>
   );
 }
@@ -194,12 +202,17 @@ function HeroBlock({
   priority?: boolean;
 }) {
   const { to } = useStorefrontPath();
+  const { locale } = useLocale();
   const c = cfg(block);
   const style = readBlockStyle(c);
   const imageUrl = str(c.imageUrl);
   const href = str(c.ctaHref, '/boutique');
   const btnStyle = buttonInlineStyle(style.buttonColor);
   const layout = style.layout;
+  const headlineText = localizeKnownCopy(str(c.headline), locale, 'welcomeShort');
+  const subtextText = localizeKnownCopy(str(c.subtext), locale);
+  const rawCta = str(c.ctaLabel);
+  const ctaLabel = rawCta ? localizeKnownCopy(rawCta, locale) : '';
 
   const headline = (
     <h1
@@ -212,11 +225,11 @@ function HeroBlock({
       )}
       style={style.textColor ? { color: style.textColor } : undefined}
     >
-      {str(c.headline, 'Bienvenue')}
+      {headlineText}
     </h1>
   );
 
-  const subtext = (
+  const subtext = subtextText ? (
     <p
       className={cn(
         'mt-4 max-w-lg',
@@ -227,20 +240,20 @@ function HeroBlock({
       )}
       style={style.textColor ? { color: style.textColor, opacity: 0.85 } : undefined}
     >
-      {str(c.subtext)}
+      {subtextText}
     </p>
-  );
+  ) : null;
 
   const cta =
-    str(c.ctaLabel) ? (
+    ctaLabel ? (
       <div className={cn('mt-8 flex w-full', layout === 'banner' && 'mt-4', justifyClass(style.align))}>
         <Button
           size={buttonSizeProp(style.buttonSize)}
           asChild
           style={btnStyle}
-          onClick={() => trackCta(pageId, str(c.ctaLabel), href, page)}
+          onClick={() => trackCta(pageId, ctaLabel, href, page)}
         >
-          <Link to={to(href)}>{str(c.ctaLabel)}</Link>
+          <Link to={to(href)}>{ctaLabel}</Link>
         </Button>
       </div>
     ) : null;
@@ -458,6 +471,7 @@ function ProductsBlock({
   usePreviewMocks?: boolean;
 }) {
   const { to } = useStorefrontPath();
+  const { locale, t } = useLocale();
   const c = cfg(block);
   const limit = num(c.limit, 8);
   const { data } = useQuery({
@@ -469,6 +483,7 @@ function ProductsBlock({
   const usingMocks = usePreviewMocks && real.length === 0;
   const products = usingMocks ? mockProducts(limit) : real;
   const style = readBlockStyle(c);
+  const title = localizeKnownCopy(str(c.title), locale, 'productsTitle');
 
   return (
     <section
@@ -481,11 +496,11 @@ function ProductsBlock({
           className={cn('font-display text-2xl font-bold sm:text-3xl', alignClass(style.align))}
           style={style.textColor ? { color: style.textColor } : undefined}
         >
-          {str(c.title, 'Produits')}
+          {title}
         </h2>
         {style.align !== 'center' ? (
           <Link to={to('/boutique')} className="text-sm font-medium text-primary hover:underline">
-            Tout voir
+            {t('seeAll')}
           </Link>
         ) : null}
       </div>
@@ -530,6 +545,7 @@ function CategoriesBlock({
   usePreviewMocks?: boolean;
 }) {
   const { to } = useStorefrontPath();
+  const { locale } = useLocale();
   const c = cfg(block);
   const { data: categories = [] } = useQuery({
     queryKey: ['categories', 'cards', 'page-block'],
@@ -551,7 +567,7 @@ function CategoriesBlock({
         className={cn('mb-8 font-display text-2xl font-bold sm:text-3xl', alignClass(style.align))}
         style={style.textColor ? { color: style.textColor } : undefined}
       >
-        {str(c.title, 'Catégories')}
+        {localizeKnownCopy(str(c.title), locale, 'categories')}
       </h2>
       <div className={cn('grid', cardDensityClass(style.cardDensity), columnsClass(style.columns))}>
         {roots.map((cat) => {
@@ -598,6 +614,7 @@ function CtaBlock({
   pageId?: number;
 }) {
   const { to } = useStorefrontPath();
+  const { locale } = useLocale();
   const c = cfg(block);
   const style = readBlockStyle(c);
   const href = str(c.ctaHref, '/contact');
@@ -605,6 +622,10 @@ function CtaBlock({
   const layout = style.ctaLayout;
   const centered = layout === 'centered' || style.align === 'center';
   const stacked = layout === 'stacked' || layout === 'centered';
+  const title = localizeKnownCopy(str(c.title), locale);
+  const body = localizeKnownCopy(str(c.body), locale);
+  const rawCta = str(c.ctaLabel);
+  const ctaLabel = rawCta ? localizeKnownCopy(rawCta, locale) : '';
 
   return (
     <section
@@ -632,24 +653,24 @@ function CtaBlock({
             className="font-display text-2xl font-bold sm:text-3xl"
             style={style.textColor ? { color: style.textColor } : undefined}
           >
-            {str(c.title)}
+            {title}
           </h2>
           <p
             className={cn('mt-2', !style.textColor && !style.bgColor && 'text-primary-foreground/85')}
             style={style.textColor ? { color: style.textColor, opacity: 0.9 } : undefined}
           >
-            {str(c.body)}
+            {body}
           </p>
         </div>
-        {str(c.ctaLabel) ? (
+        {ctaLabel ? (
           <Button
             size={buttonSizeProp(style.buttonSize)}
             variant={style.buttonColor || style.bgColor ? 'default' : 'secondary'}
             asChild
             style={btnStyle}
-            onClick={() => trackCta(pageId, str(c.ctaLabel), href, page)}
+            onClick={() => trackCta(pageId, ctaLabel, href, page)}
           >
-            <Link to={to(href)}>{str(c.ctaLabel)}</Link>
+            <Link to={to(href)}>{ctaLabel}</Link>
           </Button>
         ) : null}
       </div>

@@ -449,7 +449,7 @@ const Header = () => {
               onValueChange={(v) => {
                 const next = v as 'fr' | 'ar' | 'en';
                 setLocale(next);
-                setLang(next === 'ar' ? 'ar' : 'fr');
+                setLang(next);
               }}
             >
               <SelectTrigger
@@ -474,7 +474,7 @@ const Header = () => {
                 const idx = supportedLocales.indexOf(locale);
                 const next = supportedLocales[(idx + 1) % supportedLocales.length] ?? 'fr';
                 setLocale(next);
-                setLang(next === 'ar' ? 'ar' : 'fr');
+                setLang(next);
               }}
               aria-label={t('language')}
             >

@@ -17,6 +17,7 @@ import { useStoreLang } from '@/hooks/useStoreLang';
 import { usePreloadImage } from '@/hooks/usePreloadImage';
 import { useStoreAppearance } from '@/hooks/useStoreAppearance';
 import { resolveStickyHomeAbVariant } from '@/utils/homeAbVariant';
+import { localizeKnownCopy } from '@/utils/localizeKnownCopy';
 import type { DemoCategory } from '@/demo/mockCatalog';
 import { useLocale } from '@/contexts/LocaleContext';
 
@@ -28,7 +29,7 @@ const Index = () => {
   const { siteName, tagline, aboutText } = useStoreBrand();
   const appearance = useStoreAppearance();
   const { lang, isAr } = useStoreLang();
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
   const theme = normalizeThemeKey(store?.themeKey);
 
   const { data: publicHomes } = useQuery({
@@ -117,8 +118,8 @@ const Index = () => {
       <ThemeHome
         themeKey={theme}
         siteName={siteName}
-        tagline={tagline || t('welcomeStore')}
-        aboutText={aboutText || t('discoverProducts')}
+        tagline={localizeKnownCopy(tagline, locale, 'welcomeStore') || t('welcomeStore')}
+        aboutText={localizeKnownCopy(aboutText, locale, 'discoverProducts') || t('discoverProducts')}
         heroImage={heroImage}
         products={products}
         appearance={appearance}

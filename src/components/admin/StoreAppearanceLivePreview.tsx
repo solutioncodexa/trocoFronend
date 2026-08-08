@@ -23,6 +23,10 @@ import type { Product } from '@/types/product';
 import type { DemoCategory } from '@/demo/mockCatalog';
 import { formatPrice } from '@/utils/formatPrice';
 import { useLocale } from '@/contexts/LocaleContext';
+import {
+  AppearancePreviewLivePages,
+  isLiveStorefrontPreviewPage,
+} from '@/components/admin/appearance/AppearancePreviewLivePages';
 
 /** Convertit les breakpoints viewport en container queries (aperçu device). */
 function cq(...parts: Array<string | false | null | undefined>): string {
@@ -111,6 +115,10 @@ type Props = {
   contactPhone?: string;
   contactWhatsapp?: string;
   contactCity?: string;
+  themeKey?: string;
+  aboutText?: string;
+  heroEnabled?: boolean;
+  categoriesEnabled?: boolean;
 };
 
 function PreviewHotspot({
@@ -207,6 +215,10 @@ export function StoreAppearanceLivePreview({
   contactPhone = '',
   contactWhatsapp = '',
   contactCity = '',
+  themeKey = 'classic',
+  aboutText = '',
+  heroEnabled = true,
+  categoriesEnabled = true,
 }: Props) {
   const { t } = useLocale();
   const radius = RADIUS_PRESETS.find((p) => p.key === normalizeRadiusPreset(radiusPreset)) ?? RADIUS_PRESETS[1];
@@ -684,7 +696,31 @@ export function StoreAppearanceLivePreview({
         </>,
       )}
 
-      {previewPage === 'cart' ? (
+      {isLiveStorefrontPreviewPage(previewPage) ? (
+        <AppearancePreviewLivePages
+          previewPage={previewPage}
+          onPreviewNavigate={onPreviewNavigate}
+          siteName={siteName}
+          tagline={tagline}
+          aboutText={aboutText}
+          logoUrl={logoUrl}
+          primaryColor={primaryColor}
+          secondaryColor={secondaryColor}
+          themeKey={themeKey}
+          fontPair={fontPair}
+          radiusPreset={radiusPreset}
+          appearance={appearance}
+          heroEnabled={heroEnabled}
+          categoriesEnabled={categoriesEnabled}
+          catalogProducts={products}
+          catalogCategories={categories}
+          heroImageUrl={heroImageUrl}
+          contactEmail={contactEmail}
+          contactPhone={contactPhone}
+          contactWhatsapp={contactWhatsapp}
+          contactCity={contactCity}
+        />
+      ) : previewPage === 'cart' ? (
         hotspot(
           'cart',
           'Panier',

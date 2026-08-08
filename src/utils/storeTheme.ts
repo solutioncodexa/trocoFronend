@@ -165,19 +165,30 @@ function applyStoreFavicon(rawUrl: string) {
   disableDefaultFavicons();
   const bust = `_sf=${Date.now()}`;
   const href = resolved.includes('?') ? `${resolved}&${bust}` : `${resolved}?${bust}`;
-  let link = document.querySelector<HTMLLinkElement>(
-    `link[${STORE_FAVICON_ATTR}='1']`,
-  );
-  if (!link) {
-    link = document.createElement('link');
-    link.rel = 'icon';
-    link.setAttribute(STORE_FAVICON_ATTR, '1');
-    document.head.prepend(link);
-  }
   const mime = faviconMime(resolved);
-  if (mime) link.type = mime;
-  else link.removeAttribute('type');
-  link.href = href;
+
+  const ensureLink = (rel: string, sizes?: string) => {
+    let link: HTMLLinkElement | null = null;
+    document.querySelectorAll<HTMLLinkElement>(`link[${STORE_FAVICON_ATTR}='1']`).forEach((el) => {
+      if (el.rel === rel && (sizes ? el.getAttribute('sizes') === sizes : !el.getAttribute('sizes'))) {
+        link = el;
+      }
+    });
+    if (!link) {
+      link = document.createElement('link');
+      link.rel = rel;
+      if (sizes) link.setAttribute('sizes', sizes);
+      link.setAttribute(STORE_FAVICON_ATTR, '1');
+      document.head.prepend(link);
+    }
+    if (mime) link.type = mime;
+    else link.removeAttribute('type');
+    link.href = href;
+  };
+
+  ensureLink('icon');
+  ensureLink('shortcut icon');
+  ensureLink('apple-touch-icon');
 }
 
 export function applyDocumentBrand(store: StoreThemeInput | null) {

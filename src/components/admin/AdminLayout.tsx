@@ -196,17 +196,25 @@ const AdminLayout = ({
     onSidebarOpenChange?.(open);
   };
 
-  // Favicon / titre de l’onglet = branding boutique (sinon les icons Troco de index.html restent).
+  // Favicon / titre : branding boutique. Sur Apparence, le workspace applique le brouillon.
   useEffect(() => {
     if (!store) return;
+    if (location.pathname.startsWith('/admin/parametres')) return;
     applyDocumentBrand({
       siteName: store.siteName,
       tagline: store.tagline,
       logoUrl: store.logoUrl,
-      faviconUrl: store.faviconUrl,
+      faviconUrl: store.faviconUrl?.trim() || store.logoUrl,
     });
     return () => applyDocumentBrand(null);
-  }, [store?.siteName, store?.tagline, store?.logoUrl, store?.faviconUrl, store]);
+  }, [
+    location.pathname,
+    store?.siteName,
+    store?.tagline,
+    store?.logoUrl,
+    store?.faviconUrl,
+    store,
+  ]);
 
   const navSections = useMemo(() => {
     return ALL_NAV.map((section) => ({

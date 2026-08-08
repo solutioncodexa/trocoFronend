@@ -1,17 +1,17 @@
 import { useCallback, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { normalizeLocale, type StoreLocale } from '@/i18n/messages';
 
-export type StoreLang = 'fr' | 'ar';
-
+/** Langue vitrine alignée sur ?lang= (fr | ar | en). */
 export function useStoreLang() {
   const [params, setParams] = useSearchParams();
-  const lang: StoreLang = params.get('lang')?.toLowerCase().startsWith('ar') ? 'ar' : 'fr';
+  const lang: StoreLocale = normalizeLocale(params.get('lang'));
 
   const setLang = useCallback(
-    (next: StoreLang) => {
+    (next: StoreLocale) => {
       const p = new URLSearchParams(params);
       if (next === 'fr') p.delete('lang');
-      else p.set('lang', 'ar');
+      else p.set('lang', next);
       setParams(p, { replace: true });
       try {
         localStorage.setItem('matjarona_store_lang', next);
@@ -29,11 +29,14 @@ export function useStoreLang() {
       if (lang === 'fr') return path;
       const [base, qs] = path.split('?');
       const sp = new URLSearchParams(qs || '');
-      sp.set('lang', 'ar');
+      sp.set('lang', lang);
       return `${base}?${sp.toString()}`;
     },
     [lang],
   );
 
-  return useMemo(() => ({ lang, setLang, withLang, isAr: lang === 'ar' }), [lang, setLang, withLang]);
+  return useMemo(
+    () => ({ lang, setLang, withLang, isAr: lang === 'ar' }),
+    [lang, setLang, withLang],
+  );
 }

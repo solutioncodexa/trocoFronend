@@ -64,7 +64,7 @@ function buildVisiblePageNumbers(current: number, total: number): (number | 'gap
   return out;
 }
 
-const Boutique = () => {
+const Boutique = ({ embed = false }: { embed?: boolean } = {}) => {
   const { siteName, store, slug } = useStoreBrand();
   const { t, locale } = useLocale();
   const sortOptions = useMemo(
@@ -479,8 +479,8 @@ const Boutique = () => {
     </div>
   );
 
-  return (
-    <Layout>
+  const body = (
+    <>
       <section className="relative overflow-hidden border-b border-border bg-gradient-to-br from-card via-card to-primary/5 animate-fade-in">
         <div
           className="pointer-events-none absolute inset-0 opacity-[0.12]"
@@ -776,8 +776,11 @@ const Boutique = () => {
           </div>
         </div>
       </main>
-    </Layout>
+    </>
   );
+
+  if (embed) return body;
+  return <Layout>{body}</Layout>;
 };
 
 export default Boutique;

@@ -8,7 +8,7 @@ import { appearanceButtonClass, formsPanelClass } from '@/config/storeAppearance
 import { cn } from '@/lib/utils';
 import { useLocale } from '@/contexts/LocaleContext';
 
-const Contact = () => {
+const Contact = ({ embed = false }: { embed?: boolean } = {}) => {
   const { isEnabled, getUrl } = useSocialNetworks();
   const { contactEmail, contactPhone, contactPhoneHref } = useStoreBrand();
   const appearance = useStoreAppearance();
@@ -35,8 +35,7 @@ const Contact = () => {
   const inputClass =
     'w-full rounded-xl border border-input bg-card px-3.5 py-2.5 text-sm text-foreground shadow-soft placeholder:text-muted-foreground/80 hover:border-primary/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:border-primary transition-colors';
 
-  return (
-    <Layout>
+  const body = (
       <div className="bg-background min-h-screen animate-fade-in">
         {/* Hero Section */}
         {appearance.formsShowHero ? (
@@ -247,8 +246,10 @@ const Contact = () => {
         </div>
       </div>
       </div>
-    </Layout>
   );
+
+  if (embed) return body;
+  return <Layout>{body}</Layout>;
 };
 
 export default Contact;

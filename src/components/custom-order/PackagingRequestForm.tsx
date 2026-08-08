@@ -108,9 +108,11 @@ function buildConfig(variant: PackagingRequestVariant, t: TFn): VariantConfig {
 
 interface PackagingRequestFormProps {
   variant: PackagingRequestVariant;
+  /** Sans Layout (aperçu Apparence admin). */
+  embed?: boolean;
 }
 
-export default function PackagingRequestForm({ variant }: PackagingRequestFormProps) {
+export default function PackagingRequestForm({ variant, embed = false }: PackagingRequestFormProps) {
   const { t } = useLocale();
   const cfg = useMemo(() => buildConfig(variant, t), [variant, t]);
   const appearance = useStoreAppearance();
@@ -268,8 +270,7 @@ export default function PackagingRequestForm({ variant }: PackagingRequestFormPr
   };
 
   if (isSuccess) {
-    return (
-      <Layout>
+    const successBody = (
         <section className="py-24 bg-paper-pattern">
           <div className="max-w-lg mx-auto px-6 text-center">
             <div className="w-20 h-20 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-6">
@@ -284,12 +285,13 @@ export default function PackagingRequestForm({ variant }: PackagingRequestFormPr
             </Button>
           </div>
         </section>
-      </Layout>
     );
+    if (embed) return successBody;
+    return <Layout>{successBody}</Layout>;
   }
 
-  return (
-    <Layout>
+  const body = (
+    <>
       {appearance.formsShowHero ? (
       <section className="relative overflow-hidden border-b border-border bg-gradient-to-br from-card via-card to-primary/5 animate-fade-in">
         <div
@@ -623,6 +625,9 @@ export default function PackagingRequestForm({ variant }: PackagingRequestFormPr
           </div>
         </div>
       </section>
-    </Layout>
+    </>
   );
+
+  if (embed) return body;
+  return <Layout>{body}</Layout>;
 }

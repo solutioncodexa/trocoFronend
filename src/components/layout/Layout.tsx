@@ -49,9 +49,20 @@ const Layout = ({ children, forceThemeKey, forceBrand }: LayoutProps) => {
   /** Barre outils démo design au-dessus du header vitrine (~2 rows) */
   const demoChromePx = demo ? 96 : 0;
 
-  // Couleurs / thème : uniquement sur une vitrine tenant (sous-domaine / ?tenant= / démo).
-  // Jamais depuis la session admin sur le host Matjarona (localhost).
-  const onTenantStorefront = !!forceBrand || !!resolveTenantSlug();
+  // Couleurs / thème / favicon : vitrine tenant (sous-domaine / ?tenant=)
+  // ou boutique déjà résolue hors pages marketing/admin (ex. localhost après session).
+  const path = pathname;
+  const isAdminPath = path.startsWith('/admin') || path.startsWith('/superadmin');
+  const isMarketingPath =
+    path === '/' ||
+    path.startsWith('/creer') ||
+    path.startsWith('/create') ||
+    path.startsWith('/pricing') ||
+    path.startsWith('/design-demo');
+  const onTenantStorefront =
+    !!forceBrand ||
+    !!resolveTenantSlug() ||
+    (!!store && !isAdminPath && !isMarketingPath);
   const brand = forceBrand ?? (onTenantStorefront ? store : null);
   const themeKey = normalizeThemeKey(
     forceThemeKey ?? (onTenantStorefront ? store?.themeKey : null),

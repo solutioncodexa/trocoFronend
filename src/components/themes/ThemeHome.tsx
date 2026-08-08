@@ -3,6 +3,8 @@ import { ArrowRight, Sparkles, Truck, Shield, Star } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { formatPrice } from '@/utils/formatPrice';
 import { useStorefrontPath } from '@/hooks/useStorefrontPath';
+import { useLocale } from '@/contexts/LocaleContext';
+import { localizeKnownCopy } from '@/utils/localizeKnownCopy';
 import type { StoreThemeKey } from '@/config/storeThemes';
 import {
   DEFAULT_APPEARANCE,
@@ -53,8 +55,9 @@ function ClassicHome({
   showCategories = true,
 }: ThemeHomeProps & { appearance: StoreAppearance }) {
   const { to } = useStorefrontPath();
+  const { t, locale } = useLocale();
   const featured = products.slice(0, 4);
-  const cta = appearance.heroCtaLabel || 'Voir la boutique';
+  const cta = localizeKnownCopy(appearance.heroCtaLabel, locale, 'seeShop');
   const heroStyle = appearance.heroStyle;
   const densityPad =
     appearance.homeDensity === 'compact'
@@ -75,7 +78,7 @@ function ClassicHome({
         </Link>
       </Button>
       <Button size="lg" variant="outline" asChild>
-        <Link to={to('/contact')}>Nous contacter</Link>
+        <Link to={to('/contact')}>{t('contactUs')}</Link>
       </Button>
     </div>
   );
@@ -181,17 +184,17 @@ function ClassicHome({
       <section className="border-y border-border bg-muted/30 py-10">
         <div className="mx-auto grid max-w-6xl gap-6 px-4 sm:grid-cols-3 sm:px-6">
           {[
-            { icon: Truck, t: 'Livraison rapide', d: 'Partout au Maroc' },
-            { icon: Shield, t: 'Paiement sécurisé', d: 'COD ou en ligne' },
-            { icon: Star, t: 'Sélection soignée', d: 'Qualité garantie' },
-          ].map(({ icon: Icon, t, d }) => (
-            <div key={t} className="flex items-start gap-3">
+            { icon: Truck, title: t('fastDelivery'), desc: t('everywhereMorocco') },
+            { icon: Shield, title: t('securePayment'), desc: t('codOrOnline') },
+            { icon: Star, title: t('carefulSelection'), desc: t('qualityGuaranteed') },
+          ].map(({ icon: Icon, title, desc }) => (
+            <div key={title} className="flex items-start gap-3">
               <div className="rounded-xl bg-primary/10 p-2.5 text-primary">
                 <Icon className="h-5 w-5" />
               </div>
               <div>
-                <p className="font-display font-semibold">{t}</p>
-                <p className="text-sm text-muted-foreground">{d}</p>
+                <p className="font-display font-semibold">{title}</p>
+                <p className="text-sm text-muted-foreground">{desc}</p>
               </div>
             </div>
           ))}
@@ -202,9 +205,9 @@ function ClassicHome({
       {showCategories ? (
       <section className="mx-auto max-w-6xl px-4 py-14 sm:px-6">
         <div className="mb-8 flex items-end justify-between gap-4">
-          <h2 className="font-display text-2xl font-bold sm:text-3xl">Catégories</h2>
+          <h2 className="font-display text-2xl font-bold sm:text-3xl">{t('categories')}</h2>
           <Link to={to('/boutique')} className="text-sm font-medium text-primary hover:underline">
-            Tout voir
+            {t('seeAll')}
           </Link>
         </div>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -223,7 +226,7 @@ function ClassicHome({
               <div className="absolute inset-x-0 bottom-0 p-4 text-white">
                 <p className="font-display text-lg font-semibold">{c.name}</p>
                 {c.count > 0 ? (
-                  <p className="text-xs text-white/70">{c.count} articles</p>
+                  <p className="text-xs text-white/70">{t('nArticles', { n: c.count })}</p>
                 ) : null}
               </div>
             </Link>
@@ -234,7 +237,7 @@ function ClassicHome({
 
       <section className="bg-muted/20 py-14">
         <div className="mx-auto max-w-6xl px-4 sm:px-6">
-          <h2 className="mb-8 font-display text-2xl font-bold sm:text-3xl">Sélection</h2>
+          <h2 className="mb-8 font-display text-2xl font-bold sm:text-3xl">{t('selection')}</h2>
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
             {featured.map((p) => (
               <ProductTile key={p.id} product={p} />
@@ -256,8 +259,9 @@ function MinimalHome({
   showCategories = true,
 }: ThemeHomeProps) {
   const { to } = useStorefrontPath();
+  const { t, locale } = useLocale();
   const list = products.filter((p) => p.inStock).slice(0, 6);
-  const cta = appearance.heroCtaLabel || 'Shop';
+  const cta = localizeKnownCopy(appearance.heroCtaLabel, locale, 'seeShop');
 
   return (
     <div className="theme-home theme-home--minimal bg-[hsl(0_0%_99%)] text-[hsl(0_0%_10%)]">
@@ -275,10 +279,10 @@ function MinimalHome({
             {cta}
           </Link>
           <Link to={to('/contact')} className="underline-offset-4 hover:underline">
-            Contact
+            {t('contact')}
           </Link>
           <Link to={to('/sur-mesure')} className="underline-offset-4 hover:underline">
-            Sur-mesure
+            {t('surMesure')}
           </Link>
         </div>
       </section>
@@ -304,7 +308,7 @@ function MinimalHome({
 
       {showCategories ? (
       <section className="border-t border-neutral-200 py-16 text-center">
-        <p className="text-xs uppercase tracking-[0.25em] text-neutral-500">Collections</p>
+        <p className="text-xs uppercase tracking-[0.25em] text-neutral-500">{t('collections')}</p>
         <div className="mx-auto mt-6 flex max-w-xl flex-wrap justify-center gap-x-6 gap-y-2 text-sm">
           {categories.map((c) => (
             <Link
@@ -333,9 +337,10 @@ function BoldHome({
   showHero = true,
 }: ThemeHomeProps) {
   const { to } = useStorefrontPath();
+  const { t, locale } = useLocale();
   const deal = products.find((p) => p.originalPrice) ?? products[0];
   const grid = products.slice(0, 6);
-  const cta = appearance.heroCtaLabel || 'Shop now';
+  const cta = localizeKnownCopy(appearance.heroCtaLabel, locale, 'seeShop');
 
   return (
     <div className="theme-home theme-home--bold bg-[hsl(350_40%_8%)] text-white">
@@ -390,7 +395,7 @@ function BoldHome({
               <img src={deal.images[0]} alt="" className="h-full w-full object-cover" />
               <div className="absolute bottom-0 inset-x-0 bg-black/70 p-4">
                 <p className="text-xs font-bold uppercase tracking-widest text-[hsl(var(--primary))]">
-                  Deal du moment
+                  {t('dealOfMoment')}
                 </p>
                 <p className="font-display text-xl font-bold">{deal.name}</p>
                 <p className="text-2xl font-black">{formatPrice(deal.price)}</p>
@@ -406,11 +411,11 @@ function BoldHome({
       ) : null}
 
       <section className="border-y-4 border-[hsl(var(--primary))] bg-[hsl(var(--primary))] py-3 text-center text-sm font-black uppercase tracking-[0.2em] text-primary-foreground">
-        {siteName} · Livraison 48h · Retours faciles · Sur-mesure
+        {t('trustStripBold', { name: siteName })}
       </section>
 
       <section className="mx-auto max-w-6xl px-4 py-12 sm:px-6">
-        <h2 className="mb-6 font-display text-3xl font-black uppercase">Catégories hot</h2>
+        <h2 className="mb-6 font-display text-3xl font-black uppercase">{t('hotCategories')}</h2>
         <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
           {categories.map((c) => (
             <Link
@@ -426,7 +431,7 @@ function BoldHome({
       </section>
 
       <section className="mx-auto max-w-6xl px-4 pb-16 sm:px-6">
-        <h2 className="mb-6 font-display text-3xl font-black uppercase">Best sellers</h2>
+        <h2 className="mb-6 font-display text-3xl font-black uppercase">{t('bestSellers')}</h2>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {grid.map((p, i) => (
             <Link
@@ -450,7 +455,7 @@ function BoldHome({
                   <p className="text-xl font-black text-[hsl(var(--primary))]">{formatPrice(p.price)}</p>
                 </div>
                 <span className="rounded-none bg-white px-2 py-1 text-xs font-black uppercase text-black">
-                  Buy
+                  {t('buyNow')}
                 </span>
               </div>
             </Link>
@@ -472,9 +477,10 @@ function ElegantHome({
   showHero = true,
 }: ThemeHomeProps) {
   const { to } = useStorefrontPath();
+  const { t, locale } = useLocale();
   const editorial = products.slice(0, 3);
   const more = products.slice(3, 7);
-  const cta = appearance.heroCtaLabel || 'Découvrir la collection';
+  const cta = localizeKnownCopy(appearance.heroCtaLabel, locale, 'discoverCollection');
 
   return (
     <div className="theme-home theme-home--elegant bg-[hsl(40_30%_97%)] text-[hsl(280_20%_18%)]">
@@ -501,8 +507,8 @@ function ElegantHome({
 
       <section className="mx-auto max-w-5xl px-4 py-20 sm:px-6">
         <div className="mb-12 text-center">
-          <p className="text-[11px] uppercase tracking-[0.35em] text-[hsl(var(--primary))]">Éditorial</p>
-          <h2 className="mt-3 font-display text-3xl font-light italic sm:text-4xl">Pièces choisies</h2>
+          <p className="text-[11px] uppercase tracking-[0.35em] text-[hsl(var(--primary))]">{t('editorial')}</p>
+          <h2 className="mt-3 font-display text-3xl font-light italic sm:text-4xl">{t('chosenPieces')}</h2>
         </div>
         <div className="grid gap-10 md:grid-cols-3">
           {editorial.map((p, i) => (
@@ -565,7 +571,7 @@ function ElegantHome({
         </div>
         <div className="mt-12 text-center">
           <Button variant="outline" className="rounded-full px-8" asChild>
-            <Link to={to('/boutique')}>Voir toute la boutique</Link>
+            <Link to={to('/boutique')}>{t('seeWholeShop')}</Link>
           </Button>
         </div>
       </section>

@@ -44,10 +44,16 @@ export function useStoreBrand() {
         ? Number(store.freeShippingThreshold)
         : FREE_SHIPPING_THRESHOLD_MAD;
 
-    const contactEmail = store?.contactEmail?.trim() || null;
-    const contactPhone = store?.contactPhone?.trim() || null;
-    const contactCity = store?.contactCity?.trim() || null;
-    const whatsappUrl = toWhatsAppUrl(store?.contactWhatsapp) || toWhatsAppUrl(contactPhone);
+    const contactEmail =
+      override?.contactEmail?.trim() || store?.contactEmail?.trim() || null;
+    const contactPhone =
+      override?.contactPhone?.trim() || store?.contactPhone?.trim() || null;
+    const contactCity =
+      override?.contactCity?.trim() || store?.contactCity?.trim() || null;
+    const whatsappUrl =
+      toWhatsAppUrl(override?.contactWhatsapp) ||
+      toWhatsAppUrl(store?.contactWhatsapp) ||
+      toWhatsAppUrl(contactPhone);
 
     return {
       store,
@@ -70,7 +76,8 @@ export function useStoreBrand() {
       instagramUrl: store?.instagramUrl?.trim() || null,
       tiktokUrl: store?.tiktokUrl?.trim() || null,
       whatsappOrderTemplate: store?.whatsappOrderTemplate?.trim() || null,
-      contactWhatsapp: store?.contactWhatsapp?.trim() || null,
+      contactWhatsapp:
+        override?.contactWhatsapp?.trim() || store?.contactWhatsapp?.trim() || null,
       hasStore: !!store || !!override,
     };
   }, [store, slug, isLoading, override]);

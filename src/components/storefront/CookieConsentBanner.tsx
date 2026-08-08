@@ -53,11 +53,11 @@ const CookieConsentBanner = () => {
                 rel="noopener noreferrer"
                 className="text-primary underline-offset-2 hover:underline"
               >
-                Politique de confidentialité
+                {t('privacyPolicy')}
               </a>
             ) : (
               <Link to="/page/confidentialite" className="text-primary underline-offset-2 hover:underline">
-                En savoir plus
+                {t('learnMore')}
               </Link>
             )}
           </p>

@@ -31,16 +31,23 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
           ctaHref: '/boutique',
           imageUrl: '',
         },
+        configAr: {
+          headline: 'مرحبًا بكم في متجرنا',
+          subtext: 'اكتشف تشكيلة مختارة بعناية، مع التوصيل في كل أنحاء المغرب.',
+          ctaLabel: 'عرض المتجر',
+        },
       },
       {
         type: 'categories',
         sortOrder: 1,
         config: { title: 'Catégories' },
+        configAr: { title: 'الفئات' },
       },
       {
         type: 'products',
         sortOrder: 2,
         config: { title: 'Sélection', limit: 8 },
+        configAr: { title: 'مختارات' },
       },
       {
         type: 'cta',
@@ -50,6 +57,11 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
           body: 'Décrivez votre besoin, nous vous répondons sous 24 h.',
           ctaLabel: 'Demander un devis',
           ctaHref: '/sur-mesure',
+        },
+        configAr: {
+          title: 'مشروع حسب الطلب؟',
+          body: 'صف احتياجك، نرد عليك خلال 24 ساعة.',
+          ctaLabel: 'طلب عرض سعر',
         },
       },
     ],

@@ -7,6 +7,10 @@ export type StorefrontBrandOverrideValue = {
   primaryColor?: string | null;
   secondaryColor?: string | null;
   aboutText?: string | null;
+  contactEmail?: string | null;
+  contactPhone?: string | null;
+  contactWhatsapp?: string | null;
+  contactCity?: string | null;
 };
 
 const StorefrontBrandOverrideContext = createContext<StorefrontBrandOverrideValue | null>(null);

@@ -38,14 +38,16 @@ import { homeHeroApi } from '@/services/api/homeHero';
 import { getImageUrl } from '@/services/api/upload';
 import { topBarMessagesApi } from '@/services/api/topBarMessages';
 import { mapProductListItemListToProducts } from '@/utils/productMapper';
+import { applyDocumentBrand } from '@/utils/storeTheme';
 import { cn } from '@/lib/utils';
 
 type Device = 'desktop' | 'tablet' | 'mobile';
 
-/** Largeurs device pour mobile / tablette. Le bureau utilise toute la largeur du panneau. */
-const DEVICE_WIDTH_PX: Record<'mobile' | 'tablet', number> = {
-  mobile: 390,
+/** Largeurs « format web » : le cadre garde le layout desktop/tablette/mobile, puis on scale. */
+const DEVICE_WIDTH_PX: Record<Device, number> = {
+  desktop: 1280,
   tablet: 768,
+  mobile: 390,
 };
 
 type Props = {
@@ -171,6 +173,16 @@ export function AppearanceWorkspace({
     return null;
   }, [homeHero?.imageUrls, homeHero?.imageUrl]);
 
+  // Favicon / titre onglet = brouillon Apparence (même source que la vitrine après save).
+  useEffect(() => {
+    applyDocumentBrand({
+      siteName: form.siteName,
+      tagline: form.tagline,
+      logoUrl: form.logoUrl || null,
+      faviconUrl: form.faviconUrl || form.logoUrl || null,
+    });
+  }, [form.siteName, form.tagline, form.logoUrl, form.faviconUrl]);
+
   /** Ramène l’aperçu sur la page où la section est visible. */
   const syncPreviewToSection = useCallback((section: AppearanceSectionId) => {
     const page = previewPageForSection(section);
@@ -277,17 +289,13 @@ export function AppearanceWorkspace({
     return () => window.clearTimeout(timer);
   }, [activeSection, previewPage, showEditor]);
 
-  // Bureau : remplit le milieu à 100 %. Mobile / tablette : largeur réelle + scale si besoin.
+  // Format web réel (1280 / 768 / 390) puis scale pour tenir dans le panneau — pas de reflow étroit.
   useEffect(() => {
     const shell = previewShellRef.current;
     if (!shell) return;
     const update = () => {
-      const available = Math.max(280, shell.clientWidth - (device === 'desktop' ? 16 : 24));
-      if (device === 'desktop') {
-        setFrameWidth(available);
-        setPreviewScale(1);
-        return;
-      }
+      const pad = device === 'desktop' ? 16 : 24;
+      const available = Math.max(280, shell.clientWidth - pad);
       const target = DEVICE_WIDTH_PX[device];
       setFrameWidth(target);
       setPreviewScale(Math.min(1, available / target));
@@ -523,13 +531,19 @@ export function AppearanceWorkspace({
             )}
           >
             <div
-              className="transition-[width,transform] duration-200"
+              className="transition-[width] duration-200"
               style={{
-                width: frameWidth,
-                transform: previewScale < 0.999 ? `scale(${previewScale})` : undefined,
-                transformOrigin: 'top center',
+                width: frameWidth * previewScale,
               }}
             >
+              <div
+                className="transition-transform duration-200"
+                style={{
+                  width: frameWidth,
+                  transform: previewScale < 0.999 ? `scale(${previewScale})` : undefined,
+                  transformOrigin: 'top left',
+                }}
+              >
               <div
                 ref={previewFrameRef}
                 className={cn(
@@ -551,6 +565,10 @@ export function AppearanceWorkspace({
                   fontPair={form.fontPair}
                   radiusPreset={form.radiusPreset}
                   appearance={form.appearance}
+                  themeKey={form.themeKey}
+                  aboutText={form.aboutText}
+                  heroEnabled={form.heroEnabled}
+                  categoriesEnabled={form.categoriesEnabled}
                   topBarMessages={activeTopBarMessages}
                   customNavPages={customHeaderPages
                     .filter((p) => p.showInNav)
@@ -576,6 +594,7 @@ export function AppearanceWorkspace({
                   contactWhatsapp={form.contactWhatsapp}
                   contactCity={form.contactCity}
                 />
+              </div>
               </div>
             </div>
           </div>

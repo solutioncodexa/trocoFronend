@@ -89,7 +89,19 @@ export type ExtraMessageKey =
   | 'dvDefaultDesc'
   // Home
   | 'welcomeStore'
+  | 'welcomeShort'
   | 'discoverProducts'
+  | 'discoverSelectionMorocco'
+  | 'productsTitle'
+  | 'learnMore'
+  | 'privacyPolicy'
+  | 'customProjectTitle'
+  | 'customProjectBody'
+  | 'bestSellers'
+  | 'buyNow'
+  | 'trustStripBold'
+  | 'emptyPageBlocks'
+  | 'mockCatalogHint'
   | 'ourShop'
   | 'personalization'
   | 'artOf'
@@ -280,7 +292,19 @@ const fr: Record<ExtraMessageKey, string> = {
   dvAltLink: 'Projet personnalisé avec logo ? Sur mesure →',
   dvDefaultDesc: 'Demande de devis emballage',
   welcomeStore: 'Bienvenue dans notre boutique',
+  welcomeShort: 'Bienvenue',
   discoverProducts: 'Découvrez nos produits.',
+  discoverSelectionMorocco: 'Découvrez une sélection soignée, livrée partout au Maroc.',
+  productsTitle: 'Produits',
+  learnMore: 'En savoir plus',
+  privacyPolicy: 'Politique de confidentialité',
+  customProjectTitle: 'Un projet sur-mesure ?',
+  customProjectBody: 'Décrivez votre besoin, nous vous répondons sous 24 h.',
+  bestSellers: 'Best sellers',
+  buyNow: 'Buy',
+  trustStripBold: '{name} · Livraison 48h · Retours faciles · Sur-mesure',
+  emptyPageBlocks: 'Cette page n’a pas encore de composants.',
+  mockCatalogHint: 'Exemple — ajoutez vos données',
   ourShop: 'Notre boutique',
   personalization: 'Personnalisation',
   artOf: "L'Art du",
@@ -463,7 +487,19 @@ const ar: Record<ExtraMessageKey, string> = {
   dvAltLink: 'مشروع مخصص بشعار؟ حسب الطلب ←',
   dvDefaultDesc: 'طلب عرض سعر تغليف',
   welcomeStore: 'مرحبًا بكم في متجرنا',
+  welcomeShort: 'مرحبًا',
   discoverProducts: 'اكتشف منتجاتنا.',
+  discoverSelectionMorocco: 'اكتشف تشكيلة مختارة بعناية، مع التوصيل في كل أنحاء المغرب.',
+  productsTitle: 'المنتجات',
+  learnMore: 'اعرف المزيد',
+  privacyPolicy: 'سياسة الخصوصية',
+  customProjectTitle: 'مشروع حسب الطلب؟',
+  customProjectBody: 'صف احتياجك، نرد عليك خلال 24 ساعة.',
+  bestSellers: 'الأكثر مبيعًا',
+  buyNow: 'اشترِ',
+  trustStripBold: '{name} · توصيل خلال 48 ساعة · إرجاع سهل · حسب الطلب',
+  emptyPageBlocks: 'هذه الصفحة لا تحتوي بعد على مكونات.',
+  mockCatalogHint: 'مثال — أضف بياناتك',
   ourShop: 'متجرنا',
   personalization: 'التخصيص',
   artOf: 'فن',
@@ -647,7 +683,19 @@ const en: Record<ExtraMessageKey, string> = {
   dvAltLink: 'Custom project with logo? Custom order →',
   dvDefaultDesc: 'Packaging quote request',
   welcomeStore: 'Welcome to our store',
+  welcomeShort: 'Welcome',
   discoverProducts: 'Discover our products.',
+  discoverSelectionMorocco: 'Discover a carefully curated selection, delivered across Morocco.',
+  productsTitle: 'Products',
+  learnMore: 'Learn more',
+  privacyPolicy: 'Privacy policy',
+  customProjectTitle: 'A custom project?',
+  customProjectBody: 'Tell us what you need — we reply within 24 hours.',
+  bestSellers: 'Best sellers',
+  buyNow: 'Buy',
+  trustStripBold: '{name} · 48h delivery · Easy returns · Made to order',
+  emptyPageBlocks: 'This page has no blocks yet.',
+  mockCatalogHint: 'Sample — add your data',
   ourShop: 'Our shop',
   personalization: 'Personalization',
   artOf: 'The art of',
