@@ -61,7 +61,7 @@ const SuperAdminLogin = () => {
       <div className="relative z-10 w-full max-w-md">
         <div className="mb-8 text-center">
           <p className="font-[Syne,ui-sans-serif,sans-serif] text-3xl font-extrabold tracking-tight text-[#e8f4f2]">
-            Matjarona
+            Get STORE
           </p>
           <p className="mt-2 text-sm uppercase tracking-widest text-white/50">Super Admin</p>
         </div>
@@ -72,7 +72,7 @@ const SuperAdminLogin = () => {
               <Lock className="h-7 w-7 text-teal-300" />
             </div>
             <h2 className="text-2xl font-semibold text-[#e8f4f2]">Connexion plateforme</h2>
-            <p className="mt-2 text-sm text-white/50">Gérez les boutiques Matjarona</p>
+            <p className="mt-2 text-sm text-white/50">Gérez les boutiques Get STORE</p>
           </div>
 
           {error && (
@@ -137,7 +137,7 @@ const SuperAdminLogin = () => {
 
         <div className="mt-6 text-center">
           <Link to="/" className="text-sm text-white/45 transition-colors hover:text-white/80">
-            ← Retour à Matjarona
+            ← Retour à Get STORE
           </Link>
         </div>
       </div>

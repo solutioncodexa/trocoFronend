@@ -28,7 +28,6 @@ export interface Product {
   availableSizes?: string[];
   weight?: number;
   marginGain?: number;
-  showWeight?: boolean;
   /** Si true, le client peut uploader son logo */
   customizable?: boolean;
 }

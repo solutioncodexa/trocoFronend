@@ -23,7 +23,7 @@ function toTelHref(phone?: string | null): string | null {
 
 /**
  * Branding boutique courant (Shopify-like) — nom, logo, contact, couleurs.
- * Fallback neutre Matjarona si aucune boutique résolue.
+ * Fallback neutre Get STORE si aucune boutique résolue.
  */
 export function useStoreBrand() {
   const { store, slug, isLoading } = useTenant();

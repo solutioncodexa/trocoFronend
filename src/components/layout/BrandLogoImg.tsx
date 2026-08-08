@@ -13,7 +13,7 @@ type BrandLogoImgProps = Omit<React.ComponentPropsWithoutRef<'img'>, 'src'> & {
 /**
  * Logo boutique : URL tenant si présente.
  * Sans logo : wordmark du nom de boutique (jamais le logo Troco d’une autre marque).
- * `platformFallback` : logo plateforme Matjarona/Troco uniquement.
+ * `platformFallback` : logo plateforme Get STORE uniquement.
  */
 export function BrandLogoImg({
   className,

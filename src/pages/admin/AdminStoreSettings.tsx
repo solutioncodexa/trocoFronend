@@ -1107,7 +1107,7 @@ const AdminStoreSettings = () => {
                 </span>{' '}
                 pointant vers{' '}
                 <span className="font-mono text-foreground">
-                  {data?.slug || 'votre-slug'}.matjarona.ma
+                  {data?.slug || 'votre-slug'}.getstore.com
                 </span>
                 .
               </li>
@@ -1127,7 +1127,7 @@ const AdminStoreSettings = () => {
             ) : null}
             {data?.slug ? (
               <p className="mt-3 text-xs">
-                Lien temporaire Matjarona :{' '}
+                Lien temporaire Get STORE :{' '}
                 <a
                   className="text-primary underline"
                   href={`/?tenant=${encodeURIComponent(data.slug)}`}
@@ -1802,7 +1802,7 @@ const AdminStoreSettings = () => {
               </li>
               <li>
                 Copiez le numéro international (ex. <code className="text-foreground">+2126…</code>) et
-                collez-le ci-dessous. Matjarona ouvre WhatsApp chez le client — pas besoin de Cloud API.
+                collez-le ci-dessous. Get STORE ouvre WhatsApp chez le client — pas besoin de Cloud API.
               </li>
             </ol>
             <p className="text-xs">

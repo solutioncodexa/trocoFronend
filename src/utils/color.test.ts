@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { hexToHslComponents } from './color';
 
 describe('hexToHslComponents', () => {
-  it('convertit le teal Matjarona', () => {
+  it('convertit le teal Get STORE', () => {
     expect(hexToHslComponents('#0F766E')).toMatch(/^\d+ \d+% \d+%$/);
   });
 

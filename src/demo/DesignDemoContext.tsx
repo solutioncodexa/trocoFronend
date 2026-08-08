@@ -70,7 +70,7 @@ export function DesignDemoProvider({
       primaryColor: theme.demoPrimary,
       secondaryColor: theme.demoSecondary,
       aboutText:
-        'Collection démo Matjarona — données fictives pour explorer le design avant de l’appliquer à votre boutique.',
+        'Collection démo Get STORE — données fictives pour explorer le design avant de l’appliquer à votre boutique.',
     }),
     [theme],
   );

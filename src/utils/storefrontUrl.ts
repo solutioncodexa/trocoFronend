@@ -12,14 +12,14 @@ export function buildStorefrontUrl(slug: string | null | undefined): string {
   const port = window.location.port ? `:${window.location.port}` : '';
   const protocol = window.location.protocol;
 
-  // Dev local : ?tenant= sur localhost (évite *.localhost qui ouvre parfois la landing Matjarona).
+  // Dev local : ?tenant= sur localhost (évite *.localhost qui ouvre parfois la landing Get STORE).
   if (host === 'localhost' || host === '127.0.0.1' || host.endsWith('.localhost')) {
     return `${protocol}//localhost${port}/?tenant=${encodeURIComponent(s)}`;
   }
 
-  // slug.matjarona.ma
-  if (host.includes('matjarona.')) {
-    const base = host.replace(/^(www\.)?([a-z0-9-]+\.)?matjarona\./i, 'matjarona.');
+  // slug.getstore.com
+  if (host.includes('getstore.')) {
+    const base = host.replace(/^(www\.)?([a-z0-9-]+\.)?getstore\./i, 'getstore.');
     return `${protocol}//${s}.${base}${port}/`;
   }
 

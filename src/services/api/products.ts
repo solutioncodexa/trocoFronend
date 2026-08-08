@@ -41,7 +41,6 @@ export interface ProductFormData {
   availableSizes?: string[];
   weight?: number;
   marginGain?: number;
-  showWeight?: boolean;
   /** Produit personnalisable : upload logo client */
   customizable?: boolean;
 }

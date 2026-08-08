@@ -78,7 +78,8 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
   );
 
   const logout = useCallback(() => {
-    authApi.setStoredToken(null);
+    // Invalide le refresh token côté serveur (best-effort) + nettoie le local.
+    void authApi.logout();
     clearStockAlertPending();
     setUser(null);
   }, []);
@@ -95,10 +96,10 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
         setUser(me);
         await syncStoreBrand(me.role, me.fournisseurId);
       } else {
-        authApi.setStoredToken(null);
+        authApi.clearStoredAuth();
       }
     } catch {
-      authApi.setStoredToken(null);
+      authApi.clearStoredAuth();
     } finally {
       setIsLoading(false);
     }
@@ -115,10 +116,11 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
     try {
       const response = await authApi.login({ email, password });
       if (!isBackofficeRole(response.role)) {
-        authApi.setStoredToken(null);
+        authApi.clearStoredAuth();
         return { ok: false, error: 'Ce compte n’a pas accès à l’administration' };
       }
       authApi.setStoredToken(response.access_token);
+      authApi.setStoredRefreshToken(response.refresh_token);
       let role = response.role;
       let fournisseurId = resolveFournisseurId(response) ?? null;
       setUser({

@@ -34,7 +34,7 @@ const TenantContext = createContext<TenantContextType | undefined>(undefined);
 export function isPlatformHostname(hostname = window.location.hostname): boolean {
   const h = hostname.toLowerCase();
   if (h === 'localhost' || h === '127.0.0.1' || h === '[::1]') return true;
-  if (/^(www\.)?matjarona\./i.test(h)) return true;
+  if (/^(www\.)?getstore\./i.test(h)) return true;
   return false;
 }
 
@@ -44,7 +44,7 @@ export function resolveTenantSlugFromHost(hostname = window.location.hostname): 
     const sub = h.slice(0, -'.localhost'.length);
     if (sub && !sub.includes('.') && sub !== 'www') return sub;
   }
-  const match = h.match(/^([a-z0-9-]+)\.matjarona\./i);
+  const match = h.match(/^([a-z0-9-]+)\.getstore\./i);
   if (match && match[1] && match[1] !== 'www') return match[1];
   return null;
 }
@@ -95,12 +95,12 @@ export const TenantProvider = ({ children }: { children: ReactNode }) => {
 
   const refresh = useCallback(async () => {
     const resolved = resolveTenantSlug();
-    // Couleurs boutique : uniquement via Layout vitrine (jamais sur :root / admin / Matjarona).
+    // Couleurs boutique : uniquement via Layout vitrine (jamais sur :root / admin / Get STORE).
     clearRootStoreTheme();
 
     if (!resolved) {
       // Sur /admin, le store vient de la session (loadFromAdminSession) — ne pas l’effacer.
-      // Sinon « Voir ma boutique » perd le slug et ouvre la landing Matjarona.
+      // Sinon « Voir ma boutique » perd le slug et ouvre la landing Get STORE.
       const onAdminSurface = window.location.pathname.startsWith('/admin');
       if (!onAdminSurface) {
         setSlug(null);
@@ -116,7 +116,7 @@ export const TenantProvider = ({ children }: { children: ReactNode }) => {
     setStoredTenantSlug(resolved);
 
     const cached = readStorefrontThemeCache(resolved);
-    // Hydrate immédiatement pour éviter le flash Matjarona / thème classic.
+    // Hydrate immédiatement pour éviter le flash Get STORE / thème classic.
     if (cached) {
       setStore((prev) => prev ?? cached);
       setIsLoading(false);

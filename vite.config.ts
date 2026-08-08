@@ -61,7 +61,7 @@ export default defineConfig(() => ({
                   const sub = rawHost.slice(0, -".localhost".length);
                   if (sub && !sub.includes(".") && sub !== "www") slug = sub;
                 } else {
-                  const m = rawHost.match(/^([a-z0-9-]+)\.matjarona\./i);
+                  const m = rawHost.match(/^([a-z0-9-]+)\.getstore\./i);
                   if (m?.[1] && m[1] !== "www") slug = m[1];
                 }
                 if (slug) proxyReq.setHeader("X-Fournisseur-Slug", slug);

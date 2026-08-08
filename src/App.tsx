@@ -39,6 +39,7 @@ const AdminProducts = lazy(() => import("./pages/admin/AdminProducts"));
 const AdminOrders = lazy(() => import("./pages/admin/AdminOrders"));
 const AdminCustomRequests = lazy(() => import("./pages/admin/AdminCustomRequests"));
 const AdminCategories = lazy(() => import("./pages/admin/AdminCategories"));
+const AdminAttributeTemplates = lazy(() => import("./pages/admin/AdminAttributeTemplates"));
 const AdminHeroCategories = lazy(() => import("./pages/admin/AdminHeroCategories"));
 const AdminFeaturedProducts = lazy(() => import("./pages/admin/AdminFeaturedProducts"));
 const AdminTopBarMessages = lazy(() => import("./pages/admin/AdminTopBarMessages"));
@@ -205,6 +206,7 @@ const App = () => (
                     <Route path="/admin/commandes" element={<ProtectedAdminRoute permission={PERMISSIONS.ORDERS_VIEW}><AdminOrders /></ProtectedAdminRoute>} />
                     <Route path="/admin/personnalisations" element={<ProtectedAdminRoute permission={PERMISSIONS.CUSTOM_ORDERS_VIEW}><AdminCustomRequests /></ProtectedAdminRoute>} />
                     <Route path="/admin/categories" element={<ProtectedAdminRoute permission={PERMISSIONS.CATALOG_MANAGE}><AdminCategories /></ProtectedAdminRoute>} />
+                    <Route path="/admin/attributs" element={<ProtectedAdminRoute permission={PERMISSIONS.CATALOG_MANAGE}><AdminAttributeTemplates /></ProtectedAdminRoute>} />
                     <Route path="/admin/accueil-categories" element={<ProtectedAdminRoute permission={PERMISSIONS.CATALOG_MANAGE}><AdminHeroCategories /></ProtectedAdminRoute>} />
                     <Route path="/admin/produits-selectionnes" element={<ProtectedAdminRoute permission={PERMISSIONS.CATALOG_MANAGE}><AdminFeaturedProducts /></ProtectedAdminRoute>} />
                     <Route path="/admin/top-bar-messages" element={<ProtectedAdminRoute permission={PERMISSIONS.CONTENT_MANAGE}><AdminTopBarMessages /></ProtectedAdminRoute>} />

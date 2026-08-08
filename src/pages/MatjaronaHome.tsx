@@ -173,7 +173,7 @@ const MatjaronaHome = () => {
 
       <header className="relative z-10 mx-auto flex w-full max-w-6xl items-center justify-between px-5 py-6 sm:px-8">
         <span className="font-mj text-xl font-extrabold tracking-tight text-[var(--mj-foam)] sm:text-2xl">
-          Matjarona
+          Get STORE
         </span>
         {isAuthenticated ? (
           <Link
@@ -195,7 +195,7 @@ const MatjaronaHome = () => {
       {/* Hero — brand first, one composition */}
       <section className="relative z-10 mx-auto flex min-h-[calc(100vh-5.5rem)] w-full max-w-6xl flex-col justify-center px-5 pb-20 pt-6 sm:px-8 sm:pb-28">
         <p className="mj-rise font-mj text-[clamp(3.5rem,12vw,7.5rem)] font-extrabold leading-[0.9] tracking-tight text-[var(--mj-foam)]">
-          Matjarona
+          Get STORE
         </p>
         <div className="mj-line mj-rise mj-rise-2 mt-5 h-px w-full max-w-md opacity-80" />
         <h1 className="mj-rise mj-rise-2 mt-8 max-w-xl font-mj text-2xl font-bold leading-snug tracking-tight text-[var(--mj-foam)] sm:text-3xl md:text-4xl">
@@ -283,7 +283,7 @@ const MatjaronaHome = () => {
                   <span className="ml-1 text-sm font-medium text-[var(--mj-foam)]/55">/mois</span>
                 </p>
                 <p className="mt-4 text-sm text-[var(--mj-foam)]/65">
-                  {plan.description || 'Boutique en ligne Matjarona'}
+                  {plan.description || 'Boutique en ligne Get STORE'}
                 </p>
                 <ul className="mt-5 space-y-2 text-sm text-[var(--mj-foam)]/80">
                   {planHighlights(plan).slice(0, 6).map((line) => (
@@ -436,7 +436,7 @@ const MatjaronaHome = () => {
       </section>
 
       <footer className="relative z-10 border-t border-white/10 py-8 text-center text-xs text-[var(--mj-foam)]/40">
-        © {new Date().getFullYear()} Matjarona
+        © {new Date().getFullYear()} Get STORE
       </footer>
     </div>
   );

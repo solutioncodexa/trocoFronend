@@ -19,8 +19,8 @@ describe('tenant resolution helpers', () => {
   it('détecte les hosts plateforme', () => {
     expect(isPlatformHostname('localhost')).toBe(true);
     expect(isPlatformHostname('127.0.0.1')).toBe(true);
-    expect(isPlatformHostname('matjarona.ma')).toBe(true);
-    expect(isPlatformHostname('www.matjarona.ma')).toBe(true);
+    expect(isPlatformHostname('getstore.com')).toBe(true);
+    expect(isPlatformHostname('www.getstore.com')).toBe(true);
     expect(isPlatformHostname('shop.localhost')).toBe(false);
   });
 
@@ -29,9 +29,9 @@ describe('tenant resolution helpers', () => {
     expect(resolveTenantSlugFromHost('www.localhost')).toBeNull();
   });
 
-  it('extrait le slug depuis *.matjarona.*', () => {
-    expect(resolveTenantSlugFromHost('atlas.matjarona.ma')).toBe('atlas');
-    expect(resolveTenantSlugFromHost('www.matjarona.ma')).toBeNull();
+  it('extrait le slug depuis *.getstore.*', () => {
+    expect(resolveTenantSlugFromHost('atlas.getstore.com')).toBe('atlas');
+    expect(resolveTenantSlugFromHost('www.getstore.com')).toBeNull();
   });
 
   it('priorise ?tenant= sur le host', () => {

@@ -16,6 +16,7 @@ import { Switch } from '@/components/ui/switch';
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { Product } from '@/types/product';
 import { categoriesApi } from '@/services/api/categories';
+import { attributeTemplatesApi } from '@/services/api/attributeTemplates';
 import { getImageUrl } from '@/services/api';
 import { ProductFormData } from '@/services/api/products';
 import { productsApi } from '@/services/api/products';
@@ -125,6 +126,7 @@ const AdminProducts = () => {
   const [imageFiles, setImageFiles] = useState<File[]>([]);
   const [existingImageUrls, setExistingImageUrls] = useState<string[]>([]);
   const [variantRows, setVariantRows] = useState<ProductVariantFormRow[]>([createEmptyVariantRow(true)]);
+  const [hasVariants, setHasVariants] = useState(false);
   const imageInputRef = useRef<HTMLInputElement>(null);
 
   const newImagePreviewUrls = useMemo(
@@ -140,14 +142,29 @@ const AdminProducts = () => {
 
   const isPromo = formData.badges.includes('promo');
 
+  const selectedCategoryId = useMemo(
+    () => categories.find((c) => c.slug === formData.category)?.id ?? null,
+    [categories, formData.category],
+  );
+
+  // Modèle d'attributs résolu (catégorie → fallback boutique) : pilote les axes de variantes.
+  const { data: resolvedTemplate } = useQuery({
+    queryKey: ['attribute-template', 'resolve', selectedCategoryId],
+    queryFn: () => attributeTemplatesApi.resolve(selectedCategoryId),
+    enabled: isModalOpen && hasVariants,
+    ...staticCatalogQueryOptions,
+  });
+  const templateAxes = resolvedTemplate?.axes ?? [];
+
   useEffect(() => {
+    if (!hasVariants) return;
     const defaultRow = variantRows.find((r) => r.isDefault) ?? variantRows[0];
     if (!defaultRow) return;
     setFormData((prev) => ({
       ...prev,
       price: defaultRow.price,
     }));
-  }, [variantRows]);
+  }, [variantRows, hasVariants]);
 
   const getCategoryLabel = (slug: string) => {
     const cat = categories.find((c) => c.slug === slug);
@@ -169,10 +186,29 @@ const AdminProducts = () => {
       customizable: product.customizable === true,
     });
 
-    const rows: ProductVariantFormRow[] = (product.variants?.length ? product.variants : []).map((v) => ({
+    // Une variante « réelle » porte un attribut (Woo mono/multi-axes). La variante
+    // « Standard » synthétique (attributeValue vide) = produit simple.
+    const realVariants = (product.variants ?? []).filter(
+      (v) => (v.attributeValue && v.attributeValue.trim()) || (v.attributes && v.attributes.length > 0),
+    );
+    const productHasVariants = realVariants.length > 0;
+    setHasVariants(productHasVariants);
+
+    const rows: ProductVariantFormRow[] = (productHasVariants ? realVariants : []).map((v) => ({
       id: v.id,
-      attributeName: v.attributeName ?? 'Capacité',
+      attributeName: v.attributeName ?? '',
       attributeValue: v.attributeValue ?? v.label ?? '',
+      attrValues: (() => {
+        const map: Record<string, string> = {};
+        if (v.attributes && v.attributes.length > 0) {
+          for (const a of v.attributes) {
+            if (a?.name) map[a.name] = a.value;
+          }
+        } else if (v.attributeName && v.attributeValue) {
+          map[v.attributeName] = v.attributeValue;
+        }
+        return map;
+      })(),
       label: v.label ?? v.attributeValue ?? '',
       price: String(v.price),
       originalPrice: v.originalPrice != null ? String(v.originalPrice) : '',
@@ -185,6 +221,7 @@ const AdminProducts = () => {
     if (rows.length > 0) {
       setVariantRows(rows);
     } else {
+      // Produit simple : on pré-remplit une ligne (utile si l'admin active les variantes ensuite).
       setVariantRows([
         {
           ...createEmptyVariantRow(true),
@@ -214,6 +251,7 @@ const AdminProducts = () => {
       customizable: false,
     });
     setVariantRows([createEmptyVariantRow(true)]);
+    setHasVariants(false);
     setExistingImageUrls([]);
     setImageFiles([]);
   };
@@ -336,54 +374,112 @@ const AdminProducts = () => {
       return;
     }
 
-    const parsedVariants = variantRows
-      .map((row, index) => {
-        const price = parseFloat(row.price);
-        const originalPrice = row.originalPrice ? parseFloat(row.originalPrice) : undefined;
-        const stock = row.stock ? parseInt(row.stock, 10) : undefined;
-        const safetyStock = row.safetyStock.trim() !== '' ? parseInt(row.safetyStock, 10) : undefined;
-        const attributeValue = row.attributeValue.trim();
-        return {
-          id: row.id,
-          attributeName: row.attributeName.trim() || undefined,
-          attributeValue,
-          label: row.label.trim() || attributeValue || undefined,
-          price,
-          originalPrice: isPromo && originalPrice && originalPrice > price ? originalPrice : undefined,
-          stock: Number.isNaN(stock) ? undefined : stock,
-          safetyStock: safetyStock != null && !Number.isNaN(safetyStock) ? safetyStock : undefined,
-          sku: row.sku.trim() || undefined,
-          isDefault: row.isDefault,
-          displayOrder: index,
-        };
-      })
-      .filter((v) => v.attributeValue && !Number.isNaN(v.price) && v.price > 0);
-
-    if (parsedVariants.length === 0) {
-      toast.error('Ajoutez au moins une variante avec une valeur et un prix valides');
-      return;
-    }
-
-    const defaultVariant = parsedVariants.find((v) => v.isDefault) ?? parsedVariants[0];
     const originalPriceNum = formData.originalPrice ? parseFloat(formData.originalPrice) : undefined;
-    const stockQuantity = parseInt(formData.stockQuantity, 10);
+    const parsedStock = parseInt(formData.stockQuantity, 10);
+    const stockQuantity = Number.isNaN(parsedStock) ? 0 : parsedStock;
 
-    const productPayload: ProductFormData = {
-      name: formData.name,
-      description: formData.description,
-      shortDescription: formData.shortDescription.trim() || undefined,
-      price: defaultVariant.price,
-      originalPrice:
-        isPromo && originalPriceNum && originalPriceNum > defaultVariant.price
-          ? originalPriceNum
-          : defaultVariant.originalPrice,
-      category: formData.category,
-      sku: formData.sku.trim() || undefined,
-      stockQuantity: Number.isNaN(stockQuantity) ? 0 : stockQuantity,
-      badges: formData.badges,
-      variants: parsedVariants,
-      customizable: formData.customizable,
-    };
+    let productPayload: ProductFormData;
+
+    if (!hasVariants) {
+      // Produit simple : un seul prix / stock. Le backend crée une variante « Standard ».
+      const priceNum = parseFloat(formData.price);
+      if (Number.isNaN(priceNum) || priceNum <= 0) {
+        toast.error('Indiquez un prix valide');
+        return;
+      }
+      productPayload = {
+        name: formData.name,
+        description: formData.description,
+        shortDescription: formData.shortDescription.trim() || undefined,
+        price: priceNum,
+        originalPrice:
+          isPromo && originalPriceNum && originalPriceNum > priceNum ? originalPriceNum : undefined,
+        category: formData.category,
+        sku: formData.sku.trim() || undefined,
+        stockQuantity,
+        badges: formData.badges,
+        variants: [],
+        customizable: formData.customizable,
+      };
+    } else {
+      const parsedVariants = variantRows
+        .map((row, index) => {
+          const price = parseFloat(row.price);
+          const originalPrice = row.originalPrice ? parseFloat(row.originalPrice) : undefined;
+          const stock = row.stock ? parseInt(row.stock, 10) : undefined;
+          const safetyStock = row.safetyStock.trim() !== '' ? parseInt(row.safetyStock, 10) : undefined;
+
+          let attributes: { name: string; value: string }[] | undefined;
+          let attributeName: string | undefined;
+          let attributeValue: string;
+
+          if (templateAxes.length > 0) {
+            // Mode multi-axes : une valeur par axe du modèle.
+            const pairs = templateAxes
+              .map((ax) => ({ name: ax.name, value: (row.attrValues?.[ax.name] ?? '').trim() }))
+              .filter((p) => p.value);
+            attributes = pairs.length > 0 ? pairs : undefined;
+            attributeName = pairs[0]?.name;
+            attributeValue = pairs.map((p) => p.value).join(' · ');
+          } else {
+            attributeName = row.attributeName.trim() || undefined;
+            attributeValue = row.attributeValue.trim();
+          }
+
+          return {
+            id: row.id,
+            attributeName,
+            attributeValue,
+            attributes,
+            label: row.label.trim() || attributeValue || undefined,
+            price,
+            originalPrice: isPromo && originalPrice && originalPrice > price ? originalPrice : undefined,
+            stock: Number.isNaN(stock) ? undefined : stock,
+            safetyStock: safetyStock != null && !Number.isNaN(safetyStock) ? safetyStock : undefined,
+            sku: row.sku.trim() || undefined,
+            isDefault: row.isDefault,
+            displayOrder: index,
+          };
+        })
+        .filter((v) => v.attributeValue && !Number.isNaN(v.price) && v.price > 0);
+
+      if (parsedVariants.length === 0) {
+        toast.error('Ajoutez au moins une variante avec une valeur et un prix valides');
+        return;
+      }
+
+      // Axes obligatoires du modèle : chaque variante doit les renseigner.
+      const requiredAxes = templateAxes.filter((a) => a.required).map((a) => a.name);
+      if (requiredAxes.length > 0) {
+        const hasMissing = parsedVariants.some((v) => {
+          const names = new Set((v.attributes ?? []).map((a) => a.name));
+          return requiredAxes.some((r) => !names.has(r));
+        });
+        if (hasMissing) {
+          toast.error('Renseignez tous les axes obligatoires sur chaque variante');
+          return;
+        }
+      }
+
+      const defaultVariant = parsedVariants.find((v) => v.isDefault) ?? parsedVariants[0];
+
+      productPayload = {
+        name: formData.name,
+        description: formData.description,
+        shortDescription: formData.shortDescription.trim() || undefined,
+        price: defaultVariant.price,
+        originalPrice:
+          isPromo && originalPriceNum && originalPriceNum > defaultVariant.price
+            ? originalPriceNum
+            : defaultVariant.originalPrice,
+        category: formData.category,
+        sku: formData.sku.trim() || undefined,
+        stockQuantity,
+        badges: formData.badges,
+        variants: parsedVariants,
+        customizable: formData.customizable,
+      };
+    }
 
     if (editingProduct) {
       updateMutation.mutate({
@@ -893,13 +989,99 @@ const AdminProducts = () => {
 
                 <section className="space-y-3">
                   <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                    Variantes &amp; prix
+                    Prix &amp; variantes
                   </h3>
-                  <ProductVariantEditor
-                    rows={variantRows}
-                    onChange={setVariantRows}
-                    isPromo={isPromo}
-                  />
+
+                  <div
+                    className={cn(
+                      'flex items-start justify-between gap-4 rounded-2xl border p-4 transition-colors',
+                      hasVariants ? 'border-primary/40 bg-primary/5' : 'border-border bg-muted/20',
+                    )}
+                  >
+                    <div className="min-w-0 space-y-1">
+                      <Label htmlFor="hasVariants" className="text-sm font-semibold cursor-pointer">
+                        Ce produit a des variantes
+                      </Label>
+                      <p className="text-xs text-muted-foreground leading-relaxed">
+                        Activez si le produit se décline en plusieurs options (taille, matière,
+                        capacité…). Sinon, un seul prix et un stock suffisent.
+                      </p>
+                    </div>
+                    <Switch
+                      id="hasVariants"
+                      checked={hasVariants}
+                      onCheckedChange={(checked) => {
+                        setHasVariants(checked);
+                        if (checked) {
+                          // Passage aux variantes : injecter le prix simple dans la 1ère ligne.
+                          setVariantRows((rows) => {
+                            const base = rows.length ? rows : [createEmptyVariantRow(true)];
+                            return base.map((r, i) =>
+                              i === 0 ? { ...r, price: r.price || formData.price } : r,
+                            );
+                          });
+                        } else {
+                          // Retour au produit simple : récupérer le prix de la variante par défaut.
+                          const def = variantRows.find((r) => r.isDefault) ?? variantRows[0];
+                          if (def) {
+                            setFormData((prev) => ({
+                              ...prev,
+                              price: def.price || prev.price,
+                              originalPrice: def.originalPrice || prev.originalPrice,
+                            }));
+                          }
+                        }
+                      }}
+                      className="mt-0.5 shrink-0"
+                    />
+                  </div>
+
+                  {hasVariants ? (
+                    <ProductVariantEditor
+                      rows={variantRows}
+                      onChange={setVariantRows}
+                      isPromo={isPromo}
+                      axes={templateAxes}
+                    />
+                  ) : (
+                    <div className="grid gap-3 rounded-2xl border border-border bg-muted/20 p-4 sm:grid-cols-2 sm:p-5">
+                      <div>
+                        <Label htmlFor="simplePrice" className="text-xs">
+                          {isPromo ? 'Prix promo (DH) *' : 'Prix (DH) *'}
+                        </Label>
+                        <Input
+                          id="simplePrice"
+                          type="number"
+                          min={0.01}
+                          step={0.01}
+                          value={formData.price}
+                          onChange={(e) =>
+                            setFormData((prev) => ({ ...prev, price: e.target.value }))
+                          }
+                          className="mt-1"
+                          required
+                        />
+                      </div>
+                      {isPromo && (
+                        <div>
+                          <Label htmlFor="simpleOriginalPrice" className="text-xs">
+                            Prix barré (DH)
+                          </Label>
+                          <Input
+                            id="simpleOriginalPrice"
+                            type="number"
+                            min={0}
+                            step={0.01}
+                            value={formData.originalPrice}
+                            onChange={(e) =>
+                              setFormData((prev) => ({ ...prev, originalPrice: e.target.value }))
+                            }
+                            className="mt-1"
+                          />
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </section>
 
                 <section className="space-y-4">
@@ -940,7 +1122,9 @@ const AdminProducts = () => {
                       </Link>
                     </div>
                     <div>
-                      <Label htmlFor="stockQuantity">Stock global (fallback)</Label>
+                      <Label htmlFor="stockQuantity">
+                        {hasVariants ? 'Stock global (fallback)' : 'Stock'}
+                      </Label>
                       <Input
                         id="stockQuantity"
                         type="number"
@@ -951,7 +1135,9 @@ const AdminProducts = () => {
                           setFormData((prev) => ({ ...prev, stockQuantity: e.target.value }))
                         }
                         className="mt-1"
-                        placeholder="Utilisé si une variante n’a pas de stock"
+                        placeholder={
+                          hasVariants ? 'Utilisé si une variante n’a pas de stock' : 'Quantité en stock'
+                        }
                       />
                       {parseInt(formData.stockQuantity, 10) === 0 && (
                         <p className="mt-1 text-xs text-destructive">

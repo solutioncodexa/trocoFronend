@@ -269,7 +269,7 @@ const AdminOnboarding = () => {
         {pendingActivation ? (
           <div className="rounded-2xl border border-amber-500/40 bg-amber-50 p-4 text-sm text-amber-950">
             Votre boutique est <strong>prête côté design</strong> mais reste{' '}
-            <strong>en attente d’activation Matjarona</strong> avant d’être visible publiquement.
+            <strong>en attente d’activation Get STORE</strong> avant d’être visible publiquement.
           </div>
         ) : null}
 

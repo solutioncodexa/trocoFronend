@@ -96,7 +96,7 @@ const AdminLogin = () => {
             Espace vendeur
           </p>
           <h1 className="mt-4 max-w-md font-display text-4xl font-bold leading-tight tracking-tight text-white">
-            Gérez votre boutique Matjarona
+            Gérez votre boutique Get STORE
           </h1>
           <p className="mt-4 max-w-sm text-sm leading-relaxed text-white/65">
             Commandes, catalogue, design et abonnement — tout au même endroit.

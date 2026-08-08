@@ -57,17 +57,17 @@ describe('buildStorefrontUrl', () => {
     );
   });
 
-  it('utilise sous-domaine matjarona en prod', () => {
+  it('utilise sous-domaine getstore en prod', () => {
     Object.defineProperty(window, 'location', {
       configurable: true,
       value: {
-        origin: 'https://matjarona.ma',
+        origin: 'https://getstore.com',
         protocol: 'https:',
-        hostname: 'matjarona.ma',
+        hostname: 'getstore.com',
         port: '',
       },
     });
-    expect(buildStorefrontUrl('boutique-x')).toBe('https://boutique-x.matjarona.ma/');
+    expect(buildStorefrontUrl('boutique-x')).toBe('https://boutique-x.getstore.com/');
   });
 
   it('fallback ?tenant= sur IP / host inconnu', () => {

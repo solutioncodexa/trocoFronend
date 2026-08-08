@@ -41,7 +41,7 @@ const AdminDashboard = () => {
     if (state?.onboarding) {
       toast.success(
         state.pendingActivation
-          ? 'Boutique créée — en attente d’activation par Matjarona.'
+          ? 'Boutique créée — en attente d’activation par Get STORE.'
           : 'Bienvenue ! Suivez la checklist pour lancer votre boutique.',
       );
       navigate(location.pathname, { replace: true, state: {} });
@@ -203,7 +203,7 @@ const AdminDashboard = () => {
             Compte en attente d’activation
           </p>
           <p className="mt-1 text-sm text-amber-900/80">
-            Un Super Admin Matjarona doit activer votre boutique avant qu’elle soit visible en ligne.
+            Un Super Admin Get STORE doit activer votre boutique avant qu’elle soit visible en ligne.
             Vous pouvez déjà préparer logo, design et produits.
           </p>
         </div>

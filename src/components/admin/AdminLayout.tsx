@@ -35,6 +35,7 @@ import {
   FileText,
   Wand2,
   PenTool,
+  SlidersHorizontal,
 } from 'lucide-react';
 import AdminNotification from './AdminNotification';
 import StockAlertDialog from './StockAlertDialog';
@@ -101,6 +102,7 @@ const ALL_NAV: NavSection[] = [
     items: [
       { href: '/admin/produits', label: 'Produits', icon: Package, permission: PERMISSIONS.PRODUCTS_VIEW },
       { href: '/admin/categories', label: 'Catégories', icon: FolderOpen, permission: PERMISSIONS.CATALOG_MANAGE },
+      { href: '/admin/attributs', label: 'Attributs & variantes', icon: SlidersHorizontal, permission: PERMISSIONS.CATALOG_MANAGE },
     ],
   },
   {

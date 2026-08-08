@@ -84,7 +84,7 @@ const Layout = ({ children, forceThemeKey, forceBrand }: LayoutProps) => {
   const themeVars = useMemo(() => storeThemeStyleVars(themeBrand), [themeBrand]);
 
   useEffect(() => {
-    // Les couleurs restent sur le wrapper — jamais sur :root (admin / Matjarona).
+    // Les couleurs restent sur le wrapper — jamais sur :root (admin / Get STORE).
     clearRootStoreTheme();
     if (brand) {
       applyDocumentBrand(brand);
@@ -135,7 +135,7 @@ const Layout = ({ children, forceThemeKey, forceBrand }: LayoutProps) => {
     };
   }, [demoChromePx]);
 
-  // Première visite sans cache : ne pas peindre le chrome Matjarona (rose / classic).
+  // Première visite sans cache : ne pas peindre le chrome Get STORE (rose / classic).
   if (onTenantStorefront && !forceBrand && !brand && isLoading) {
     return <NeutralBootLoader />;
   }

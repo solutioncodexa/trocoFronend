@@ -80,7 +80,7 @@ const CreateStore = () => {
       if (auth.ok) {
         markStockAlertPending();
         toast.success(
-          `Boutique « ${created.name} » créée — en attente d'activation Matjarona`,
+          `Boutique « ${created.name} » créée — en attente d'activation Get STORE`,
         );
         navigate('/admin/onboarding', {
           replace: true,
@@ -108,7 +108,7 @@ const CreateStore = () => {
           className="mb-8 inline-flex items-center gap-2 text-sm text-[#e8f4f2]/70 hover:text-[#e8f4f2]"
         >
           <ArrowLeft className="h-4 w-4" />
-          Retour Matjarona
+          Retour Get STORE
         </Link>
 
         <div className="mb-8 flex items-center gap-3">
@@ -120,7 +120,7 @@ const CreateStore = () => {
               Créer ma boutique
             </h1>
             <p className="text-sm text-[#e8f4f2]/65">
-              Activation par Matjarona après inscription
+              Activation par Get STORE après inscription
             </p>
           </div>
         </div>

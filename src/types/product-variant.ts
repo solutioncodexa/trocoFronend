@@ -102,6 +102,8 @@ export interface ProductVariantFormRow {
   id?: string;
   attributeName: string;
   attributeValue: string;
+  /** Valeurs par axe (mode multi-axes piloté par un modèle d'attributs), clé = nom d'axe. */
+  attrValues?: Record<string, string>;
   label: string;
   price: string;
   originalPrice: string;
@@ -112,9 +114,9 @@ export interface ProductVariantFormRow {
   isDefault: boolean;
 }
 
-export function createEmptyVariantRow(isDefault = false): ProductVariantFormRow {
+export function createEmptyVariantRow(isDefault = false, attributeName = ''): ProductVariantFormRow {
   return {
-    attributeName: 'Capacité',
+    attributeName,
     attributeValue: '',
     label: '',
     price: '',

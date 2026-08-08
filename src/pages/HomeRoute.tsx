@@ -4,12 +4,12 @@ import Index from '@/pages/Index';
 import MatjaronaHome from '@/pages/MatjaronaHome';
 
 /**
- * `/` : boutique locataire si un store est résolu, sinon landing Matjarona.
+ * `/` : boutique locataire si un store est résolu, sinon landing Get STORE.
  */
 const HomeRoute = () => {
   const { store, isLoading, slug, storeUnavailableMessage, isPlatformHost } = useTenant();
 
-  // Attente bootstrap : loader neutre (pas les couleurs Matjarona).
+  // Attente bootstrap : loader neutre (pas les couleurs Get STORE).
   // Si un cache thème existe, `store` est déjà hydraté → on affiche Index tout de suite.
   if (isLoading && !store) {
     return <NeutralBootLoader />;

@@ -1,5 +1,5 @@
 /**
- * Loader neutre — pas de couleurs Matjarona (évite le flash rose avant bootstrap boutique).
+ * Loader neutre — pas de couleurs Get STORE (évite le flash rose avant bootstrap boutique).
  */
 export function NeutralBootLoader({ label = 'Chargement…' }: { label?: string }) {
   return (

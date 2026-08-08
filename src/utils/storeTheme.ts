@@ -49,7 +49,7 @@ function adjustLightness(hsl: string, delta: number): string {
 
 /**
  * Efface toute fuite de couleurs boutique sur `:root`
- * (admin / landing Matjarona / autres tenants).
+ * (admin / landing Get STORE / autres tenants).
  */
 export function clearRootStoreTheme() {
   const root = document.documentElement.style;
@@ -124,7 +124,7 @@ function defaultIconLinks(): NodeListOf<HTMLLinkElement> {
   );
 }
 
-/** Les favicons Matjarona/Troco dans index.html passent avant un link ajouté en fin de head. */
+/** Les favicons Get STORE dans index.html passent avant un link ajouté en fin de head. */
 function disableDefaultFavicons() {
   defaultIconLinks().forEach((el) => {
     if (el.getAttribute(STORE_FAVICON_ATTR) === '1') return;

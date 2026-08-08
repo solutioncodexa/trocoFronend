@@ -47,7 +47,6 @@ export const mapProductDetailToProduct = (dto: ProductDetailDTO): Product => {
     variants,
     badges: (dto.badges || []) as ('new' | 'bestseller' | 'promo')[],
     createdAt: dto.createdAt || new Date().toISOString(),
-    showWeight: dto.showWeight === true,
     customizable: dto.customizable === true,
   };
 };

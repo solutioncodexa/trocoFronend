@@ -184,7 +184,7 @@ const SuperAdminPlans = () => {
           <div className="flex items-center gap-3">
             <Building2 className="h-5 w-5 text-primary" />
             <div>
-              <p className="font-display text-lg font-semibold">Matjarona</p>
+              <p className="font-display text-lg font-semibold">Get STORE</p>
               <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
                 Super Admin · Packs
               </p>

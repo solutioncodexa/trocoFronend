@@ -4,7 +4,7 @@ export const PUBLIC_SITE_URL =
   'https://troco.ma';
 
 export const PUBLIC_SITE_NAME =
-  (import.meta.env.VITE_PUBLIC_SITE_NAME as string | undefined) || 'Matjarona';
+  (import.meta.env.VITE_PUBLIC_SITE_NAME as string | undefined) || 'Get STORE';
 
 /** Seuil livraison gratuite (DH) — aligné troco.ma */
 export const FREE_SHIPPING_THRESHOLD_MAD = 750;

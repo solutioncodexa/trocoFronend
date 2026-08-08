@@ -53,7 +53,7 @@ describe('MatjaronaHome', () => {
   it('affiche la marque et le CTA créer boutique', async () => {
     renderWithProviders(<MatjaronaHome />);
 
-    expect(screen.getAllByText('Matjarona').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Get STORE').length).toBeGreaterThan(0);
     expect(screen.getAllByRole('link', { name: /Créer ma boutique/i }).length).toBeGreaterThan(0);
 
     await waitFor(() => {

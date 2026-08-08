@@ -4,10 +4,65 @@ export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api';
 
 export const TENANT_SLUG_STORAGE_KEY = 'troco_tenant_slug';
 
+// Clés localStorage (dupliquées ici pour éviter un import circulaire avec services/api/auth)
+const ACCESS_TOKEN_KEY = 'troco_admin_token';
+const REFRESH_TOKEN_KEY = 'troco_admin_refresh';
+
 // Récupération du token pour les requêtes authentifiées (évite import circulaire)
 const getAuthToken = (): string | null => {
-  return localStorage.getItem('troco_admin_token');
+  return localStorage.getItem(ACCESS_TOKEN_KEY);
 };
+
+// ── Refresh token : une seule requête /auth/refresh à la fois (dédup) ──────────
+let refreshPromise: Promise<string | null> | null = null;
+
+const doRefresh = async (refreshToken: string): Promise<string | null> => {
+  try {
+    const res = await fetch(buildApiUrl('/auth/refresh'), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ refreshToken }),
+    });
+    if (!res.ok) return null;
+    const json = await res.json().catch(() => null);
+    const data = json && json.data !== undefined ? json.data : json;
+    const newAccess: string | null = data?.access_token ?? null;
+    const newRefresh: string | null = data?.refresh_token ?? null;
+    if (newAccess) localStorage.setItem(ACCESS_TOKEN_KEY, newAccess);
+    if (newRefresh) localStorage.setItem(REFRESH_TOKEN_KEY, newRefresh);
+    return newAccess;
+  } catch {
+    return null;
+  }
+};
+
+const getFreshAccessToken = (): Promise<string | null> => {
+  const refreshToken = localStorage.getItem(REFRESH_TOKEN_KEY);
+  if (!refreshToken) return Promise.resolve(null);
+  if (!refreshPromise) {
+    refreshPromise = doRefresh(refreshToken).finally(() => {
+      refreshPromise = null;
+    });
+  }
+  return refreshPromise;
+};
+
+const clearAuthAndRedirect = (): void => {
+  localStorage.removeItem(ACCESS_TOKEN_KEY);
+  localStorage.removeItem(REFRESH_TOKEN_KEY);
+  try {
+    const p = window.location.pathname;
+    if (p.startsWith('/super-admin') && p !== '/super-admin') {
+      window.location.assign('/super-admin');
+    } else if (p.startsWith('/admin') && p !== '/admin') {
+      window.location.assign('/admin');
+    }
+  } catch {
+    /* pas de window (SSR/tests) */
+  }
+};
+
+const isAuthEndpoint = (url: string): boolean => /\/auth\//.test(url);
 
 const getTenantSlug = (): string | null => {
   try {
@@ -60,14 +115,30 @@ export const apiRequest = async <T>(
     headers['X-Fournisseur-Slug'] = tenantSlug;
   }
 
-  const response = await fetch(url, {
+  let response = await fetch(url, {
     ...fetchOptions,
     headers,
   });
 
+  // 401 = token absent/expiré : tenter un refresh puis rejouer la requête une seule fois.
+  if (response.status === 401 && !skipAuth && !isAuthEndpoint(url)) {
+    const newToken = await getFreshAccessToken();
+    if (newToken) {
+      response = await fetch(url, {
+        ...fetchOptions,
+        headers: { ...headers, Authorization: `Bearer ${newToken}` },
+      });
+    } else {
+      // Refresh impossible (expiré/invalide) → session terminée.
+      clearAuthAndRedirect();
+      throw new Error('Session expirée, veuillez vous reconnecter');
+    }
+  }
+
   if (!response.ok) {
     if (response.status === 401 && !skipAuth) {
-      localStorage.removeItem('troco_admin_token');
+      // Le retry post-refresh a encore échoué : session terminée.
+      clearAuthAndRedirect();
     }
     const rawText = await response.text().catch(() => '');
     let error: Record<string, unknown> = {};
