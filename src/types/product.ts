@@ -23,8 +23,9 @@ export interface Product {
   badges: ('new' | 'bestseller' | 'promo')[];
   createdAt: string;
   variants?: ProductVariant[];
+  /** Marque / label produit (ex. Apple, Nike). */
+  marque?: string;
   /** Legacy / optional */
-  goldType?: string;
   availableSizes?: string[];
   weight?: number;
   marginGain?: number;

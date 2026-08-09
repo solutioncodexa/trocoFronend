@@ -61,7 +61,7 @@ const AdminRevenue = () => {
               variant={preset === p ? 'default' : 'outline'}
               onClick={() => applyPreset(p)}
             >
-              {p}j
+              {t('revenue.rangeDays', { count: p })}
             </Button>
           ))}
           <Button
@@ -69,11 +69,11 @@ const AdminRevenue = () => {
             variant={preset === 'custom' ? 'default' : 'outline'}
             onClick={() => setPreset('custom')}
           >
-            Personnalisé
+            {t('revenue.customRange')}
           </Button>
         </div>
         <div>
-          <Label className="text-xs">Du</Label>
+          <Label className="text-xs">{t('revenue.from')}</Label>
           <Input
             type="date"
             value={from}
@@ -85,7 +85,7 @@ const AdminRevenue = () => {
           />
         </div>
         <div>
-          <Label className="text-xs">Au</Label>
+          <Label className="text-xs">{t('revenue.to')}</Label>
           <Input
             type="date"
             value={to}
@@ -99,14 +99,14 @@ const AdminRevenue = () => {
       </div>
 
       {isLoading ? (
-        <p className="text-muted-foreground">Chargement…</p>
+        <p className="text-muted-foreground">{t('common.loading')}</p>
       ) : (
         <>
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm text-muted-foreground flex items-center gap-2">
-                  <DollarSign className="w-4 h-4" /> CA livré
+                  <DollarSign className="w-4 h-4" /> {t('revenue.deliveredRevenue')}
                 </CardTitle>
               </CardHeader>
               <CardContent className="text-2xl font-display">
@@ -116,7 +116,7 @@ const AdminRevenue = () => {
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm text-muted-foreground flex items-center gap-2">
-                  <ShoppingCart className="w-4 h-4" /> Commandes livrées
+                  <ShoppingCart className="w-4 h-4" /> {t('revenue.deliveredOrders')}
                 </CardTitle>
               </CardHeader>
               <CardContent className="text-2xl font-display">{data?.deliveredOrders ?? 0}</CardContent>
@@ -124,7 +124,7 @@ const AdminRevenue = () => {
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm text-muted-foreground flex items-center gap-2">
-                  <TrendingUp className="w-4 h-4" /> Panier moyen
+                  <TrendingUp className="w-4 h-4" /> {t('revenue.averageBasket')}
                 </CardTitle>
               </CardHeader>
               <CardContent className="text-2xl font-display">
@@ -134,7 +134,7 @@ const AdminRevenue = () => {
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm text-muted-foreground flex items-center gap-2">
-                  <Ban className="w-4 h-4" /> Taux annulation
+                  <Ban className="w-4 h-4" /> {t('revenue.cancellationRate')}
                 </CardTitle>
               </CardHeader>
               <CardContent className="text-2xl font-display">
@@ -146,11 +146,11 @@ const AdminRevenue = () => {
           <div className="grid lg:grid-cols-3 gap-6 mb-8">
             <Card className="lg:col-span-2">
               <CardHeader>
-                <CardTitle>CA journalier (livré)</CardTitle>
+                <CardTitle>{t('revenue.dailyRevenue')}</CardTitle>
               </CardHeader>
               <CardContent className="h-[280px]">
                 {chartData.length === 0 ? (
-                  <p className="text-muted-foreground text-sm">Aucune donnée sur la période</p>
+                  <p className="text-muted-foreground text-sm">{t('revenue.noDataPeriod')}</p>
                 ) : (
                   <ResponsiveContainer width="100%" height="100%">
                     <AreaChart data={chartData}>
@@ -158,7 +158,7 @@ const AdminRevenue = () => {
                       <XAxis dataKey="date" tick={{ fontSize: 11 }} />
                       <YAxis tick={{ fontSize: 11 }} />
                       <Tooltip
-                        formatter={(value: number) => [formatPrice(value), 'CA']}
+                        formatter={(value: number) => [formatPrice(value), t('revenue.revenueAbbrev')]}
                         labelFormatter={(l) => String(l)}
                       />
                       <Area
@@ -175,27 +175,27 @@ const AdminRevenue = () => {
 
             <Card>
               <CardHeader>
-                <CardTitle>Indicateurs</CardTitle>
+                <CardTitle>{t('revenue.indicators')}</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3 text-sm">
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">CA confirmé</span>
+                  <span className="text-muted-foreground">{t('revenue.confirmedRevenue')}</span>
                   <span className="font-medium">{formatPrice(data?.confirmedRevenue ?? 0)}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Nouvelles</span>
+                  <span className="text-muted-foreground">{t('revenue.newOrders')}</span>
                   <span className="font-medium">{data?.newOrders ?? 0}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Confirmées</span>
+                  <span className="text-muted-foreground">{t('status.confirmed')}</span>
                   <span className="font-medium">{data?.confirmedOrders ?? 0}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Annulées</span>
+                  <span className="text-muted-foreground">{t('status.cancelled')}</span>
                   <span className="font-medium">{data?.cancelledOrders ?? 0}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Total commandes</span>
+                  <span className="text-muted-foreground">{t('revenue.totalOrders')}</span>
                   <span className="font-medium">{data?.totalOrders ?? 0}</span>
                 </div>
               </CardContent>
@@ -204,11 +204,11 @@ const AdminRevenue = () => {
 
           <Card>
             <CardHeader>
-              <CardTitle>Top produits</CardTitle>
+              <CardTitle>{t('revenue.topProducts')}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
               {(data?.topProducts ?? []).length === 0 ? (
-                <p className="text-muted-foreground text-sm">Aucun produit vendu sur la période</p>
+                <p className="text-muted-foreground text-sm">{t('revenue.noProductsSold')}</p>
               ) : (
                 (data?.topProducts ?? []).map((p, i) => (
                   <div

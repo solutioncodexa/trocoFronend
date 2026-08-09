@@ -38,7 +38,7 @@ export const mapProductDetailToProduct = (dto: ProductDetailDTO): Product => {
     images: finalImages,
     category: dto.category || '',
     sku: dto.sku,
-    goldType: dto.goldType ? String(dto.goldType) : undefined,
+    marque: dto.marque?.trim() || undefined,
     availableSizes: normalizeAvailableSizes(dto.availableSizes),
     inStock: dto.inStock ?? true,
     stockQuantity: dto.stockQuantity ?? 0,

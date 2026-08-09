@@ -19,6 +19,7 @@ interface AdminContextType {
   ) => Promise<{ ok: true; role: string } | { ok: false; error: string }>;
   logout: () => void;
   hasPermission: (code: PermissionCode | string) => boolean;
+  setUser: (user: UserInfoDTO | null) => void;
 }
 
 const AdminContext = createContext<AdminContextType | undefined>(undefined);
@@ -165,6 +166,7 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
         login,
         logout,
         hasPermission,
+        setUser,
       }}
     >
       {children}

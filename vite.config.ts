@@ -23,6 +23,9 @@ function configureSeoProxy(proxy: { on: (event: string, listener: (...args: unkn
 
 // https://vitejs.dev/config/
 export default defineConfig(() => ({
+  define: {
+    global: "globalThis",
+  },
   server: {
     host: "::",
     port: 4200,
@@ -42,6 +45,7 @@ export default defineConfig(() => ({
         changeOrigin: true,
         secure: false,
         xfwd: false,
+        ws: true,
         configure(proxy) {
           proxy.on("proxyReq", (proxyReq, req) => {
             proxyReq.removeHeader("forwarded");

@@ -109,7 +109,7 @@ const AdminBlog = () => {
   return (
     <AdminLayout
       title={t('blog.title')}
-      breadcrumbs={[{ label: 'Blog' }]}
+      breadcrumbs={[{ label: t('blog.title') }]}
       description={t('blog.description')}
       actions={
         <Button className="gap-1.5" onClick={openCreate}>

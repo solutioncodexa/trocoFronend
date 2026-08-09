@@ -18,6 +18,7 @@ import { useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import AdminLayout from '@/components/admin/AdminLayout';
 import { useAdminLocale } from '@/contexts/AdminLocaleContext';
+import type { AdminMessageKey } from '@/i18n/admin/adminMessages';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ordersApi } from '@/services/api/orders';
@@ -32,6 +33,16 @@ import { buildStorefrontUrl } from '@/utils/storefrontUrl';
 import { normalizeThemeKey } from '@/config/storeThemes';
 import { toast } from 'sonner';
 
+const ORDER_STATUS_KEYS: Record<string, AdminMessageKey> = {
+  new: 'status.new',
+  confirmed: 'status.confirmed',
+  delivered: 'status.delivered',
+  cancelled: 'status.cancelled',
+  pending: 'common.pending',
+  contacted: 'status.contacted',
+  completed: 'status.completed',
+};
+
 const AdminDashboard = () => {
   const { t } = useAdminLocale();
   const location = useLocation();
@@ -43,12 +54,12 @@ const AdminDashboard = () => {
     if (state?.onboarding) {
       toast.success(
         state.pendingActivation
-          ? 'Boutique créée — en attente d’activation par Get STORE.'
-          : 'Bienvenue ! Suivez la checklist pour lancer votre boutique.',
+          ? t('dashboard.toastCreatedPending')
+          : t('dashboard.toastWelcomeChecklist'),
       );
       navigate(location.pathname, { replace: true, state: {} });
     }
-  }, [location.pathname, location.state, navigate]);
+  }, [location.pathname, location.state, navigate, t]);
 
   const { data: dash } = useQuery({
     queryKey: ['stats', 'dashboard'],
@@ -73,32 +84,32 @@ const AdminDashboard = () => {
 
   const stats = [
     {
-      title: 'Total Produits',
+      title: t('dashboard.statProducts'),
       value: dash?.productCount ?? 0,
       icon: Package,
       color: 'bg-blue-500',
       href: '/admin/produits',
     },
     {
-      title: 'Commandes',
+      title: t('nav.orders'),
       value: dash?.orderCount ?? 0,
-      subValue: `${dash?.newOrderCount ?? 0} nouvelles`,
+      subValue: t('dashboard.newOrdersCount', { count: dash?.newOrderCount ?? 0 }),
       icon: ShoppingCart,
       color: 'bg-green-500',
       href: '/admin/commandes',
     },
     {
-      title: 'Personnalisations',
+      title: t('dashboard.statCustom'),
       value: dash?.customOrderCount ?? 0,
-      subValue: `${dash?.pendingCustomOrderCount ?? 0} en attente`,
+      subValue: t('dashboard.pendingCount', { count: dash?.pendingCustomOrderCount ?? 0 }),
       icon: Palette,
       color: 'bg-purple-500',
       href: '/admin/personnalisations',
     },
     {
-      title: "Chiffre d'affaires",
+      title: t('dashboard.statRevenue'),
       value: formatPrice(dash?.deliveredRevenue ?? 0),
-      subValue: 'Livrées (12 mois)',
+      subValue: t('dashboard.delivered12m'),
       icon: DollarSign,
       color: 'bg-primary',
       href: '/admin/revenus',
@@ -115,18 +126,10 @@ const AdminDashboard = () => {
       contacted: 'bg-purple-100 text-purple-800',
       completed: 'bg-green-100 text-green-800',
     };
-    const labels: Record<string, string> = {
-      new: 'Nouvelle',
-      confirmed: 'Confirmée',
-      delivered: 'Livrée',
-      cancelled: 'Annulée',
-      pending: 'En attente',
-      contacted: 'Contacté',
-      completed: 'Terminée',
-    };
+    const labelKey = ORDER_STATUS_KEYS[status];
     return (
       <span className={`px-2 py-1 rounded-full text-xs font-body ${styles[status] ?? 'bg-muted text-muted-foreground'}`}>
-        {labels[status] ?? status}
+        {labelKey ? t(labelKey) : status}
       </span>
     );
   };
@@ -140,31 +143,31 @@ const AdminDashboard = () => {
   const setupSteps = [
     {
       done: !!normalizeThemeKey(storeSettings?.themeKey),
-      label: 'Choisir un thème',
+      label: t('dashboard.setupTheme'),
       href: '/admin/onboarding',
       icon: Palette,
     },
     {
       done: hasLogo,
-      label: 'Ajouter un logo',
+      label: t('dashboard.setupLogo'),
       href: '/admin/parametres',
       icon: ImagePlus,
     },
     {
       done: hasBranding,
-      label: 'Personnaliser l’apparence',
+      label: t('dashboard.setupAppearance'),
       href: '/admin/parametres',
       icon: Palette,
     },
     {
       done: productCount > 0,
-      label: 'Ajouter un premier produit',
+      label: t('dashboard.setupFirstProduct'),
       href: '/admin/produits?action=new',
       icon: Package,
     },
     {
       done: productCount > 0 && hasLogo,
-      label: 'Voir ma boutique en ligne',
+      label: t('dashboard.setupViewStore'),
       href: storefrontUrl,
       icon: ExternalLink,
       external: true,
@@ -177,24 +180,26 @@ const AdminDashboard = () => {
   const pendingActivation = storeStatus === 'PENDING';
 
   const quickActions = [
-    { href: '/admin/produits?action=new', label: 'Nouveau produit', icon: Package },
-    { href: '/admin/commandes', label: 'Commandes', icon: ShoppingCart },
-    { href: '/admin/categories?action=new', label: 'Catégorie', icon: FolderOpen },
-    { href: '/admin/boutique-en-ligne', label: 'Boutique en ligne', icon: Store },
-    { href: '/admin/stock', label: 'Stock', icon: AlertTriangle },
-    { href: '/admin/revenus', label: 'Revenus', icon: TrendingUp },
+    { href: '/admin/produits?action=new', label: t('dashboard.qaNewProduct'), icon: Package },
+    { href: '/admin/commandes', label: t('nav.orders'), icon: ShoppingCart },
+    { href: '/admin/categories?action=new', label: t('dashboard.qaCategory'), icon: FolderOpen },
+    { href: '/admin/boutique-en-ligne', label: t('nav.onlineStore'), icon: Store },
+    { href: '/admin/stock', label: t('nav.stock'), icon: AlertTriangle },
+    { href: '/admin/revenus', label: t('nav.revenue'), icon: TrendingUp },
   ];
 
   return (
     <AdminLayout
       title={t('dashboard.title')}
-      description={siteName ? `Bienvenue sur ${siteName}` : 'Pilot d’ensemble de votre boutique'}
-      breadcrumbs={[{ label: 'Tableau de bord' }]}
+      description={
+        siteName ? t('dashboard.welcome', { name: siteName }) : t('dashboard.description')
+      }
+      breadcrumbs={[{ label: t('dashboard.title') }]}
       actions={
         <Button variant="outline" size="sm" className="hidden gap-1.5 sm:inline-flex" asChild>
           <a href={storefrontUrl} target="_blank" rel="noopener noreferrer">
             <ExternalLink className="h-3.5 w-3.5" />
-            Voir la boutique
+            {t('dashboard.viewStorefront')}
           </a>
         </Button>
       }
@@ -202,21 +207,20 @@ const AdminDashboard = () => {
       {pendingActivation ? (
         <div className="mb-6 rounded-2xl border border-amber-500/40 bg-amber-50 p-4 sm:p-5">
           <p className="font-display text-base font-semibold text-amber-950">
-            Compte en attente d’activation
+            {t('dashboard.pendingActivationTitle')}
           </p>
           <p className="mt-1 text-sm text-amber-900/80">
-            Un Super Admin Get STORE doit activer votre boutique avant qu’elle soit visible en ligne.
-            Vous pouvez déjà préparer logo, design et produits.
+            {t('dashboard.pendingActivationBody')}
           </p>
         </div>
       ) : null}
       {showOnboarding ? (
         <div className="mb-8 rounded-2xl border border-primary/20 bg-white p-5 shadow-soft sm:p-6">
           <h2 className="font-display text-lg font-semibold">
-            Démarrez votre boutique
+            {t('dashboard.setupTitle')}
           </h2>
           <p className="mt-1 text-sm text-muted-foreground">
-            {pendingSteps} étape{pendingSteps > 1 ? 's' : ''} restante{pendingSteps > 1 ? 's' : ''} pour être prêt.
+            {t('dashboard.setupRemaining', { count: pendingSteps })}
           </p>
           <ul className="mt-5 grid gap-3 sm:grid-cols-2">
             {setupSteps.map((step) => (
@@ -257,7 +261,7 @@ const AdminDashboard = () => {
       ) : null}
 
       <div className="mb-8">
-        <h2 className="mb-3 font-display text-base font-semibold">Actions rapides</h2>
+        <h2 className="mb-3 font-display text-base font-semibold">{t('dashboard.quickActions')}</h2>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
           {quickActions.map((action) => (
             <Link
@@ -299,7 +303,7 @@ const AdminDashboard = () => {
                   to={stat.href}
                   className="inline-flex text-sm font-medium text-primary hover:underline"
                 >
-                  Voir tout →
+                  {t('dashboard.viewAllArrow')}
                 </Link>
               ) : null}
             </div>
@@ -315,7 +319,7 @@ const AdminDashboard = () => {
                 <AlertTriangle className="h-5 w-5 text-white" aria-hidden />
               </div>
               <div className="min-w-0">
-                <p className="text-sm text-muted-foreground">Alertes stock bas</p>
+                <p className="text-sm text-muted-foreground">{t('dashboard.lowStock')}</p>
                 <p className="font-display text-xl font-semibold tracking-tight">
                   {dash?.lowStockCount ?? 0}
                 </p>
@@ -330,7 +334,7 @@ const AdminDashboard = () => {
                 <PackageX className="h-5 w-5 text-white" aria-hidden />
               </div>
               <div className="min-w-0">
-                <p className="text-sm text-muted-foreground">Ruptures</p>
+                <p className="text-sm text-muted-foreground">{t('dashboard.outOfStock')}</p>
                 <p className="font-display text-xl font-semibold tracking-tight">
                   {dash?.outOfStockCount ?? 0}
                 </p>
@@ -343,9 +347,9 @@ const AdminDashboard = () => {
       <div className="grid lg:grid-cols-2 gap-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="font-display text-lg">Commandes récentes</CardTitle>
+            <CardTitle className="font-display text-lg">{t('dashboard.recentOrders')}</CardTitle>
             <Link to="/admin/commandes" className="font-body text-sm text-primary hover:underline">
-              Voir tout
+              {t('dashboard.viewAll')}
             </Link>
           </CardHeader>
           <CardContent>
@@ -376,9 +380,9 @@ const AdminDashboard = () => {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="font-display text-lg">Personnalisations en attente</CardTitle>
+            <CardTitle className="font-display text-lg">{t('dashboard.pendingCustomizations')}</CardTitle>
             <Link to="/admin/personnalisations" className="font-body text-sm text-primary hover:underline">
-              Voir tout
+              {t('dashboard.viewAll')}
             </Link>
           </CardHeader>
           <CardContent>
@@ -392,7 +396,7 @@ const AdminDashboard = () => {
                     {request.imageUrl ? (
                       <img
                         src={getImageUrl(request.imageUrl)}
-                        alt="Modèle"
+                        alt={t('dashboard.modelAlt')}
                         className="w-12 h-12 rounded-lg object-cover"
                       />
                     ) : (

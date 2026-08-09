@@ -14,7 +14,7 @@ export interface ProductListItemDTO {
   stockQuantity?: number;
   badges?: string[];
   createdAt?: string;
-  goldType?: string;
+  marque?: string;
   weight?: number;
   customizable?: boolean;
 }

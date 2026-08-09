@@ -39,6 +39,7 @@ import {
   Globe,
 } from 'lucide-react';
 import AdminNotification from './AdminNotification';
+import AdminFirstUseGuide from './AdminFirstUseGuide';
 import StockAlertDialog from './StockAlertDialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -213,6 +214,7 @@ const AdminLayout = ({
     if (sidebarOpenProp === undefined) setSidebarOpenInternal(open);
     onSidebarOpenChange?.(open);
   };
+  const [forceGuideOpen, setForceGuideOpen] = useState(false);
 
   // Favicon / titre : branding boutique. Sur Apparence, le workspace applique le brouillon.
   useEffect(() => {
@@ -261,6 +263,10 @@ const AdminLayout = ({
   return (
     <div className="flex h-screen min-h-0 overflow-hidden bg-[hsl(220_20%_97%)]" dir={dir} lang={locale}>
       <StockAlertDialog />
+      <AdminFirstUseGuide
+        forceOpen={forceGuideOpen}
+        onForceOpenHandled={() => setForceGuideOpen(false)}
+      />
       {isSidebarOpen && (
         <div
           className="fixed inset-0 z-40 bg-foreground/40 backdrop-blur-sm lg:hidden"
@@ -371,6 +377,16 @@ const AdminLayout = ({
               {t('common.viewStore')}
             </a>
           </Button>
+          {!isSuperAdmin ? (
+            <Button
+              variant="ghost"
+              className="w-full justify-start gap-2 text-white/75 hover:bg-white/10 hover:text-white"
+              onClick={() => setForceGuideOpen(true)}
+            >
+              <BookOpen className="h-4 w-4" />
+              {t('guide.menu')}
+            </Button>
+          ) : null}
           <Button
             variant="ghost"
             className="w-full justify-start gap-2 text-white/75 hover:bg-white/10 hover:text-white"

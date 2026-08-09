@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Package, Plus, Pencil, Trash2, Search, Upload, X, ArrowLeft, ArrowRight, Star } from 'lucide-react';
+import type { CategoryDTO } from '@/types/api';
 import { createEmptyVariantRow, type ProductVariantFormRow } from '@/types/product-variant';
 import { ProductVariantEditor } from '@/components/admin/ProductVariantEditor';
 import AdminLayout from '@/components/admin/AdminLayout';
@@ -40,6 +41,22 @@ import {
   readOnboardingDraft,
 } from '@/utils/onboardingSession';
 
+const generateCategorySlug = (name: string) =>
+  name
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/\s+/g, '-')
+    .replace(/[^a-z0-9-]/g, '');
+
+const uniqueCategorySlug = (base: string, existing: Set<string>) => {
+  let slug = base || 'categorie';
+  if (!existing.has(slug)) return slug;
+  let i = 2;
+  while (existing.has(`${slug}-${i}`)) i += 1;
+  return `${slug}-${i}`;
+};
+
 type AdminFormData = {
   name: string;
   shortDescription: string;
@@ -48,6 +65,7 @@ type AdminFormData = {
   originalPrice: string;
   category: string;
   sku: string;
+  marque: string;
   stockQuantity: string;
   badges: string[];
   customizable: boolean;
@@ -121,6 +139,7 @@ const AdminProducts = () => {
     originalPrice: '',
     category: '',
     sku: '',
+    marque: '',
     stockQuantity: '100',
     badges: [],
     customizable: false,
@@ -130,6 +149,13 @@ const AdminProducts = () => {
   const [variantRows, setVariantRows] = useState<ProductVariantFormRow[]>([createEmptyVariantRow(true)]);
   const [hasVariants, setHasVariants] = useState(false);
   const imageInputRef = useRef<HTMLInputElement>(null);
+
+  /** Création catégorie / sous-catégorie sans quitter le formulaire produit */
+  const [showQuickCategory, setShowQuickCategory] = useState(false);
+  const [quickCatMode, setQuickCatMode] = useState<'parent' | 'child'>('parent');
+  const [quickCatName, setQuickCatName] = useState('');
+  const [quickCatParentId, setQuickCatParentId] = useState<string>('');
+  const [quickCatSaving, setQuickCatSaving] = useState(false);
 
   const newImagePreviewUrls = useMemo(
     () => imageFiles.map((file) => URL.createObjectURL(file)),
@@ -148,6 +174,101 @@ const AdminProducts = () => {
     () => categories.find((c) => c.slug === formData.category)?.id ?? null,
     [categories, formData.category],
   );
+
+  const parentCategories = useMemo(
+    () =>
+      categories
+        .filter((c) => c.parentId == null)
+        .sort((a, b) => a.name.localeCompare(b.name, 'fr')),
+    [categories],
+  );
+
+  /** Liste select : parents puis enfants indentés */
+  const categoriesForSelect = useMemo(() => {
+    const childrenByParent = new Map<number, CategoryDTO[]>();
+    for (const c of categories) {
+      if (c.parentId == null) continue;
+      const list = childrenByParent.get(Number(c.parentId)) ?? [];
+      list.push(c);
+      childrenByParent.set(Number(c.parentId), list);
+    }
+    for (const list of childrenByParent.values()) {
+      list.sort((a, b) => a.name.localeCompare(b.name, 'fr'));
+    }
+    const rows: { cat: CategoryDTO; label: string }[] = [];
+    for (const parent of parentCategories) {
+      rows.push({ cat: parent, label: parent.name });
+      for (const child of childrenByParent.get(Number(parent.id)) ?? []) {
+        rows.push({ cat: child, label: `${parent.name} › ${child.name}` });
+      }
+    }
+    // orphelines (parent disparu)
+    for (const c of categories) {
+      if (c.parentId == null) continue;
+      if (!parentCategories.some((p) => Number(p.id) === Number(c.parentId))) {
+        rows.push({ cat: c, label: c.name });
+      }
+    }
+    return rows;
+  }, [categories, parentCategories]);
+
+  const resetQuickCategory = () => {
+    setShowQuickCategory(false);
+    setQuickCatMode('parent');
+    setQuickCatName('');
+    setQuickCatParentId('');
+    setQuickCatSaving(false);
+  };
+
+  const openQuickCategory = (mode: 'parent' | 'child' = 'parent') => {
+    setQuickCatMode(mode);
+    setQuickCatName('');
+    if (mode === 'child') {
+      const selected = categories.find((c) => c.slug === formData.category);
+      if (selected?.parentId != null) {
+        setQuickCatParentId(String(selected.parentId));
+      } else if (selected) {
+        setQuickCatParentId(String(selected.id));
+      } else {
+        setQuickCatParentId(parentCategories[0] ? String(parentCategories[0].id) : '');
+      }
+    } else {
+      setQuickCatParentId('');
+    }
+    setShowQuickCategory(true);
+  };
+
+  const handleQuickCreateCategory = async () => {
+    const name = quickCatName.trim();
+    if (!name) {
+      toast.error('Indiquez un nom');
+      return;
+    }
+    if (quickCatMode === 'child' && !quickCatParentId) {
+      toast.error('Choisissez une catégorie parente');
+      return;
+    }
+    const used = new Set(categories.map((c) => c.slug));
+    const slug = uniqueCategorySlug(generateCategorySlug(name), used);
+    setQuickCatSaving(true);
+    try {
+      const created = await categoriesApi.createCategory({
+        name,
+        slug,
+        parentId: quickCatMode === 'child' ? Number(quickCatParentId) : null,
+      });
+      await queryClient.invalidateQueries({ queryKey: ['categories'] });
+      setFormData((prev) => ({ ...prev, category: created.slug }));
+      toast.success(
+        quickCatMode === 'child' ? 'Sous-catégorie créée' : 'Catégorie créée',
+      );
+      resetQuickCategory();
+    } catch (err) {
+      toastError(err, 'Impossible de créer la catégorie');
+    } finally {
+      setQuickCatSaving(false);
+    }
+  };
 
   // Modèle d'attributs résolu (catégorie → fallback boutique) : pilote les axes de variantes.
   const { data: resolvedTemplate } = useQuery({
@@ -183,6 +304,7 @@ const AdminProducts = () => {
       originalPrice: (product.originalPrice ?? '').toString(),
       category: product.category,
       sku: product.sku ?? '',
+      marque: product.marque ?? '',
       stockQuantity: String(product.stockQuantity ?? 0),
       badges: product.badges,
       customizable: product.customizable === true,
@@ -248,6 +370,7 @@ const AdminProducts = () => {
       originalPrice: '',
       category: categories[0]?.slug ?? '',
       sku: '',
+      marque: '',
       stockQuantity: '100',
       badges: [],
       customizable: false,
@@ -326,6 +449,7 @@ const AdminProducts = () => {
     setIsLoadingProduct(false);
     setImageFiles([]);
     setExistingImageUrls([]);
+    resetQuickCategory();
   };
 
   const createMutation = useMutation({
@@ -398,6 +522,7 @@ const AdminProducts = () => {
           isPromo && originalPriceNum && originalPriceNum > priceNum ? originalPriceNum : undefined,
         category: formData.category,
         sku: formData.sku.trim() || undefined,
+        marque: formData.marque.trim() || undefined,
         stockQuantity,
         badges: formData.badges,
         variants: [],
@@ -476,6 +601,7 @@ const AdminProducts = () => {
             : defaultVariant.originalPrice,
         category: formData.category,
         sku: formData.sku.trim() || undefined,
+        marque: formData.marque.trim() || undefined,
         stockQuantity,
         badges: formData.badges,
         variants: parsedVariants,
@@ -587,7 +713,7 @@ const AdminProducts = () => {
   if (isLoading && !productsPage) {
     return (
       <AdminLayout title={t('products.title')} breadcrumbs={[{ label: t('products.breadcrumb') }]}>
-        <div className="p-8 text-center text-muted-foreground">Chargement...</div>
+        <div className="p-8 text-center text-muted-foreground">{t('common.loading')}</div>
       </AdminLayout>
     );
   }
@@ -596,32 +722,29 @@ const AdminProducts = () => {
     <AdminLayout title={t('products.title')} breadcrumbs={[{ label: t('products.breadcrumb') }]}>
       {fromOnboarding ? (
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-primary/30 bg-primary/5 px-4 py-3">
-          <p className="text-sm text-foreground">
-            Assistant de configuration — ajoutez un produit, puis vous reviendrez à l’étape{' '}
-            <strong>Publication</strong>.
-          </p>
+          <p className="text-sm text-foreground">{t('products.onboardingBanner')}</p>
           <Button type="button" variant="outline" size="sm" onClick={returnToOnboardingProducts}>
-            Retour à l’assistant
+            {t('products.onboardingBack')}
           </Button>
         </div>
       ) : null}
       <p className="text-xs sm:text-sm text-muted-foreground mb-3 flex flex-wrap items-center gap-x-1.5 gap-y-1">
-        <span className="font-medium text-foreground">{productsPage?.totalElements ?? 0}</span>
-        produit{(productsPage?.totalElements ?? 0) > 1 ? 's' : ''}
+        <span className="font-medium text-foreground">{productsPage?.totalElements ?? 0}</span>{' '}
+        {t('common.productUnit')}
         {filterCategory !== 'all' && (
-          <>· filtre <Badge variant="secondary" className="text-[10px] px-1.5 py-0">{getCategoryLabel(filterCategory)}</Badge></>
+          <>· {t('common.filterLabel')} <Badge variant="secondary" className="text-[10px] px-1.5 py-0">{getCategoryLabel(filterCategory)}</Badge></>
         )}
         {debouncedSearch && (
           <>· &quot;{debouncedSearch}&quot;</>
         )}
-        {isFetching && <span className="text-[10px]">(mise à jour…)</span>}
+        {isFetching && <span className="text-[10px]">{t('products.updating')}</span>}
       </p>
 
       <div className="flex flex-col sm:flex-row gap-4 mb-6">
         <div className="flex-1 relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
           <Input
-            placeholder="Rechercher un produit..."
+            placeholder={t('products.searchPlaceholder')}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="pl-10"
@@ -629,10 +752,10 @@ const AdminProducts = () => {
         </div>
         <Select value={filterCategory} onValueChange={handleFilterCategoryChange}>
           <SelectTrigger className="w-full sm:w-48">
-            <SelectValue placeholder="Catégorie" />
+            <SelectValue placeholder={t('common.category')} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">Toutes les catégories</SelectItem>
+            <SelectItem value="all">{t('products.allCategories')}</SelectItem>
             {categories.map((cat) => (
               <SelectItem key={cat.id} value={cat.slug}>
                 {cat.name}
@@ -643,7 +766,7 @@ const AdminProducts = () => {
         {canCreate && (
           <Button onClick={() => handleOpenModal()} className="font-body">
             <Plus className="w-4 h-4 mr-2" />
-            Ajouter
+            {t('common.add')}
           </Button>
         )}
       </div>
@@ -665,20 +788,20 @@ const AdminProducts = () => {
                 </p>
                 <div className="flex flex-wrap items-center gap-1 mt-1">
                   {!product.inStock ? (
-                    <Badge variant="destructive" className="text-[10px]">Rupture</Badge>
+                    <Badge variant="destructive" className="text-[10px]">{t('common.outOfStock')}</Badge>
                   ) : (
                     <Badge variant="outline" className="text-[10px] text-green-600 border-green-600">
-                      Stock {product.stockQuantity}
+                      {t('products.stockCount', { count: product.stockQuantity })}
                     </Badge>
                   )}
                   {product.badges.map((badge) => (
                     <Badge key={badge} variant={badge === 'promo' ? 'destructive' : 'outline'} className="text-[10px]">
-                      {badge === 'new' ? 'Nouveau' : badge === 'bestseller' ? 'Best-seller' : 'Promo'}
+                      {badge === 'new' ? t('products.badgeNew') : badge === 'bestseller' ? t('products.badgeBestseller') : t('products.badgePromo')}
                     </Badge>
                   ))}
                   {product.customizable && (
                     <Badge variant="outline" className="text-[10px] border-primary/40 text-primary">
-                      Logo
+                      {t('products.badgeLogo')}
                     </Badge>
                   )}
                 </div>
@@ -703,7 +826,7 @@ const AdminProducts = () => {
                   onClick={() => handleOpenModal(product)}
                 >
                   <Pencil className="w-3.5 h-3.5 mr-1" />
-                  Modifier
+                  {t('common.edit')}
                 </Button>
               )}
               {canDelete && (
@@ -725,11 +848,11 @@ const AdminProducts = () => {
             title={hasActiveFilters ? t('products.emptyFiltered') : t('products.empty')}
             description={
               hasActiveFilters
-                ? 'Modifiez la recherche ou la catégorie.'
-                : 'Ajoutez votre premier produit pour démarrer la boutique.'
+                ? t('products.emptyFilteredDesc')
+                : t('products.emptyDesc')
             }
             actionLabel={
-              hasActiveFilters ? 'Réinitialiser les filtres' : canCreate ? 'Ajouter un produit' : undefined
+              hasActiveFilters ? t('common.resetFilters') : canCreate ? t('products.addProduct') : undefined
             }
             onAction={
               hasActiveFilters
@@ -748,12 +871,12 @@ const AdminProducts = () => {
           <table className="w-full">
             <thead className="bg-muted/50">
               <tr>
-                <th className="px-4 py-3 text-left font-body text-sm font-medium text-muted-foreground">Produit</th>
-                <th className="px-4 py-3 text-left font-body text-sm font-medium text-muted-foreground">Catégorie</th>
-                <th className="px-4 py-3 text-left font-body text-sm font-medium text-muted-foreground">Stock</th>
-                <th className="px-4 py-3 text-left font-body text-sm font-medium text-muted-foreground">Prix</th>
-                <th className="px-4 py-3 text-left font-body text-sm font-medium text-muted-foreground">Badges</th>
-                <th className="px-4 py-3 text-right font-body text-sm font-medium text-muted-foreground">Actions</th>
+                <th className="px-4 py-3 text-left font-body text-sm font-medium text-muted-foreground">{t('common.product')}</th>
+                <th className="px-4 py-3 text-left font-body text-sm font-medium text-muted-foreground">{t('common.category')}</th>
+                <th className="px-4 py-3 text-left font-body text-sm font-medium text-muted-foreground">{t('stock.title')}</th>
+                <th className="px-4 py-3 text-left font-body text-sm font-medium text-muted-foreground">{t('common.price')}</th>
+                <th className="px-4 py-3 text-left font-body text-sm font-medium text-muted-foreground">{t('common.badges')}</th>
+                <th className="px-4 py-3 text-right font-body text-sm font-medium text-muted-foreground">{t('common.actions')}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
@@ -780,10 +903,10 @@ const AdminProducts = () => {
                   <td className="px-4 py-3">
                     {product.inStock ? (
                       <Badge variant="outline" className="text-green-600 border-green-600 text-xs">
-                        En stock ({product.stockQuantity})
+                        {t('products.inStockCount', { count: product.stockQuantity })}
                       </Badge>
                     ) : (
-                      <Badge variant="destructive" className="text-xs">Rupture</Badge>
+                      <Badge variant="destructive" className="text-xs">{t('common.outOfStock')}</Badge>
                     )}
                   </td>
                   <td className="px-4 py-3 font-body">
@@ -802,12 +925,12 @@ const AdminProducts = () => {
                     <div className="flex flex-wrap gap-1">
                       {product.badges.map((badge) => (
                         <Badge key={badge} variant={badge === 'promo' ? 'destructive' : 'outline'} className="text-xs">
-                          {badge === 'new' ? 'Nouveau' : badge === 'bestseller' ? 'Best-seller' : 'Promo'}
+                          {badge === 'new' ? t('products.badgeNew') : badge === 'bestseller' ? t('products.badgeBestseller') : t('products.badgePromo')}
                         </Badge>
                       ))}
                       {product.customizable && (
                         <Badge variant="outline" className="text-xs border-primary/40 text-primary">
-                          Logo
+                          {t('products.badgeLogo')}
                         </Badge>
                       )}
                     </div>
@@ -847,11 +970,11 @@ const AdminProducts = () => {
             title={hasActiveFilters ? t('products.emptyFiltered') : t('products.emptyCatalog')}
             description={
               hasActiveFilters
-                ? 'Modifiez la recherche ou la catégorie.'
-                : 'Créez un produit pour le voir apparaître ici et sur votre boutique.'
+                ? t('products.emptyFilteredDesc')
+                : t('products.emptyCatalogDesc')
             }
             actionLabel={
-              hasActiveFilters ? 'Réinitialiser les filtres' : canCreate ? 'Ajouter un produit' : undefined
+              hasActiveFilters ? t('common.resetFilters') : canCreate ? t('products.addProduct') : undefined
             }
             onAction={
               hasActiveFilters
@@ -891,7 +1014,7 @@ const AdminProducts = () => {
         >
           <DialogHeader className="shrink-0 space-y-1 border-b border-border bg-card px-5 py-4 text-left sm:px-6">
             <DialogTitle className="font-display text-xl text-foreground">
-              {editingProduct ? 'Modifier le produit' : 'Nouveau produit'}
+              {editingProduct ? t('products.editProduct') : t('products.newProduct')}
             </DialogTitle>
             <DialogDescription className="text-sm text-muted-foreground">
               Renseignez les infos, les variantes de prix, puis les images. Activez la personnalisation
@@ -901,7 +1024,7 @@ const AdminProducts = () => {
 
           {isLoadingProduct ? (
             <div className="flex-1 px-6 py-12 text-center text-muted-foreground">
-              Chargement du produit…
+              {t('common.loading')}
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col bg-card">
@@ -929,6 +1052,16 @@ const AdminProducts = () => {
                         onChange={(e) => setFormData((prev) => ({ ...prev, sku: e.target.value }))}
                         className="mt-1"
                         placeholder="Référence produit"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="marque">Marque</Label>
+                      <Input
+                        id="marque"
+                        value={formData.marque}
+                        onChange={(e) => setFormData((prev) => ({ ...prev, marque: e.target.value }))}
+                        className="mt-1"
+                        placeholder="ex. Apple, Nike…"
                       />
                     </div>
                     <div className="sm:col-span-2">
@@ -1091,7 +1224,7 @@ const AdminProducts = () => {
                     Catalogue
                   </h3>
                   <div className="grid items-start gap-4 sm:grid-cols-2">
-                    <div>
+                    <div className="sm:col-span-2">
                       <Label>Catégorie *</Label>
                       <Select
                         value={formData.category || undefined}
@@ -1103,25 +1236,133 @@ const AdminProducts = () => {
                           <SelectValue placeholder="Choisir une catégorie" />
                         </SelectTrigger>
                         <SelectContent>
-                          {categories.length === 0 ? (
+                          {categoriesForSelect.length === 0 ? (
                             <SelectItem value="__none" disabled>
-                              Aucune catégorie — créez-en une
+                              Aucune catégorie — créez-en une ci-dessous
                             </SelectItem>
                           ) : (
-                            categories.map((cat) => (
+                            categoriesForSelect.map(({ cat, label }) => (
                               <SelectItem key={cat.id} value={cat.slug}>
-                                {cat.name}
+                                {label}
                               </SelectItem>
                             ))
                           )}
                         </SelectContent>
                       </Select>
-                      <Link
-                        to="/admin/categories?action=new"
-                        className="mt-1.5 inline-block text-xs text-primary hover:underline"
-                      >
-                        + Créer une catégorie
-                      </Link>
+                      {!showQuickCategory ? (
+                        <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-1">
+                          <button
+                            type="button"
+                            onClick={() => openQuickCategory('parent')}
+                            className="text-xs text-primary hover:underline"
+                          >
+                            + Créer une catégorie
+                          </button>
+                          {parentCategories.length > 0 && (
+                            <button
+                              type="button"
+                              onClick={() => openQuickCategory('child')}
+                              className="text-xs text-primary hover:underline"
+                            >
+                              + Créer une sous-catégorie
+                            </button>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="mt-3 space-y-3 rounded-lg border border-border bg-muted/30 p-3">
+                          <div className="flex gap-1 rounded-md bg-background p-0.5">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setQuickCatMode('parent');
+                                setQuickCatParentId('');
+                              }}
+                              className={cn(
+                                'flex-1 rounded px-2 py-1.5 text-xs font-medium transition-colors',
+                                quickCatMode === 'parent'
+                                  ? 'bg-primary text-primary-foreground'
+                                  : 'text-muted-foreground hover:text-foreground',
+                              )}
+                            >
+                              Catégorie
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => openQuickCategory('child')}
+                              disabled={parentCategories.length === 0}
+                              className={cn(
+                                'flex-1 rounded px-2 py-1.5 text-xs font-medium transition-colors disabled:opacity-40',
+                                quickCatMode === 'child'
+                                  ? 'bg-primary text-primary-foreground'
+                                  : 'text-muted-foreground hover:text-foreground',
+                              )}
+                            >
+                              Sous-catégorie
+                            </button>
+                          </div>
+                          {quickCatMode === 'child' && (
+                            <div>
+                              <Label className="text-xs">Catégorie parente *</Label>
+                              <Select
+                                value={quickCatParentId || undefined}
+                                onValueChange={setQuickCatParentId}
+                              >
+                                <SelectTrigger className="mt-1">
+                                  <SelectValue placeholder="Choisir le parent" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {parentCategories.map((p) => (
+                                    <SelectItem key={p.id} value={String(p.id)}>
+                                      {p.name}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          )}
+                          <div>
+                            <Label className="text-xs" htmlFor="quick-cat-name">
+                              Nom *
+                            </Label>
+                            <Input
+                              id="quick-cat-name"
+                              value={quickCatName}
+                              onChange={(e) => setQuickCatName(e.target.value)}
+                              className="mt-1"
+                              placeholder={
+                                quickCatMode === 'child'
+                                  ? 'ex. T-shirts, Sneakers…'
+                                  : 'ex. Vêtements, Chaussures…'
+                              }
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                  e.preventDefault();
+                                  void handleQuickCreateCategory();
+                                }
+                              }}
+                            />
+                          </div>
+                          <div className="flex justify-end gap-2">
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={resetQuickCategory}
+                              disabled={quickCatSaving}
+                            >
+                              Annuler
+                            </Button>
+                            <Button
+                              type="button"
+                              size="sm"
+                              onClick={() => void handleQuickCreateCategory()}
+                              disabled={quickCatSaving}
+                            >
+                              {quickCatSaving ? 'Création…' : 'Créer et sélectionner'}
+                            </Button>
+                          </div>
+                        </div>
+                      )}
                     </div>
                     <div>
                       <Label htmlFor="stockQuantity">
@@ -1350,10 +1591,10 @@ const AdminProducts = () => {
 
               <DialogFooter className="shrink-0 gap-2 border-t border-border bg-card px-5 py-4 sm:px-6">
                 <Button type="button" variant="outline" onClick={handleCloseModal}>
-                  Annuler
+                  {t('common.cancel')}
                 </Button>
                 <Button type="submit" disabled={createMutation.isPending || updateMutation.isPending}>
-                  {editingProduct ? 'Enregistrer' : 'Créer'}
+                  {editingProduct ? t('common.save') : t('common.create')}
                 </Button>
               </DialogFooter>
             </form>

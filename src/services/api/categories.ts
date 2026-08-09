@@ -92,4 +92,31 @@ export const categoriesApi = {
       method: 'DELETE',
     });
   },
+
+  /** Suppression multiple (enfants traités avant parents). */
+  bulkDeleteCategories: async (
+    ids: number[],
+  ): Promise<{ successCount: number; failureCount: number; errors: string[] }> => {
+    return apiRequest(buildApiUrl('/categories/bulk-delete'), {
+      method: 'POST',
+      body: JSON.stringify({ ids }),
+    });
+  },
+
+  /** Activer / désactiver plusieurs catégories. */
+  bulkSetActive: async (
+    ids: number[],
+    active: boolean,
+  ): Promise<{ successCount: number; failureCount: number; errors: string[] }> => {
+    return apiRequest(buildApiUrl('/categories/bulk-active'), {
+      method: 'POST',
+      body: JSON.stringify({ ids, active }),
+    });
+  },
+
+  setActive: async (id: number, active: boolean): Promise<CategoryDTO> => {
+    return apiRequest(buildApiUrl(`/categories/${id}/active?active=${active}`), {
+      method: 'PATCH',
+    });
+  },
 };

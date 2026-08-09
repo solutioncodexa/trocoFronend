@@ -86,10 +86,10 @@ const AdminOrders = () => {
 
   const getStatusLabel = (status: string) => {
     const labels: Record<string, string> = {
-      new: 'Nouvelle',
-      confirmed: 'Confirmée',
-      delivered: 'Livrée',
-      cancelled: 'Annulée',
+      new: t('status.new'),
+      confirmed: t('status.confirmed'),
+      delivered: t('status.delivered'),
+      cancelled: t('status.cancelled'),
     };
     return labels[status] ?? status;
   };
@@ -161,7 +161,7 @@ const AdminOrders = () => {
   if (isLoading) {
     return (
       <AdminLayout title={t('orders.title')} breadcrumbs={[{ label: t('orders.breadcrumb') }]}>
-        <div className="p-8 text-center text-muted-foreground">Chargement...</div>
+        <div className="p-8 text-center text-muted-foreground">{t('common.loading')}</div>
       </AdminLayout>
     );
   }
@@ -169,10 +169,10 @@ const AdminOrders = () => {
   return (
     <AdminLayout title={t('orders.title')} breadcrumbs={[{ label: t('orders.breadcrumb') }]}>
       <p className="text-xs sm:text-sm text-muted-foreground mb-3 flex flex-wrap items-center gap-x-1.5 gap-y-1">
-        <span className="font-medium text-foreground">{ordersPage?.totalElements ?? 0}</span>
-        commande{(ordersPage?.totalElements ?? 0) > 1 ? 's' : ''}
+        <span className="font-medium text-foreground">{ordersPage?.totalElements ?? 0}</span>{' '}
+        {t('orders.unit')}
         {filterStatus !== 'all' && (
-          <>· filtre <Badge className={cn('text-[10px] px-1.5 py-0', getStatusStyle(filterStatus))}>{getStatusLabel(filterStatus)}</Badge></>
+          <>· {t('common.filterLabel')} <Badge className={cn('text-[10px] px-1.5 py-0', getStatusStyle(filterStatus))}>{getStatusLabel(filterStatus)}</Badge></>
         )}
       </p>
 
@@ -180,7 +180,7 @@ const AdminOrders = () => {
         <div className="flex-1 relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
           <Input
-            placeholder="Rechercher par ID, nom ou téléphone..."
+            placeholder={t('orders.searchPlaceholder')}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="pl-10"
@@ -188,14 +188,14 @@ const AdminOrders = () => {
         </div>
         <Select value={filterStatus} onValueChange={handleFilterStatusChange}>
           <SelectTrigger className="w-full sm:w-48">
-            <SelectValue placeholder="Statut" />
+            <SelectValue placeholder={t('common.status')} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">Tous les statuts</SelectItem>
-            <SelectItem value="new">Nouvelles</SelectItem>
-            <SelectItem value="confirmed">Confirmées</SelectItem>
-            <SelectItem value="delivered">Livrées</SelectItem>
-            <SelectItem value="cancelled">Annulées</SelectItem>
+            <SelectItem value="all">{t('orders.allStatuses')}</SelectItem>
+            <SelectItem value="new">{t('status.new')}</SelectItem>
+            <SelectItem value="confirmed">{t('status.confirmed')}</SelectItem>
+            <SelectItem value="delivered">{t('status.delivered')}</SelectItem>
+            <SelectItem value="cancelled">{t('status.cancelled')}</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -210,7 +210,7 @@ const AdminOrders = () => {
                 <p className="font-body text-xs text-muted-foreground">{order.customer?.phone}</p>
                 <p className="font-body text-xs text-muted-foreground">{order.customer?.city ?? '—'}</p>
                 <p className="font-body text-[10px] text-muted-foreground mt-0.5">
-                  Paiement : {getPaymentLabel(order.paymentMethod)}
+                  {t('common.payment')} : {getPaymentLabel(order.paymentMethod)}
                   {order.paymentStatus ? ` · ${order.paymentStatus}` : ''}
                 </p>
               </div>
@@ -234,7 +234,9 @@ const AdminOrders = () => {
                 <div className="flex-1 min-w-0">
                   <p className="font-body text-sm truncate">{order.previewProductName}</p>
                   {(order.itemCount ?? 0) > 1 && (
-                    <p className="font-body text-xs text-muted-foreground">+{(order.itemCount ?? 0) - 1} article(s)</p>
+                    <p className="font-body text-xs text-muted-foreground">
+                      +{(order.itemCount ?? 0) - 1} {t('orders.itemsUnit')}
+                    </p>
                   )}
                 </div>
                 <p className="font-body font-medium text-sm shrink-0">{formatPrice(order.total ?? 0)}</p>
@@ -252,15 +254,15 @@ const AdminOrders = () => {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="new">Nouvelle</SelectItem>
-                  <SelectItem value="confirmed">Confirmée</SelectItem>
-                  <SelectItem value="delivered">Livrée</SelectItem>
-                  <SelectItem value="cancelled">Annulée</SelectItem>
+                  <SelectItem value="new">{t('status.new')}</SelectItem>
+                  <SelectItem value="confirmed">{t('status.confirmed')}</SelectItem>
+                  <SelectItem value="delivered">{t('status.delivered')}</SelectItem>
+                  <SelectItem value="cancelled">{t('status.cancelled')}</SelectItem>
                 </SelectContent>
               </Select>
               <Button variant="outline" size="sm" className="h-8 text-xs" onClick={() => handleViewOrder(order)}>
                 <Eye className="w-4 h-4 mr-1" />
-                Détails
+                {t('common.details')}
               </Button>
             </div>
             <p className="font-body text-[10px] text-muted-foreground">
@@ -280,14 +282,14 @@ const AdminOrders = () => {
             <thead className="bg-muted/50">
               <tr>
                 <th className="px-4 py-3 text-left font-body text-sm font-medium text-muted-foreground">ID</th>
-                <th className="px-4 py-3 text-left font-body text-sm font-medium text-muted-foreground">Client</th>
-                <th className="px-4 py-3 text-left font-body text-sm font-medium text-muted-foreground">Ville</th>
-                <th className="px-4 py-3 text-left font-body text-sm font-medium text-muted-foreground">Produit</th>
-                <th className="px-4 py-3 text-left font-body text-sm font-medium text-muted-foreground">Total</th>
-                <th className="px-4 py-3 text-left font-body text-sm font-medium text-muted-foreground">Paiement</th>
-                <th className="px-4 py-3 text-left font-body text-sm font-medium text-muted-foreground">Date</th>
-                <th className="px-4 py-3 text-left font-body text-sm font-medium text-muted-foreground">Statut</th>
-                <th className="px-4 py-3 text-right font-body text-sm font-medium text-muted-foreground">Actions</th>
+                <th className="px-4 py-3 text-left font-body text-sm font-medium text-muted-foreground">{t('common.customer')}</th>
+                <th className="px-4 py-3 text-left font-body text-sm font-medium text-muted-foreground">{t('common.city')}</th>
+                <th className="px-4 py-3 text-left font-body text-sm font-medium text-muted-foreground">{t('common.product')}</th>
+                <th className="px-4 py-3 text-left font-body text-sm font-medium text-muted-foreground">{t('common.total')}</th>
+                <th className="px-4 py-3 text-left font-body text-sm font-medium text-muted-foreground">{t('common.payment')}</th>
+                <th className="px-4 py-3 text-left font-body text-sm font-medium text-muted-foreground">{t('common.date')}</th>
+                <th className="px-4 py-3 text-left font-body text-sm font-medium text-muted-foreground">{t('common.status')}</th>
+                <th className="px-4 py-3 text-right font-body text-sm font-medium text-muted-foreground">{t('common.actions')}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
@@ -316,7 +318,9 @@ const AdminOrders = () => {
                         <div className="flex-1 min-w-0">
                           <p className="font-body text-sm truncate">{order.previewProductName}</p>
                           {(order.itemCount ?? 0) > 1 && (
-                            <p className="font-body text-xs text-muted-foreground">+{(order.itemCount ?? 0) - 1} article(s)</p>
+                            <p className="font-body text-xs text-muted-foreground">
+                              +{(order.itemCount ?? 0) - 1} {t('orders.itemsUnit')}
+                            </p>
                           )}
                         </div>
                       </div>
@@ -345,17 +349,17 @@ const AdminOrders = () => {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="new">Nouvelle</SelectItem>
-                        <SelectItem value="confirmed">Confirmée</SelectItem>
-                        <SelectItem value="delivered">Livrée</SelectItem>
-                        <SelectItem value="cancelled">Annulée</SelectItem>
+                        <SelectItem value="new">{t('status.new')}</SelectItem>
+                        <SelectItem value="confirmed">{t('status.confirmed')}</SelectItem>
+                        <SelectItem value="delivered">{t('status.delivered')}</SelectItem>
+                        <SelectItem value="cancelled">{t('status.cancelled')}</SelectItem>
                       </SelectContent>
                     </Select>
                   </td>
                   <td className="px-4 py-3 text-right">
                     <Button variant="outline" size="sm" onClick={() => handleViewOrder(order)}>
                       <Eye className="w-4 h-4 mr-2" />
-                      Détails
+                      {t('common.details')}
                     </Button>
                   </td>
                 </tr>
@@ -384,12 +388,12 @@ const AdminOrders = () => {
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="font-display text-xl">
-              Commande {selectedOrder?.id}
+              {t('orders.dialogTitle', { id: selectedOrder?.id ?? '' })}
             </DialogTitle>
           </DialogHeader>
 
           {isLoadingDetail ? (
-            <div className="py-12 text-center text-muted-foreground">Chargement de la commande…</div>
+            <div className="py-12 text-center text-muted-foreground">{t('orders.loadingDetail')}</div>
           ) : selectedOrder ? (
             <div className="space-y-6">
               <div className="flex items-center justify-between">
@@ -402,7 +406,7 @@ const AdminOrders = () => {
               </div>
 
               <div className="bg-muted/50 rounded-lg p-4 space-y-3">
-                <h3 className="font-display text-lg">Informations client</h3>
+                <h3 className="font-display text-lg">{t('orders.customerInfo')}</h3>
                 <div className="grid sm:grid-cols-2 gap-4">
                   <div className="flex items-center gap-2">
                     <span className="font-body">{selectedOrder.customer?.fullName}</span>
@@ -426,7 +430,7 @@ const AdminOrders = () => {
               </div>
 
               <div>
-                <h3 className="font-display text-lg mb-4">Articles commandés</h3>
+                <h3 className="font-display text-lg mb-4">{t('orders.orderedItems')}</h3>
                 <div className="space-y-3">
                   {(selectedOrder.items ?? []).map((item, index) => (
                     <div
@@ -441,7 +445,7 @@ const AdminOrders = () => {
                       <div className="flex-1">
                         <p className="font-body font-medium">{item.product?.name}</p>
                         <p className="font-body text-sm text-muted-foreground">
-                          {item.product?.weight}g • Qté: {item.quantity}
+                          {item.product?.weight}g • {t('orders.qty')}: {item.quantity}
                         </p>
                       </div>
                       <p className="font-body font-medium">
@@ -454,7 +458,7 @@ const AdminOrders = () => {
 
               <div className="border-t border-border pt-4">
                 <div className="flex justify-between items-center">
-                  <span className="font-display text-lg">Total</span>
+                  <span className="font-display text-lg">{t('common.total')}</span>
                   <span className="font-display text-2xl text-primary">
                     {formatPrice(selectedOrder.total ?? 0)}
                   </span>
@@ -467,17 +471,17 @@ const AdminOrders = () => {
                   onValueChange={(value) => handleStatusChange(selectedOrder.id, value)}
                 >
                   <SelectTrigger className="flex-1">
-                    <SelectValue placeholder="Changer le statut" />
+                    <SelectValue placeholder={t('orders.changeStatus')} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="new">Nouvelle</SelectItem>
-                    <SelectItem value="confirmed">Confirmée</SelectItem>
-                    <SelectItem value="delivered">Livrée</SelectItem>
-                    <SelectItem value="cancelled">Annulée</SelectItem>
+                    <SelectItem value="new">{t('status.new')}</SelectItem>
+                    <SelectItem value="confirmed">{t('status.confirmed')}</SelectItem>
+                    <SelectItem value="delivered">{t('status.delivered')}</SelectItem>
+                    <SelectItem value="cancelled">{t('status.cancelled')}</SelectItem>
                   </SelectContent>
                 </Select>
                 <Button variant="outline" onClick={() => setIsDetailOpen(false)}>
-                  Fermer
+                  {t('common.close')}
                 </Button>
               </div>
             </div>

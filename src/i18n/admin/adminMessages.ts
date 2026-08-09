@@ -3,11 +3,31 @@ import {
   appearanceAdminExtra,
   type AppearanceAdminMessageKey,
 } from './appearanceAdminExtra';
+import {
+  dashboardAdminExtra,
+  type DashboardAdminMessageKey,
+} from './dashboardAdminExtra';
+import {
+  guideAdminExtra,
+  type GuideAdminMessageKey,
+} from './guideAdminExtra';
+import {
+  morePagesAdminExtra,
+  type MorePagesAdminMessageKey,
+} from './morePagesAdminExtra';
+import {
+  pagesAdminExtra,
+  type PagesAdminMessageKey,
+} from './pagesAdminExtra';
 
 export type AdminLocale = StoreLocale;
 
 export type AdminMessageKey =
   | AppearanceAdminMessageKey
+  | DashboardAdminMessageKey
+  | GuideAdminMessageKey
+  | MorePagesAdminMessageKey
+  | PagesAdminMessageKey
   | 'nav.overview'
   | 'nav.sales'
   | 'nav.catalog'
@@ -220,7 +240,14 @@ export type AdminMessageKey =
   | 'status.pending'
   | 'status.suspended';
 
-type AdminCoreMessageKey = Exclude<AdminMessageKey, AppearanceAdminMessageKey>;
+type AdminCoreMessageKey = Exclude<
+  AdminMessageKey,
+  | AppearanceAdminMessageKey
+  | DashboardAdminMessageKey
+  | GuideAdminMessageKey
+  | MorePagesAdminMessageKey
+  | PagesAdminMessageKey
+>;
 
 const fr: Record<AdminCoreMessageKey, string> = {
   'nav.overview': 'Vue d’ensemble',
@@ -879,9 +906,30 @@ const en: Record<AdminCoreMessageKey, string> = {
 };
 
 export const adminMessages: Record<AdminLocale, Record<AdminMessageKey, string>> = {
-  fr: { ...fr, ...appearanceAdminExtra.fr },
-  ar: { ...ar, ...appearanceAdminExtra.ar },
-  en: { ...en, ...appearanceAdminExtra.en },
+  fr: {
+    ...fr,
+    ...appearanceAdminExtra.fr,
+    ...dashboardAdminExtra.fr,
+    ...guideAdminExtra.fr,
+    ...morePagesAdminExtra.fr,
+    ...pagesAdminExtra.fr,
+  },
+  ar: {
+    ...ar,
+    ...appearanceAdminExtra.ar,
+    ...dashboardAdminExtra.ar,
+    ...guideAdminExtra.ar,
+    ...morePagesAdminExtra.ar,
+    ...pagesAdminExtra.ar,
+  },
+  en: {
+    ...en,
+    ...appearanceAdminExtra.en,
+    ...dashboardAdminExtra.en,
+    ...guideAdminExtra.en,
+    ...morePagesAdminExtra.en,
+    ...pagesAdminExtra.en,
+  },
 };
 
 export const ADMIN_LOCALES: AdminLocale[] = ['fr', 'ar', 'en'];

@@ -89,6 +89,8 @@ const abandonedCartDemo = {
  */
 export async function mockMatjaronaApi(page: Page) {
   let lastLoginEmail = 'admin@maison-atlas.test';
+  /** État guide 1ère utilisation (persisté côté mock entre PATCH et GET /auth/me). */
+  const adminGuideCompletedByEmail: Record<string, boolean> = {};
 
   // Important : ne pas matcher `/src/services/api/**` (modules Vite).
   await page.route((url) => {
@@ -178,6 +180,22 @@ export async function mockMatjaronaApi(page: Page) {
           'PAGES_EDIT', 'PAGES_PUBLISH', 'WEBHOOKS_MANAGE',
         ],
         fournisseurId: isSuper ? null : 10,
+        adminGuideCompleted: adminGuideCompletedByEmail[lastLoginEmail.toLowerCase()] ?? false,
+      }));
+    }
+
+    if (method === 'PATCH' && path === '/auth/me/admin-guide') {
+      const body = (req.postDataJSON() as { completed?: boolean }) || {};
+      const key = lastLoginEmail.toLowerCase();
+      adminGuideCompletedByEmail[key] = body.completed === true;
+      return json(route, ok({
+        id: 2,
+        email: lastLoginEmail,
+        role: 'ADMIN',
+        fullName: 'Admin Boutique',
+        permissions: [],
+        fournisseurId: 10,
+        adminGuideCompleted: adminGuideCompletedByEmail[key],
       }));
     }
 
@@ -394,6 +412,13 @@ export async function mockMatjaronaApi(page: Page) {
         lowStockCount: 0,
         outOfStockCount: 0,
       }));
+    }
+
+    if (method === 'GET' && path === '/notifications') {
+      return json(route, ok([]));
+    }
+    if (method === 'GET' && path === '/notifications/unread/count') {
+      return json(route, ok({ count: 0 }));
     }
 
     if (method === 'GET' && path === '/stock/overview') {

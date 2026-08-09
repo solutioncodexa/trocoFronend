@@ -729,6 +729,11 @@ const ProductDetail = () => {
           >
             {/* Title row */}
             <div>
+              {product.marque ? (
+                <p className="mb-1 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                  {product.marque}
+                </p>
+              ) : null}
               <h1 className="text-xl sm:text-2xl lg:text-3xl font-display text-foreground leading-tight">
                 {product.name}
               </h1>

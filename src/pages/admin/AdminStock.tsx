@@ -71,18 +71,12 @@ const ADJUST_REASONS = [
   'Autre correction',
 ];
 
-const statusBadge = (status: string) => {
+const statusBadge = (status: string, labels: Record<string, string>) => {
   const map: Record<string, string> = {
     OK: 'bg-emerald-100 text-emerald-800',
     LOW: 'bg-amber-100 text-amber-800',
     OUT: 'bg-red-100 text-red-800',
     EXPIRING: 'bg-orange-100 text-orange-800',
-  };
-  const labels: Record<string, string> = {
-    OK: 'OK',
-    LOW: 'Bas',
-    OUT: 'Rupture',
-    EXPIRING: 'Expire bientôt',
   };
   return (
     <span className={cn('px-2 py-0.5 rounded-full text-xs font-medium', map[status] ?? 'bg-muted')}>
@@ -122,6 +116,12 @@ function formatQtyDelta(m: StockMovementDTO): string {
 
 const AdminStock = () => {
   const { t } = useAdminLocale();
+  const stockStatusLabels: Record<string, string> = {
+    OK: 'OK',
+    LOW: t('stock.statusLow'),
+    OUT: t('common.outOfStock'),
+    EXPIRING: t('stock.expiringSoon'),
+  };
   const queryClient = useQueryClient();
   const { hasPermission } = useAdmin();
   const canAdjust = hasPermission(PERMISSIONS.STOCK_ADJUST);
@@ -325,10 +325,10 @@ const AdminStock = () => {
 
   const dialogTitle =
     adjustMode === 'purchase'
-      ? 'Achat / entrée stock'
+      ? t('stock.dialogPurchaseTitle')
       : adjustMode === 'direct-sale'
-        ? 'Vente directe (hors site)'
-        : 'Correction inventaire';
+        ? t('stock.dialogDirectSaleTitle')
+        : t('stock.inventoryCorrection');
 
   const dialogDesc =
     adjustMode === 'purchase'
@@ -358,7 +358,7 @@ const AdminStock = () => {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-              <AlertTriangle className="w-4 h-4" /> Stock bas
+              <AlertTriangle className="w-4 h-4" /> {t('stock.lowStock')}
             </CardTitle>
           </CardHeader>
           <CardContent className="text-2xl font-display">{overview?.lowStockCount ?? 0}</CardContent>
@@ -366,7 +366,7 @@ const AdminStock = () => {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-              <PackageX className="w-4 h-4" /> Ruptures
+              <PackageX className="w-4 h-4" /> {t('stock.statOutOfStock')}
             </CardTitle>
           </CardHeader>
           <CardContent className="text-2xl font-display">{overview?.outOfStockCount ?? 0}</CardContent>
@@ -374,7 +374,7 @@ const AdminStock = () => {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-              <CalendarClock className="w-4 h-4" /> Expire bientôt
+              <CalendarClock className="w-4 h-4" /> {t('stock.expiringSoon')}
             </CardTitle>
           </CardHeader>
           <CardContent className="text-2xl font-display">{overview?.expiringSoonCount ?? 0}</CardContent>
@@ -382,7 +382,7 @@ const AdminStock = () => {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-              <Package className="w-4 h-4" /> Valeur stock
+              <Package className="w-4 h-4" /> {t('stock.stockValue')}
             </CardTitle>
           </CardHeader>
           <CardContent className="text-2xl font-display">{formatPrice(overview?.stockValue ?? 0)}</CardContent>
@@ -407,11 +407,11 @@ const AdminStock = () => {
       {tab === 'settings' && (
         <Card>
           <CardHeader>
-            <CardTitle>Paramètres d&apos;alerte</CardTitle>
+            <CardTitle>{t('stock.settingsTitle')}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-6 max-w-xl">
             <div>
-              <Label>Seuil d&apos;alerte par défaut</Label>
+              <Label>{t('stock.defaultThreshold')}</Label>
               <Input
                 type="number"
                 min={0}
@@ -422,11 +422,11 @@ const AdminStock = () => {
                 }
               />
               <p className="text-xs text-muted-foreground mt-1">
-                Utilisé pour les variantes sans seuil personnalisé
+                {t('stock.defaultThresholdHelp')}
               </p>
             </div>
             <div>
-              <Label>Jours avant alerte péremption</Label>
+              <Label>{t('stock.expiryDaysLabel')}</Label>
               <Input
                 type="number"
                 min={1}
@@ -438,21 +438,21 @@ const AdminStock = () => {
               />
             </div>
             <div className="flex items-center justify-between">
-              <Label>Alertes actives</Label>
+              <Label>{t('stock.alertsEnabledLabel')}</Label>
               <Switch
                 checked={settingsForm.alertsEnabled}
                 onCheckedChange={(v) => setSettingsForm((s) => ({ ...s, alertsEnabled: v }))}
               />
             </div>
             <div className="flex items-center justify-between">
-              <Label>Alertes stock bas</Label>
+              <Label>{t('stock.lowStockAlertsLabel')}</Label>
               <Switch
                 checked={settingsForm.lowStockAlertsEnabled}
                 onCheckedChange={(v) => setSettingsForm((s) => ({ ...s, lowStockAlertsEnabled: v }))}
               />
             </div>
             <div className="flex items-center justify-between">
-              <Label>Alertes péremption</Label>
+              <Label>{t('stock.expiryAlertsLabel')}</Label>
               <Switch
                 checked={settingsForm.expiryAlertsEnabled}
                 onCheckedChange={(v) => setSettingsForm((s) => ({ ...s, expiryAlertsEnabled: v }))}
@@ -460,14 +460,14 @@ const AdminStock = () => {
             </div>
             <div className="flex flex-wrap gap-2">
               <Button onClick={() => saveSettingsMutation.mutate()} disabled={saveSettingsMutation.isPending}>
-                Enregistrer
+                {t('common.save')}
               </Button>
               <Button
                 variant="outline"
                 onClick={() => bulkClearMutation.mutate()}
                 disabled={bulkClearMutation.isPending}
               >
-                Appliquer le défaut aux variantes sans override
+                {t('stock.applyDefaultToAll')}
               </Button>
             </div>
           </CardContent>
@@ -476,14 +476,10 @@ const AdminStock = () => {
 
       {(tab === 'alerts' || tab === 'list') && (
         <div className="space-y-4">
-          <p className="text-sm text-muted-foreground">
-            Les commandes du site déduisent le stock automatiquement. Utilisez{' '}
-            <strong>Achat stock</strong> pour réapprovisionner, ou{' '}
-            <strong>Vente directe</strong> pour une vente hors site — chaque action est enregistrée dans l’historique.
-          </p>
+          <p className="text-sm text-muted-foreground">{t('stock.listDescription')}</p>
           <div className="flex flex-wrap gap-3">
             <Input
-              placeholder="Rechercher produit, variante, SKU…"
+              placeholder={t('stock.searchPlaceholder')}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="max-w-xs"
@@ -500,18 +496,18 @@ const AdminStock = () => {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">Tous</SelectItem>
-                  <SelectItem value="alert">En alerte</SelectItem>
-                  <SelectItem value="low">Stock bas</SelectItem>
-                  <SelectItem value="out">Rupture</SelectItem>
-                  <SelectItem value="expiring">Expire bientôt</SelectItem>
+                  <SelectItem value="all">{t('common.all')}</SelectItem>
+                  <SelectItem value="alert">{t('stock.filterAlert')}</SelectItem>
+                  <SelectItem value="low">{t('stock.lowStock')}</SelectItem>
+                  <SelectItem value="out">{t('common.outOfStock')}</SelectItem>
+                  <SelectItem value="expiring">{t('stock.expiringSoon')}</SelectItem>
                 </SelectContent>
               </Select>
             )}
           </div>
 
           {loadingVariants ? (
-            <p className="text-muted-foreground">Chargement…</p>
+            <p className="text-muted-foreground">{t('common.loading')}</p>
           ) : (
             <div className="space-y-2">
               {(tab === 'alerts' ? filtered.filter((v) => v.status !== 'OK') : filtered).map((row) => (
@@ -525,7 +521,7 @@ const AdminStock = () => {
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2 mb-1">
                       <span className="font-medium truncate">{row.productName}</span>
-                      {statusBadge(row.status)}
+                      {statusBadge(row.status, stockStatusLabels)}
                       {row.usesDefaultSafety ? (
                         <Badge variant="outline" className="text-xs">
                           Seuil défaut
@@ -548,7 +544,7 @@ const AdminStock = () => {
                   <div className="flex flex-wrap gap-2 shrink-0">
                     {canAdjust && (
                       <Button size="sm" variant="outline" onClick={() => openEdit(row)}>
-                        Seuil / date
+                        {t('stock.thresholdDate')}
                       </Button>
                     )}
                     {canAdjust && (
@@ -559,7 +555,7 @@ const AdminStock = () => {
                         onClick={() => openMovementDialog(row, 'purchase')}
                       >
                         <Truck className="w-3.5 h-3.5" />
-                        Achat stock
+                        {t('stock.actionPurchase')}
                       </Button>
                     )}
                     {canAdjust && (
@@ -570,7 +566,7 @@ const AdminStock = () => {
                         disabled={row.stock <= 0}
                       >
                         <ShoppingCart className="w-3.5 h-3.5" />
-                        Vente directe
+                        {t('stock.actionDirectSale')}
                       </Button>
                     )}
                     {canAdjust && (
@@ -582,7 +578,7 @@ const AdminStock = () => {
                         title={t('stock.inventoryCorrection')}
                       >
                         <ClipboardList className="w-3.5 h-3.5" />
-                        Inventaire
+                        {t('stock.inventoryShort')}
                       </Button>
                     )}
                   </div>
@@ -608,7 +604,7 @@ const AdminStock = () => {
       {tab === 'movements' && (
         <div className="space-y-4">
           <p className="text-sm text-muted-foreground">
-            Historique de tous les mouvements : achats, ventes directes, commandes site et corrections.
+            {t('stock.movementsDescription')}
           </p>
           <div className="flex flex-wrap gap-3">
             <Select
@@ -619,14 +615,14 @@ const AdminStock = () => {
               }}
             >
               <SelectTrigger className="w-[220px]">
-                <SelectValue placeholder="Type" />
+                <SelectValue placeholder={t('common.type')} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Tous les types</SelectItem>
-                <SelectItem value="IN">Achats / entrées</SelectItem>
-                <SelectItem value="OUT">Sorties (site + direct)</SelectItem>
-                <SelectItem value="ADJUST">Corrections inventaire</SelectItem>
-                <SelectItem value="RESTORE">Annulations commande</SelectItem>
+                <SelectItem value="all">{t('stock.filterTypeAll')}</SelectItem>
+                <SelectItem value="IN">{t('stock.filterTypeIn')}</SelectItem>
+                <SelectItem value="OUT">{t('stock.filterTypeOut')}</SelectItem>
+                <SelectItem value="ADJUST">{t('stock.filterTypeAdjust')}</SelectItem>
+                <SelectItem value="RESTORE">{t('stock.filterTypeRestore')}</SelectItem>
               </SelectContent>
             </Select>
             <Select
@@ -637,10 +633,10 @@ const AdminStock = () => {
               }}
             >
               <SelectTrigger className="w-[260px]">
-                <SelectValue placeholder="Produit" />
+                <SelectValue placeholder={t('common.product')} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Tous les produits</SelectItem>
+                <SelectItem value="all">{t('stock.filterProductAll')}</SelectItem>
                 {allVariants.map((v) => (
                   <SelectItem key={v.variantId} value={String(v.variantId)}>
                     {v.productName} — {v.variantLabel}
@@ -651,7 +647,7 @@ const AdminStock = () => {
           </div>
 
           {loadingMovements ? (
-            <p className="text-muted-foreground">Chargement…</p>
+            <p className="text-muted-foreground">{t('common.loading')}</p>
           ) : (
             <>
               <div className="space-y-2">
@@ -781,13 +777,13 @@ const AdminStock = () => {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setAdjustOpen(false)}>
-              Annuler
+              {t('common.cancel')}
             </Button>
             <Button
               onClick={() => adjustMutation.mutate()}
               disabled={adjustMutation.isPending || !canSubmit}
             >
-              Valider
+              {t('stock.validate')}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -837,10 +833,10 @@ const AdminStock = () => {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setEditOpen(false)}>
-              Annuler
+              {t('common.cancel')}
             </Button>
             <Button onClick={() => patchMutation.mutate()} disabled={patchMutation.isPending}>
-              Enregistrer
+              {t('common.save')}
             </Button>
           </DialogFooter>
         </DialogContent>

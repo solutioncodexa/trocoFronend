@@ -11,15 +11,20 @@ import {
 import { Button } from '@/components/ui/button';
 import { notificationsApi } from '@/services/api/notifications';
 import type { NotificationDTO } from '@/types/api';
+import { useAdmin } from '@/contexts/AdminContext';
+import { useAdminNotificationSocket } from '@/hooks/useAdminNotificationSocket';
 
 const AdminNotification = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { user } = useAdmin();
+  const { connected } = useAdminNotificationSocket(user?.fournisseurId);
 
   const { data: unreadCount = 0 } = useQuery({
     queryKey: ['notifications', 'unread-count'],
     queryFn: () => notificationsApi.getUnreadCount(),
-    refetchInterval: 30000,
+    // WS prioritaire ; poll lent en fallback si socket down
+    refetchInterval: connected ? false : 60_000,
   });
 
   const { data: notifications = [] } = useQuery({

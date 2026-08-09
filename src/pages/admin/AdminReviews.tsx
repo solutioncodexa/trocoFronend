@@ -40,7 +40,7 @@ const AdminReviews = () => {
   return (
     <AdminLayout
       title={t('reviews.title')}
-      breadcrumbs={[{ label: 'Avis' }]}
+      breadcrumbs={[{ label: t('reviews.title') }]}
       description={t('reviews.description')}
     >
       {isLoading ? (

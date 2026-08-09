@@ -55,7 +55,7 @@ const AdminPrivacy = () => {
   return (
     <AdminLayout
       title={t('privacy.title')}
-      breadcrumbs={[{ label: 'Conformité' }]}
+      breadcrumbs={[{ label: t('nav.compliance') }]}
     >
       <div className="mx-auto max-w-2xl space-y-6">
         <div className="flex items-start gap-3">

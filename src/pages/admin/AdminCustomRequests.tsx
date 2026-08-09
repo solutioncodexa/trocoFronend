@@ -20,9 +20,28 @@ import { cn } from '@/lib/utils';
 import QuoteDialog, { QuoteData } from '@/components/admin/QuoteDialog';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { formatPrice } from '@/utils/formatPrice';
+import type { AdminMessageKey } from '@/i18n/admin/adminMessages';
+
+const STATUS_KEYS: Record<string, AdminMessageKey> = {
+  pending: 'common.pending',
+  contacted: 'status.contacted',
+  completed: 'status.completed',
+};
+
+const TYPE_KEYS: Record<string, AdminMessageKey> = {
+  'sur-mesure:personnalisation-logo': 'customRequests.typeLogo',
+  'sur-mesure:produit-unique': 'customRequests.typeUnique',
+  'sur-mesure:dimensions-specifiques': 'customRequests.typeDimensions',
+  'sur-mesure:autre-sur-mesure': 'customRequests.typeOtherCustom',
+  'devis:commande-gros': 'customRequests.typeBulk',
+  'devis:renouvellement-stock': 'customRequests.typeRestock',
+  'devis:devis-multi-produits': 'customRequests.typeMulti',
+  'devis:autre-devis': 'customRequests.typeOtherQuote',
+};
 
 const AdminCustomRequests = () => {
-  const { t } = useAdminLocale();
+  const { t, locale } = useAdminLocale();
+  const dateTag = locale === 'ar' ? 'ar-MA' : locale === 'en' ? 'en-GB' : 'fr-FR';
   const [searchParams, setSearchParams] = useSearchParams();
   const idParam = searchParams.get('id');
   const queryClient = useQueryClient();
@@ -96,32 +115,13 @@ const AdminCustomRequests = () => {
   };
 
   const getStatusLabel = (status: string) => {
-    const labels: Record<string, string> = {
-      pending: 'En attente',
-      contacted: 'Contacté',
-      completed: 'Terminée',
-    };
-    return labels[status] || status;
+    const key = STATUS_KEYS[status];
+    return key ? t(key) : status;
   };
 
   const getTypeLabel = (type: string) => {
-    const labels: Record<string, string> = {
-      'sur-mesure:personnalisation-logo': 'Sur mesure — logo',
-      'sur-mesure:produit-unique': 'Sur mesure — produit unique',
-      'sur-mesure:dimensions-specifiques': 'Sur mesure — dimensions',
-      'sur-mesure:autre-sur-mesure': 'Sur mesure — autre',
-      'devis:commande-gros': 'Devis — gros',
-      'devis:renouvellement-stock': 'Devis — stock',
-      'devis:devis-multi-produits': 'Devis — multi-produits',
-      'devis:autre-devis': 'Devis — autre',
-      sachet: 'Sachet',
-      carton: 'Carton',
-      protection: 'Protection',
-      decoration: 'Décoration',
-      materiel: 'Matériel',
-      other: 'Autre',
-    };
-    return labels[type] || type;
+    const key = TYPE_KEYS[type];
+    return key ? t(key) : type;
   };
 
   const getQuoteStatusStyle = (status: QuoteData['status']) => {
@@ -228,7 +228,7 @@ const AdminCustomRequests = () => {
   if (isLoading && !requestsPage) {
     return (
       <AdminLayout title={t('customRequests.title')} breadcrumbs={[{ label: t('customRequests.breadcrumb') }]}>
-        <div className="p-8 text-center text-muted-foreground">Chargement...</div>
+        <div className="p-8 text-center text-muted-foreground">{t('common.loading')}</div>
       </AdminLayout>
     );
   }
@@ -237,27 +237,33 @@ const AdminCustomRequests = () => {
     <AdminLayout title={t('customRequests.title')} breadcrumbs={[{ label: t('customRequests.breadcrumb') }]}>
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4 mb-4">
         <div className="bg-card rounded-lg p-3 sm:p-4 border border-border">
-          <Badge className={cn('mb-2 text-[10px]', getStatusStyle('pending'))}>En attente</Badge>
+          <Badge className={cn('mb-2 text-[10px]', getStatusStyle('pending'))}>{t('common.pending')}</Badge>
           <p className="font-display text-xl sm:text-2xl">{stats?.pending ?? 0}</p>
         </div>
         <div className="bg-card rounded-lg p-3 sm:p-4 border border-border">
-          <Badge className={cn('mb-2 text-[10px]', getStatusStyle('contacted'))}>Contacté</Badge>
+          <Badge className={cn('mb-2 text-[10px]', getStatusStyle('contacted'))}>{t('status.contacted')}</Badge>
           <p className="font-display text-xl sm:text-2xl">{stats?.contacted ?? 0}</p>
         </div>
         <div className="bg-card rounded-lg p-3 sm:p-4 border border-border col-span-2 sm:col-span-1">
-          <Badge className={cn('mb-2 text-[10px]', getStatusStyle('completed'))}>Terminée</Badge>
+          <Badge className={cn('mb-2 text-[10px]', getStatusStyle('completed'))}>{t('status.completed')}</Badge>
           <p className="font-display text-xl sm:text-2xl">{stats?.completed ?? 0}</p>
         </div>
       </div>
 
       <p className="text-xs sm:text-sm text-muted-foreground mb-3 flex flex-wrap items-center gap-x-1.5 gap-y-1">
-        <span className="font-medium text-foreground">{requestsPage?.totalElements ?? 0}</span>
-        demande{(requestsPage?.totalElements ?? 0) > 1 ? 's' : ''}
+        <span className="font-medium text-foreground">
+          {t('customRequests.requestsCount', { count: requestsPage?.totalElements ?? 0 })}
+        </span>
         {filterStatus !== 'all' && (
-          <>· filtre <Badge className={cn('text-[10px] px-1.5 py-0', getStatusStyle(filterStatus))}>{getStatusLabel(filterStatus)}</Badge></>
+          <>
+            · {t('customRequests.filterPrefix')}{' '}
+            <Badge className={cn('text-[10px] px-1.5 py-0', getStatusStyle(filterStatus))}>
+              {getStatusLabel(filterStatus)}
+            </Badge>
+          </>
         )}
         {debouncedSearch && <>· &quot;{debouncedSearch}&quot;</>}
-        {isFetching && <span className="text-[10px]">(mise à jour…)</span>}
+        {isFetching && <span className="text-[10px]">{t('customRequests.updating')}</span>}
       </p>
 
       {/* Toolbar */}
@@ -265,7 +271,7 @@ const AdminCustomRequests = () => {
         <div className="flex-1 relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
           <Input
-            placeholder="Rechercher par ID, nom ou email..."
+            placeholder={t('customRequests.searchPlaceholder')}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="pl-10"
@@ -273,13 +279,13 @@ const AdminCustomRequests = () => {
         </div>
         <Select value={filterStatus} onValueChange={handleFilterStatusChange}>
           <SelectTrigger className="w-full sm:w-48">
-            <SelectValue placeholder="Statut" />
+            <SelectValue placeholder={t('common.status')} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">Tous les statuts</SelectItem>
-            <SelectItem value="pending">En attente</SelectItem>
-            <SelectItem value="contacted">Contacté</SelectItem>
-            <SelectItem value="completed">Terminée</SelectItem>
+            <SelectItem value="all">{t('orders.allStatuses')}</SelectItem>
+            <SelectItem value="pending">{t('common.pending')}</SelectItem>
+            <SelectItem value="contacted">{t('status.contacted')}</SelectItem>
+            <SelectItem value="completed">{t('status.completed')}</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -298,74 +304,76 @@ const AdminCustomRequests = () => {
                 {request.imageUrl ? (
                   <img
                     src={getImageUrl(request.imageUrl)}
-                    alt="Modèle"
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <div className="w-full h-full bg-muted flex items-center justify-center">
-                    <FileText className="w-8 h-8 text-muted-foreground" />
+                        alt={t('dashboard.modelAlt')}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-muted flex items-center justify-center">
+                        <FileText className="w-8 h-8 text-muted-foreground" />
+                      </div>
+                    )}
+                    <Badge className={cn('absolute top-2 right-2', getStatusStyle(request.status))}>
+                      {getStatusLabel(request.status)}
+                    </Badge>
+                    {quote && (
+                      <Badge className={cn('absolute top-2 left-2', getQuoteStatusStyle(quote.status))}>
+                        {t('customRequests.quotePrefix', { status: getQuoteStatusLabel(quote.status) })}
+                      </Badge>
+                    )}
                   </div>
-                )}
-                <Badge className={cn('absolute top-2 right-2', getStatusStyle(request.status))}>
-                  {getStatusLabel(request.status)}
-                </Badge>
-                {quote && (
-                  <Badge className={cn('absolute top-2 left-2', getQuoteStatusStyle(quote.status))}>
-                    Devis: {getQuoteStatusLabel(quote.status)}
-                  </Badge>
-                )}
-              </div>
 
-              {/* Content */}
-              <div className="p-4 space-y-3">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <p className="font-body font-medium">{request.customer?.fullName}</p>
-                    <p className="font-body text-xs text-muted-foreground">{request.id}</p>
-                  </div>
-                  <Badge variant="outline">
-                    {getTypeLabel(request.type)}
-                  </Badge>
-                </div>
+                  {/* Content */}
+                  <div className="p-4 space-y-3">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <p className="font-body font-medium">{request.customer?.fullName}</p>
+                        <p className="font-body text-xs text-muted-foreground">{request.id}</p>
+                      </div>
+                      <Badge variant="outline">
+                        {getTypeLabel(request.type)}
+                      </Badge>
+                    </div>
 
-                <div className="flex gap-2 text-xs text-muted-foreground">
-                  <span className="capitalize">{request.style}</span>
-                  <span>•</span>
-                  <span>{request.weight} unités estimées</span>
-                </div>
+                    <div className="flex gap-2 text-xs text-muted-foreground">
+                      <span className="capitalize">{request.style}</span>
+                      <span>•</span>
+                      <span>{t('customRequests.unitsEstimated', { count: request.weight })}</span>
+                    </div>
 
-                {quote && (
-                  <div className="bg-primary/10 rounded-lg p-2">
-                    <p className="font-display text-lg">{formatPrice(quote.totalPrice)}</p>
-                    <p className="font-body text-xs text-muted-foreground">
-                      Valide jusqu'au {new Date(quote.validUntil).toLocaleDateString('fr-FR')}
+                    {quote && (
+                      <div className="bg-primary/10 rounded-lg p-2">
+                        <p className="font-display text-lg">{formatPrice(quote.totalPrice)}</p>
+                        <p className="font-body text-xs text-muted-foreground">
+                          {t('customRequests.validUntil', {
+                            date: new Date(quote.validUntil).toLocaleDateString(dateTag),
+                          })}
+                        </p>
+                      </div>
+                    )}
+
+                    <p className="font-body text-sm text-muted-foreground line-clamp-2">
+                      {request.description}
                     </p>
-                  </div>
-                )}
 
-                <p className="font-body text-sm text-muted-foreground line-clamp-2">
-                  {request.description}
-                </p>
-
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="flex-1"
-                    onClick={() => handleViewRequest(request)}
-                  >
-                    <Eye className="w-4 h-4 mr-2" />
-                    Détails
-                  </Button>
-                  {!quote ? (
-                    <Button
-                      size="sm"
-                      className="flex-1 bg-primary text-primary-foreground"
-                      onClick={() => handleCreateQuote(request)}
-                    >
-                      <Calculator className="w-4 h-4 mr-2" />
-                      Devis
-                    </Button>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="flex-1"
+                        onClick={() => handleViewRequest(request)}
+                      >
+                        <Eye className="w-4 h-4 mr-2" />
+                        {t('common.details')}
+                      </Button>
+                      {!quote ? (
+                        <Button
+                          size="sm"
+                          className="flex-1 bg-primary text-primary-foreground"
+                          onClick={() => handleCreateQuote(request)}
+                        >
+                          <Calculator className="w-4 h-4 mr-2" />
+                          {t('customRequests.quote')}
+                        </Button>
                   ) : (
                     <Button
                       variant="outline"
@@ -408,12 +416,12 @@ const AdminCustomRequests = () => {
         <DialogContent className="max-w-3xl w-[90vw] sm:w-[85vw] md:w-[80vw] lg:w-[75vw] max-h-[85vh] overflow-hidden flex flex-col">
           <DialogHeader className="flex-shrink-0 pb-2 border-b">
             <DialogTitle className="font-display text-sm sm:text-base truncate">
-              Demande {selectedRequest?.id}
+              {t('customRequests.dialogTitle', { id: selectedRequest?.id ?? '' })}
             </DialogTitle>
           </DialogHeader>
 
           {isLoadingDetail ? (
-            <div className="py-12 text-center text-muted-foreground">Chargement de la demande…</div>
+            <div className="py-12 text-center text-muted-foreground">{t('customRequests.loadingDetail')}</div>
           ) : selectedRequest ? (
             <div className="flex-1 overflow-y-auto">
               {/* Vertical Layout - Image on top, content below for all devices */}
@@ -426,7 +434,7 @@ const AdminCustomRequests = () => {
                       {selectedRequest.imageUrl ? (
                         <img
                           src={getImageUrl(selectedRequest.imageUrl)}
-                          alt="Modèle"
+                          alt={t('dashboard.modelAlt')}
                           className="w-full h-full object-contain"
                         />
                       ) : (
@@ -591,12 +599,12 @@ const AdminCustomRequests = () => {
                     onValueChange={(value) => handleStatusChange(selectedRequest.id, value)}
                   >
                     <SelectTrigger className="w-full h-7 text-xs">
-                      <SelectValue placeholder="Statut" />
+                      <SelectValue placeholder={t('common.status')} />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="pending">En attente</SelectItem>
-                      <SelectItem value="contacted">Contacté</SelectItem>
-                      <SelectItem value="completed">Terminée</SelectItem>
+                      <SelectItem value="pending">{t('common.pending')}</SelectItem>
+                      <SelectItem value="contacted">{t('status.contacted')}</SelectItem>
+                      <SelectItem value="completed">{t('status.completed')}</SelectItem>
                     </SelectContent>
                   </Select>
 

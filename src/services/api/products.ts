@@ -4,7 +4,7 @@ import type { PageResponse, CatalogFacetsDTO } from '@/types/api';
 
 export interface ProductFilters {
   category?: string;
-  goldType?: string;
+  marque?: string;
   minPrice?: number;
   maxPrice?: number;
   inStock?: boolean;
@@ -16,7 +16,7 @@ export interface ProductQueryParams {
   sortBy?: string;
   sortDir?: 'ASC' | 'DESC';
   category?: string;
-  goldType?: string;
+  marque?: string;
   minPrice?: number;
   maxPrice?: number;
   inStock?: boolean;
@@ -36,8 +36,9 @@ export interface ProductFormData {
   stockQuantity?: number;
   badges?: string[];
   variants?: ProductVariant[];
+  /** Marque / label produit */
+  marque?: string;
   /** Legacy optionnels */
-  goldType?: string;
   availableSizes?: string[];
   weight?: number;
   marginGain?: number;
@@ -52,7 +53,7 @@ function buildProductsQueryString(params: ProductQueryParams): string {
     sortBy = 'createdAt',
     sortDir = 'DESC',
     category,
-    goldType,
+    marque,
     minPrice,
     maxPrice,
     inStock,
@@ -66,7 +67,7 @@ function buildProductsQueryString(params: ProductQueryParams): string {
   qs.set('sortBy', sortBy);
   qs.set('sortDir', sortDir);
   if (category) qs.set('category', category);
-  if (goldType) qs.set('goldType', goldType);
+  if (marque) qs.set('marque', marque);
   if (minPrice !== undefined) qs.set('minPrice', String(minPrice));
   if (maxPrice !== undefined) qs.set('maxPrice', String(maxPrice));
   if (inStock === true) qs.set('inStock', 'true');
@@ -117,7 +118,7 @@ export const productsApi = {
   filterProducts: async (filters: ProductFilters): Promise<ProductListItemDTO[]> => {
     const params = new URLSearchParams();
     if (filters.category) params.append('category', filters.category);
-    if (filters.goldType) params.append('goldType', filters.goldType);
+    if (filters.marque) params.append('marque', filters.marque);
     if (filters.minPrice !== undefined) params.append('minPrice', filters.minPrice.toString());
     if (filters.maxPrice !== undefined) params.append('maxPrice', filters.maxPrice.toString());
     if (filters.inStock !== undefined) params.append('inStock', filters.inStock.toString());

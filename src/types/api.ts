@@ -151,6 +151,8 @@ export interface CategoryDTO {
   showOnHero?: boolean;
   heroSortOrder?: number | null;
   productCount?: number;
+  /** false = désactivée (masquée vitrine) */
+  active?: boolean;
 }
 
 export interface HeroCategoryPatchDTO {
@@ -194,6 +196,8 @@ export interface UserInfoDTO {
   active?: boolean;
   fournisseurId?: number | null;
   permissions?: string[];
+  /** Guide 1ère utilisation admin déjà terminé (persisté en base) */
+  adminGuideCompleted?: boolean;
 }
 
 // Platform / multi-tenant

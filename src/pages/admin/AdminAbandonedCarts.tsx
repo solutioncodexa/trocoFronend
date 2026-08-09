@@ -7,12 +7,16 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { abandonedCartsApi } from '@/services/api/abandonedCarts';
 import { formatPrice } from '@/utils/formatPrice';
 
+const localeTag = (locale: string) =>
+  locale === 'ar' ? 'ar-MA' : locale === 'en' ? 'en-GB' : 'fr-MA';
+
 const AdminAbandonedCarts = () => {
-  const { t } = useAdminLocale();
+  const { t, locale } = useAdminLocale();
   const { data: carts = [], isLoading } = useQuery({
     queryKey: ['admin-abandoned-carts'],
     queryFn: () => abandonedCartsApi.listAdmin(),
   });
+  const tag = localeTag(locale);
 
   return (
     <AdminLayout
@@ -21,7 +25,7 @@ const AdminAbandonedCarts = () => {
       description={t('abandonedCarts.description')}
     >
       {isLoading ? (
-        <p className="text-sm text-muted-foreground">Chargement…</p>
+        <p className="text-sm text-muted-foreground">{t('common.loading')}</p>
       ) : carts.length === 0 ? (
         <EmptyState
           icon={TimerReset}
@@ -33,13 +37,13 @@ const AdminAbandonedCarts = () => {
           <table className="w-full text-sm">
             <thead className="bg-muted/40 text-left text-xs text-muted-foreground">
               <tr>
-                <th className="px-3 py-2 font-medium">Dernière activité</th>
-                <th className="px-3 py-2 font-medium">Client</th>
-                <th className="px-3 py-2 font-medium">Contact</th>
-                <th className="px-3 py-2 font-medium">Articles</th>
-                <th className="px-3 py-2 font-medium">Total</th>
-                <th className="px-3 py-2 font-medium">Relance</th>
-                <th className="px-3 py-2 font-medium">Statut</th>
+                <th className="px-3 py-2 font-medium">{t('abandonedCarts.colActivity')}</th>
+                <th className="px-3 py-2 font-medium">{t('common.customer')}</th>
+                <th className="px-3 py-2 font-medium">{t('abandonedCarts.colContact')}</th>
+                <th className="px-3 py-2 font-medium">{t('abandonedCarts.colItems')}</th>
+                <th className="px-3 py-2 font-medium">{t('common.total')}</th>
+                <th className="px-3 py-2 font-medium">{t('abandonedCarts.colReminder')}</th>
+                <th className="px-3 py-2 font-medium">{t('common.status')}</th>
               </tr>
             </thead>
             <tbody>
@@ -47,9 +51,9 @@ const AdminAbandonedCarts = () => {
                 <tr key={c.id} className="border-t border-border align-top">
                   <td className="whitespace-nowrap px-3 py-2 text-xs text-muted-foreground">
                     {c.lastActivityAt
-                      ? new Date(c.lastActivityAt).toLocaleString('fr-MA')
+                      ? new Date(c.lastActivityAt).toLocaleString(tag)
                       : c.createdAt
-                        ? new Date(c.createdAt).toLocaleString('fr-MA')
+                        ? new Date(c.createdAt).toLocaleString(tag)
                         : '—'}
                   </td>
                   <td className="px-3 py-2">{c.customerName || '—'}</td>
@@ -64,18 +68,24 @@ const AdminAbandonedCarts = () => {
                   </td>
                   <td className="px-3 py-2 text-xs text-muted-foreground">
                     {c.reminderSent ? (
-                      <Badge variant="secondary">Envoyée</Badge>
+                      <Badge variant="secondary">{t('abandonedCarts.reminderSent')}</Badge>
                     ) : c.remindAt ? (
-                      <span>Prévue {new Date(c.remindAt).toLocaleString('fr-MA')}</span>
+                      <span>
+                        {t('abandonedCarts.reminderScheduled', {
+                          date: new Date(c.remindAt).toLocaleString(tag),
+                        })}
+                      </span>
                     ) : (
                       '—'
                     )}
                   </td>
                   <td className="px-3 py-2">
                     {c.recovered ? (
-                      <Badge className="bg-emerald-600 hover:bg-emerald-600">Récupéré</Badge>
+                      <Badge className="bg-emerald-600 hover:bg-emerald-600">
+                        {t('abandonedCarts.recovered')}
+                      </Badge>
                     ) : (
-                      <Badge variant="outline">Abandonné</Badge>
+                      <Badge variant="outline">{t('abandonedCarts.abandoned')}</Badge>
                     )}
                   </td>
                 </tr>

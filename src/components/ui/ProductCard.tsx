@@ -175,6 +175,11 @@ const ProductCard = ({ product, className }: ProductCardProps) => {
             infoCenter ? 'text-center' : 'text-left',
           )}
         >
+          {product.marque ? (
+            <p className="mb-0.5 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+              {product.marque}
+            </p>
+          ) : null}
           <h4 className="mb-1 line-clamp-2 min-h-[3.25rem] font-display text-base font-semibold leading-snug text-foreground transition-colors group-hover:text-primary sm:text-lg">
             {product.name}
           </h4>

@@ -20,38 +20,6 @@ import { storeGlobalSectionsApi } from '@/services/api/storeGlobalSections';
 import { storePagesApi } from '@/services/api/storePages';
 import { topBarMessagesApi } from '@/services/api/topBarMessages';
 
-const tiles = [
-  {
-    href: '/admin/parametres',
-    title: 'Apparence',
-    description: 'Thèmes, couleurs, polices, logo et header.',
-    icon: Palette,
-  },
-  {
-    href: '/admin/pages',
-    title: 'Pages',
-    description: 'Constructeur, accueil personnalisé, templates.',
-    icon: FileText,
-  },
-  {
-    href: '/admin/sections',
-    title: 'Navigation',
-    description: 'Menus, en-tête global et CTA sticky.',
-    icon: LayoutPanelLeft,
-  },
-  {
-    href: '/admin/top-bar-messages',
-    title: 'Bandeau',
-    description: 'Messages rotatifs au-dessus de la vitrine.',
-    icon: MessageSquare,
-  },
-];
-
-const homeClassicLinks = [
-  { href: '/admin/accueil-categories', label: 'Catégories accueil', icon: Sparkles },
-  { href: '/admin/produits-selectionnes', label: 'Produits à la une', icon: Star },
-];
-
 const AdminOnlineStore = () => {
   const { t } = useAdminLocale();
   const { slug, siteName, store } = useStoreBrand();
@@ -77,22 +45,54 @@ const AdminOnlineStore = () => {
   const homePage = storePages.find((p) => p.isHome && p.published);
 
   const headerSource = megaMenuOn
-    ? 'Mega menu (Navigation)'
-    : 'Liens simples (Apparence → Header)';
+    ? t('onlineStore.headerMega')
+    : t('onlineStore.headerSimple');
   const bandeauSource =
     activeBandeau.length > 0
-      ? `Bandeau rotatif (${activeBandeau.length} message${activeBandeau.length > 1 ? 's' : ''})`
+      ? t('onlineStore.bannerRotating', { count: activeBandeau.length })
       : appBarOn
-        ? 'En-tête / promo App bar'
-        : 'Aucun bandeau actif';
+        ? t('onlineStore.bannerAppBar')
+        : t('onlineStore.bannerNone');
+
+  const tiles = [
+    {
+      href: '/admin/parametres',
+      title: t('onlineStore.tileAppearanceTitle'),
+      description: t('onlineStore.tileAppearanceDesc'),
+      icon: Palette,
+    },
+    {
+      href: '/admin/pages',
+      title: t('onlineStore.tilePagesTitle'),
+      description: t('onlineStore.tilePagesDesc'),
+      icon: FileText,
+    },
+    {
+      href: '/admin/sections',
+      title: t('onlineStore.tileNavTitle'),
+      description: t('onlineStore.tileNavDesc'),
+      icon: LayoutPanelLeft,
+    },
+    {
+      href: '/admin/top-bar-messages',
+      title: t('onlineStore.tileTopBarTitle'),
+      description: t('onlineStore.tileTopBarDesc'),
+      icon: MessageSquare,
+    },
+  ];
+
+  const homeClassicLinks = [
+    { href: '/admin/accueil-categories', label: t('onlineStore.heroCategories'), icon: Sparkles },
+    { href: '/admin/produits-selectionnes', label: t('onlineStore.featuredProducts'), icon: Star },
+  ];
 
   return (
     <AdminLayout
       title={t('onlineStore.title')}
       description={t('onlineStore.description')}
       breadcrumbs={[
-        { label: 'Tableau de bord', href: '/admin/dashboard' },
-        { label: 'Boutique en ligne' },
+        { label: t('dashboard.title'), href: '/admin/dashboard' },
+        { label: t('onlineStore.title') },
       ]}
       actions={
         <div className="flex flex-wrap gap-2">
@@ -100,20 +100,22 @@ const AdminOnlineStore = () => {
             <Button size="sm" asChild>
               <Link to={`/admin/pages/${homePage.id}`}>
                 <Paintbrush className="mr-1.5 h-4 w-4" />
-                Personnaliser la boutique
+                {t('onlineStore.customize')}
               </Link>
             </Button>
           ) : (
             <Button size="sm" asChild>
               <Link to="/admin/parametres">
                 <Paintbrush className="mr-1.5 h-4 w-4" />
-                Personnaliser la boutique
+                {t('onlineStore.customize')}
               </Link>
             </Button>
           )}
           <Button variant="outline" size="sm" asChild>
             <a href={storefrontUrl} target="_blank" rel="noopener noreferrer">
-              Voir {siteName || 'la boutique'}
+              {t('onlineStore.viewNamed', {
+                name: siteName || t('onlineStore.viewFallback'),
+              })}
             </a>
           </Button>
         </div>
@@ -122,31 +124,29 @@ const AdminOnlineStore = () => {
       <BoutiqueWorkspaceLinks current="/admin/boutique-en-ligne" className="mb-6" />
 
       <section className="mb-6 rounded-2xl border border-border bg-card p-5 sm:p-6">
-        <h2 className="font-display text-lg font-semibold">État actuel</h2>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Source de vérité pour le header et le bandeau — une seule active à la fois.
-        </p>
+        <h2 className="font-display text-lg font-semibold">{t('onlineStore.statusTitle')}</h2>
+        <p className="mt-1 text-sm text-muted-foreground">{t('onlineStore.statusDesc')}</p>
         <ul className="mt-4 space-y-2 text-sm">
           <li>
-            <span className="text-muted-foreground">Navigation : </span>
+            <span className="text-muted-foreground">{t('onlineStore.navLabel')} </span>
             <span className="font-medium text-foreground">{headerSource}</span>
           </li>
           <li>
-            <span className="text-muted-foreground">Bandeau : </span>
+            <span className="text-muted-foreground">{t('onlineStore.bannerLabel')} </span>
             <span className="font-medium text-foreground">{bandeauSource}</span>
           </li>
           <li>
-            <span className="text-muted-foreground">Accueil : </span>
+            <span className="text-muted-foreground">{t('onlineStore.homeLabel')} </span>
             <span className="font-medium text-foreground">
               {homePage
-                ? `Page builder (« ${homePage.title} »)`
-                : 'Accueil classique (thème + sections)'}
+                ? t('onlineStore.homeBuilder', { title: homePage.title })
+                : t('onlineStore.homeClassic')}
             </span>
           </li>
           {stickyOn ? (
             <li>
-              <span className="text-muted-foreground">CTA sticky : </span>
-              <span className="font-medium text-foreground">Activé</span>
+              <span className="text-muted-foreground">{t('onlineStore.stickyLabel')} </span>
+              <span className="font-medium text-foreground">{t('common.enabled')}</span>
             </li>
           ) : null}
         </ul>
@@ -168,22 +168,18 @@ const AdminOnlineStore = () => {
 
       {homePage ? (
         <section className="mt-8 rounded-2xl border border-border bg-muted/20 p-5 sm:p-6">
-          <h2 className="font-display text-lg font-semibold">Accueil page builder</h2>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Votre page d’accueil publiée remplace les sections classiques. Éditez-la dans le
-            constructeur.
-          </p>
+          <h2 className="font-display text-lg font-semibold">{t('onlineStore.builderHomeTitle')}</h2>
+          <p className="mt-1 text-sm text-muted-foreground">{t('onlineStore.builderHomeDesc')}</p>
           <Button className="mt-4" asChild>
-            <Link to={`/admin/pages/${homePage.id}`}>Éditer « {homePage.title} »</Link>
+            <Link to={`/admin/pages/${homePage.id}`}>
+              {t('onlineStore.editNamed', { title: homePage.title })}
+            </Link>
           </Button>
         </section>
       ) : (
         <section className="mt-8 rounded-2xl border border-border bg-card p-6">
-          <h2 className="font-display text-lg font-semibold">Accueil classique</h2>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Pas de page d’accueil publiée : catégories hero et produits à la une. Pour un accueil
-            type Shopify, créez une page Accueil dans Pages.
-          </p>
+          <h2 className="font-display text-lg font-semibold">{t('onlineStore.classicHomeTitle')}</h2>
+          <p className="mt-1 text-sm text-muted-foreground">{t('onlineStore.classicHomeDesc')}</p>
           <ul className="mt-4 grid gap-2 sm:grid-cols-2">
             {homeClassicLinks.map((link) => (
               <li key={link.href}>
@@ -198,7 +194,7 @@ const AdminOnlineStore = () => {
             ))}
           </ul>
           <Button variant="outline" className="mt-4" asChild>
-            <Link to="/admin/pages">Créer une page d’accueil</Link>
+            <Link to="/admin/pages">{t('onlineStore.createHomePage')}</Link>
           </Button>
         </section>
       )}
@@ -206,15 +202,13 @@ const AdminOnlineStore = () => {
       <section className="mt-6 rounded-2xl border border-dashed border-border bg-muted/30 p-6">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
-            <h2 className="font-display text-lg font-semibold">Assistant de configuration</h2>
-            <p className="text-sm text-muted-foreground">
-              Thème → identité → accueil → menu → bandeau → produits.
-            </p>
+            <h2 className="font-display text-lg font-semibold">{t('onlineStore.assistantTitle')}</h2>
+            <p className="text-sm text-muted-foreground">{t('onlineStore.assistantDesc')}</p>
           </div>
           <Button asChild>
             <Link to="/admin/onboarding">
               <Wand2 className="mr-2 h-4 w-4" />
-              Lancer l’assistant
+              {t('onlineStore.assistantCta')}
             </Link>
           </Button>
         </div>

@@ -77,3 +77,13 @@ export async function getMe(): Promise<UserInfoDTO | null> {
     return null;
   }
 }
+
+/** Persiste l’état du guide 1ère utilisation (ne plus l’afficher à chaque visite). */
+export async function updateAdminGuide(payload: {
+  completed: boolean;
+}): Promise<UserInfoDTO> {
+  return apiRequest<UserInfoDTO>(buildApiUrl('/auth/me/admin-guide'), {
+    method: 'PATCH',
+    body: JSON.stringify(payload),
+  });
+}
