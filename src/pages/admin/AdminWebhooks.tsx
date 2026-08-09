@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Loader2, Pencil, Plus, Trash2, Webhook } from 'lucide-react';
 import AdminLayout from '@/components/admin/AdminLayout';
+import { useAdminLocale } from '@/contexts/AdminLocaleContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -48,6 +49,7 @@ const emptyForm = (): FormState => ({
 });
 
 const AdminWebhooks = () => {
+  const { t } = useAdminLocale();
   const queryClient = useQueryClient();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<StoreWebhook | null>(null);
@@ -142,9 +144,9 @@ const AdminWebhooks = () => {
 
   return (
     <AdminLayout
-      title="Webhooks"
-      breadcrumbs={[{ label: 'Intégrations' }, { label: 'Webhooks' }]}
-      description="Notifiez vos outils (Zapier, Make, CRM…) lors d’une commande ou d’un lead."
+      title={t('webhooks.title')}
+      breadcrumbs={[{ label: t('nav.integrations') }, { label: t('webhooks.title') }]}
+      description={t('webhooks.description')}
       actions={
         <Button className="gap-1.5" onClick={openCreate}>
           <Plus className="h-4 w-4" />
@@ -169,8 +171,8 @@ const AdminWebhooks = () => {
           ) : webhooks.length === 0 ? (
             <EmptyState
               icon={Webhook}
-              title="Aucun webhook"
-              description="Créez un endpoint pour recevoir les événements en JSON signé (HMAC)."
+              title={t('webhooks.empty')}
+              description={t('webhooks.emptyDesc')}
             />
           ) : (
             <ul className="space-y-2">

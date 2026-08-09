@@ -3,6 +3,7 @@ import { Link, useLocation, useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Copy, ExternalLink, Eye, EyeOff, Loader2, Save, Settings2 } from 'lucide-react';
 import AdminLayout from '@/components/admin/AdminLayout';
+import { useAdminLocale } from '@/contexts/AdminLocaleContext';
 import { AppearanceWorkspace } from '@/components/admin/appearance/AppearanceWorkspace';
 import { toStorePageLinkOptions } from '@/components/admin/StorePageHrefSelect';
 import { Button } from '@/components/ui/button';
@@ -177,6 +178,7 @@ const emptyForm: FormState = {
 };
 
 const AdminStoreSettings = () => {
+  const { t } = useAdminLocale();
   const location = useLocation();
   const settingsMode = location.pathname.includes('/reglages');
   const queryClient = useQueryClient();
@@ -472,7 +474,7 @@ const AdminStoreSettings = () => {
         }
         toast.success('Enregistré — vitrine ouverte dans la langue principale');
       } else {
-        toast.success('Paramètres boutique enregistrés');
+        toast.success(t('appearance.settingsSaved'));
       }
     },
     onError: (err: unknown) => toastError(err, 'Erreur lors de la sauvegarde'),
@@ -865,17 +867,17 @@ const AdminStoreSettings = () => {
   if (isLoading) {
     return (
       <AdminLayout
-        title={settingsMode ? 'Paramètres' : 'Apparence'}
+        title={settingsMode ? t('settings.title') : t('appearance.title')}
         breadcrumbs={
           settingsMode
-            ? [{ label: 'Paramètres' }]
+            ? [{ label: t('settings.title') }]
             : [
-                { label: 'Boutique en ligne', href: '/admin/boutique-en-ligne' },
-                { label: 'Apparence' },
+                { label: t('appearance.onlineStoreCrumb'), href: '/admin/boutique-en-ligne' },
+                { label: t('appearance.title') },
               ]
         }
       >
-        <div className="p-8 text-center text-muted-foreground">Chargement...</div>
+        <div className="p-8 text-center text-muted-foreground">{t('common.loading')}</div>
       </AdminLayout>
     );
   }
@@ -883,19 +885,19 @@ const AdminStoreSettings = () => {
   if (error) {
     return (
       <AdminLayout
-        title={settingsMode ? 'Paramètres' : 'Apparence'}
+        title={settingsMode ? t('settings.title') : t('appearance.title')}
         breadcrumbs={
           settingsMode
-            ? [{ label: 'Paramètres' }]
+            ? [{ label: t('settings.title') }]
             : [
-                { label: 'Boutique en ligne', href: '/admin/boutique-en-ligne' },
-                { label: 'Apparence' },
+                { label: t('appearance.onlineStoreCrumb'), href: '/admin/boutique-en-ligne' },
+                { label: t('appearance.title') },
               ]
         }
       >
         <div className="rounded-lg border border-red-200 bg-red-50 p-4">
-          <h3 className="mb-2 font-medium text-red-800">Erreur de chargement</h3>
-          <p className="text-red-600">Impossible de charger les paramètres boutique.</p>
+          <h3 className="mb-2 font-medium text-red-800">{t('appearance.loadError')}</h3>
+          <p className="text-red-600">{t('appearance.loadErrorDesc')}</p>
         </div>
       </AdminLayout>
     );
@@ -906,10 +908,10 @@ const AdminStoreSettings = () => {
     return (
       <AdminLayout
         workspace
-        title="Apparence"
+        title={t('appearance.title')}
         breadcrumbs={[
-          { label: 'Boutique en ligne', href: '/admin/boutique-en-ligne' },
-          { label: 'Apparence' },
+          { label: t('appearance.onlineStoreCrumb'), href: '/admin/boutique-en-ligne' },
+          { label: t('appearance.title') },
         ]}
       >
         <AppearanceWorkspace
@@ -967,8 +969,8 @@ const AdminStoreSettings = () => {
 
   return (
     <AdminLayout
-      title="Paramètres"
-      breadcrumbs={[{ label: 'Paramètres' }]}
+      title={t('settings.title')}
+      breadcrumbs={[{ label: t('settings.title') }]}
     >
       {unsavedDialog}
       <div className="space-y-6">
@@ -976,7 +978,7 @@ const AdminStoreSettings = () => {
           <div>
             <h1 className="flex items-center gap-2 text-2xl font-bold sm:text-3xl">
               <Settings2 className="h-7 w-7 text-primary" />
-              Paramètres boutique
+              {t('appearance.storeSettings')}
             </h1>
             <p className="mt-1 text-sm text-muted-foreground">
               Domaine, abonnement, paiements, tracking et conformité.
@@ -1019,7 +1021,7 @@ const AdminStoreSettings = () => {
               className="shrink-0 gap-2"
             >
               <Save className="h-4 w-4" />
-              {saveMutation.isPending ? 'Enregistrement…' : 'Enregistrer'}
+              {saveMutation.isPending ? t('common.saving') : t('common.save')}
             </Button>
           </div>
         </div>
@@ -1027,10 +1029,10 @@ const AdminStoreSettings = () => {
 
         <div className="flex flex-wrap gap-2">
           <Button type="button" variant="outline" size="sm" asChild>
-            <Link to="/admin/parametres">Apparence</Link>
+            <Link to="/admin/parametres">{t('appearance.title')}</Link>
           </Button>
           <Button type="button" variant="default" size="sm" asChild>
-            <Link to="/admin/reglages">Paramètres boutique</Link>
+            <Link to="/admin/reglages">{t('appearance.storeSettings')}</Link>
           </Button>
         </div>
 

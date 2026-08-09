@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Download, Loader2, Mail } from 'lucide-react';
 import AdminLayout from '@/components/admin/AdminLayout';
+import { useAdminLocale } from '@/contexts/AdminLocaleContext';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { storeLeadsApi } from '@/services/api/storeLeads';
@@ -15,6 +16,7 @@ const LEAD_LABELS: Record<string, string> = {
 };
 
 const AdminLeads = () => {
+  const { t } = useAdminLocale();
   const [exporting, setExporting] = useState(false);
 
   const { data: leads = [], isLoading } = useQuery({
@@ -36,9 +38,9 @@ const AdminLeads = () => {
 
   return (
     <AdminLayout
-      title="Leads & formulaires"
+      title={t('leads.title')}
       breadcrumbs={[{ label: 'Leads' }]}
-      description="Inscriptions newsletter, contacts et demandes de devis depuis la vitrine."
+      description={t('leads.description')}
       actions={
         <Button variant="outline" className="gap-1.5" disabled={exporting} onClick={() => void handleExport()}>
           {exporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}

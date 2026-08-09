@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Loader2, Pencil, Plus, Trash2 } from 'lucide-react';
 import AdminLayout from '@/components/admin/AdminLayout';
+import { useAdminLocale } from '@/contexts/AdminLocaleContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -36,6 +37,7 @@ const emptyForm = (): UpsertBlogPostPayload => ({
 });
 
 const AdminBlog = () => {
+  const { t } = useAdminLocale();
   const { isAdmin } = useAdmin();
   const queryClient = useQueryClient();
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -106,9 +108,9 @@ const AdminBlog = () => {
 
   return (
     <AdminLayout
-      title="Blog"
+      title={t('blog.title')}
       breadcrumbs={[{ label: 'Blog' }]}
-      description="Articles publiés sur /blog de votre boutique."
+      description={t('blog.description')}
       actions={
         <Button className="gap-1.5" onClick={openCreate}>
           <Plus className="h-4 w-4" />

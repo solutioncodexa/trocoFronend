@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Eye, Search, Phone, MapPin, ShoppingCart } from 'lucide-react';
 import AdminLayout from '@/components/admin/AdminLayout';
+import { useAdminLocale } from '@/contexts/AdminLocaleContext';
 import AdminPagination from '@/components/admin/AdminPagination';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -19,6 +20,7 @@ import { toastError, toastInfo } from '@/utils/toastMessages';
 import { cn } from '@/lib/utils';
 
 const AdminOrders = () => {
+  const { t } = useAdminLocale();
   const [searchParams, setSearchParams] = useSearchParams();
   const orderIdParam = searchParams.get('order');
   const queryClient = useQueryClient();
@@ -158,14 +160,14 @@ const AdminOrders = () => {
 
   if (isLoading) {
     return (
-      <AdminLayout title="Gestion des Commandes" breadcrumbs={[{ label: 'Commandes' }]}>
+      <AdminLayout title={t('orders.title')} breadcrumbs={[{ label: t('orders.breadcrumb') }]}>
         <div className="p-8 text-center text-muted-foreground">Chargement...</div>
       </AdminLayout>
     );
   }
 
   return (
-    <AdminLayout title="Gestion des Commandes" breadcrumbs={[{ label: 'Commandes' }]}>
+    <AdminLayout title={t('orders.title')} breadcrumbs={[{ label: t('orders.breadcrumb') }]}>
       <p className="text-xs sm:text-sm text-muted-foreground mb-3 flex flex-wrap items-center gap-x-1.5 gap-y-1">
         <span className="font-medium text-foreground">{ordersPage?.totalElements ?? 0}</span>
         commande{(ordersPage?.totalElements ?? 0) > 1 ? 's' : ''}
@@ -267,7 +269,7 @@ const AdminOrders = () => {
           </div>
         ))}
         {orders.length === 0 && (
-          <EmptyState icon={ShoppingCart} title="Aucune commande trouvée" />
+          <EmptyState icon={ShoppingCart} title={t('orders.empty')} />
         )}
       </div>
 
@@ -363,7 +365,7 @@ const AdminOrders = () => {
         </div>
 
         {orders.length === 0 && (
-          <EmptyState icon={ShoppingCart} title="Aucune commande trouvée" />
+          <EmptyState icon={ShoppingCart} title={t('orders.empty')} />
         )}
       </div>
 

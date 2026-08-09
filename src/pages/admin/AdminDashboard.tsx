@@ -17,6 +17,7 @@ import {
 import { useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import AdminLayout from '@/components/admin/AdminLayout';
+import { useAdminLocale } from '@/contexts/AdminLocaleContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ordersApi } from '@/services/api/orders';
@@ -32,6 +33,7 @@ import { normalizeThemeKey } from '@/config/storeThemes';
 import { toast } from 'sonner';
 
 const AdminDashboard = () => {
+  const { t } = useAdminLocale();
   const location = useLocation();
   const navigate = useNavigate();
   const { siteName, logoUrl, slug, store } = useStoreBrand();
@@ -185,7 +187,7 @@ const AdminDashboard = () => {
 
   return (
     <AdminLayout
-      title="Tableau de bord"
+      title={t('dashboard.title')}
       description={siteName ? `Bienvenue sur ${siteName}` : 'Pilot d’ensemble de votre boutique'}
       breadcrumbs={[{ label: 'Tableau de bord' }]}
       actions={
@@ -366,7 +368,7 @@ const AdminDashboard = () => {
                 </div>
               ))}
               {orders.length === 0 && (
-                <EmptyState icon={ShoppingCart} title="Aucune commande" className="py-6" />
+                <EmptyState icon={ShoppingCart} title={t('dashboard.noOrders')} className="py-6" />
               )}
             </div>
           </CardContent>
@@ -410,7 +412,7 @@ const AdminDashboard = () => {
                   </div>
                 ))
               ) : (
-                <EmptyState icon={Palette} title="Aucune demande en attente" className="py-6" />
+                <EmptyState icon={Palette} title={t('dashboard.noCustomRequests')} className="py-6" />
               )}
             </div>
           </CardContent>

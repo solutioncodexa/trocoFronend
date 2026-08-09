@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { Loader2, Plus, Save, Trash2 } from 'lucide-react';
 import AdminLayout from '@/components/admin/AdminLayout';
+import { useAdminLocale } from '@/contexts/AdminLocaleContext';
 import { BoutiqueWorkspaceLinks } from '@/components/admin/BoutiqueWorkspaceLinks';
 import {
   StorePageHrefSelect,
@@ -76,6 +77,7 @@ const TAB_HINTS: Record<GlobalSectionKey, string> = {
 };
 
 const AdminGlobalSections = () => {
+  const { t } = useAdminLocale();
   const queryClient = useQueryClient();
   const [tab, setTab] = useState<GlobalSectionKey>('mega_menu');
   const [megaMenu, setMegaMenu] = useState<MegaMenuConfig>(emptyMegaMenu());
@@ -308,9 +310,9 @@ const AdminGlobalSections = () => {
   if (isLoading) {
     return (
       <AdminLayout
-        title="Navigation"
+        title={t('navigation.title')}
         breadcrumbs={[
-          { label: 'Boutique en ligne', href: '/admin/boutique-en-ligne' },
+          { label: t('appearance.onlineStoreCrumb'), href: '/admin/boutique-en-ligne' },
           { label: 'Navigation' },
         ]}
       >
@@ -322,9 +324,9 @@ const AdminGlobalSections = () => {
   if (error) {
     return (
       <AdminLayout
-        title="Navigation"
+        title={t('navigation.title')}
         breadcrumbs={[
-          { label: 'Boutique en ligne', href: '/admin/boutique-en-ligne' },
+          { label: t('appearance.onlineStoreCrumb'), href: '/admin/boutique-en-ligne' },
           { label: 'Navigation' },
         ]}
       >
@@ -335,10 +337,10 @@ const AdminGlobalSections = () => {
 
   return (
     <AdminLayout
-      title="Navigation"
-      description="Menus · En-tête · Pied de page · CTA sticky. Un seul menu principal à la fois : Menus activé remplace Apparence → Header."
+      title={t('navigation.title')}
+      description={t('navigation.description')}
       breadcrumbs={[
-        { label: 'Boutique en ligne', href: '/admin/boutique-en-ligne' },
+        { label: t('appearance.onlineStoreCrumb'), href: '/admin/boutique-en-ligne' },
         { label: 'Navigation' },
       ]}
       actions={

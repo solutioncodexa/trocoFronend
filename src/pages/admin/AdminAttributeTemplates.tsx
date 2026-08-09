@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { Plus, Trash2, Pencil, SlidersHorizontal, Store } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import AdminLayout from '@/components/admin/AdminLayout';
+import { useAdminLocale } from '@/contexts/AdminLocaleContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -38,6 +39,7 @@ type EditorTarget = {
 const BRAND_KEY = 'brand';
 
 const AdminAttributeTemplates = () => {
+  const { t } = useAdminLocale();
   const queryClient = useQueryClient();
 
   const { data: categories = [] } = useQuery({
@@ -170,7 +172,7 @@ const AdminAttributeTemplates = () => {
               size="sm"
               className="h-8 w-8 p-0 text-destructive hover:bg-destructive hover:text-destructive-foreground"
               onClick={() => handleDelete(tpl)}
-              aria-label="Supprimer"
+              aria-label={t('common.delete')}
             >
               <Trash2 className="h-3.5 w-3.5" />
             </Button>
@@ -182,13 +184,11 @@ const AdminAttributeTemplates = () => {
 
   return (
     <AdminLayout
-      title="Attributs & variantes"
-      breadcrumbs={[{ label: 'Catalogue' }, { label: 'Attributs & variantes' }]}
+      title={t('attributes.title')}
+      breadcrumbs={[{ label: t('nav.catalog') }, { label: t('attributes.title') }]}
     >
       <p className="mb-4 max-w-2xl text-sm text-muted-foreground">
-        Définissez les axes de variantes adaptés à votre boutique (ex. Bijoux → Matière, Carat,
-        Taille ; Épicerie → Poids). Le modèle d’une catégorie prime ; sinon le modèle par défaut de
-        la boutique s’applique. Ces axes pré-remplissent le formulaire produit.
+        {t('attributes.description')}
       </p>
 
       {isLoading ? (
@@ -261,7 +261,7 @@ const AdminAttributeTemplates = () => {
                       size="sm"
                       className="h-7 w-7 p-0 text-destructive hover:text-destructive"
                       onClick={() => removeAxis(index)}
-                      aria-label="Supprimer l’axe"
+                      aria-label={t('common.delete')}
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>

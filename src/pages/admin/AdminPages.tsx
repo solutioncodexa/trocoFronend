@@ -15,6 +15,7 @@ import {
   Trophy,
 } from 'lucide-react';
 import AdminLayout from '@/components/admin/AdminLayout';
+import { useAdminLocale } from '@/contexts/AdminLocaleContext';
 import { BoutiqueWorkspaceLinks } from '@/components/admin/BoutiqueWorkspaceLinks';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -39,6 +40,7 @@ import BlockPalettePreview from '@/components/admin/page-builder/BlockPalettePre
 import { cn } from '@/lib/utils';
 
 const AdminPages = () => {
+  const { t } = useAdminLocale();
   const { isAdmin, hasPermission } = useAdmin();
   const canPublish = isAdmin || hasPermission(PERMISSIONS.PAGES_PUBLISH);
   const navigate = useNavigate();
@@ -233,12 +235,12 @@ const AdminPages = () => {
 
   return (
     <AdminLayout
-      title="Pages"
+      title={t('pages.title')}
       breadcrumbs={[
-        { label: 'Boutique en ligne', href: '/admin/boutique-en-ligne' },
+        { label: t('appearance.onlineStoreCrumb'), href: '/admin/boutique-en-ligne' },
         { label: 'Pages' },
       ]}
-      description="Templates, starters, puis édition drag & drop des composants."
+      description={t('pages.description')}
     >
       <div className="mx-auto max-w-4xl space-y-8">
         <BoutiqueWorkspaceLinks current="/admin/pages" />
@@ -526,8 +528,8 @@ const AdminPages = () => {
           ) : pages.length === 0 ? (
             <EmptyState
               icon={LayoutTemplate}
-              title="Aucune page"
-              description="Choisissez un template ci-dessus ou créez une page vide pour démarrer votre vitrine."
+              title={t('pages.empty')}
+              description={t('pages.emptyDesc')}
             />
           ) : (
             <ul className="space-y-2">

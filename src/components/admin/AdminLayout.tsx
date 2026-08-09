@@ -36,6 +36,7 @@ import {
   Wand2,
   PenTool,
   SlidersHorizontal,
+  Globe,
 } from 'lucide-react';
 import AdminNotification from './AdminNotification';
 import StockAlertDialog from './StockAlertDialog';
@@ -43,12 +44,26 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useAdmin } from '@/contexts/AdminContext';
 import { useTenant } from '@/contexts/TenantContext';
+import { useAdminLocale } from '@/contexts/AdminLocaleContext';
 import { PERMISSIONS } from '@/config/permissions';
 import { cn } from '@/lib/utils';
 import { BrandLogoImg } from '@/components/layout/BrandLogoImg';
 import { useStoreBrand } from '@/hooks/useStoreBrand';
 import { buildFreshStorefrontUrl } from '@/utils/storefrontUrl';
 import { applyDocumentBrand } from '@/utils/storeTheme';
+import {
+  ADMIN_LOCALES,
+  ADMIN_LOCALE_LABELS,
+  type AdminMessageKey,
+} from '@/i18n/admin/adminMessages';
+import type { AdminLocale } from '@/i18n/admin/adminMessages';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 interface AdminLayoutProps {
   children: ReactNode;
@@ -72,104 +87,104 @@ interface AdminLayoutProps {
 
 type NavItem = {
   href: string;
-  label: string;
+  labelKey: AdminMessageKey;
   icon: typeof LayoutDashboard;
   permission?: string;
   adminOnly?: boolean;
 };
 
-type NavSection = { label: string; items: NavItem[] };
+type NavSection = { labelKey: AdminMessageKey; items: NavItem[] };
 
 const ALL_NAV: NavSection[] = [
   {
-    label: 'Vue d’ensemble',
+    labelKey: 'nav.overview',
     items: [
-      { href: '/admin/dashboard', label: 'Tableau de bord', icon: LayoutDashboard },
-      { href: '/admin/revenus', label: 'Revenus', icon: TrendingUp, permission: PERMISSIONS.STATS_VIEW },
+      { href: '/admin/dashboard', labelKey: 'nav.dashboard', icon: LayoutDashboard },
+      { href: '/admin/revenus', labelKey: 'nav.revenue', icon: TrendingUp, permission: PERMISSIONS.STATS_VIEW },
     ],
   },
   {
-    label: 'Ventes',
+    labelKey: 'nav.sales',
     items: [
-      { href: '/admin/commandes', label: 'Commandes', icon: ShoppingCart, permission: PERMISSIONS.ORDERS_VIEW },
-      { href: '/admin/paniers-abandonnes', label: 'Paniers abandonnés', icon: TimerReset, permission: PERMISSIONS.ORDERS_VIEW },
-      { href: '/admin/personnalisations', label: 'Devis / Sur-mesure', icon: PenTool, permission: PERMISSIONS.CUSTOM_ORDERS_VIEW },
-      { href: '/admin/stock', label: 'Stock', icon: Warehouse, permission: PERMISSIONS.STOCK_VIEW },
+      { href: '/admin/commandes', labelKey: 'nav.orders', icon: ShoppingCart, permission: PERMISSIONS.ORDERS_VIEW },
+      { href: '/admin/paniers-abandonnes', labelKey: 'nav.abandonedCarts', icon: TimerReset, permission: PERMISSIONS.ORDERS_VIEW },
+      { href: '/admin/personnalisations', labelKey: 'nav.customRequests', icon: PenTool, permission: PERMISSIONS.CUSTOM_ORDERS_VIEW },
+      { href: '/admin/stock', labelKey: 'nav.stock', icon: Warehouse, permission: PERMISSIONS.STOCK_VIEW },
     ],
   },
   {
-    label: 'Catalogue',
+    labelKey: 'nav.catalog',
     items: [
-      { href: '/admin/produits', label: 'Produits', icon: Package, permission: PERMISSIONS.PRODUCTS_VIEW },
-      { href: '/admin/categories', label: 'Catégories', icon: FolderOpen, permission: PERMISSIONS.CATALOG_MANAGE },
-      { href: '/admin/attributs', label: 'Attributs & variantes', icon: SlidersHorizontal, permission: PERMISSIONS.CATALOG_MANAGE },
+      { href: '/admin/produits', labelKey: 'nav.products', icon: Package, permission: PERMISSIONS.PRODUCTS_VIEW },
+      { href: '/admin/categories', labelKey: 'nav.categories', icon: FolderOpen, permission: PERMISSIONS.CATALOG_MANAGE },
+      { href: '/admin/attributs', labelKey: 'nav.attributes', icon: SlidersHorizontal, permission: PERMISSIONS.CATALOG_MANAGE },
     ],
   },
   {
-    label: 'Boutique en ligne',
+    labelKey: 'nav.onlineStore',
     items: [
-      { href: '/admin/boutique-en-ligne', label: 'Vue d’ensemble', icon: Store },
-      { href: '/admin/parametres', label: 'Apparence', icon: Palette, adminOnly: true },
-      { href: '/admin/pages', label: 'Pages', icon: FileText },
-      { href: '/admin/sections', label: 'Navigation', icon: LayoutPanelLeft },
-      { href: '/admin/top-bar-messages', label: 'Bandeau', icon: MessageSquare, permission: PERMISSIONS.CONTENT_MANAGE },
-      { href: '/admin/onboarding', label: 'Assistant', icon: Wand2, adminOnly: true },
+      { href: '/admin/boutique-en-ligne', labelKey: 'nav.onlineStoreOverview', icon: Store },
+      { href: '/admin/parametres', labelKey: 'nav.appearance', icon: Palette, adminOnly: true },
+      { href: '/admin/pages', labelKey: 'nav.pages', icon: FileText },
+      { href: '/admin/sections', labelKey: 'nav.navigation', icon: LayoutPanelLeft },
+      { href: '/admin/top-bar-messages', labelKey: 'nav.topBar', icon: MessageSquare, permission: PERMISSIONS.CONTENT_MANAGE },
+      { href: '/admin/onboarding', labelKey: 'nav.onboarding', icon: Wand2, adminOnly: true },
     ],
   },
   {
-    label: 'Boutique',
+    labelKey: 'nav.store',
     items: [
-      { href: '/admin/reglages', label: 'Paramètres', icon: Settings2, adminOnly: true },
+      { href: '/admin/reglages', labelKey: 'nav.settings', icon: Settings2, adminOnly: true },
     ],
   },
   {
-    label: 'Marketing',
+    labelKey: 'nav.marketing',
     items: [
-      { href: '/admin/promo-modals', label: 'Pop-ups promo', icon: ImageIcon, permission: PERMISSIONS.CONTENT_MANAGE },
-      { href: '/admin/codes-promo', label: 'Codes promo', icon: Ticket, permission: PERMISSIONS.CONTENT_MANAGE },
-      { href: '/admin/blog', label: 'Blog', icon: BookOpen },
-      { href: '/admin/leads', label: 'Clients / Leads', icon: Inbox },
-      { href: '/admin/avis', label: 'Avis', icon: Star, permission: PERMISSIONS.CONTENT_MANAGE },
-      { href: '/admin/reseaux-sociaux', label: 'Réseaux sociaux', icon: Share2, permission: PERMISSIONS.CONTENT_MANAGE },
+      { href: '/admin/promo-modals', labelKey: 'nav.promoModals', icon: ImageIcon, permission: PERMISSIONS.CONTENT_MANAGE },
+      { href: '/admin/codes-promo', labelKey: 'nav.promoCodes', icon: Ticket, permission: PERMISSIONS.CONTENT_MANAGE },
+      { href: '/admin/blog', labelKey: 'nav.blog', icon: BookOpen },
+      { href: '/admin/leads', labelKey: 'nav.leads', icon: Inbox },
+      { href: '/admin/avis', labelKey: 'nav.reviews', icon: Star, permission: PERMISSIONS.CONTENT_MANAGE },
+      { href: '/admin/reseaux-sociaux', labelKey: 'nav.social', icon: Share2, permission: PERMISSIONS.CONTENT_MANAGE },
     ],
   },
   {
-    label: 'Intégrations',
+    labelKey: 'nav.integrations',
     items: [
-      { href: '/admin/webhooks', label: 'Webhooks', icon: Webhook, permission: PERMISSIONS.WEBHOOKS_MANAGE },
-      { href: '/admin/api-keys', label: 'Clés API', icon: Key, permission: PERMISSIONS.API_KEYS_MANAGE },
+      { href: '/admin/webhooks', labelKey: 'nav.webhooks', icon: Webhook, permission: PERMISSIONS.WEBHOOKS_MANAGE },
+      { href: '/admin/api-keys', labelKey: 'nav.apiKeys', icon: Key, permission: PERMISSIONS.API_KEYS_MANAGE },
     ],
   },
   {
-    label: 'Conformité',
+    labelKey: 'nav.compliance',
     items: [
-      { href: '/admin/conformite', label: 'Données personnelles', icon: Shield, permission: PERMISSIONS.PRIVACY_MANAGE },
-      { href: '/admin/livraison', label: 'Livraison', icon: Truck, permission: PERMISSIONS.ORDERS_VIEW },
+      { href: '/admin/conformite', labelKey: 'nav.privacy', icon: Shield, permission: PERMISSIONS.PRIVACY_MANAGE },
+      { href: '/admin/livraison', labelKey: 'nav.shipping', icon: Truck, permission: PERMISSIONS.ORDERS_VIEW },
     ],
   },
   {
-    label: 'Équipe',
+    labelKey: 'nav.team',
     items: [
-      { href: '/admin/membres', label: 'Membres', icon: Users, adminOnly: true },
-      { href: '/admin/audit', label: 'Journal d’audit', icon: History, permission: PERMISSIONS.AUDIT_VIEW },
+      { href: '/admin/membres', labelKey: 'nav.members', icon: Users, adminOnly: true },
+      { href: '/admin/audit', labelKey: 'nav.audit', icon: History, permission: PERMISSIONS.AUDIT_VIEW },
     ],
   },
 ];
 
-function statusBadge(status?: string | null) {
+function statusBadge(status: string | null | undefined, t: (key: AdminMessageKey) => string) {
   const s = (status || '').toUpperCase();
   if (s === 'ACTIVE' || s === 'TRIAL') {
-    return <Badge className="bg-emerald-600 hover:bg-emerald-600 text-[10px]">Active</Badge>;
+    return <Badge className="bg-emerald-600 hover:bg-emerald-600 text-[10px]">{t('status.active')}</Badge>;
   }
   if (s === 'PENDING') {
     return (
       <Badge variant="outline" className="border-amber-500 text-amber-700 text-[10px]">
-        En attente
+        {t('status.pending')}
       </Badge>
     );
   }
   if (s === 'SUSPENDED') {
-    return <Badge variant="destructive" className="text-[10px]">Suspendue</Badge>;
+    return <Badge variant="destructive" className="text-[10px]">{t('status.suspended')}</Badge>;
   }
   return s ? <Badge variant="secondary" className="text-[10px]">{s}</Badge> : null;
 }
@@ -190,6 +205,7 @@ const AdminLayout = ({
   const { logout, isAuthenticated, isAdmin, isSuperAdmin, hasPermission, user } = useAdmin();
   const { store } = useTenant();
   const { siteName, logoUrl, slug } = useStoreBrand();
+  const { t, locale, setLocale, dir } = useAdminLocale();
   const storefrontUrl = buildFreshStorefrontUrl(slug || store?.slug);
   const [sidebarOpenInternal, setSidebarOpenInternal] = useState(() => window.innerWidth >= 1024);
   const isSidebarOpen = sidebarOpenProp ?? sidebarOpenInternal;
@@ -243,7 +259,7 @@ const AdminLayout = ({
     location.pathname === href || location.pathname.startsWith(`${href}/`);
 
   return (
-    <div className="flex h-screen min-h-0 overflow-hidden bg-[hsl(220_20%_97%)]">
+    <div className="flex h-screen min-h-0 overflow-hidden bg-[hsl(220_20%_97%)]" dir={dir} lang={locale}>
       <StockAlertDialog />
       {isSidebarOpen && (
         <div
@@ -255,15 +271,16 @@ const AdminLayout = ({
 
       <aside
         className={cn(
-          'fixed inset-y-0 left-0 z-50 flex h-full w-[17.5rem] flex-col border-r border-border/70 bg-[hsl(220_22%_12%)] text-white shadow-elegant transition-transform duration-300 ease-premium',
-          isSidebarOpen ? 'translate-x-0' : '-translate-x-full',
+          'fixed inset-y-0 z-50 flex h-full w-[17.5rem] flex-col border-border/70 bg-[hsl(220_22%_12%)] text-white shadow-elegant transition-transform duration-300 ease-premium',
+          dir === 'rtl' ? 'right-0 border-l' : 'left-0 border-r',
+          isSidebarOpen ? 'translate-x-0' : dir === 'rtl' ? 'translate-x-full' : '-translate-x-full',
         )}
       >
         <div className="flex h-[4.25rem] shrink-0 items-center justify-between border-b border-white/10 px-4">
           <Link
             to="/admin/dashboard"
             className="flex min-w-0 items-center gap-2.5"
-            aria-label={`${siteName} — tableau de bord`}
+            aria-label={`${siteName} — ${t('nav.dashboard')}`}
           >
             {logoUrl ? (
               <span className="flex h-10 items-center rounded-lg bg-white px-2">
@@ -271,7 +288,7 @@ const AdminLayout = ({
               </span>
             ) : (
               <span className="truncate font-display text-base font-semibold tracking-tight">
-                {siteName || 'Ma boutique'}
+                {siteName || t('common.myStore')}
               </span>
             )}
           </Link>
@@ -279,8 +296,8 @@ const AdminLayout = ({
             type="button"
             className="rounded-lg p-2 text-white/70 transition-colors hover:bg-white/10 hover:text-white"
             onClick={() => setIsSidebarOpen(false)}
-            aria-label="Masquer le menu"
-            title="Masquer le menu"
+            aria-label={t('common.hideMenu')}
+            title={t('common.hideMenu')}
           >
             <PanelLeftClose className="hidden h-5 w-5 lg:block" />
             <X className="h-5 w-5 lg:hidden" />
@@ -290,18 +307,18 @@ const AdminLayout = ({
         <div className="border-b border-white/10 px-4 py-3">
           <div className="flex items-center justify-between gap-2">
             <div className="min-w-0">
-              <p className="truncate text-sm font-medium text-white">{siteName || 'Boutique'}</p>
-              <p className="truncate text-[11px] text-white/50">{slug ? `${slug}.…` : 'Espace vendeur'}</p>
+              <p className="truncate text-sm font-medium text-white">{siteName || t('common.myStore')}</p>
+              <p className="truncate text-[11px] text-white/50">{slug ? `${slug}.…` : t('common.sellerSpace')}</p>
             </div>
-            {statusBadge(store?.status)}
+            {statusBadge(store?.status, t)}
           </div>
         </div>
 
         <nav className="min-h-0 flex-1 space-y-5 overflow-y-auto overscroll-contain p-3 scrollbar-app">
           {navSections.map((section) => (
-            <div key={section.label}>
+            <div key={section.labelKey}>
               <p className="mb-1.5 px-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-white/40">
-                {section.label}
+                {t(section.labelKey)}
               </p>
               <div className="space-y-0.5">
                 {section.items.map((item) => (
@@ -319,7 +336,7 @@ const AdminLayout = ({
                     )}
                   >
                     <item.icon className="h-4 w-4 shrink-0 opacity-90" />
-                    <span className="truncate">{item.label}</span>
+                    <span className="truncate">{t(item.labelKey)}</span>
                   </Link>
                 ))}
               </div>
@@ -340,7 +357,7 @@ const AdminLayout = ({
             >
               <Link to="/super-admin/dashboard">
                 <Shield className="h-4 w-4" />
-                Super Admin
+                {t('common.superAdmin')}
               </Link>
             </Button>
           ) : null}
@@ -351,7 +368,7 @@ const AdminLayout = ({
           >
             <a href={storefrontUrl} target="troco-storefront" rel="noopener noreferrer" title={storefrontUrl}>
               <ExternalLink className="h-4 w-4" />
-              Voir ma boutique
+              {t('common.viewStore')}
             </a>
           </Button>
           <Button
@@ -360,7 +377,7 @@ const AdminLayout = ({
             onClick={handleLogout}
           >
             <LogOut className="h-4 w-4" />
-            Déconnexion
+            {t('common.logout')}
           </Button>
         </div>
       </aside>
@@ -368,7 +385,7 @@ const AdminLayout = ({
       <div
         className={cn(
           'flex min-w-0 flex-1 flex-col transition-[padding] duration-300 ease-premium',
-          isSidebarOpen && 'lg:pl-[17.5rem]',
+          isSidebarOpen && (dir === 'rtl' ? 'lg:pr-[17.5rem]' : 'lg:pl-[17.5rem]'),
         )}
       >
         <header className="flex h-[4.25rem] shrink-0 items-center justify-between gap-3 border-b border-border/80 bg-white/90 px-4 backdrop-blur-md sm:px-6">
@@ -380,8 +397,8 @@ const AdminLayout = ({
                 isSidebarOpen && 'lg:hidden',
               )}
               onClick={() => setIsSidebarOpen(true)}
-              aria-label="Afficher le menu"
-              title="Afficher le menu"
+              aria-label={t('common.showMenu')}
+              title={t('common.showMenu')}
             >
               <PanelLeftOpen className="hidden h-5 w-5 lg:block" />
               <Menu className="h-5 w-5 lg:hidden" />
@@ -391,8 +408,8 @@ const AdminLayout = ({
                 type="button"
                 className="hidden rounded-lg p-2 text-muted-foreground hover:bg-muted lg:inline-flex"
                 onClick={() => setIsSidebarOpen(false)}
-                aria-label="Masquer le menu"
-                title="Masquer le menu"
+                aria-label={t('common.hideMenu')}
+                title={t('common.hideMenu')}
               >
                 <PanelLeftClose className="h-5 w-5" />
               </button>
@@ -402,7 +419,7 @@ const AdminLayout = ({
                 <div className="mb-0.5 flex items-center gap-1 text-xs text-muted-foreground">
                   {breadcrumbs.map((b, i) => (
                     <span key={b.label} className="flex items-center gap-1">
-                      {i > 0 && <ChevronRight className="h-3 w-3" />}
+                      {i > 0 && <ChevronRight className={cn('h-3 w-3', dir === 'rtl' && 'rotate-180')} />}
                       {b.href ? (
                         <Link to={b.href} className="hover:text-foreground">
                           {b.label}
@@ -422,6 +439,22 @@ const AdminLayout = ({
           </div>
           <div className="flex shrink-0 items-center gap-2">
             {actions}
+            <Select value={locale} onValueChange={(v) => setLocale(v as AdminLocale)}>
+              <SelectTrigger
+                className="h-9 w-auto min-w-[7.5rem] gap-1.5 border-border/80 bg-white px-2.5 text-xs sm:min-w-[9rem]"
+                aria-label={t('common.language')}
+              >
+                <Globe className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent align="end">
+                {ADMIN_LOCALES.map((code) => (
+                  <SelectItem key={code} value={code}>
+                    {ADMIN_LOCALE_LABELS[code]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             <AdminNotification />
           </div>
         </header>

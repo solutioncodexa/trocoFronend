@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { Eye, Search, Phone, Mail, MessageSquare, ExternalLink, FileText, Calculator, Check, X } from 'lucide-react';
 import AdminLayout from '@/components/admin/AdminLayout';
+import { useAdminLocale } from '@/contexts/AdminLocaleContext';
 import AdminPagination from '@/components/admin/AdminPagination';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -21,6 +22,7 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { formatPrice } from '@/utils/formatPrice';
 
 const AdminCustomRequests = () => {
+  const { t } = useAdminLocale();
   const [searchParams, setSearchParams] = useSearchParams();
   const idParam = searchParams.get('id');
   const queryClient = useQueryClient();
@@ -225,14 +227,14 @@ const AdminCustomRequests = () => {
 
   if (isLoading && !requestsPage) {
     return (
-      <AdminLayout title="Demandes de Personnalisation" breadcrumbs={[{ label: 'Personnalisations' }]}>
+      <AdminLayout title={t('customRequests.title')} breadcrumbs={[{ label: t('customRequests.breadcrumb') }]}>
         <div className="p-8 text-center text-muted-foreground">Chargement...</div>
       </AdminLayout>
     );
   }
 
   return (
-    <AdminLayout title="Demandes de Personnalisation" breadcrumbs={[{ label: 'Personnalisations' }]}>
+    <AdminLayout title={t('customRequests.title')} breadcrumbs={[{ label: t('customRequests.breadcrumb') }]}>
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4 mb-4">
         <div className="bg-card rounded-lg p-3 sm:p-4 border border-border">
           <Badge className={cn('mb-2 text-[10px]', getStatusStyle('pending'))}>En attente</Badge>
@@ -385,8 +387,8 @@ const AdminCustomRequests = () => {
       {requests.length === 0 && (
         <EmptyState
           icon={FileText}
-          title="Aucune demande trouvée"
-          description="Les nouvelles demandes de personnalisation apparaîtront ici."
+          title={t('customRequests.empty')}
+          description={t('customRequests.emptyDesc')}
         />
       )}
 

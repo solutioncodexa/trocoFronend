@@ -11,6 +11,7 @@ import {
 } from 'recharts';
 import { DollarSign, ShoppingCart, TrendingUp, Ban } from 'lucide-react';
 import AdminLayout from '@/components/admin/AdminLayout';
+import { useAdminLocale } from '@/contexts/AdminLocaleContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -23,6 +24,7 @@ function isoDate(d: Date) {
 }
 
 const AdminRevenue = () => {
+  const { t } = useAdminLocale();
   const today = useMemo(() => new Date(), []);
   const [preset, setPreset] = useState<'7' | '30' | '90' | 'custom'>('30');
   const [from, setFrom] = useState(() => isoDate(new Date(Date.now() - 30 * 86400000)));
@@ -49,7 +51,7 @@ const AdminRevenue = () => {
   }));
 
   return (
-    <AdminLayout title="Revenus" breadcrumbs={[{ label: 'Revenus' }]}>
+    <AdminLayout title={t('revenue.title')} breadcrumbs={[{ label: t('revenue.title') }]}>
       <div className="flex flex-wrap items-end gap-3 mb-6">
         <div className="flex gap-2">
           {(['7', '30', '90'] as const).map((p) => (

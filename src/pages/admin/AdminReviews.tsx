@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Check, MessageSquareQuote, Star, Trash2, X } from 'lucide-react';
 import AdminLayout from '@/components/admin/AdminLayout';
+import { useAdminLocale } from '@/contexts/AdminLocaleContext';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -9,6 +10,7 @@ import { toast } from 'sonner';
 import { toastError } from '@/utils/toastMessages';
 
 const AdminReviews = () => {
+  const { t } = useAdminLocale();
   const queryClient = useQueryClient();
 
   const { data: reviews = [], isLoading } = useQuery({
@@ -37,17 +39,17 @@ const AdminReviews = () => {
 
   return (
     <AdminLayout
-      title="Avis produits"
+      title={t('reviews.title')}
       breadcrumbs={[{ label: 'Avis' }]}
-      description="Modérez les avis clients avant publication sur la fiche produit."
+      description={t('reviews.description')}
     >
       {isLoading ? (
         <p className="text-sm text-muted-foreground">Chargement…</p>
       ) : reviews.length === 0 ? (
         <EmptyState
           icon={MessageSquareQuote}
-          title="Aucun avis"
-          description="Les avis soumis sur les fiches produits apparaîtront ici pour validation."
+          title={t('reviews.empty')}
+          description={t('reviews.emptyDesc')}
         />
       ) : (
         <div className="overflow-hidden rounded-xl border border-border">

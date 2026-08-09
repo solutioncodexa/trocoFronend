@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Share2, Save } from 'lucide-react';
 import AdminLayout from '@/components/admin/AdminLayout';
+import { useAdminLocale } from '@/contexts/AdminLocaleContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
@@ -14,6 +15,7 @@ import { toastError } from '@/utils/toastMessages';
 import { cn } from '@/lib/utils';
 
 const AdminSocialNetworks = () => {
+  const { t } = useAdminLocale();
   const queryClient = useQueryClient();
   const [drafts, setDrafts] = useState<SocialNetworkDTO[]>([]);
 
@@ -66,7 +68,7 @@ const AdminSocialNetworks = () => {
 
   if (isLoading) {
     return (
-      <AdminLayout title="Réseaux sociaux" breadcrumbs={[{ label: 'Réseaux sociaux' }]}>
+      <AdminLayout title={t('social.title')} breadcrumbs={[{ label: t('social.title') }]}>
         <div className="p-8 text-center text-muted-foreground">Chargement...</div>
       </AdminLayout>
     );
@@ -74,7 +76,7 @@ const AdminSocialNetworks = () => {
 
   if (error) {
     return (
-      <AdminLayout title="Réseaux sociaux" breadcrumbs={[{ label: 'Réseaux sociaux' }]}>
+      <AdminLayout title={t('social.title')} breadcrumbs={[{ label: t('social.title') }]}>
         <div className="p-8">
           <div className="rounded-lg border border-red-200 bg-red-50 p-4">
             <h3 className="mb-2 font-medium text-red-800">Erreur de chargement</h3>
@@ -86,7 +88,7 @@ const AdminSocialNetworks = () => {
   }
 
   return (
-    <AdminLayout title="Réseaux sociaux" breadcrumbs={[{ label: 'Réseaux sociaux' }]}>
+    <AdminLayout title={t('social.title')} breadcrumbs={[{ label: t('social.title') }]}>
       <div className="max-h-[calc(100vh-8rem)] overflow-y-auto">
         <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>

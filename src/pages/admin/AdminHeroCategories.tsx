@@ -3,6 +3,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { ImageIcon, Loader2, Upload, Plus, RotateCcw, Trash2, ArrowUp, ArrowDown } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import AdminLayout from '@/components/admin/AdminLayout';
+import { useAdminLocale } from '@/contexts/AdminLocaleContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -59,6 +60,7 @@ const rowFromDto = (u: CategoryDTO): RowState[number] => ({
 });
 
 const AdminHeroCategories = () => {
+  const { t } = useAdminLocale();
   const queryClient = useQueryClient();
   const fileInputs = useRef<Record<number, HTMLInputElement | null>>({});
   const homeHeroFileRef = useRef<HTMLInputElement | null>(null);
@@ -266,10 +268,10 @@ const AdminHeroCategories = () => {
   if (isLoading) {
     return (
       <AdminLayout
-        title="Catégories de l’accueil"
+        title={t('heroCategories.title')}
         breadcrumbs={[
-          { label: 'Boutique en ligne', href: '/admin/boutique-en-ligne' },
-          { label: 'Catégories accueil' },
+          { label: t('appearance.onlineStoreCrumb'), href: '/admin/boutique-en-ligne' },
+          { label: t('heroCategories.title') },
         ]}
       >
         <div className="flex items-center justify-center py-12">
@@ -281,10 +283,10 @@ const AdminHeroCategories = () => {
 
   return (
     <AdminLayout
-      title="Catégories de l’accueil"
+      title={t('heroCategories.title')}
       breadcrumbs={[
-        { label: 'Boutique en ligne', href: '/admin/boutique-en-ligne' },
-        { label: 'Catégories accueil' },
+        { label: t('appearance.onlineStoreCrumb'), href: '/admin/boutique-en-ligne' },
+        { label: t('heroCategories.title') },
       ]}
     >
       <div className="mb-4 rounded-lg border border-border bg-muted/30 p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -362,7 +364,7 @@ const AdminHeroCategories = () => {
                     className="h-7 w-7"
                     disabled={uploadingHomeHero || index === 0}
                     onClick={() => moveHomeHero(index, -1)}
-                    aria-label="Monter"
+                    aria-label={t('common.moveUp')}
                   >
                     <ArrowUp className="h-3.5 w-3.5" />
                   </Button>
@@ -373,7 +375,7 @@ const AdminHeroCategories = () => {
                     className="h-7 w-7"
                     disabled={uploadingHomeHero || index === homeHeroUrls.length - 1}
                     onClick={() => moveHomeHero(index, 1)}
-                    aria-label="Descendre"
+                    aria-label={t('common.moveDown')}
                   >
                     <ArrowDown className="h-3.5 w-3.5" />
                   </Button>
@@ -384,7 +386,7 @@ const AdminHeroCategories = () => {
                     className="h-7 w-7"
                     disabled={uploadingHomeHero || homeHeroUrls.length <= 1}
                     onClick={() => removeHomeHeroAt(index)}
-                    aria-label="Supprimer"
+                    aria-label={t('common.delete')}
                   >
                     <Trash2 className="h-3.5 w-3.5" />
                   </Button>

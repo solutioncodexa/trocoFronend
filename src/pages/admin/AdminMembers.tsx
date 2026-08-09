@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { History, Plus, UserCheck, UserX, KeyRound, Users, Trash2 } from 'lucide-react';
 import AdminLayout from '@/components/admin/AdminLayout';
+import { useAdminLocale } from '@/contexts/AdminLocaleContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { PasswordInput } from '@/components/ui/PasswordInput';
@@ -55,6 +56,7 @@ const ROLE_PRESETS: { key: string; label: string; permissions: string[] }[] = [
 ];
 
 const AdminMembers = () => {
+  const { t } = useAdminLocale();
   const queryClient = useQueryClient();
   const { user: currentUser } = useAdmin();
   const [selected, setSelected] = useState<MemberDTO | null>(null);
@@ -203,7 +205,7 @@ const AdminMembers = () => {
   );
 
   return (
-    <AdminLayout title="Membres" breadcrumbs={[{ label: 'Équipe' }, { label: 'Membres' }]}>
+    <AdminLayout title={t('members.title')} breadcrumbs={[{ label: t('members.breadcrumbTeam') }, { label: t('members.title') }]}>
       <div className="flex flex-col lg:flex-row gap-6">
         <div className="lg:w-1/3 space-y-3">
           <div className="flex justify-between items-center gap-2">
@@ -215,7 +217,7 @@ const AdminMembers = () => {
           {isLoading ? (
             <p className="text-muted-foreground">Chargement…</p>
           ) : members.length === 0 ? (
-            <EmptyState icon={Users} title="Aucun membre" />
+            <EmptyState icon={Users} title={t('members.empty')} />
           ) : (
             members.map((m) => (
               <button
@@ -280,7 +282,7 @@ const AdminMembers = () => {
                     className="gap-1"
                     onClick={() => setDeleteOpen(true)}
                     disabled={isSelf}
-                    title={isSelf ? 'Impossible de supprimer votre propre compte' : undefined}
+                    title={isSelf ? t('members.cannotDeleteSelf') : undefined}
                   >
                     <Trash2 className="w-3.5 h-3.5" />
                     Supprimer

@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import AdminLayout from '@/components/admin/AdminLayout';
+import { useAdminLocale } from '@/contexts/AdminLocaleContext';
 import { BoutiqueWorkspaceLinks } from '@/components/admin/BoutiqueWorkspaceLinks';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -25,6 +26,7 @@ import { toastError } from '@/utils/toastMessages';
 import { cn } from '@/lib/utils';
 
 const AdminTopBarMessages = () => {
+  const { t } = useAdminLocale();
   const queryClient = useQueryClient();
   const [selectedMessage, setSelectedMessage] = useState<TopBarMessageDTO | null>(null);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
@@ -175,9 +177,9 @@ const AdminTopBarMessages = () => {
   if (isLoading) {
     return (
       <AdminLayout
-        title="Bandeau"
+        title={t('topBar.title')}
         breadcrumbs={[
-          { label: 'Boutique en ligne', href: '/admin/boutique-en-ligne' },
+          { label: t('appearance.onlineStoreCrumb'), href: '/admin/boutique-en-ligne' },
           { label: 'Bandeau' },
         ]}
       >
@@ -189,9 +191,9 @@ const AdminTopBarMessages = () => {
   if (error) {
     return (
       <AdminLayout
-        title="Bandeau"
+        title={t('topBar.title')}
         breadcrumbs={[
-          { label: 'Boutique en ligne', href: '/admin/boutique-en-ligne' },
+          { label: t('appearance.onlineStoreCrumb'), href: '/admin/boutique-en-ligne' },
           { label: 'Bandeau' },
         ]}
       >
@@ -209,10 +211,10 @@ const AdminTopBarMessages = () => {
 
   return (
     <AdminLayout
-      title="Bandeau"
-      description="Créez plusieurs bandeaux promo : texte, couleurs, durée d’affichage et rotation automatique."
+      title={t('topBar.title')}
+      description={t('topBar.description')}
       breadcrumbs={[
-        { label: 'Boutique en ligne', href: '/admin/boutique-en-ligne' },
+        { label: t('appearance.onlineStoreCrumb'), href: '/admin/boutique-en-ligne' },
         { label: 'Bandeau' },
       ]}
     >
@@ -269,7 +271,7 @@ const AdminTopBarMessages = () => {
                         backgroundColor: message.backgroundColor || 'hsl(var(--primary))',
                         color: message.textColor || '#fff',
                       }}
-                      title="Aperçu couleurs"
+                      title={t('topBar.colorPreview')}
                     >
                       <span className="line-clamp-2">{message.message || '—'}</span>
                     </div>

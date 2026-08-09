@@ -9,6 +9,7 @@ import {
   RefreshCw,
 } from 'lucide-react';
 import AdminLayout from '@/components/admin/AdminLayout';
+import { useAdminLocale } from '@/contexts/AdminLocaleContext';
 import AdminPagination from '@/components/admin/AdminPagination';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -61,6 +62,7 @@ const emptyPromoForm: CreatePromoCodeRequest = {
 };
 
 const AdminPromoCodes = () => {
+  const { t } = useAdminLocale();
   const queryClient = useQueryClient();
   const [page, setPage] = useState(0);
   const [pageSize, setPageSize] = useState(20);
@@ -207,7 +209,7 @@ const AdminPromoCodes = () => {
 
   if (loadingCodes && !promoCodesPage) {
     return (
-      <AdminLayout title="Codes Promo" breadcrumbs={[{ label: 'Codes Promo' }]}>
+      <AdminLayout title={t('promoCodes.title')} breadcrumbs={[{ label: t('promoCodes.title') }]}>
         <div className="p-8 text-center text-muted-foreground">Chargement...</div>
       </AdminLayout>
     );
@@ -215,8 +217,8 @@ const AdminPromoCodes = () => {
 
   return (
     <AdminLayout
-      title="Codes Promo"
-      breadcrumbs={[{ label: 'Codes Promo' }]}
+      title={t('promoCodes.title')}
+      breadcrumbs={[{ label: t('promoCodes.title') }]}
     >
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 mb-4">
@@ -480,7 +482,7 @@ const AdminPromoCodes = () => {
                   type="button"
                   variant="outline"
                   size="icon"
-                  title="Générer automatiquement"
+                  title={t('promoCodes.autoGenerate')}
                   onClick={() =>
                     setPromoForm((f) => ({ ...f, code: generateLocalCode() }))
                   }

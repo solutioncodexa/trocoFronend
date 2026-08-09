@@ -17,6 +17,7 @@ import {
   Loader2
 } from 'lucide-react';
 import AdminLayout from '@/components/admin/AdminLayout';
+import { useAdminLocale } from '@/contexts/AdminLocaleContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -36,6 +37,7 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { ErrorState } from '@/components/ui/ErrorState';
 
 const AdminFeaturedProducts = () => {
+  const { t } = useAdminLocale();
   const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState('');
   const [filterSection, setFilterSection] = useState<'all' | 'heritage' | 'sur-mesure'>('all');
@@ -183,9 +185,9 @@ const AdminFeaturedProducts = () => {
   if (isLoading) {
     return (
       <AdminLayout
-        title="Produits à la une"
+        title={t('featuredProducts.title')}
         breadcrumbs={[
-          { label: 'Boutique en ligne', href: '/admin/boutique-en-ligne' },
+          { label: t('appearance.onlineStoreCrumb'), href: '/admin/boutique-en-ligne' },
           { label: 'Produits à la une' },
         ]}
       >
@@ -199,15 +201,15 @@ const AdminFeaturedProducts = () => {
   if (error) {
     return (
       <AdminLayout
-        title="Produits à la une"
+        title={t('featuredProducts.title')}
         breadcrumbs={[
-          { label: 'Boutique en ligne', href: '/admin/boutique-en-ligne' },
+          { label: t('appearance.onlineStoreCrumb'), href: '/admin/boutique-en-ligne' },
           { label: 'Produits à la une' },
         ]}
       >
         <ErrorState
-          title="Erreur de chargement"
-          description="Impossible de charger les produits sélectionnés. Veuillez vérifier que le serveur backend est en cours d'exécution."
+          title={t('featuredProducts.loadError')}
+          description={t('featuredProducts.loadErrorDesc')}
           onRetry={() => refetch()}
         />
       </AdminLayout>
@@ -216,9 +218,9 @@ const AdminFeaturedProducts = () => {
 
   return (
     <AdminLayout
-      title="Produits à la une"
+      title={t('featuredProducts.title')}
       breadcrumbs={[
-        { label: 'Boutique en ligne', href: '/admin/boutique-en-ligne' },
+        { label: t('appearance.onlineStoreCrumb'), href: '/admin/boutique-en-ligne' },
         { label: 'Produits à la une' },
       ]}
     >
@@ -369,8 +371,8 @@ const AdminFeaturedProducts = () => {
       {sortedProducts.length === 0 && (
         <EmptyState
           icon={Package}
-          title="Aucun produit sélectionné trouvé"
-          description="Ajoutez des produits à mettre en avant sur la vitrine ou en sur-mesure."
+          title={t('featuredProducts.empty')}
+          description={t('featuredProducts.emptyDesc')}
           actionLabel="Ajouter"
           onAction={() => setIsCreateDialogOpen(true)}
         />

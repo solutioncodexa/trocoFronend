@@ -1,14 +1,27 @@
 import { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Lock, Mail, Eye, EyeOff, AlertCircle, Store } from 'lucide-react';
+import { Lock, Mail, Eye, EyeOff, AlertCircle, Store, Globe } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useAdmin } from '@/contexts/AdminContext';
+import { useAdminLocale } from '@/contexts/AdminLocaleContext';
 import { BrandLogoImg } from '@/components/layout/BrandLogoImg';
 import { markStockAlertPending } from '@/utils/stockAlertSession';
 import { setStoredTenantSlug } from '@/config/api';
 import { useStoreBrand } from '@/hooks/useStoreBrand';
+import {
+  ADMIN_LOCALES,
+  ADMIN_LOCALE_LABELS,
+  type AdminLocale,
+} from '@/i18n/admin/adminMessages';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 type LoginLocationState = {
   email?: string;
@@ -22,6 +35,7 @@ const AdminLogin = () => {
   const locationState = (location.state || {}) as LoginLocationState;
   const { login, isAuthenticated, isSuperAdmin, isLoading: authLoading } = useAdmin();
   const { siteName, hasStore } = useStoreBrand();
+  const { t, locale, setLocale, dir } = useAdminLocale();
   const [email, setEmail] = useState(locationState.email ?? '');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -36,9 +50,9 @@ const AdminLogin = () => {
       setEmail(locationState.email);
     }
     if (locationState.from?.pathname) {
-      setError('Connectez-vous pour accéder à cette page');
+      setError(t('login.errorAccess'));
     }
-  }, [locationState.createdSlug, locationState.email, locationState.from?.pathname]);
+  }, [locationState.createdSlug, locationState.email, locationState.from?.pathname, t]);
 
   useEffect(() => {
     if (authLoading || !isAuthenticated) return;
@@ -56,7 +70,7 @@ const AdminLogin = () => {
 
     const result = await login(email.trim(), password);
     if (result.ok === false) {
-      setError(result.error || 'Email ou mot de passe incorrect');
+      setError(result.error || t('login.errorCredentials'));
       setIsLoading(false);
       return;
     }
@@ -72,14 +86,16 @@ const AdminLogin = () => {
 
   if (authLoading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[hsl(220_22%_12%)] text-white/70">
-        Chargement…
+      <div className="flex min-h-screen items-center justify-center bg-[hsl(220_22%_12%)] text-white/70" dir={dir} lang={locale}>
+        {t('common.loading')}
       </div>
     );
   }
 
+  const bullets = [t('login.bullet1'), t('login.bullet2'), t('login.bullet3')];
+
   return (
-    <div className="grid min-h-screen lg:grid-cols-2">
+    <div className="grid min-h-screen lg:grid-cols-2" dir={dir} lang={locale}>
       <div className="relative hidden overflow-hidden bg-[hsl(220_22%_12%)] lg:flex lg:flex-col lg:justify-between lg:p-12">
         <div
           className="pointer-events-none absolute inset-0 opacity-80"
@@ -93,21 +109,17 @@ const AdminLogin = () => {
         />
         <div className="relative z-10">
           <p className="font-display text-sm font-semibold uppercase tracking-[0.2em] text-white/50">
-            Espace vendeur
+            {t('login.sellerSpace')}
           </p>
           <h1 className="mt-4 max-w-md font-display text-4xl font-bold leading-tight tracking-tight text-white">
-            Gérez votre boutique Get STORE
+            {t('login.title')}
           </h1>
           <p className="mt-4 max-w-sm text-sm leading-relaxed text-white/65">
-            Commandes, catalogue, design et abonnement — tout au même endroit.
+            {t('login.subtitle')}
           </p>
         </div>
         <ul className="relative z-10 space-y-3 text-sm text-white/70">
-          {[
-            'Suivi des commandes en temps réel',
-            'Personnalisez logo, couleurs et design',
-            'Catalogue et stock centralisés',
-          ].map((line) => (
+          {bullets.map((line) => (
             <li key={line} className="flex items-center gap-2">
               <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/30 text-primary-foreground">
                 <Store className="h-3.5 w-3.5" />
@@ -120,16 +132,33 @@ const AdminLogin = () => {
 
       <div className="flex items-center justify-center bg-[hsl(220_20%_97%)] p-6 sm:p-10">
         <div className="w-full max-w-md">
-          <div className="mb-8 text-center lg:text-left">
+          <div className="mb-4 flex justify-end">
+            <Select value={locale} onValueChange={(v) => setLocale(v as AdminLocale)}>
+              <SelectTrigger className="h-9 w-[9.5rem] text-xs" aria-label={t('common.language')}>
+                <Globe className="me-2 h-3.5 w-3.5 shrink-0 opacity-70" />
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {ADMIN_LOCALES.map((code) => (
+                  <SelectItem key={code} value={code}>
+                    {ADMIN_LOCALE_LABELS[code]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="mb-8 text-center lg:text-start">
             <BrandLogoImg
               className="mx-auto mb-4 h-14 w-auto max-w-[220px] lg:mx-0"
               draggable={false}
             />
             <h2 className="font-display text-2xl font-semibold tracking-tight text-foreground">
-              Connexion{hasStore && siteName ? ` — ${siteName}` : ''}
+              {t('login.signIn')}
+              {hasStore && siteName ? ` — ${siteName}` : ''}
             </h2>
             <p className="mt-1.5 text-sm text-muted-foreground">
-              Accédez au tableau de bord de votre boutique
+              {t('login.accessDashboard')}
             </p>
           </div>
 
@@ -143,15 +172,15 @@ const AdminLogin = () => {
 
             <form onSubmit={handleSubmit} className="space-y-5">
               <div>
-                <Label htmlFor="email">Email</Label>
+                <Label htmlFor="email">{t('login.email')}</Label>
                 <div className="relative mt-1.5">
-                  <Mail className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Mail className="absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                   <Input
                     id="email"
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="h-11 pl-10"
+                    className="h-11 ps-10"
                     placeholder="vous@boutique.ma"
                     autoComplete="username"
                     required
@@ -160,23 +189,23 @@ const AdminLogin = () => {
               </div>
 
               <div>
-                <Label htmlFor="password">Mot de passe</Label>
+                <Label htmlFor="password">{t('login.password')}</Label>
                 <div className="relative mt-1.5">
-                  <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Lock className="absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                   <Input
                     id="password"
                     type={showPassword ? 'text' : 'password'}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="h-11 pl-10 pr-10"
+                    className="h-11 ps-10 pe-10"
                     autoComplete="current-password"
                     required
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                    aria-label={showPassword ? 'Masquer le mot de passe' : 'Afficher le mot de passe'}
+                    className="absolute end-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                    aria-label={showPassword ? t('login.hidePassword') : t('login.showPassword')}
                   >
                     {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
@@ -184,17 +213,17 @@ const AdminLogin = () => {
               </div>
 
               <Button type="submit" className="h-11 w-full text-sm font-semibold" disabled={isLoading}>
-                {isLoading ? 'Connexion…' : 'Se connecter'}
+                {isLoading ? t('login.submitting') : t('login.submit')}
               </Button>
             </form>
           </div>
 
           <div className="mt-6 flex flex-wrap items-center justify-center gap-4 text-sm text-muted-foreground lg:justify-start">
             <Link to="/" className="hover:text-primary">
-              ← Retour au site
+              {t('login.backToSite')}
             </Link>
             <Link to="/creer-boutique" className="hover:text-primary">
-              Créer une boutique
+              {t('login.createStore')}
             </Link>
           </div>
         </div>

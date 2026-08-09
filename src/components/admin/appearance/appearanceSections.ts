@@ -1,4 +1,5 @@
 import type { AppearancePreviewSection } from '@/components/admin/StoreAppearanceLivePreview';
+import type { AdminMessageKey } from '@/i18n/admin/adminMessages';
 
 /** Sections éditables dans l’atelier Apparence (outline + panneau droit). */
 export type AppearanceSectionId =
@@ -9,25 +10,25 @@ export type AppearanceSectionId =
 
 export const APPEARANCE_OUTLINE: {
   id: AppearanceSectionId;
-  label: string;
+  labelKey: AdminMessageKey;
 }[] = [
-  { id: 'themes', label: 'Thèmes' },
-  { id: 'identity', label: 'Identité & couleurs' },
-  { id: 'typography', label: 'Typographie' },
-  { id: 'buttons', label: 'Boutons' },
-  { id: 'cards', label: 'Cards produit' },
-  { id: 'hero', label: 'Hero' },
-  { id: 'backgrounds', label: 'Fonds' },
-  { id: 'header', label: 'Header' },
-  { id: 'footer', label: 'Footer' },
-  { id: 'home', label: 'Sections accueil' },
-  { id: 'shop', label: 'Boutique' },
-  { id: 'product', label: 'Fiche produit' },
-  { id: 'wishlist', label: 'Favoris' },
-  { id: 'cart', label: 'Panier' },
-  { id: 'checkout', label: 'Checkout' },
-  { id: 'forms', label: 'Formulaires' },
-  { id: 'notFound', label: 'Page 404' },
+  { id: 'themes', labelKey: 'appearance.sec.themes' },
+  { id: 'identity', labelKey: 'appearance.sec.identity' },
+  { id: 'typography', labelKey: 'appearance.sec.typography' },
+  { id: 'buttons', labelKey: 'appearance.sec.buttons' },
+  { id: 'cards', labelKey: 'appearance.sec.cards' },
+  { id: 'hero', labelKey: 'appearance.sec.hero' },
+  { id: 'backgrounds', labelKey: 'appearance.sec.backgrounds' },
+  { id: 'header', labelKey: 'appearance.sec.header' },
+  { id: 'footer', labelKey: 'appearance.sec.footer' },
+  { id: 'home', labelKey: 'appearance.sec.home' },
+  { id: 'shop', labelKey: 'appearance.sec.shop' },
+  { id: 'product', labelKey: 'appearance.sec.product' },
+  { id: 'wishlist', labelKey: 'appearance.sec.wishlist' },
+  { id: 'cart', labelKey: 'appearance.sec.cart' },
+  { id: 'checkout', labelKey: 'appearance.sec.checkout' },
+  { id: 'forms', labelKey: 'appearance.sec.forms' },
+  { id: 'notFound', labelKey: 'appearance.sec.notFound' },
 ];
 
 export function isPreviewHotspotSection(

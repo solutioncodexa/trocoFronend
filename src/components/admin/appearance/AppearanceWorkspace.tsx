@@ -33,6 +33,7 @@ import { staticCatalogQueryOptions } from '@/config/queryOptions';
 import type { StoreThemeKey } from '@/config/storeThemes';
 import type { DemoCategory } from '@/demo/mockCatalog';
 import { useTenant } from '@/contexts/TenantContext';
+import { useAdminLocale } from '@/contexts/AdminLocaleContext';
 import { categoriesApi, productsApi } from '@/services/api';
 import { homeHeroApi } from '@/services/api/homeHero';
 import { getImageUrl } from '@/services/api/upload';
@@ -99,6 +100,7 @@ export function AppearanceWorkspace({
   onSave,
   saving,
 }: Props) {
+  const { t } = useAdminLocale();
   const [activeSection, setActiveSection] = useState<AppearanceSectionId>('themes');
   const [showOutline, setShowOutline] = useState(true);
   const [showEditor, setShowEditor] = useState(true);
@@ -307,17 +309,17 @@ export function AppearanceWorkspace({
   }, [device]);
 
   const activeLabel =
-    APPEARANCE_OUTLINE.find((s) => s.id === activeSection)?.label ?? 'Section';
+    t(APPEARANCE_OUTLINE.find((s) => s.id === activeSection)?.labelKey ?? 'common.section');
 
   return (
     <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden bg-[hsl(222_14%_92%)]">
       <div className="flex h-12 shrink-0 items-center justify-between gap-2 border-b border-border/80 bg-white px-2 sm:px-3">
         <div className="flex min-w-0 items-center gap-2">
           <Palette className="h-4 w-4 shrink-0 text-sky-600" />
-          <p className="truncate text-sm font-semibold">Apparence</p>
-          <span className="ml-1 inline-flex items-center gap-1 rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-700">
+          <p className="truncate text-sm font-semibold">{t('appearance.title')}</p>
+          <span className="ms-1 inline-flex items-center gap-1 rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-700">
             <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-500" />
-            Live
+            {t('appearance.live')}
           </span>
         </div>
 
@@ -330,7 +332,7 @@ export function AppearanceWorkspace({
               className="h-8 w-8"
               disabled={undoLen === 0}
               onClick={undoAppearance}
-              title="Annuler (Ctrl+Z)"
+              title={t('appearance.undo')}
             >
               <Undo2 className="h-3.5 w-3.5" />
             </Button>
@@ -341,7 +343,7 @@ export function AppearanceWorkspace({
               className="h-8 w-8"
               disabled={redoLen === 0}
               onClick={redoAppearance}
-              title="Rétablir (Ctrl+Y)"
+              title={t('appearance.redo')}
             >
               <Redo2 className="h-3.5 w-3.5" />
             </Button>
@@ -353,7 +355,7 @@ export function AppearanceWorkspace({
               variant={showOutline ? 'secondary' : 'ghost'}
               className="h-8 w-8"
               onClick={() => setShowOutline((v) => !v)}
-              title={showOutline ? 'Masquer les sections' : 'Afficher les sections'}
+              title={showOutline ? t('appearance.hideSections') : t('appearance.showSections')}
             >
               <PanelLeft className="h-3.5 w-3.5" />
             </Button>
@@ -363,7 +365,7 @@ export function AppearanceWorkspace({
               variant={showEditor ? 'secondary' : 'ghost'}
               className="h-8 w-8"
               onClick={() => setShowEditor((v) => !v)}
-              title={showEditor ? 'Masquer l’éditeur' : 'Afficher l’éditeur'}
+              title={showEditor ? t('appearance.hideEditor') : t('appearance.showEditor')}
             >
               <PanelRight className="h-3.5 w-3.5" />
             </Button>
@@ -376,7 +378,7 @@ export function AppearanceWorkspace({
               variant={device === 'desktop' ? 'default' : 'ghost'}
               className="h-8 px-2"
               onClick={() => setDevice('desktop')}
-              title="Bureau"
+              title={t('appearance.desktop')}
             >
               <Monitor className="h-3.5 w-3.5" />
             </Button>
@@ -386,7 +388,7 @@ export function AppearanceWorkspace({
               variant={device === 'tablet' ? 'default' : 'ghost'}
               className="h-8 px-2"
               onClick={() => setDevice('tablet')}
-              title="Tablette"
+              title={t('appearance.tablet')}
             >
               <Tablet className="h-3.5 w-3.5" />
             </Button>
@@ -396,7 +398,7 @@ export function AppearanceWorkspace({
               variant={device === 'mobile' ? 'default' : 'ghost'}
               className="h-8 px-2"
               onClick={() => setDevice('mobile')}
-              title="Mobile"
+              title={t('appearance.mobile')}
             >
               <Smartphone className="h-3.5 w-3.5" />
             </Button>
@@ -406,18 +408,18 @@ export function AppearanceWorkspace({
             <Button type="button" variant="outline" size="sm" className="h-8 gap-1.5" asChild>
               <a href={storefrontHref} target="troco-storefront" rel="noopener noreferrer">
                 <ExternalLink className="h-3.5 w-3.5" />
-                <span className="hidden sm:inline">Voir boutique</span>
+                <span className="hidden sm:inline">{t('common.viewStoreShort')}</span>
               </a>
             </Button>
           ) : null}
 
           <Button type="button" size="sm" asChild variant="outline" className="h-8 hidden sm:inline-flex">
-            <Link to="/admin/reglages">Paramètres</Link>
+            <Link to="/admin/reglages">{t('settings.title')}</Link>
           </Button>
 
           <Button className="h-8 gap-1.5" disabled={saving} onClick={onSave}>
             {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-            <span className="hidden sm:inline">Enregistrer</span>
+            <span className="hidden sm:inline">{t('common.save')}</span>
           </Button>
         </div>
       </div>
@@ -426,26 +428,26 @@ export function AppearanceWorkspace({
         <div className="flex min-h-0 flex-1 overflow-hidden">
         <aside
           className={cn(
-            'w-[240px] shrink-0 flex-col border-r border-border/80 bg-white',
+            'w-[240px] shrink-0 flex-col border-e border-border/80 bg-white',
             showOutline ? 'hidden md:flex' : 'hidden',
           )}
         >
           <div className="flex items-center justify-between border-b border-border/70 px-3 py-2">
-            <p className="text-xs font-semibold text-muted-foreground">Sections</p>
+            <p className="text-xs font-semibold text-muted-foreground">{t('appearance.sections')}</p>
             <Button
               type="button"
               size="icon"
               variant="ghost"
               className="h-7 w-7"
               onClick={() => setShowOutline(false)}
-              title="Masquer"
+              title={t('common.hide')}
             >
               <PanelLeft className="h-3.5 w-3.5" />
             </Button>
           </div>
           <div className="min-h-0 flex-1 space-y-1 overflow-y-auto p-2.5 scrollbar-app">
             <p className="mb-2 px-0.5 text-[11px] text-muted-foreground">
-              Cliquez une section ou une zone de l’aperçu
+              {t('appearance.clickSectionHint')}
             </p>
             {APPEARANCE_OUTLINE.map((item) => (
               <button
@@ -453,13 +455,13 @@ export function AppearanceWorkspace({
                 type="button"
                 onClick={() => selectSection(item.id)}
                 className={cn(
-                  'flex w-full items-center rounded-lg border px-2.5 py-2 text-left text-xs transition',
+                  'flex w-full items-center rounded-lg border px-2.5 py-2 text-start text-xs transition',
                   activeSection === item.id
                     ? 'border-sky-500 bg-sky-50 font-semibold text-sky-900'
                     : 'border-border/70 hover:border-sky-300',
                 )}
               >
-                {item.label}
+                {t(item.labelKey)}
               </button>
             ))}
           </div>
@@ -475,7 +477,7 @@ export function AppearanceWorkspace({
         >
           <div className="sticky top-0 z-30 flex items-center justify-between gap-2 border-b border-border/50 bg-white/90 px-3 py-1.5 text-[11px] backdrop-blur">
             <span className="font-medium text-muted-foreground">
-              1ᵉʳ clic = éditer · 2ᵉ clic même zone = fermer · 2ᵉ clic menu = page
+              {t('appearance.clickEditHint')}
             </span>
             <div className="flex items-center gap-2">
               {!showOutline ? (
@@ -484,7 +486,7 @@ export function AppearanceWorkspace({
                   className="hidden rounded-md border border-border bg-white px-2 py-0.5 font-medium text-sky-700 hover:bg-sky-50 md:inline-flex"
                   onClick={() => setShowOutline(true)}
                 >
-                  Afficher sections
+                  {t('appearance.showSections')}
                 </button>
               ) : null}
               {!showEditor ? (
@@ -493,11 +495,15 @@ export function AppearanceWorkspace({
                   className="hidden rounded-md border border-border bg-white px-2 py-0.5 font-medium text-sky-700 hover:bg-sky-50 lg:inline-flex"
                   onClick={() => setShowEditor(true)}
                 >
-                  Afficher éditeur
+                  {t('appearance.showEditor')}
                 </button>
               ) : null}
               <span className="tabular-nums text-muted-foreground">
-                {device === 'desktop' ? 'Bureau' : device === 'tablet' ? 'Tablette' : 'Mobile'}
+                {device === 'desktop'
+                  ? t('appearance.desktop')
+                  : device === 'tablet'
+                    ? t('appearance.tablet')
+                    : t('appearance.mobile')}
                 {' · '}
                 {Math.round(frameWidth)}px
                 {previewScale < 0.999 ? ` · ${Math.round(previewScale * 100)}%` : ''}
@@ -518,7 +524,7 @@ export function AppearanceWorkspace({
                     : 'border-border bg-white',
                 )}
               >
-                {item.label}
+                {t(item.labelKey)}
               </button>
             ))}
           </div>
@@ -529,6 +535,9 @@ export function AppearanceWorkspace({
               'flex justify-center overflow-x-hidden',
               device === 'desktop' ? 'px-2 py-3' : 'px-3 py-6',
             )}
+            // Géométrie du scale toujours LTR : en RTL admin, origin « left »
+            // écrase l’aperçu en une bande étroite.
+            dir="ltr"
           >
             <div
               className="transition-[width] duration-200"
@@ -602,14 +611,14 @@ export function AppearanceWorkspace({
 
         <aside
           className={cn(
-            'w-[320px] shrink-0 flex-col border-l border-border/80 bg-white',
+            'w-[320px] shrink-0 flex-col border-s border-border/80 bg-white',
             showEditor ? 'hidden lg:flex' : 'hidden',
           )}
         >
           <div className="flex items-start justify-between gap-2 border-b border-border/70 px-3 py-2.5">
             <div className="min-w-0">
               <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                Propriétés
+                {t('appearance.properties')}
               </p>
               <p className="mt-0.5 truncate text-sm font-semibold">{activeLabel}</p>
             </div>
@@ -619,7 +628,7 @@ export function AppearanceWorkspace({
               variant="ghost"
               className="h-7 w-7 shrink-0"
               onClick={() => setShowEditor(false)}
-              title="Masquer"
+              title={t('common.hide')}
             >
               <PanelRight className="h-3.5 w-3.5" />
             </Button>

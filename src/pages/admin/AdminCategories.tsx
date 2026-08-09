@@ -15,6 +15,7 @@ import {
   ChevronRight,
 } from 'lucide-react';
 import AdminLayout from '@/components/admin/AdminLayout';
+import { useAdminLocale } from '@/contexts/AdminLocaleContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -52,6 +53,7 @@ const generateSlug = (name: string) =>
     .replace(/[^a-z0-9-]/g, '');
 
 const AdminCategories = () => {
+  const { t } = useAdminLocale();
   const queryClient = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
   const [search, setSearch] = useState('');
@@ -365,7 +367,7 @@ const AdminCategories = () => {
             </div>
           </div>
           <div className="flex gap-0.5 shrink-0">
-            <Button variant="ghost" size="sm" onClick={() => handleOpenEdit(category)} title="Modifier">
+            <Button variant="ghost" size="sm" onClick={() => handleOpenEdit(category)} title={t('common.edit')}>
               <Pencil className="w-4 h-4" />
             </Button>
             <Button
@@ -373,7 +375,7 @@ const AdminCategories = () => {
               size="sm"
               className="text-destructive hover:text-destructive"
               onClick={() => handleDelete(category)}
-              title="Supprimer"
+              title={t('common.delete')}
             >
               <Trash2 className="w-4 h-4" />
             </Button>
@@ -403,7 +405,7 @@ const AdminCategories = () => {
   };
 
   return (
-    <AdminLayout title="Gestion des Catégories" breadcrumbs={[{ label: 'Catégories' }]}>
+    <AdminLayout title={t('categories.title')} breadcrumbs={[{ label: t('categories.breadcrumb') }]}>
       <div className="mb-6 rounded-lg border border-primary/20 bg-primary/5 p-4 space-y-3">
         <div>
           <p className="font-medium text-sm sm:text-base">Catégories parentes & sous-catégories</p>

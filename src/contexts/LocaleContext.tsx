@@ -7,7 +7,7 @@ import {
   useState,
   type ReactNode,
 } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useLocation, useSearchParams } from 'react-router-dom';
 import { useTenant } from '@/contexts/TenantContext';
 import {
   messages,
@@ -68,8 +68,11 @@ function pickInitialLocale(
 
 export function LocaleProvider({ children }: { children: ReactNode }) {
   const { store } = useTenant();
+  const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
   const slug = store?.slug;
+  const onAdminShell =
+    location.pathname.startsWith('/admin') || location.pathname.startsWith('/super-admin');
 
   const supportedLocales = useMemo(
     () => parseSupportedLocales(store?.supportedLocales),
@@ -103,20 +106,24 @@ export function LocaleProvider({ children }: { children: ReactNode }) {
           /* ignore */
         }
       }
-      document.documentElement.lang = next;
-      document.documentElement.dir = next === 'ar' ? 'rtl' : 'ltr';
+      if (!onAdminShell) {
+        document.documentElement.lang = next;
+        document.documentElement.dir = next === 'ar' ? 'rtl' : 'ltr';
+      }
       const p = new URLSearchParams(searchParams);
       if (next === 'fr') p.delete('lang');
       else p.set('lang', next);
       setSearchParams(p, { replace: true });
     },
-    [slug, supportedLocales, searchParams, setSearchParams],
+    [slug, supportedLocales, searchParams, setSearchParams, onAdminShell],
   );
 
   useEffect(() => {
+    // L’admin a sa propre langue (AdminLocaleProvider) — ne pas écraser.
+    if (onAdminShell) return;
     document.documentElement.lang = locale;
     document.documentElement.dir = locale === 'ar' ? 'rtl' : 'ltr';
-  }, [locale]);
+  }, [locale, onAdminShell]);
 
   const t = useCallback(
     (key: MessageKey, vars?: Record<string, string | number>) => {

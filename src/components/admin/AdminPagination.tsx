@@ -1,6 +1,7 @@
 import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useAdminLocale } from '@/contexts/AdminLocaleContext';
 
 interface AdminPaginationProps {
   page: number;
@@ -21,6 +22,7 @@ export default function AdminPagination({
   onSizeChange,
   pageSizeOptions = [10, 20, 50],
 }: AdminPaginationProps) {
+  const { t } = useAdminLocale();
   if (totalElements === 0) return null;
 
   const start = page * size + 1;
@@ -31,7 +33,7 @@ export default function AdminPagination({
   return (
     <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-4 border-t border-border">
       <div className="flex items-center gap-2 text-xs sm:text-sm text-muted-foreground">
-        <span>{start}–{end} sur {totalElements}</span>
+        <span>{t('common.paginationOf', { start, end, total: totalElements })}</span>
         {onSizeChange && (
           <Select value={String(size)} onValueChange={(v) => onSizeChange(Number(v))}>
             <SelectTrigger className="h-8 w-[70px] text-xs">

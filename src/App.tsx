@@ -8,6 +8,7 @@ import { AdminProvider } from "@/contexts/AdminContext";
 import { WishlistProvider } from "@/contexts/WishlistContext";
 import { TenantProvider } from "@/contexts/TenantContext";
 import { LocaleProvider } from "@/contexts/LocaleContext";
+import { AdminLocaleProvider } from "@/contexts/AdminLocaleContext";
 import ScrollToTop from "@/components/ui/ScrollToTop";
 import WhatsAppButton from "@/components/ui/WhatsAppButton";
 import { ProtectedAdminRoute } from "@/components/ProtectedAdminRoute";
@@ -128,6 +129,7 @@ const App = () => (
                 }}
               >
                 <LocaleProvider>
+                <AdminLocaleProvider>
                 <ScrollToTop />
                 <WhatsAppButton />
                 <Suspense
@@ -236,6 +238,7 @@ const App = () => (
                     <Route path="*" element={<NotFound />} />
                   </Routes>
                 </Suspense>
+                </AdminLocaleProvider>
                 </LocaleProvider>
               </BrowserRouter>
             </WishlistProvider>

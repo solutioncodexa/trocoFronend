@@ -14,6 +14,7 @@ import {
   ClipboardList,
 } from 'lucide-react';
 import AdminLayout from '@/components/admin/AdminLayout';
+import { useAdminLocale } from '@/contexts/AdminLocaleContext';
 import AdminPagination from '@/components/admin/AdminPagination';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -120,6 +121,7 @@ function formatQtyDelta(m: StockMovementDTO): string {
 }
 
 const AdminStock = () => {
+  const { t } = useAdminLocale();
   const queryClient = useQueryClient();
   const { hasPermission } = useAdmin();
   const canAdjust = hasPermission(PERMISSIONS.STOCK_ADJUST);
@@ -336,10 +338,10 @@ const AdminStock = () => {
         : 'Définit le stock exact après inventaire physique. Historisé comme correction.';
 
   const tabs: { id: Tab; label: string; icon: typeof Settings2 }[] = [
-    { id: 'settings', label: 'Réglages', icon: Settings2 },
-    { id: 'alerts', label: 'Alertes', icon: AlertTriangle },
-    { id: 'list', label: 'Liste stock', icon: Warehouse },
-    { id: 'movements', label: 'Historique', icon: History },
+    { id: 'settings', label: t('nav.settings'), icon: Settings2 },
+    { id: 'alerts', label: t('stock.tabAlerts'), icon: AlertTriangle },
+    { id: 'list', label: t('stock.tabList'), icon: Warehouse },
+    { id: 'movements', label: t('stock.tabHistory'), icon: History },
   ];
 
   const qtyNum = parseInt(adjustQty, 10);
@@ -351,7 +353,7 @@ const AdminStock = () => {
     !(adjustMode === 'direct-sale' && selected != null && qtyNum > selected.stock);
 
   return (
-    <AdminLayout title="Stock" breadcrumbs={[{ label: 'Stock' }]}>
+    <AdminLayout title={t('stock.title')} breadcrumbs={[{ label: t('stock.breadcrumb') }]}>
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         <Card>
           <CardHeader className="pb-2">
@@ -577,7 +579,7 @@ const AdminStock = () => {
                         variant="ghost"
                         className="gap-1"
                         onClick={() => openMovementDialog(row, 'adjust')}
-                        title="Correction inventaire"
+                        title={t('stock.inventoryCorrection')}
                       >
                         <ClipboardList className="w-3.5 h-3.5" />
                         Inventaire
@@ -587,7 +589,7 @@ const AdminStock = () => {
                 </div>
               ))}
               {(tab === 'alerts' ? filtered.filter((v) => v.status !== 'OK') : filtered).length === 0 && (
-                <EmptyState icon={Warehouse} title="Aucune ligne à afficher" />
+                <EmptyState icon={Warehouse} title={t('stock.emptyLines')} />
               )}
               {tab !== 'alerts' && variantsData && variantsData.totalPages > 1 ? (
                 <AdminPagination
@@ -654,7 +656,7 @@ const AdminStock = () => {
             <>
               <div className="space-y-2">
                 {(movementsPage?.content ?? []).length === 0 && (
-                  <EmptyState icon={History} title="Aucun mouvement" description="Les achats, ventes et commandes apparaîtront ici." />
+                  <EmptyState icon={History} title={t('stock.noMovements')} description={t('stock.noMovementsDesc')} />
                 )}
                 {(movementsPage?.content ?? []).map((m) => {
                   const meta = movementLabel(m);

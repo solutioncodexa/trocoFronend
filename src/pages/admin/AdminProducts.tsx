@@ -4,6 +4,7 @@ import { Package, Plus, Pencil, Trash2, Search, Upload, X, ArrowLeft, ArrowRight
 import { createEmptyVariantRow, type ProductVariantFormRow } from '@/types/product-variant';
 import { ProductVariantEditor } from '@/components/admin/ProductVariantEditor';
 import AdminLayout from '@/components/admin/AdminLayout';
+import { useAdminLocale } from '@/contexts/AdminLocaleContext';
 import AdminPagination from '@/components/admin/AdminPagination';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -55,6 +56,7 @@ type AdminFormData = {
 const PLACEHOLDER_IMAGE = '/placeholder-modern-fixed.svg';
 
 const AdminProducts = () => {
+  const { t } = useAdminLocale();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -584,14 +586,14 @@ const AdminProducts = () => {
 
   if (isLoading && !productsPage) {
     return (
-      <AdminLayout title="Gestion des Produits" breadcrumbs={[{ label: 'Produits' }]}>
+      <AdminLayout title={t('products.title')} breadcrumbs={[{ label: t('products.breadcrumb') }]}>
         <div className="p-8 text-center text-muted-foreground">Chargement...</div>
       </AdminLayout>
     );
   }
 
   return (
-    <AdminLayout title="Gestion des Produits" breadcrumbs={[{ label: 'Produits' }]}>
+    <AdminLayout title={t('products.title')} breadcrumbs={[{ label: t('products.breadcrumb') }]}>
       {fromOnboarding ? (
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-primary/30 bg-primary/5 px-4 py-3">
           <p className="text-sm text-foreground">
@@ -720,7 +722,7 @@ const AdminProducts = () => {
         {products.length === 0 && (
           <EmptyState
             icon={Package}
-            title={hasActiveFilters ? 'Aucun produit ne correspond' : 'Aucun produit pour le moment'}
+            title={hasActiveFilters ? t('products.emptyFiltered') : t('products.empty')}
             description={
               hasActiveFilters
                 ? 'Modifiez la recherche ou la catégorie.'
@@ -842,7 +844,7 @@ const AdminProducts = () => {
         {products.length === 0 && (
           <EmptyState
             icon={Package}
-            title={hasActiveFilters ? 'Aucun produit ne correspond' : 'Catalogue vide'}
+            title={hasActiveFilters ? t('products.emptyFiltered') : t('products.emptyCatalog')}
             description={
               hasActiveFilters
                 ? 'Modifiez la recherche ou la catégorie.'
@@ -1229,7 +1231,7 @@ const AdminProducts = () => {
                                     type="button"
                                     onClick={() => setAsPrimary('existing', index)}
                                     className="flex h-5 w-5 items-center justify-center rounded bg-primary"
-                                    title="Définir comme principale"
+                                    title={t('products.setPrimary')}
                                   >
                                     <Star className="h-3 w-3 text-white" />
                                   </button>
@@ -1298,7 +1300,7 @@ const AdminProducts = () => {
                                     type="button"
                                     onClick={() => setAsPrimary('new', index)}
                                     className="flex h-5 w-5 items-center justify-center rounded bg-primary"
-                                    title="Définir comme principale"
+                                    title={t('products.setPrimary')}
                                   >
                                     <Star className="h-3 w-3 text-white" />
                                   </button>

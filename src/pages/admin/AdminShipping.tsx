@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Loader2, Save, Truck } from 'lucide-react';
 import AdminLayout from '@/components/admin/AdminLayout';
+import { useAdminLocale } from '@/contexts/AdminLocaleContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -31,6 +32,7 @@ function toForm(c: ShippingCarrierDTO): CarrierForm {
 }
 
 const AdminShipping = () => {
+  const { t } = useAdminLocale();
   const queryClient = useQueryClient();
   const { data: carriers = [], isLoading } = useQuery({
     queryKey: ['shipping-carriers-admin'],
@@ -92,7 +94,7 @@ const AdminShipping = () => {
   };
 
   return (
-    <AdminLayout title="Livraison" breadcrumbs={[{ label: 'Livraison' }]}>
+    <AdminLayout title={t('shipping.title')} breadcrumbs={[{ label: t('shipping.title') }]}>
       <div className="mx-auto max-w-3xl space-y-6">
         <div className="flex items-center gap-2">
           <Truck className="h-7 w-7 text-primary" />
@@ -104,7 +106,7 @@ const AdminShipping = () => {
             <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
           </div>
         ) : carriers.length === 0 ? (
-          <EmptyState title="Aucun transporteur" description="Configurez les transporteurs côté plateforme." />
+          <EmptyState title={t('shipping.empty')} description={t('shipping.emptyDesc')} />
         ) : (
           <ul className="space-y-4">
             {carriers.map((c) => {

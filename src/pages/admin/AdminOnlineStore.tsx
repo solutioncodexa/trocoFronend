@@ -11,6 +11,7 @@ import {
   Wand2,
 } from 'lucide-react';
 import AdminLayout from '@/components/admin/AdminLayout';
+import { useAdminLocale } from '@/contexts/AdminLocaleContext';
 import { BoutiqueWorkspaceLinks } from '@/components/admin/BoutiqueWorkspaceLinks';
 import { Button } from '@/components/ui/button';
 import { buildStorefrontUrl } from '@/utils/storefrontUrl';
@@ -52,6 +53,7 @@ const homeClassicLinks = [
 ];
 
 const AdminOnlineStore = () => {
+  const { t } = useAdminLocale();
   const { slug, siteName, store } = useStoreBrand();
   const storefrontUrl = buildStorefrontUrl(slug || store?.slug);
 
@@ -86,8 +88,8 @@ const AdminOnlineStore = () => {
 
   return (
     <AdminLayout
-      title="Boutique en ligne"
-      description="Tout pour personnaliser la vitrine vue par vos clients."
+      title={t('onlineStore.title')}
+      description={t('onlineStore.description')}
       breadcrumbs={[
         { label: 'Tableau de bord', href: '/admin/dashboard' },
         { label: 'Boutique en ligne' },

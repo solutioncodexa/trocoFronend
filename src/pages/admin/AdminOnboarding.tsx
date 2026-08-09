@@ -10,6 +10,7 @@ import {
   Package,
 } from 'lucide-react';
 import AdminLayout from '@/components/admin/AdminLayout';
+import { useAdminLocale } from '@/contexts/AdminLocaleContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -39,6 +40,7 @@ function clampStep(value: number) {
 }
 
 const AdminOnboarding = () => {
+  const { t } = useAdminLocale();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const queryClient = useQueryClient();
@@ -238,10 +240,10 @@ const AdminOnboarding = () => {
 
   return (
     <AdminLayout
-      title="Configurer ma boutique"
-      description="Choisissez votre look et publiez en quelques minutes."
+      title={t('onboarding.title')}
+      description={t('onboarding.description')}
       breadcrumbs={[
-        { label: 'Boutique en ligne', href: '/admin/boutique-en-ligne' },
+        { label: t('appearance.onlineStoreCrumb'), href: '/admin/boutique-en-ligne' },
         { label: 'Assistant' },
       ]}
     >

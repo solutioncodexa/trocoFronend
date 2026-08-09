@@ -1,12 +1,14 @@
 import { useQuery } from '@tanstack/react-query';
 import { TimerReset } from 'lucide-react';
 import AdminLayout from '@/components/admin/AdminLayout';
+import { useAdminLocale } from '@/contexts/AdminLocaleContext';
 import { Badge } from '@/components/ui/badge';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { abandonedCartsApi } from '@/services/api/abandonedCarts';
 import { formatPrice } from '@/utils/formatPrice';
 
 const AdminAbandonedCarts = () => {
+  const { t } = useAdminLocale();
   const { data: carts = [], isLoading } = useQuery({
     queryKey: ['admin-abandoned-carts'],
     queryFn: () => abandonedCartsApi.listAdmin(),
@@ -14,17 +16,17 @@ const AdminAbandonedCarts = () => {
 
   return (
     <AdminLayout
-      title="Paniers abandonnés"
-      breadcrumbs={[{ label: 'Paniers abandonnés' }]}
-      description="Paniers capturés depuis la vitrine avec relance email (si activée)."
+      title={t('abandonedCarts.title')}
+      breadcrumbs={[{ label: t('abandonedCarts.title') }]}
+      description={t('abandonedCarts.description')}
     >
       {isLoading ? (
         <p className="text-sm text-muted-foreground">Chargement…</p>
       ) : carts.length === 0 ? (
         <EmptyState
           icon={TimerReset}
-          title="Aucun panier abandonné"
-          description="Les paniers capturés au checkout (email ou téléphone) apparaîtront ici pour relance."
+          title={t('abandonedCarts.empty')}
+          description={t('abandonedCarts.emptyDesc')}
         />
       ) : (
         <div className="overflow-hidden rounded-xl border border-border">

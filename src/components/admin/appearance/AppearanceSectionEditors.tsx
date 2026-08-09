@@ -19,6 +19,12 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
+import { useAdminLocale } from '@/contexts/AdminLocaleContext';
+import type { AdminMessageKey } from '@/i18n/admin/adminMessages';
+import {
+  appearanceOptDesc,
+  appearanceOptLabel,
+} from '@/i18n/admin/appearanceOptionI18n';
 import {
   StorePageHrefSelect,
   type StorePageLinkOption,
@@ -318,20 +324,105 @@ export function AppearanceSectionEditors({
   onWishlistPreviewModeChange,
   mergeAppearance,
 }: AppearanceSectionEditorsProps) {
+  const { t, locale } = useAdminLocale();
+
+  const localizeOpts = <T extends { key: string; label: string; description?: string }>(
+    group: string,
+    opts: readonly T[],
+  ): T[] =>
+    opts.map((o) => ({
+      ...o,
+      label: appearanceOptLabel(locale, group, o.key, o.label),
+      description:
+        o.description != null
+          ? appearanceOptDesc(locale, group, o.key, o.description)
+          : o.description,
+    }));
+
+  const buttonStyles = localizeOpts('button', BUTTON_STYLES);
+  const cardStyles = localizeOpts('card', CARD_STYLES);
+  const heroStyles = localizeOpts('hero', HERO_STYLES);
+  const footerLayouts = localizeOpts('footerLayout', FOOTER_LAYOUTS);
+  const headerLayouts = localizeOpts('headerLayout', HEADER_LAYOUTS);
+  const cartDensities = localizeOpts('cartDensity', CART_DENSITIES);
+  const cartEmptyStyles = localizeOpts('cartEmpty', CART_EMPTY_STYLES);
+  const checkoutLayouts = localizeOpts('checkoutLayout', CHECKOUT_LAYOUTS);
+  const checkoutCtaEmphasis = localizeOpts('checkoutCta', CHECKOUT_CTA_EMPHASIS);
+  const checkoutSummaryPositions = localizeOpts('checkoutSummary', CHECKOUT_SUMMARY_POSITIONS);
+  const checkoutDensities = localizeOpts('checkoutDensity', CHECKOUT_DENSITIES);
+  const checkoutFormStyles = localizeOpts('checkoutForm', CHECKOUT_FORM_STYLES);
+  const checkoutPaymentStyles = localizeOpts('checkoutPayment', CHECKOUT_PAYMENT_STYLES);
+  const checkoutHeadingAligns = localizeOpts('checkoutHeading', CHECKOUT_HEADING_ALIGNS);
+  const shopFilterLayouts = localizeOpts('shopFilter', SHOP_FILTER_LAYOUTS);
+  const shopGridColumns = localizeOpts('shopGrid', SHOP_GRID_COLUMNS);
+  const shopDensities = localizeOpts('shopDensity', SHOP_DENSITIES);
+  const shopEmptyStyles = localizeOpts('shopEmpty', SHOP_EMPTY_STYLES);
+  const shopFilterMobiles = localizeOpts('shopFilterMobile', SHOP_FILTER_MOBILES);
+  const productGalleryMobiles = localizeOpts('productGalleryMobile', PRODUCT_GALLERY_MOBILES);
+  const homeDensities = localizeOpts('homeDensity', HOME_DENSITIES);
+  const productGalleryLayouts = localizeOpts('productGallery', PRODUCT_GALLERY_LAYOUTS);
+  const productInfoPositions = localizeOpts('productInfo', PRODUCT_INFO_POSITIONS);
+  const cardImageRatios = localizeOpts('cardRatio', CARD_IMAGE_RATIOS);
+  const cardInfoAligns = localizeOpts('cardAlign', CARD_INFO_ALIGNS);
+  const cardHoverEffects = localizeOpts('cardHover', CARD_HOVER_EFFECTS);
+  const wishlistEmptyStyles = localizeOpts('wishlistEmpty', WISHLIST_EMPTY_STYLES);
+  const wishlistGridColumns = localizeOpts('wishlistGrid', WISHLIST_GRID_COLUMNS);
+  const formsLayouts = localizeOpts('formsLayout', FORMS_LAYOUTS);
+  const formsStyles = localizeOpts('formsStyle', FORMS_STYLES);
+  const fontPairs = localizeOpts('font', FONT_PAIRS);
+  const radiusPresets = localizeOpts('radius', RADIUS_PRESETS);
+  const surfacePresets = localizeOpts('surface', SURFACE_PRESETS);
+  const colorSchemes = localizeOpts('scheme', COLOR_SCHEMES);
+  const headerChromePresets = localizeOpts('chrome', HEADER_CHROME_PRESETS);
+
+  const themeLabel = (key: string): string => {
+    const map: Record<string, AdminMessageKey> = {
+      classic: 'appearance.theme.classic',
+      minimal: 'appearance.theme.minimal',
+      bold: 'appearance.theme.bold',
+      elegant: 'appearance.theme.elegant',
+    };
+    return map[key] ? t(map[key]) : key;
+  };
+  const themeDesc = (key: string, fallback: string): string => {
+    const map: Record<string, AdminMessageKey> = {
+      classic: 'appearance.theme.classicDesc',
+      minimal: 'appearance.theme.minimalDesc',
+      bold: 'appearance.theme.boldDesc',
+      elegant: 'appearance.theme.elegantDesc',
+    };
+    return map[key] ? t(map[key]) : fallback;
+  };
+  const lookLabel = (key: string, fallback: string): string => {
+    const map: Record<string, AdminMessageKey> = {
+      editorial: 'appearance.look.editorial',
+      dense: 'appearance.look.dense',
+      boutique: 'appearance.look.boutique',
+      'bold-sale': 'appearance.look.flash',
+    };
+    return map[key] ? t(map[key]) : fallback;
+  };
+  const lookDesc = (key: string, fallback: string): string => {
+    const map: Record<string, AdminMessageKey> = {
+      editorial: 'appearance.look.editorialDesc',
+      dense: 'appearance.look.denseDesc',
+      boutique: 'appearance.look.boutiqueDesc',
+      'bold-sale': 'appearance.look.flashDesc',
+    };
+    return map[key] ? t(map[key]) : fallback;
+  };
+
   switch (section) {
     case 'themes':
       return (
         <div className="space-y-4">
-          <Hint>
-            Chaque thème conserve ses couleurs et réglages. Changer de thème sauvegarde l’actuel ;
-            y revenir le restaure.
-          </Hint>
+          <Hint>{t('appearance.themesHint')}</Hint>
           {mergeAppearance ? (
             <div className="space-y-2">
               <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                Looks complets
+                {t('appearance.looksComplete')}
               </p>
-              <Hint>1 clic applique styles boutique + layout (sans changer le thème de base).</Hint>
+              <Hint>{t('appearance.looksHint')}</Hint>
               <div className="grid grid-cols-2 gap-2">
                 {APPEARANCE_LOOK_PRESETS.map((preset) => (
                   <OptionTile
@@ -343,8 +434,10 @@ export function AppearanceSectionEditors({
                       mergeAppearance(preset.appearance);
                     }}
                   >
-                    <p className="text-xs font-semibold">{preset.label}</p>
-                    <p className="text-[10px] text-muted-foreground">{preset.description}</p>
+                    <p className="text-xs font-semibold">{lookLabel(preset.key, preset.label)}</p>
+                    <p className="text-[10px] text-muted-foreground">
+                      {lookDesc(preset.key, preset.description)}
+                    </p>
                   </OptionTile>
                 ))}
               </div>
@@ -375,26 +468,26 @@ export function AppearanceSectionEditors({
                   />
                   <div className="space-y-2 p-2.5">
                     <div className="flex flex-wrap items-center gap-1.5">
-                      <p className="text-sm font-semibold">{theme.label}</p>
+                      <p className="text-sm font-semibold">{themeLabel(theme.key)}</p>
                       {hasPreset ? (
                         <span className="rounded bg-muted px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-muted-foreground">
-                          Personnalisé
+                          {t('common.customized')}
                         </span>
                       ) : null}
                       {selected ? (
                         <span className="rounded bg-sky-600/15 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-sky-800">
-                          Actif
+                          {t('common.active')}
                         </span>
                       ) : null}
                     </div>
                     <p className="text-[11px] leading-snug text-muted-foreground">
-                      {theme.description}
+                      {themeDesc(theme.key, theme.description)}
                     </p>
                     <div className="flex gap-1.5">
                       <Button type="button" size="sm" variant="outline" className="h-8 flex-1 gap-1 text-xs" asChild>
                         <Link to={designDemoPath(theme.key)} target="_blank" rel="noreferrer">
                           <Eye className="h-3.5 w-3.5" />
-                          Démo
+                          {t('common.demo')}
                         </Link>
                       </Button>
                       <Button
@@ -405,7 +498,11 @@ export function AppearanceSectionEditors({
                         onClick={() => void applyThemeNow(theme.key)}
                         disabled={selected}
                       >
-                        {selected ? 'Actif' : hasPreset ? 'Restaurer' : 'Appliquer'}
+                        {selected
+                          ? t('common.active')
+                          : hasPreset
+                            ? t('common.restore')
+                            : t('common.apply')}
                       </Button>
                     </div>
                   </div>
@@ -419,10 +516,10 @@ export function AppearanceSectionEditors({
     case 'typography':
       return (
         <div className="space-y-4">
-          <Hint>Choisissez une paire Display / Body — aperçu live à gauche.</Hint>
+          <Hint>{t('appearance.typoHint')}</Hint>
           <div className="space-y-2">
-            <GroupTitle>Paires de polices</GroupTitle>
-            {FONT_PAIRS.map((pair) => (
+            <GroupTitle>{t('appearance.fontPairs')}</GroupTitle>
+            {fontPairs.map((pair) => (
               <OptionTile
                 key={pair.key}
                 selected={form.fontPair === pair.key}
@@ -450,9 +547,9 @@ export function AppearanceSectionEditors({
             ))}
           </div>
           <div className="space-y-2">
-            <GroupTitle>Arrondis</GroupTitle>
+            <GroupTitle>{t('appearance.group.radius')}</GroupTitle>
             <div className="grid grid-cols-1 gap-2">
-              {RADIUS_PRESETS.map((preset) => (
+              {radiusPresets.map((preset) => (
                 <OptionTile
                   key={preset.key}
                   selected={form.radiusPreset === preset.key}
@@ -494,9 +591,9 @@ export function AppearanceSectionEditors({
     case 'buttons':
       return (
         <div className="space-y-3">
-          <Hint>Style des boutons CTA — cliquez une carte pour appliquer.</Hint>
+          <Hint>{t('appearance.buttonsHint')}</Hint>
           <div className="grid grid-cols-2 gap-2">
-            {BUTTON_STYLES.map((opt) => (
+            {buttonStyles.map((opt) => (
               <OptionTile
                 key={opt.key}
                 selected={form.appearance.buttonStyle === opt.key}
@@ -524,13 +621,13 @@ export function AppearanceSectionEditors({
     case 'cards':
       return (
         <div className="space-y-4">
-          <Hint>Apparence des fiches produit — style, image, badges, hover.</Hint>
+          <Hint>{t('appearance.cardsHint')}</Hint>
           <div>
             <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-              Style carte
+              {t('appearance.group.cardStyle')}
             </p>
             <div className="grid grid-cols-2 gap-2">
-              {CARD_STYLES.map((opt) => (
+              {cardStyles.map((opt) => (
                 <OptionTile
                   key={opt.key}
                   selected={form.appearance.cardStyle === opt.key}
@@ -564,7 +661,7 @@ export function AppearanceSectionEditors({
               Ratio image
             </p>
             <div className="grid grid-cols-3 gap-2">
-              {CARD_IMAGE_RATIOS.map((opt) => (
+              {cardImageRatios.map((opt) => (
                 <OptionTile
                   key={opt.key}
                   selected={form.appearance.cardImageRatio === opt.key}
@@ -588,7 +685,7 @@ export function AppearanceSectionEditors({
               Alignement infos
             </p>
             <div className="grid grid-cols-2 gap-2">
-              {CARD_INFO_ALIGNS.map((opt) => (
+              {cardInfoAligns.map((opt) => (
                 <OptionTile
                   key={opt.key}
                   selected={form.appearance.cardInfoAlign === opt.key}
@@ -605,7 +702,7 @@ export function AppearanceSectionEditors({
               Effet survol
             </p>
             <div className="grid grid-cols-3 gap-2">
-              {CARD_HOVER_EFFECTS.map((opt) => (
+              {cardHoverEffects.map((opt) => (
                 <OptionTile
                   key={opt.key}
                   selected={form.appearance.cardHoverEffect === opt.key}
@@ -646,9 +743,9 @@ export function AppearanceSectionEditors({
     case 'hero':
       return (
         <div className="space-y-4">
-          <Hint>Disposition du bandeau d’accueil — comme les layouts Shopify.</Hint>
+          <Hint>{t('appearance.heroHint')}</Hint>
           <div className="grid grid-cols-2 gap-2">
-            {HERO_STYLES.map((opt) => (
+            {heroStyles.map((opt) => (
               <OptionTile
                 key={opt.key}
                 selected={form.appearance.heroStyle === opt.key}
@@ -661,7 +758,7 @@ export function AppearanceSectionEditors({
               </OptionTile>
             ))}
           </div>
-          <Field label="Libellé CTA" htmlFor="heroCtaLabel">
+          <Field label={t('appearance.ctaLabel')} htmlFor="heroCtaLabel">
             <Input
               id="heroCtaLabel"
               className="h-9"
@@ -671,7 +768,7 @@ export function AppearanceSectionEditors({
           </Field>
           <ToggleRow
             id="heroShowBenefits"
-            label="Bande bénéfices"
+            label={t('appearance.benefitsStrip')}
             checked={form.appearance.heroShowBenefits}
             onCheckedChange={(v) => patchAppearance('heroShowBenefits', v)}
           />
@@ -681,10 +778,10 @@ export function AppearanceSectionEditors({
     case 'backgrounds':
       return (
         <div className="space-y-4">
-          <Hint>« Auto » utilise la couleur du thème actif. Ou choisissez une surface prête.</Hint>
-          <GroupTitle>Surfaces rapides</GroupTitle>
+          <Hint>{t('appearance.autoSurfaceHint')}</Hint>
+          <GroupTitle>{t('appearance.group.surfaces')}</GroupTitle>
           <div className="grid grid-cols-2 gap-2">
-            {SURFACE_PRESETS.map((preset) => {
+            {surfacePresets.map((preset) => {
               const selected =
                 form.appearance.pageBgColor === preset.pageBgColor &&
                 form.appearance.headerBgColor === preset.headerBgColor &&
@@ -731,7 +828,7 @@ export function AppearanceSectionEditors({
               );
             })}
           </div>
-          <GroupTitle>Fonds</GroupTitle>
+          <GroupTitle>{t('appearance.group.backgrounds')}</GroupTitle>
           {(
             [
               ['headerBgColor', 'Header', '#0f0c0c'],
@@ -748,35 +845,35 @@ export function AppearanceSectionEditors({
               onChange={(v) => patchAppearance(key, v)}
             />
           ))}
-          <GroupTitle>Textes</GroupTitle>
+          <GroupTitle>{t('appearance.group.texts')}</GroupTitle>
           <ColorControl
-            label="Texte header"
+            label={t('appearance.headerText')}
             value={form.appearance.headerTextColor}
             fallback="#ffffff"
             allowAuto
             onChange={(v) => patchAppearance('headerTextColor', v)}
           />
           <ColorControl
-            label="Texte footer"
+            label={t('appearance.footerText')}
             value={form.appearance.footerTextColor}
             fallback="#ffffff"
             allowAuto
             onChange={(v) => patchAppearance('footerTextColor', v)}
           />
-          <GroupTitle>Scrollbar</GroupTitle>
+          <GroupTitle>{t('appearance.group.scrollbar')}</GroupTitle>
           <Hint>
             Couleurs de la barre de défilement (page et zones internes). « Auto » = thème. Faites
             défiler la zone ci-dessous ou l’aperçu live pour juger le rendu.
           </Hint>
           <ColorControl
-            label="Piste"
+            label={t('appearance.track')}
             value={form.appearance.scrollbarTrackColor}
             fallback="#e5e7eb"
             allowAuto
             onChange={(v) => patchAppearance('scrollbarTrackColor', v)}
           />
           <ColorControl
-            label="Curseur"
+            label={t('appearance.thumb')}
             value={form.appearance.scrollbarThumbColor}
             fallback="#0d9488"
             allowAuto
@@ -832,9 +929,9 @@ export function AppearanceSectionEditors({
             </Link>
             .
           </Hint>
-          <GroupTitle>Disposition</GroupTitle>
+          <GroupTitle>{t('appearance.group.layout')}</GroupTitle>
           <div className="grid grid-cols-1 gap-2">
-            {HEADER_LAYOUTS.map((opt) => (
+            {headerLayouts.map((opt) => (
               <OptionTile
                 key={opt.key}
                 selected={form.appearance.headerLayout === opt.key}
@@ -847,9 +944,9 @@ export function AppearanceSectionEditors({
               </OptionTile>
             ))}
           </div>
-          <GroupTitle>Style header</GroupTitle>
+          <GroupTitle>{t('appearance.group.headerStyle')}</GroupTitle>
           <div className="grid grid-cols-2 gap-2">
-            {HEADER_CHROME_PRESETS.map((preset) => {
+            {headerChromePresets.map((preset) => {
               const selected =
                 form.appearance.headerBgColor === preset.headerBgColor &&
                 form.appearance.headerTextColor === preset.headerTextColor;
@@ -892,7 +989,7 @@ export function AppearanceSectionEditors({
               .
             </div>
           ) : null}
-          <GroupTitle>Éléments</GroupTitle>
+          <GroupTitle>{t('appearance.group.elements')}</GroupTitle>
           <div className="grid grid-cols-2 gap-2">
             {(
               [
@@ -940,8 +1037,8 @@ export function AppearanceSectionEditors({
             className="mt-2 flex items-center justify-between gap-2"
           >
             <div>
-              <p className="text-sm font-semibold">Header sticky</p>
-              <p className="text-[10px] text-muted-foreground">Reste visible au scroll.</p>
+              <p className="text-sm font-semibold">{t('appearance.headerSticky')}</p>
+              <p className="text-[10px] text-muted-foreground">{t('appearance.headerStickyDesc')}</p>
             </div>
             <Switch
               checked={form.appearance.headerSticky}
@@ -952,7 +1049,7 @@ export function AppearanceSectionEditors({
 
           <div className="space-y-2 border-t border-border/60 pt-3">
             <div className="flex items-center justify-between gap-2">
-              <GroupTitle>Bandeaux promo</GroupTitle>
+              <GroupTitle>{t('appearance.group.promoBars')}</GroupTitle>
               <Button type="button" variant="outline" size="sm" className="h-7 px-2 text-[11px]" asChild>
                 <Link to="/admin/top-bar-messages">Gérer</Link>
               </Button>
@@ -988,7 +1085,7 @@ export function AppearanceSectionEditors({
                       {msg.message}
                     </div>
                     <div className="flex flex-wrap items-center gap-1.5 px-2 py-1.5 text-[10px] text-muted-foreground">
-                      <span>{msg.isActive ? 'Actif' : 'Inactif'}</span>
+                      <span>{msg.isActive ? t('common.active') : t('common.inactive')}</span>
                       <span>·</span>
                       <span>{msg.displayDurationSeconds ?? 7}s</span>
                       <span>·</span>
@@ -1007,13 +1104,13 @@ export function AppearanceSectionEditors({
             ) : null}
             <ToggleRow
               id="headerPromoEnabled"
-              label="Bandeau fixe de secours (Apparence)"
+              label={t('appearance.fallbackBar')}
               checked={form.appearance.headerPromoEnabled}
               onCheckedChange={(v) => patchAppearance('headerPromoEnabled', v)}
             />
             {form.appearance.headerPromoEnabled ? (
               <div className="space-y-2">
-                <Field label="Texte de secours" htmlFor="headerPromoText">
+                <Field label={t('appearance.fallbackText')} htmlFor="headerPromoText">
                   <Input
                     id="headerPromoText"
                     className="h-9"
@@ -1022,14 +1119,14 @@ export function AppearanceSectionEditors({
                   />
                 </Field>
                 <ColorControl
-                  label="Fond (secours)"
+                  label={t('appearance.fallbackBg')}
                   value={form.appearance.headerPromoBgColor}
                   fallback={form.primaryColor || '#0d9488'}
                   allowAuto
                   onChange={(v) => patchAppearance('headerPromoBgColor', v)}
                 />
                 <ColorControl
-                  label="Texte (secours)"
+                  label={t('appearance.fallbackFg')}
                   value={form.appearance.headerPromoTextColor}
                   fallback="#ffffff"
                   allowAuto
@@ -1042,7 +1139,7 @@ export function AppearanceSectionEditors({
           {form.appearance.headerShowNav && !megaMenuEnabled ? (
             <div className="space-y-3 border-t border-border/60 pt-3">
               <div className="flex items-center justify-between gap-2">
-                <GroupTitle>Boutons système</GroupTitle>
+                <GroupTitle>{t('appearance.group.systemButtons')}</GroupTitle>
                 <Button type="button" variant="outline" size="sm" className="h-7 gap-1 px-2 text-[11px]" asChild>
                   <Link to="/admin/pages">
                     <FileText className="h-3 w-3" />
@@ -1072,7 +1169,7 @@ export function AppearanceSectionEditors({
                         }
                       />
                     </div>
-                    <Field label="Texte" htmlFor={item.labelKey}>
+                    <Field label={t('appearance.text')} htmlFor={item.labelKey}>
                       <Input
                         id={item.labelKey}
                         className="h-8 text-xs"
@@ -1083,7 +1180,7 @@ export function AppearanceSectionEditors({
                         }
                       />
                     </Field>
-                    <Field label="Destination" htmlFor={`${item.hrefKey}-page`}>
+                    <Field label={t('appearance.destination')} htmlFor={`${item.hrefKey}-page`}>
                       <StorePageHrefSelect
                         id={`${item.hrefKey}-page`}
                         className="mt-0"
@@ -1105,7 +1202,7 @@ export function AppearanceSectionEditors({
                         }}
                       />
                     </Field>
-                    <Field label="Lien manuel" htmlFor={item.hrefKey}>
+                    <Field label={t('appearance.manualLink')} htmlFor={item.hrefKey}>
                       <Input
                         id={item.hrefKey}
                         className="h-8 font-mono text-xs"
@@ -1121,7 +1218,7 @@ export function AppearanceSectionEditors({
                 );
               })}
 
-              <GroupTitle>Pages personnalisées</GroupTitle>
+              <GroupTitle>{t('appearance.group.customPages')}</GroupTitle>
               {customHeaderPages.length === 0 ? (
                 <p className="rounded-lg border border-dashed border-border bg-muted/20 px-2.5 py-2 text-[11px] text-muted-foreground">
                   Aucune page.{' '}
@@ -1169,7 +1266,7 @@ export function AppearanceSectionEditors({
     case 'footer':
       return (
         <div className="space-y-3">
-          <Hint>Blocs visibles et structure du pied de page.</Hint>
+          <Hint>{t('appearance.footerHint')}</Hint>
           <div className="grid grid-cols-1 gap-2">
             {(
               [
@@ -1196,9 +1293,9 @@ export function AppearanceSectionEditors({
               </OptionTile>
             ))}
           </div>
-          <GroupTitle>Disposition</GroupTitle>
+          <GroupTitle>{t('appearance.group.layout')}</GroupTitle>
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-1">
-            {FOOTER_LAYOUTS.map((opt) => (
+            {footerLayouts.map((opt) => (
               <OptionTile
                 key={opt.key}
                 selected={form.appearance.footerLayout === opt.key}
@@ -1217,8 +1314,8 @@ export function AppearanceSectionEditors({
     case 'identity':
       return (
         <div className="space-y-4">
-          <Hint>Nom, logo, favicon et couleurs de marque.</Hint>
-          <Field label="Nom du site" htmlFor="siteName">
+          <Hint>{t('appearance.identityHint')}</Hint>
+          <Field label={t('appearance.siteName')} htmlFor="siteName">
             <Input
               id="siteName"
               className="h-9"
@@ -1226,7 +1323,7 @@ export function AppearanceSectionEditors({
               onChange={(e) => patch('siteName', e.target.value)}
             />
           </Field>
-          <Field label="Accroche" htmlFor="tagline">
+          <Field label={t('appearance.tagline')} htmlFor="tagline">
             <Input
               id="tagline"
               className="h-9"
@@ -1234,7 +1331,7 @@ export function AppearanceSectionEditors({
               onChange={(e) => patch('tagline', e.target.value)}
             />
           </Field>
-          <Field label="À propos" htmlFor="aboutText">
+          <Field label={t('appearance.about')} htmlFor="aboutText">
             <Textarea
               id="aboutText"
               className="min-h-[88px] text-sm"
@@ -1243,7 +1340,7 @@ export function AppearanceSectionEditors({
             />
           </Field>
 
-          <GroupTitle>Logo</GroupTitle>
+          <GroupTitle>{t('appearance.group.logo')}</GroupTitle>
           <div className="flex h-16 items-center justify-center overflow-hidden rounded-lg border border-border bg-muted/25">
             {form.logoUrl ? (
               <img
@@ -1298,8 +1395,8 @@ export function AppearanceSectionEditors({
             ) : null}
           </div>
 
-          <GroupTitle>Favicon</GroupTitle>
-          <Hint>Icône de l’onglet du navigateur (.png, .ico, .svg — idéal 32×32 ou 64×64).</Hint>
+          <GroupTitle>{t('appearance.group.favicon')}</GroupTitle>
+          <Hint>{t('appearance.faviconHint')}</Hint>
           <div className="flex h-16 items-center justify-center overflow-hidden rounded-lg border border-border bg-muted/25">
             {form.faviconUrl ? (
               <img
@@ -1354,10 +1451,10 @@ export function AppearanceSectionEditors({
             ) : null}
           </div>
 
-          <GroupTitle>Schémas de couleurs</GroupTitle>
-          <Hint>Un clic applique primaire + secondaire (comme les color schemes Shopify).</Hint>
+          <GroupTitle>{t('appearance.group.colorSchemes')}</GroupTitle>
+          <Hint>{t('appearance.colorSchemesHint')}</Hint>
           <div className="grid grid-cols-2 gap-2">
-            {COLOR_SCHEMES.map((scheme) => {
+            {colorSchemes.map((scheme) => {
               const selected =
                 form.primaryColor.toUpperCase() === scheme.primaryColor.toUpperCase() &&
                 form.secondaryColor.toUpperCase() === scheme.secondaryColor.toUpperCase();
@@ -1383,15 +1480,15 @@ export function AppearanceSectionEditors({
               );
             })}
           </div>
-          <GroupTitle>Personnaliser</GroupTitle>
+          <GroupTitle>{t('appearance.group.customize')}</GroupTitle>
           <ColorControl
-            label="Primaire"
+            label={t('appearance.primary')}
             value={form.primaryColor}
             fallback="#0d9488"
             onChange={(v) => patch('primaryColor', v)}
           />
           <ColorControl
-            label="Secondaire"
+            label={t('appearance.secondary')}
             value={form.secondaryColor}
             fallback="#0a1628"
             onChange={(v) => patch('secondaryColor', v)}
@@ -1402,8 +1499,8 @@ export function AppearanceSectionEditors({
     case 'cart':
       return (
         <div className="space-y-4">
-          <Hint>Mise en page de la page panier — aperçu live au centre.</Hint>
-          <GroupTitle>Aperçu</GroupTitle>
+          <Hint>{t('appearance.cartHint')}</Hint>
+          <GroupTitle>{t('appearance.group.preview')}</GroupTitle>
           <div className="grid grid-cols-2 gap-2">
             {(
               [
@@ -1422,9 +1519,9 @@ export function AppearanceSectionEditors({
               </OptionTile>
             ))}
           </div>
-          <GroupTitle>Densité</GroupTitle>
+          <GroupTitle>{t('appearance.group.density')}</GroupTitle>
           <div className="grid grid-cols-1 gap-2">
-            {CART_DENSITIES.map((opt) => (
+            {cartDensities.map((opt) => (
               <OptionTile
                 key={opt.key}
                 selected={form.appearance.cartDensity === opt.key}
@@ -1440,10 +1537,10 @@ export function AppearanceSectionEditors({
               </OptionTile>
             ))}
           </div>
-          <GroupTitle>Panier vide</GroupTitle>
-          <Hint>Cliquez un style — l’aperçu passe automatiquement en « Vide ».</Hint>
+          <GroupTitle>{t('appearance.group.emptyCart')}</GroupTitle>
+          <Hint>{t('appearance.cartEmptyHint')}</Hint>
           <div className="grid grid-cols-3 gap-2">
-            {CART_EMPTY_STYLES.map((opt) => (
+            {cartEmptyStyles.map((opt) => (
               <OptionTile
                 key={opt.key}
                 selected={form.appearance.cartEmptyStyle === opt.key}
@@ -1466,7 +1563,7 @@ export function AppearanceSectionEditors({
             className="flex items-center justify-between gap-2"
           >
             <div>
-              <p className="text-xs font-semibold">Cross-sell</p>
+              <p className="text-xs font-semibold">{t('appearance.crossSell')}</p>
               <p className="text-[10px] text-muted-foreground">
                 Produits complémentaires sous le panier
               </p>
@@ -1477,7 +1574,7 @@ export function AppearanceSectionEditors({
               onClick={(e) => e.stopPropagation()}
             />
           </OptionTile>
-          <Field label="Libellé CTA" htmlFor="cartCtaLabel">
+          <Field label={t('appearance.ctaLabel')} htmlFor="cartCtaLabel">
             <Input
               id="cartCtaLabel"
               className="h-9"
@@ -1491,10 +1588,10 @@ export function AppearanceSectionEditors({
     case 'checkout':
       return (
         <div className="space-y-4">
-          <Hint>Parcours de commande — visible dans l’aperçu Checkout.</Hint>
-          <GroupTitle>Disposition</GroupTitle>
+          <Hint>{t('appearance.checkoutHint')}</Hint>
+          <GroupTitle>{t('appearance.group.layout')}</GroupTitle>
           <div className="grid grid-cols-2 gap-2">
-            {CHECKOUT_LAYOUTS.map((opt) => (
+            {checkoutLayouts.map((opt) => (
               <OptionTile
                 key={opt.key}
                 selected={form.appearance.checkoutLayout === opt.key}
@@ -1507,9 +1604,9 @@ export function AppearanceSectionEditors({
               </OptionTile>
             ))}
           </div>
-          <GroupTitle>Position du récap</GroupTitle>
+          <GroupTitle>{t('appearance.group.summaryPos')}</GroupTitle>
           <div className="grid grid-cols-3 gap-2">
-            {CHECKOUT_SUMMARY_POSITIONS.map((opt) => (
+            {checkoutSummaryPositions.map((opt) => (
               <OptionTile
                 key={opt.key}
                 selected={form.appearance.checkoutSummaryPosition === opt.key}
@@ -1521,9 +1618,9 @@ export function AppearanceSectionEditors({
               </OptionTile>
             ))}
           </div>
-          <GroupTitle>Densité</GroupTitle>
+          <GroupTitle>{t('appearance.group.density')}</GroupTitle>
           <div className="grid grid-cols-3 gap-2">
-            {CHECKOUT_DENSITIES.map((opt) => (
+            {checkoutDensities.map((opt) => (
               <OptionTile
                 key={opt.key}
                 selected={form.appearance.checkoutDensity === opt.key}
@@ -1535,9 +1632,9 @@ export function AppearanceSectionEditors({
               </OptionTile>
             ))}
           </div>
-          <GroupTitle>Style formulaire</GroupTitle>
+          <GroupTitle>{t('appearance.group.formStyle')}</GroupTitle>
           <div className="grid grid-cols-3 gap-2">
-            {CHECKOUT_FORM_STYLES.map((opt) => (
+            {checkoutFormStyles.map((opt) => (
               <OptionTile
                 key={opt.key}
                 selected={form.appearance.checkoutFormStyle === opt.key}
@@ -1556,9 +1653,9 @@ export function AppearanceSectionEditors({
               </OptionTile>
             ))}
           </div>
-          <GroupTitle>Style paiements</GroupTitle>
+          <GroupTitle>{t('appearance.group.paymentStyle')}</GroupTitle>
           <div className="grid grid-cols-3 gap-2">
-            {CHECKOUT_PAYMENT_STYLES.map((opt) => (
+            {checkoutPaymentStyles.map((opt) => (
               <OptionTile
                 key={opt.key}
                 selected={form.appearance.checkoutPaymentStyle === opt.key}
@@ -1570,9 +1667,9 @@ export function AppearanceSectionEditors({
               </OptionTile>
             ))}
           </div>
-          <GroupTitle>Titre</GroupTitle>
+          <GroupTitle>{t('appearance.group.title')}</GroupTitle>
           <div className="grid grid-cols-2 gap-2">
-            {CHECKOUT_HEADING_ALIGNS.map((opt) => (
+            {checkoutHeadingAligns.map((opt) => (
               <OptionTile
                 key={opt.key}
                 selected={form.appearance.checkoutHeadingAlign === opt.key}
@@ -1598,9 +1695,9 @@ export function AppearanceSectionEditors({
               </OptionTile>
             ))}
           </div>
-          <GroupTitle>Bouton de paiement</GroupTitle>
+          <GroupTitle>{t('appearance.group.payButton')}</GroupTitle>
           <div className="grid grid-cols-2 gap-2">
-            {CHECKOUT_CTA_EMPHASIS.map((opt) => (
+            {checkoutCtaEmphasis.map((opt) => (
               <OptionTile
                 key={opt.key}
                 selected={form.appearance.checkoutCtaEmphasis === opt.key}
@@ -1623,7 +1720,7 @@ export function AppearanceSectionEditors({
               </OptionTile>
             ))}
           </div>
-          <GroupTitle>Options</GroupTitle>
+          <GroupTitle>{t('appearance.group.options')}</GroupTitle>
           {(
             [
               [
@@ -1665,7 +1762,7 @@ export function AppearanceSectionEditors({
               />
             </OptionTile>
           ))}
-          <Field label="Libellé CTA (vide = auto selon paiement)" htmlFor="checkoutCtaLabel">
+          <Field label={t('appearance.ctaLabel')} htmlFor="checkoutCtaLabel">
             <Input
               id="checkoutCtaLabel"
               className="h-9"
@@ -1680,13 +1777,13 @@ export function AppearanceSectionEditors({
     case 'shop':
       return (
         <div className="space-y-4">
-          <Hint>Catalogue boutique — filtres, grille, densité, état vide.</Hint>
+          <Hint>{t('appearance.shopHint')}</Hint>
           <div>
             <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
               Disposition filtres
             </p>
             <div className="grid grid-cols-3 gap-2">
-              {SHOP_FILTER_LAYOUTS.map((opt) => (
+              {shopFilterLayouts.map((opt) => (
                 <OptionTile
                   key={opt.key}
                   selected={form.appearance.shopFilterLayout === opt.key}
@@ -1705,7 +1802,7 @@ export function AppearanceSectionEditors({
               Colonnes grille
             </p>
             <div className="grid grid-cols-3 gap-2">
-              {SHOP_GRID_COLUMNS.map((opt) => (
+              {shopGridColumns.map((opt) => (
                 <OptionTile
                   key={opt.key}
                   selected={form.appearance.shopGridColumns === opt.key}
@@ -1722,7 +1819,7 @@ export function AppearanceSectionEditors({
               Densité
             </p>
             <div className="grid grid-cols-3 gap-2">
-              {SHOP_DENSITIES.map((opt) => (
+              {shopDensities.map((opt) => (
                 <OptionTile
                   key={opt.key}
                   selected={form.appearance.shopDensity === opt.key}
@@ -1739,7 +1836,7 @@ export function AppearanceSectionEditors({
               Catalogue vide
             </p>
             <div className="grid grid-cols-3 gap-2">
-              {SHOP_EMPTY_STYLES.map((opt) => (
+              {shopEmptyStyles.map((opt) => (
                 <OptionTile
                   key={opt.key}
                   selected={form.appearance.shopEmptyStyle === opt.key}
@@ -1778,7 +1875,7 @@ export function AppearanceSectionEditors({
               Filtres mobile
             </p>
             <div className="grid grid-cols-3 gap-2">
-              {SHOP_FILTER_MOBILES.map((opt) => (
+              {shopFilterMobiles.map((opt) => (
                 <OptionTile
                   key={opt.key}
                   selected={form.appearance.shopFilterMobile === opt.key}
@@ -1790,7 +1887,7 @@ export function AppearanceSectionEditors({
               ))}
             </div>
           </div>
-          <Field label="Titre boutique" htmlFor="shopTitle">
+          <Field label={t('appearance.shopTitle')} htmlFor="shopTitle">
             <Input
               id="shopTitle"
               className="h-9"
@@ -1798,7 +1895,7 @@ export function AppearanceSectionEditors({
               onChange={(e) => patchAppearance('shopTitle', e.target.value)}
             />
           </Field>
-          <Field label="Sous-titre" htmlFor="shopSubtitle">
+          <Field label={t('appearance.subtitle')} htmlFor="shopSubtitle">
             <Textarea
               id="shopSubtitle"
               className="min-h-[64px] text-sm"
@@ -1806,7 +1903,7 @@ export function AppearanceSectionEditors({
               onChange={(e) => patchAppearance('shopSubtitle', e.target.value)}
             />
           </Field>
-          <Field label="Titre catalogue vide" htmlFor="shopEmptyTitle">
+          <Field label={t('appearance.shopEmptyTitle')} htmlFor="shopEmptyTitle">
             <Input
               id="shopEmptyTitle"
               className="h-9"
@@ -1814,7 +1911,7 @@ export function AppearanceSectionEditors({
               onChange={(e) => patchAppearance('shopEmptyTitle', e.target.value)}
             />
           </Field>
-          <Field label="Description vide" htmlFor="shopEmptyDescription">
+          <Field label={t('appearance.shopEmptyDesc')} htmlFor="shopEmptyDescription">
             <Textarea
               id="shopEmptyDescription"
               className="min-h-[64px] text-sm"
@@ -1822,7 +1919,7 @@ export function AppearanceSectionEditors({
               onChange={(e) => patchAppearance('shopEmptyDescription', e.target.value)}
             />
           </Field>
-          <Field label="CTA catalogue vide" htmlFor="shopEmptyCtaLabel">
+          <Field label={t('appearance.shopEmptyCta')} htmlFor="shopEmptyCtaLabel">
             <Input
               id="shopEmptyCtaLabel"
               className="h-9"
@@ -1836,13 +1933,13 @@ export function AppearanceSectionEditors({
     case 'product':
       return (
         <div className="space-y-4">
-          <Hint>Fiche produit — galerie, buy box, produits liés.</Hint>
+          <Hint>{t('appearance.productHint')}</Hint>
           <div>
             <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
               Galerie
             </p>
             <div className="grid grid-cols-3 gap-2">
-              {PRODUCT_GALLERY_LAYOUTS.map((opt) => (
+              {productGalleryLayouts.map((opt) => (
                 <OptionTile
                   key={opt.key}
                   selected={form.appearance.productGalleryLayout === opt.key}
@@ -1861,7 +1958,7 @@ export function AppearanceSectionEditors({
               Galerie mobile
             </p>
             <div className="grid grid-cols-3 gap-2">
-              {PRODUCT_GALLERY_MOBILES.map((opt) => (
+              {productGalleryMobiles.map((opt) => (
                 <OptionTile
                   key={opt.key}
                   selected={form.appearance.productGalleryMobile === opt.key}
@@ -1878,7 +1975,7 @@ export function AppearanceSectionEditors({
               Position infos
             </p>
             <div className="grid grid-cols-2 gap-2">
-              {PRODUCT_INFO_POSITIONS.map((opt) => (
+              {productInfoPositions.map((opt) => (
                 <OptionTile
                   key={opt.key}
                   selected={form.appearance.productInfoPosition === opt.key}
@@ -1913,7 +2010,7 @@ export function AppearanceSectionEditors({
               </OptionTile>
             ))}
           </div>
-          <Field label="Libellé CTA principal" htmlFor="productCtaLabel">
+          <Field label={t('appearance.productCta')} htmlFor="productCtaLabel">
             <Input
               id="productCtaLabel"
               className="h-9"
@@ -1927,7 +2024,7 @@ export function AppearanceSectionEditors({
     case 'wishlist':
       return (
         <div className="space-y-4">
-          <Hint>Page favoris — grille et état vide.</Hint>
+          <Hint>{t('appearance.wishlistHint')}</Hint>
           {onWishlistPreviewModeChange ? (
             <div>
               <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
@@ -1956,7 +2053,7 @@ export function AppearanceSectionEditors({
               Colonnes
             </p>
             <div className="grid grid-cols-3 gap-2">
-              {WISHLIST_GRID_COLUMNS.map((opt) => (
+              {wishlistGridColumns.map((opt) => (
                 <OptionTile
                   key={opt.key}
                   selected={form.appearance.wishlistGridColumns === opt.key}
@@ -1973,7 +2070,7 @@ export function AppearanceSectionEditors({
               Liste vide
             </p>
             <div className="grid grid-cols-3 gap-2">
-              {WISHLIST_EMPTY_STYLES.map((opt) => (
+              {wishlistEmptyStyles.map((opt) => (
                 <OptionTile
                   key={opt.key}
                   selected={form.appearance.wishlistEmptyStyle === opt.key}
@@ -1985,7 +2082,7 @@ export function AppearanceSectionEditors({
               ))}
             </div>
           </div>
-          <Field label="Titre état vide" htmlFor="wishlistEmptyTitle">
+          <Field label={t('appearance.emptyTitle')} htmlFor="wishlistEmptyTitle">
             <Input
               id="wishlistEmptyTitle"
               className="h-9"
@@ -1993,7 +2090,7 @@ export function AppearanceSectionEditors({
               onChange={(e) => patchAppearance('wishlistEmptyTitle', e.target.value)}
             />
           </Field>
-          <Field label="Libellé CTA vide" htmlFor="wishlistEmptyCtaLabel">
+          <Field label={t('appearance.emptyCta')} htmlFor="wishlistEmptyCtaLabel">
             <Input
               id="wishlistEmptyCtaLabel"
               className="h-9"
@@ -2007,13 +2104,13 @@ export function AppearanceSectionEditors({
     case 'forms':
       return (
         <div className="space-y-4">
-          <Hint>Contact, Sur-mesure et Devis — même logique visuelle.</Hint>
+          <Hint>{t('appearance.formsHint')}</Hint>
           <div>
             <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
               Disposition
             </p>
             <div className="grid grid-cols-3 gap-2">
-              {FORMS_LAYOUTS.map((opt) => (
+              {formsLayouts.map((opt) => (
                 <OptionTile
                   key={opt.key}
                   selected={form.appearance.formsLayout === opt.key}
@@ -2032,7 +2129,7 @@ export function AppearanceSectionEditors({
               Style panneau
             </p>
             <div className="grid grid-cols-3 gap-2">
-              {FORMS_STYLES.map((opt) => (
+              {formsStyles.map((opt) => (
                 <OptionTile
                   key={opt.key}
                   selected={form.appearance.formsStyle === opt.key}
@@ -2066,7 +2163,7 @@ export function AppearanceSectionEditors({
               </OptionTile>
             ))}
           </div>
-          <Field label="Libellé CTA (vide = défaut page)" htmlFor="formsCtaLabel">
+          <Field label={t('appearance.formsCta')} htmlFor="formsCtaLabel">
             <Input
               id="formsCtaLabel"
               className="h-9"
@@ -2081,8 +2178,8 @@ export function AppearanceSectionEditors({
     case 'notFound':
       return (
         <div className="space-y-4">
-          <Hint>Page 404 — titres et CTA de secours.</Hint>
-          <Field label="Titre" htmlFor="notFoundTitle">
+          <Hint>{t('appearance.notFoundHint')}</Hint>
+          <Field label={t('appearance.titleField')} htmlFor="notFoundTitle">
             <Input
               id="notFoundTitle"
               className="h-9"
@@ -2090,7 +2187,7 @@ export function AppearanceSectionEditors({
               onChange={(e) => patchAppearance('notFoundTitle', e.target.value)}
             />
           </Field>
-          <Field label="Message" htmlFor="notFoundMessage">
+          <Field label={t('appearance.message')} htmlFor="notFoundMessage">
             <Textarea
               id="notFoundMessage"
               className="min-h-[72px] text-sm"
@@ -2098,7 +2195,7 @@ export function AppearanceSectionEditors({
               onChange={(e) => patchAppearance('notFoundMessage', e.target.value)}
             />
           </Field>
-          <Field label="Libellé CTA" htmlFor="notFoundCtaLabel">
+          <Field label={t('appearance.ctaLabel')} htmlFor="notFoundCtaLabel">
             <Input
               id="notFoundCtaLabel"
               className="h-9"
@@ -2106,7 +2203,7 @@ export function AppearanceSectionEditors({
               onChange={(e) => patchAppearance('notFoundCtaLabel', e.target.value)}
             />
           </Field>
-          <Field label="Lien CTA" htmlFor="notFoundCtaHref">
+          <Field label={t('appearance.ctaHref')} htmlFor="notFoundCtaHref">
             <Input
               id="notFoundCtaHref"
               className="h-9"
@@ -2133,13 +2230,13 @@ export function AppearanceSectionEditors({
             </div>
           ) : (
             <>
-              <Hint>Activez les blocs d’accueil classiques — un clic suffit.</Hint>
+              <Hint>{t('appearance.homeBlocksHint')}</Hint>
               <div>
                 <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
                   Densité sections
                 </p>
                 <div className="grid grid-cols-3 gap-2">
-                  {HOME_DENSITIES.map((opt) => (
+                  {homeDensities.map((opt) => (
                     <OptionTile
                       key={opt.key}
                       selected={form.appearance.homeDensity === opt.key}

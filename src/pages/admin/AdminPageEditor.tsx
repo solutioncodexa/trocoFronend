@@ -12,6 +12,7 @@ import {
   Sparkles,
 } from 'lucide-react';
 import AdminLayout from '@/components/admin/AdminLayout';
+import { useAdminLocale } from '@/contexts/AdminLocaleContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -67,6 +68,7 @@ function toLocalInput(iso?: string | null) {
 }
 
 const AdminPageEditor = () => {
+  const { t } = useAdminLocale();
   const { isAdmin, hasPermission } = useAdmin();
   const canPublish = isAdmin || hasPermission(PERMISSIONS.PAGES_PUBLISH);
   const { slug: tenantSlug, store } = useTenant();
@@ -383,7 +385,7 @@ const AdminPageEditor = () => {
 
   if (!Number.isFinite(pageId)) {
     return (
-      <AdminLayout title="Page">
+      <AdminLayout title={t('pageEditor.title')}>
         <p className="p-6">Page invalide</p>
       </AdminLayout>
     );
@@ -391,7 +393,7 @@ const AdminPageEditor = () => {
 
   if (isLoading) {
     return (
-      <AdminLayout title="Éditer la page">
+      <AdminLayout title={t('pageEditor.edit')}>
         <div className="p-8 text-center text-muted-foreground">Chargement…</div>
       </AdminLayout>
     );
@@ -399,7 +401,7 @@ const AdminPageEditor = () => {
 
   if (error || !data) {
     return (
-      <AdminLayout title="Éditer la page">
+      <AdminLayout title={t('pageEditor.edit')}>
         <div className="p-6">
           <p className="text-destructive">Page introuvable</p>
           <Button className="mt-4" onClick={() => navigate('/admin/pages')}>
@@ -413,9 +415,9 @@ const AdminPageEditor = () => {
   return (
     <AdminLayout
       workspace
-      title={`Constructeur — ${data.title}`}
+      title={t('pageEditor.builder', { title: data.title })}
       breadcrumbs={[
-        { label: 'Boutique en ligne', href: '/admin/boutique-en-ligne' },
+        { label: t('appearance.onlineStoreCrumb'), href: '/admin/boutique-en-ligne' },
         { label: 'Pages', href: '/admin/pages' },
         { label: data.title },
       ]}
@@ -490,7 +492,7 @@ const AdminPageEditor = () => {
                 variant="ghost"
                 size="sm"
                 className="h-8 gap-1.5"
-                title="Régénérer le lien d’aperçu"
+                title={t('pageEditor.regeneratePreview')}
                 disabled={rotatePreviewMutation.isPending}
                 onClick={() => rotatePreviewMutation.mutate()}
               >

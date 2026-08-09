@@ -18,6 +18,7 @@ import {
   ArrowDown
 } from 'lucide-react';
 import AdminLayout from '@/components/admin/AdminLayout';
+import { useAdminLocale } from '@/contexts/AdminLocaleContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
@@ -33,6 +34,7 @@ import { toastError } from '@/utils/toastMessages';
 import { cn } from '@/lib/utils';
 
 const AdminPromoModals = () => {
+  const { t } = useAdminLocale();
   const queryClient = useQueryClient();
   const [selectedModal, setSelectedModal] = useState<PromoModalDTO | null>(null);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
@@ -198,7 +200,7 @@ const AdminPromoModals = () => {
 
   if (isLoading) {
     return (
-      <AdminLayout title="Promo Modals" breadcrumbs={[{ label: 'Promo Modals' }]}>
+      <AdminLayout title={t('promoModals.title')} breadcrumbs={[{ label: t('promoModals.title') }]}>
         <div className="p-8 text-center text-muted-foreground">Chargement...</div>
       </AdminLayout>
     );
@@ -206,7 +208,7 @@ const AdminPromoModals = () => {
 
   if (error) {
     return (
-      <AdminLayout title="Promo Modals" breadcrumbs={[{ label: 'Promo Modals' }]}>
+      <AdminLayout title={t('promoModals.title')} breadcrumbs={[{ label: t('promoModals.title') }]}>
         <div className="p-8 text-center">
           <p className="text-red-500 mb-4">
             Impossible de charger les promo modals. Veuillez réessayer.
@@ -217,7 +219,7 @@ const AdminPromoModals = () => {
   }
 
   return (
-    <AdminLayout title="Promo Modals" breadcrumbs={[{ label: 'Promo Modals' }]}>
+    <AdminLayout title={t('promoModals.title')} breadcrumbs={[{ label: t('promoModals.title') }]}>
       <div className="max-h-[calc(100vh-8rem)] overflow-y-auto">
         <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
           <div>

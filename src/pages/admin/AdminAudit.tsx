@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router-dom';
 import AdminLayout from '@/components/admin/AdminLayout';
+import { useAdminLocale } from '@/contexts/AdminLocaleContext';
 import AdminPagination from '@/components/admin/AdminPagination';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -43,6 +44,7 @@ const ACTION_LABELS: Record<string, string> = {
 };
 
 const AdminAudit = () => {
+  const { t } = useAdminLocale();
   const { isAdmin } = useAdmin();
   const [searchParams, setSearchParams] = useSearchParams();
   const userIdParam = searchParams.get('userId');
@@ -70,7 +72,7 @@ const AdminAudit = () => {
   });
 
   return (
-    <AdminLayout title="Audit" breadcrumbs={[{ label: 'Équipe' }, { label: 'Audit' }]}>
+    <AdminLayout title={t('audit.title')} breadcrumbs={[{ label: t('members.breadcrumbTeam') }, { label: t('audit.breadcrumb') }]}>
       <p className="text-sm text-muted-foreground mb-4">
         Historique des actions : produits, stock, commandes, pages boutique, webhooks, membres…
       </p>
@@ -149,7 +151,7 @@ const AdminAudit = () => {
       ) : (
         <>
           {(pageData?.content ?? []).length === 0 && (
-            <EmptyState icon={History} title="Aucune entrée d'audit" />
+            <EmptyState icon={History} title={t('audit.empty')} />
           )}
           <div className="space-y-2">
             {(pageData?.content ?? []).map((row) => (

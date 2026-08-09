@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Copy, Key, Loader2, Plus, Trash2 } from 'lucide-react';
 import AdminLayout from '@/components/admin/AdminLayout';
+import { useAdminLocale } from '@/contexts/AdminLocaleContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -19,6 +20,7 @@ import { toast } from 'sonner';
 import { toastError } from '@/utils/toastMessages';
 
 const AdminApiKeys = () => {
+  const { t } = useAdminLocale();
   const queryClient = useQueryClient();
   const [createOpen, setCreateOpen] = useState(false);
   const [name, setName] = useState('');
@@ -52,7 +54,7 @@ const AdminApiKeys = () => {
   });
 
   return (
-    <AdminLayout title="Clés API" breadcrumbs={[{ label: 'Clés API' }]}>
+    <AdminLayout title={t('apiKeys.title')} breadcrumbs={[{ label: t('apiKeys.title') }]}>
       <div className="mx-auto max-w-3xl space-y-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2">
@@ -70,7 +72,7 @@ const AdminApiKeys = () => {
             <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
           </div>
         ) : keys.length === 0 ? (
-          <EmptyState title="Aucune clé API" description="Créez une clé pour intégrer votre boutique." />
+          <EmptyState title={t('apiKeys.empty')} description={t('apiKeys.emptyDesc')} />
         ) : (
           <ul className="space-y-3">
             {keys.map((k) => (
