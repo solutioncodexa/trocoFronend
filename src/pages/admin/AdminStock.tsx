@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import {
   AlertTriangle,
   Package,
@@ -12,6 +12,7 @@ import {
   ShoppingCart,
   Truck,
   ClipboardList,
+  Pencil,
 } from 'lucide-react';
 import AdminLayout from '@/components/admin/AdminLayout';
 import { useAdminLocale } from '@/contexts/AdminLocaleContext';
@@ -49,6 +50,7 @@ import { PERMISSIONS } from '@/config/permissions';
 
 type Tab = 'settings' | 'alerts' | 'list' | 'movements';
 type AdjustMode = 'purchase' | 'direct-sale' | 'adjust';
+type StockFilter = 'all' | 'alert' | 'low' | 'out' | 'expiring';
 
 const PURCHASE_REASONS = [
   'Achat fournisseur',
@@ -85,6 +87,61 @@ const statusBadge = (status: string, labels: Record<string, string>) => {
   );
 };
 
+function RowActions({
+  row,
+  canAdjust,
+  onEdit,
+  onPurchase,
+  onSale,
+  onAdjust,
+  labels,
+}: {
+  row: StockVariantRowDTO;
+  canAdjust: boolean;
+  onEdit: () => void;
+  onPurchase: () => void;
+  onSale: () => void;
+  onAdjust: () => void;
+  labels: {
+    threshold: string;
+    purchase: string;
+    sale: string;
+    inventory: string;
+  };
+}) {
+  if (!canAdjust) return null;
+  return (
+    <div className="flex flex-wrap justify-end gap-1.5 shrink-0">
+      <Button size="sm" variant="outline" className="h-8 gap-1 px-2" onClick={onEdit} title={labels.threshold}>
+        <Pencil className="h-3.5 w-3.5" />
+        <span className="hidden xl:inline">{labels.threshold}</span>
+      </Button>
+      <Button size="sm" variant="outline" className="h-8 gap-1 px-2" onClick={onPurchase}>
+        <Truck className="h-3.5 w-3.5" />
+        <span className="hidden sm:inline">{labels.purchase}</span>
+      </Button>
+      <Button
+        size="sm"
+        className="h-8 gap-1 px-2"
+        onClick={onSale}
+        disabled={row.stock <= 0}
+      >
+        <ShoppingCart className="h-3.5 w-3.5" />
+        <span className="hidden sm:inline">{labels.sale}</span>
+      </Button>
+      <Button
+        size="sm"
+        variant="ghost"
+        className="h-8 gap-1 px-2"
+        onClick={onAdjust}
+        title={labels.inventory}
+      >
+        <ClipboardList className="h-3.5 w-3.5" />
+      </Button>
+    </div>
+  );
+}
+
 function movementLabel(m: StockMovementDTO): { label: string; className: string } {
   const reason = (m.reason || '').toLowerCase();
   if (m.type === 'IN') {
@@ -116,6 +173,7 @@ function formatQtyDelta(m: StockMovementDTO): string {
 
 const AdminStock = () => {
   const { t } = useAdminLocale();
+  const navigate = useNavigate();
   const stockStatusLabels: Record<string, string> = {
     OK: 'OK',
     LOW: t('stock.statusLow'),
@@ -128,8 +186,8 @@ const AdminStock = () => {
   const [searchParams] = useSearchParams();
   const highlightVariant = searchParams.get('variant');
   const filterFromUrl = searchParams.get('filter');
-  const [tab, setTab] = useState<Tab>(highlightVariant || filterFromUrl ? 'list' : 'alerts');
-  const [filter, setFilter] = useState(filterFromUrl || 'all');
+  const [tab, setTab] = useState<Tab>('list');
+  const [filter, setFilter] = useState<StockFilter>((filterFromUrl as StockFilter) || 'all');
   const [search, setSearch] = useState('');
   const [movPage, setMovPage] = useState(0);
   const [movTypeFilter, setMovTypeFilter] = useState('all');
@@ -150,6 +208,7 @@ const AdminStock = () => {
   const { data: overview } = useQuery({
     queryKey: ['stock', 'overview'],
     queryFn: () => stockApi.getOverview(),
+    refetchOnMount: 'always',
   });
 
   const { data: settings } = useQuery({
@@ -178,10 +237,12 @@ const AdminStock = () => {
   }, [settings]);
 
   const [variantsPage, setVariantsPage] = useState(0);
+  const listFilter = tab === 'alerts' ? 'alert' : filter;
 
   const { data: variantsData, isLoading: loadingVariants } = useQuery({
-    queryKey: ['stock', 'variants', filter, variantsPage],
-    queryFn: () => stockApi.listVariants(filter, variantsPage, 50),
+    queryKey: ['stock', 'variants', listFilter, variantsPage],
+    queryFn: () => stockApi.listVariants(listFilter, variantsPage, 50),
+    refetchOnMount: 'always',
   });
   const variants = variantsData?.content ?? [];
 
@@ -189,6 +250,7 @@ const AdminStock = () => {
     queryKey: ['stock', 'variants', 'all-options'],
     queryFn: () => stockApi.listVariants('all', 0, 200),
     enabled: tab === 'movements',
+    refetchOnMount: 'always',
   });
   const allVariants = allVariantsData?.content ?? [];
 
@@ -294,6 +356,49 @@ const AdminStock = () => {
     );
   }, [variants, search]);
 
+  const displayRows = useMemo(() => {
+    if (tab === 'alerts') return filtered.filter((v) => v.status !== 'OK');
+    return filtered;
+  }, [filtered, tab]);
+
+  const productCount = useMemo(
+    () => new Set(displayRows.map((r) => r.productId).filter(Boolean)).size,
+    [displayRows],
+  );
+
+  const groupedRows = useMemo(() => {
+    const groups: { productId: number; productName: string; rows: StockVariantRowDTO[] }[] = [];
+    const indexByProduct = new Map<number, number>();
+    for (const row of displayRows) {
+      const pid = row.productId ?? -1;
+      const existing = indexByProduct.get(pid);
+      if (existing == null) {
+        indexByProduct.set(pid, groups.length);
+        groups.push({
+          productId: pid,
+          productName: row.productName || '—',
+          rows: [row],
+        });
+      } else {
+        groups[existing].rows.push(row);
+      }
+    }
+    return groups;
+  }, [displayRows]);
+
+  const openKpi = (nextFilter: StockFilter) => {
+    setTab('list');
+    setFilter(nextFilter);
+    setVariantsPage(0);
+  };
+
+  const actionLabels = {
+    threshold: t('stock.thresholdDate'),
+    purchase: t('stock.actionPurchase'),
+    sale: t('stock.actionDirectSale'),
+    inventory: t('stock.inventoryCorrection'),
+  };
+
   const openMovementDialog = (row: StockVariantRowDTO, mode: AdjustMode) => {
     setSelected(row);
     setAdjustMode(mode);
@@ -354,52 +459,88 @@ const AdminStock = () => {
 
   return (
     <AdminLayout title={t('stock.title')} breadcrumbs={[{ label: t('stock.breadcrumb') }]}>
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-              <AlertTriangle className="w-4 h-4" /> {t('stock.lowStock')}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="text-2xl font-display">{overview?.lowStockCount ?? 0}</CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-              <PackageX className="w-4 h-4" /> {t('stock.statOutOfStock')}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="text-2xl font-display">{overview?.outOfStockCount ?? 0}</CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-              <CalendarClock className="w-4 h-4" /> {t('stock.expiringSoon')}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="text-2xl font-display">{overview?.expiringSoonCount ?? 0}</CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-              <Package className="w-4 h-4" /> {t('stock.stockValue')}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="text-2xl font-display">{formatPrice(overview?.stockValue ?? 0)}</CardContent>
-        </Card>
+      <div className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-4 lg:gap-4">
+        <button
+          type="button"
+          onClick={() => openKpi('low')}
+          className={cn(
+            'rounded-lg border border-border bg-card text-start transition hover:border-amber-300 hover:bg-amber-50/40',
+            filter === 'low' && tab === 'list' && 'border-amber-400 ring-1 ring-amber-300',
+          )}
+        >
+          <Card className="border-0 shadow-none">
+            <CardHeader className="pb-2">
+              <CardTitle className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                <AlertTriangle className="h-4 w-4 text-amber-600" /> {t('stock.lowStock')}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="font-display text-2xl">{overview?.lowStockCount ?? 0}</CardContent>
+          </Card>
+        </button>
+        <button
+          type="button"
+          onClick={() => openKpi('out')}
+          className={cn(
+            'rounded-lg border border-border bg-card text-start transition hover:border-red-300 hover:bg-red-50/40',
+            filter === 'out' && tab === 'list' && 'border-red-400 ring-1 ring-red-300',
+          )}
+        >
+          <Card className="border-0 shadow-none">
+            <CardHeader className="pb-2">
+              <CardTitle className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                <PackageX className="h-4 w-4 text-red-600" /> {t('stock.statOutOfStock')}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="font-display text-2xl">{overview?.outOfStockCount ?? 0}</CardContent>
+          </Card>
+        </button>
+        <button
+          type="button"
+          onClick={() => openKpi('expiring')}
+          className={cn(
+            'rounded-lg border border-border bg-card text-start transition hover:border-orange-300 hover:bg-orange-50/40',
+            filter === 'expiring' && tab === 'list' && 'border-orange-400 ring-1 ring-orange-300',
+          )}
+        >
+          <Card className="border-0 shadow-none">
+            <CardHeader className="pb-2">
+              <CardTitle className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                <CalendarClock className="h-4 w-4 text-orange-600" /> {t('stock.expiringSoon')}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="font-display text-2xl">{overview?.expiringSoonCount ?? 0}</CardContent>
+          </Card>
+        </button>
+        <button
+          type="button"
+          onClick={() => openKpi('all')}
+          className={cn(
+            'rounded-lg border border-border bg-card text-start transition hover:border-primary/40 hover:bg-muted/40',
+            filter === 'all' && tab === 'list' && 'border-primary/50 ring-1 ring-primary/30',
+          )}
+        >
+          <Card className="border-0 shadow-none">
+            <CardHeader className="pb-2">
+              <CardTitle className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                <Package className="h-4 w-4" /> {t('stock.stockValue')}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="font-display text-2xl">{formatPrice(overview?.stockValue ?? 0)}</CardContent>
+          </Card>
+        </button>
       </div>
 
-      <div className="flex flex-wrap gap-2 mb-6 border-b border-border pb-3">
-        {tabs.map((t) => (
+      <div className="mb-6 flex flex-wrap gap-2 border-b border-border pb-3">
+        {tabs.map((tabItem) => (
           <Button
-            key={t.id}
-            variant={tab === t.id ? 'default' : 'ghost'}
+            key={tabItem.id}
+            variant={tab === tabItem.id ? 'default' : 'ghost'}
             size="sm"
-            onClick={() => setTab(t.id)}
+            onClick={() => setTab(tabItem.id)}
             className="gap-1.5"
           >
-            <t.icon className="w-4 h-4" />
-            {t.label}
+            <tabItem.icon className="h-4 w-4" />
+            {tabItem.label}
           </Button>
         ))}
       </div>
@@ -476,19 +617,35 @@ const AdminStock = () => {
 
       {(tab === 'alerts' || tab === 'list') && (
         <div className="space-y-4">
-          <p className="text-sm text-muted-foreground">{t('stock.listDescription')}</p>
+          <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <p className="text-sm text-muted-foreground">{t('stock.sameCatalogHint')}</p>
+              <p className="text-xs text-muted-foreground/80">{t('stock.listDescription')}</p>
+            </div>
+            {displayRows.length > 0 && (
+              <p className="text-sm font-medium text-muted-foreground">
+                {t('stock.variantsOfProducts', {
+                  variants: displayRows.length,
+                  products: productCount,
+                })}
+              </p>
+            )}
+          </div>
           <div className="flex flex-wrap gap-3">
             <Input
               placeholder={t('stock.searchPlaceholder')}
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              onChange={(e) => {
+                setSearch(e.target.value);
+                setVariantsPage(0);
+              }}
               className="max-w-xs"
             />
             {tab === 'list' && (
               <Select
                 value={filter}
                 onValueChange={(v) => {
-                  setFilter(v);
+                  setFilter(v as StockFilter);
                   setVariantsPage(0);
                 }}
               >
@@ -508,85 +665,180 @@ const AdminStock = () => {
 
           {loadingVariants ? (
             <p className="text-muted-foreground">{t('common.loading')}</p>
+          ) : displayRows.length === 0 ? (
+            <EmptyState
+              icon={tab === 'alerts' ? AlertTriangle : Warehouse}
+              title={
+                tab === 'alerts'
+                  ? t('stock.noAlerts')
+                  : search || filter !== 'all'
+                    ? t('stock.emptyFiltered')
+                    : t('stock.emptyCatalog')
+              }
+              description={
+                tab === 'alerts'
+                  ? t('stock.noAlertsDesc')
+                  : search || filter !== 'all'
+                    ? t('stock.emptyFilteredDesc')
+                    : t('stock.emptyCatalogDesc')
+              }
+              actionLabel={
+                tab === 'list' && !search && filter === 'all' ? t('stock.goToProducts') : undefined
+              }
+              onAction={
+                tab === 'list' && !search && filter === 'all'
+                  ? () => navigate('/admin/produits')
+                  : undefined
+              }
+              className="my-4 border border-border bg-card"
+            />
           ) : (
-            <div className="space-y-2">
-              {(tab === 'alerts' ? filtered.filter((v) => v.status !== 'OK') : filtered).map((row) => (
-                <div
-                  key={row.variantId}
-                  className={cn(
-                    'flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-lg border border-border p-4 bg-card',
-                    highlightVariant === String(row.variantId) && 'ring-2 ring-primary'
-                  )}
-                >
-                  <div className="min-w-0">
-                    <div className="flex flex-wrap items-center gap-2 mb-1">
-                      <span className="font-medium truncate">{row.productName}</span>
-                      {statusBadge(row.status, stockStatusLabels)}
-                      {row.usesDefaultSafety ? (
-                        <Badge variant="outline" className="text-xs">
-                          Seuil défaut
-                        </Badge>
-                      ) : (
-                        <Badge variant="secondary" className="text-xs">
-                          Personnalisé
-                        </Badge>
-                      )}
+            <>
+              {/* Mobile cards */}
+              <div className="space-y-3 lg:hidden">
+                {groupedRows.map((group) => (
+                  <div key={group.productId} className="overflow-hidden rounded-lg border border-border bg-card">
+                    <div className="flex items-center justify-between gap-2 border-b border-border bg-muted/40 px-3 py-2">
+                      <p className="truncate font-medium">{group.productName}</p>
+                      <Button variant="ghost" size="sm" className="h-7 shrink-0 px-2 text-xs" asChild>
+                        <Link to="/admin/produits">{t('stock.goToProducts')}</Link>
+                      </Button>
                     </div>
-                    <p className="text-sm text-muted-foreground">
-                      {row.variantLabel}
-                      {row.sku ? ` · ${row.sku}` : ''} · Stock {row.stock} · Seuil {row.effectiveSafetyStock}
-                      {row.expiryDate ? ` · Exp. ${row.expiryDate}` : ''}
-                      {row.lastRestockedAt
-                        ? ` · Dernier achat ${new Date(row.lastRestockedAt).toLocaleDateString('fr-FR')}`
-                        : ''}
-                    </p>
+                    <div className="divide-y divide-border">
+                      {group.rows.map((row) => (
+                        <div
+                          key={row.variantId}
+                          className={cn(
+                            'space-y-3 p-3',
+                            highlightVariant === String(row.variantId) && 'bg-primary/5 ring-1 ring-inset ring-primary',
+                          )}
+                        >
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="font-medium">{row.variantLabel || '—'}</span>
+                            {statusBadge(row.status, stockStatusLabels)}
+                            <Badge variant="outline" className="text-xs">
+                              {row.usesDefaultSafety
+                                ? t('stock.thresholdDefault')
+                                : t('stock.thresholdCustom')}
+                            </Badge>
+                          </div>
+                          <p className="text-sm text-muted-foreground">
+                            {row.sku ? `SKU ${row.sku} · ` : ''}
+                            {t('stock.colQty')} {row.stock} · {t('stock.colThreshold')}{' '}
+                            {row.effectiveSafetyStock}
+                            {row.expiryDate ? ` · Exp. ${row.expiryDate}` : ''}
+                          </p>
+                          <RowActions
+                            row={row}
+                            canAdjust={canAdjust}
+                            labels={actionLabels}
+                            onEdit={() => openEdit(row)}
+                            onPurchase={() => openMovementDialog(row, 'purchase')}
+                            onSale={() => openMovementDialog(row, 'direct-sale')}
+                            onAdjust={() => openMovementDialog(row, 'adjust')}
+                          />
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                  <div className="flex flex-wrap gap-2 shrink-0">
-                    {canAdjust && (
-                      <Button size="sm" variant="outline" onClick={() => openEdit(row)}>
-                        {t('stock.thresholdDate')}
-                      </Button>
-                    )}
-                    {canAdjust && (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="gap-1"
-                        onClick={() => openMovementDialog(row, 'purchase')}
-                      >
-                        <Truck className="w-3.5 h-3.5" />
-                        {t('stock.actionPurchase')}
-                      </Button>
-                    )}
-                    {canAdjust && (
-                      <Button
-                        size="sm"
-                        className="gap-1"
-                        onClick={() => openMovementDialog(row, 'direct-sale')}
-                        disabled={row.stock <= 0}
-                      >
-                        <ShoppingCart className="w-3.5 h-3.5" />
-                        {t('stock.actionDirectSale')}
-                      </Button>
-                    )}
-                    {canAdjust && (
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="gap-1"
-                        onClick={() => openMovementDialog(row, 'adjust')}
-                        title={t('stock.inventoryCorrection')}
-                      >
-                        <ClipboardList className="w-3.5 h-3.5" />
-                        {t('stock.inventoryShort')}
-                      </Button>
-                    )}
-                  </div>
+                ))}
+              </div>
+
+              {/* Desktop table */}
+              <div className="hidden overflow-hidden rounded-lg border border-border bg-card lg:block">
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead className="bg-muted/50">
+                      <tr>
+                        <th className="px-4 py-3 text-start text-sm font-medium text-muted-foreground">
+                          {t('common.product')}
+                        </th>
+                        <th className="px-4 py-3 text-start text-sm font-medium text-muted-foreground">
+                          {t('stock.colVariant')}
+                        </th>
+                        <th className="px-4 py-3 text-start text-sm font-medium text-muted-foreground">
+                          {t('stock.colSku')}
+                        </th>
+                        <th className="px-4 py-3 text-start text-sm font-medium text-muted-foreground">
+                          {t('stock.colQty')}
+                        </th>
+                        <th className="px-4 py-3 text-start text-sm font-medium text-muted-foreground">
+                          {t('stock.colThreshold')}
+                        </th>
+                        <th className="px-4 py-3 text-start text-sm font-medium text-muted-foreground">
+                          {t('stock.colStatus')}
+                        </th>
+                        <th className="px-4 py-3 text-end text-sm font-medium text-muted-foreground">
+                          {t('common.actions')}
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-border">
+                      {groupedRows.map((group) =>
+                        group.rows.map((row, idx) => (
+                          <tr
+                            key={row.variantId}
+                            className={cn(
+                              'hover:bg-muted/30',
+                              highlightVariant === String(row.variantId) && 'bg-primary/5',
+                            )}
+                          >
+                            <td className="px-4 py-3 align-middle">
+                              {idx === 0 ? (
+                                <div>
+                                  <p className="font-medium">{group.productName}</p>
+                                  {group.rows.length > 1 ? (
+                                    <p className="text-xs text-muted-foreground">
+                                      {group.rows.length} {t('stock.colVariant').toLowerCase()}
+                                    </p>
+                                  ) : null}
+                                </div>
+                              ) : (
+                                <span className="ps-2 text-muted-foreground/40">·</span>
+                              )}
+                            </td>
+                            <td className="px-4 py-3 align-middle">{row.variantLabel || '—'}</td>
+                            <td className="px-4 py-3 align-middle text-sm text-muted-foreground">
+                              {row.sku || '—'}
+                            </td>
+                            <td className="px-4 py-3 align-middle font-medium tabular-nums">{row.stock}</td>
+                            <td className="px-4 py-3 align-middle">
+                              <div className="flex flex-col gap-0.5">
+                                <span className="tabular-nums">{row.effectiveSafetyStock}</span>
+                                <span className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                                  {row.usesDefaultSafety
+                                    ? t('stock.thresholdDefault')
+                                    : t('stock.thresholdCustom')}
+                                </span>
+                              </div>
+                            </td>
+                            <td className="px-4 py-3 align-middle">
+                              <div className="flex flex-col gap-1">
+                                {statusBadge(row.status, stockStatusLabels)}
+                                {row.expiryDate ? (
+                                  <span className="text-xs text-muted-foreground">Exp. {row.expiryDate}</span>
+                                ) : null}
+                              </div>
+                            </td>
+                            <td className="px-4 py-3 align-middle">
+                              <RowActions
+                                row={row}
+                                canAdjust={canAdjust}
+                                labels={actionLabels}
+                                onEdit={() => openEdit(row)}
+                                onPurchase={() => openMovementDialog(row, 'purchase')}
+                                onSale={() => openMovementDialog(row, 'direct-sale')}
+                                onAdjust={() => openMovementDialog(row, 'adjust')}
+                              />
+                            </td>
+                          </tr>
+                        )),
+                      )}
+                    </tbody>
+                  </table>
                 </div>
-              ))}
-              {(tab === 'alerts' ? filtered.filter((v) => v.status !== 'OK') : filtered).length === 0 && (
-                <EmptyState icon={Warehouse} title={t('stock.emptyLines')} />
-              )}
+              </div>
+
               {tab !== 'alerts' && variantsData && variantsData.totalPages > 1 ? (
                 <AdminPagination
                   page={variantsPage}
@@ -596,7 +848,7 @@ const AdminStock = () => {
                   onPageChange={setVariantsPage}
                 />
               ) : null}
-            </div>
+            </>
           )}
         </div>
       )}

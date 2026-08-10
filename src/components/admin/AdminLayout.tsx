@@ -216,7 +216,8 @@ const AdminLayout = ({
   };
   const [forceGuideOpen, setForceGuideOpen] = useState(false);
 
-  // Favicon / titre : branding boutique. Sur Apparence, le workspace applique le brouillon.
+  // Titre boutique OK ; favicon = toujours plateforme (IMG_6526) en admin.
+  // Sur Apparence, le workspace peut prévisualiser le favicon boutique dans l’onglet.
   useEffect(() => {
     if (!store) return;
     if (location.pathname.startsWith('/admin/parametres')) return;
@@ -224,7 +225,8 @@ const AdminLayout = ({
       siteName: store.siteName,
       tagline: store.tagline,
       logoUrl: store.logoUrl,
-      faviconUrl: store.faviconUrl?.trim() || store.logoUrl,
+      faviconUrl: null,
+      faviconFallbackToLogo: false,
     });
     return () => applyDocumentBrand(null);
   }, [
@@ -232,7 +234,6 @@ const AdminLayout = ({
     store?.siteName,
     store?.tagline,
     store?.logoUrl,
-    store?.faviconUrl,
     store,
   ]);
 

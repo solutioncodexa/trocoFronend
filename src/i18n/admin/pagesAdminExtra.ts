@@ -92,6 +92,23 @@ export type PagesAdminMessageKey =
   | 'stock.dialogPurchaseTitle'
   | 'stock.dialogDirectSaleTitle'
   | 'stock.validate'
+  | 'stock.thresholdDefault'
+  | 'stock.thresholdCustom'
+  | 'stock.colVariant'
+  | 'stock.colSku'
+  | 'stock.colQty'
+  | 'stock.colThreshold'
+  | 'stock.colStatus'
+  | 'stock.variantsOfProducts'
+  | 'stock.emptyCatalog'
+  | 'stock.emptyCatalogDesc'
+  | 'stock.goToProducts'
+  | 'stock.emptyFiltered'
+  | 'stock.emptyFilteredDesc'
+  | 'stock.noAlerts'
+  | 'stock.noAlertsDesc'
+  | 'stock.sameCatalogHint'
+  | 'stock.lastRestock'
   | 'revenue.customRange'
   | 'revenue.from'
   | 'revenue.to'
@@ -205,6 +222,25 @@ const fr: Record<PagesAdminMessageKey, string> = {
   'stock.dialogPurchaseTitle': 'Achat / entrée stock',
   'stock.dialogDirectSaleTitle': 'Vente directe (hors site)',
   'stock.validate': 'Valider',
+  'stock.thresholdDefault': 'Seuil défaut',
+  'stock.thresholdCustom': 'Personnalisé',
+  'stock.colVariant': 'Variante',
+  'stock.colSku': 'SKU',
+  'stock.colQty': 'Qté',
+  'stock.colThreshold': 'Seuil',
+  'stock.colStatus': 'Statut',
+  'stock.variantsOfProducts': '{variants} variante(s) · {products} produit(s)',
+  'stock.emptyCatalog': 'Aucun stock à gérer',
+  'stock.emptyCatalogDesc':
+    'Le stock reprend exactement les produits de votre catalogue. Ajoutez un produit pour commencer.',
+  'stock.goToProducts': 'Aller aux produits',
+  'stock.emptyFiltered': 'Aucun résultat',
+  'stock.emptyFilteredDesc': 'Modifiez la recherche ou le filtre.',
+  'stock.noAlerts': 'Aucune alerte',
+  'stock.noAlertsDesc': 'Tous vos niveaux de stock sont dans les seuils.',
+  'stock.sameCatalogHint':
+    'Même catalogue que Produits : une ligne par variante (taille, couleur…).',
+  'stock.lastRestock': 'Dernier achat {date}',
   'revenue.customRange': 'Personnalisé',
   'revenue.from': 'Du',
   'revenue.to': 'Au',
@@ -319,6 +355,25 @@ const en: Record<PagesAdminMessageKey, string> = {
   'stock.dialogPurchaseTitle': 'Stock purchase / stock-in',
   'stock.dialogDirectSaleTitle': 'Direct sale (off-site)',
   'stock.validate': 'Confirm',
+  'stock.thresholdDefault': 'Default threshold',
+  'stock.thresholdCustom': 'Custom',
+  'stock.colVariant': 'Variant',
+  'stock.colSku': 'SKU',
+  'stock.colQty': 'Qty',
+  'stock.colThreshold': 'Threshold',
+  'stock.colStatus': 'Status',
+  'stock.variantsOfProducts': '{variants} variant(s) · {products} product(s)',
+  'stock.emptyCatalog': 'No stock to manage',
+  'stock.emptyCatalogDesc':
+    'Stock mirrors your product catalog exactly. Add a product to get started.',
+  'stock.goToProducts': 'Go to products',
+  'stock.emptyFiltered': 'No results',
+  'stock.emptyFilteredDesc': 'Change the search or filter.',
+  'stock.noAlerts': 'No alerts',
+  'stock.noAlertsDesc': 'All stock levels are within thresholds.',
+  'stock.sameCatalogHint':
+    'Same catalog as Products: one row per variant (size, color…).',
+  'stock.lastRestock': 'Last purchase {date}',
   'revenue.customRange': 'Custom',
   'revenue.from': 'From',
   'revenue.to': 'To',
@@ -433,6 +488,25 @@ const ar: Record<PagesAdminMessageKey, string> = {
   'stock.dialogPurchaseTitle': 'شراء / إدخال مخزون',
   'stock.dialogDirectSaleTitle': 'بيع مباشر (خارج الموقع)',
   'stock.validate': 'تأكيد',
+  'stock.thresholdDefault': 'الحد الافتراضي',
+  'stock.thresholdCustom': 'مخصص',
+  'stock.colVariant': 'المتغير',
+  'stock.colSku': 'SKU',
+  'stock.colQty': 'الكمية',
+  'stock.colThreshold': 'الحد',
+  'stock.colStatus': 'الحالة',
+  'stock.variantsOfProducts': '{variants} متغير(ات) · {products} منتج(ات)',
+  'stock.emptyCatalog': 'لا يوجد مخزون لإدارته',
+  'stock.emptyCatalogDesc':
+    'يعكس المخزون كتالوج منتجاتك تمامًا. أضف منتجًا للبدء.',
+  'stock.goToProducts': 'الانتقال إلى المنتجات',
+  'stock.emptyFiltered': 'لا نتائج',
+  'stock.emptyFilteredDesc': 'غيّر البحث أو المرشح.',
+  'stock.noAlerts': 'لا تنبيهات',
+  'stock.noAlertsDesc': 'كل مستويات المخزون ضمن الحدود.',
+  'stock.sameCatalogHint':
+    'نفس كتالوج المنتجات: سطر لكل متغير (مقاس، لون…).',
+  'stock.lastRestock': 'آخر شراء {date}',
   'revenue.customRange': 'مخصص',
   'revenue.from': 'من',
   'revenue.to': 'إلى',

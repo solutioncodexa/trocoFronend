@@ -175,15 +175,16 @@ export function AppearanceWorkspace({
     return null;
   }, [homeHero?.imageUrls, homeHero?.imageUrl]);
 
-  // Favicon / titre onglet = brouillon Apparence (même source que la vitrine après save).
+  // Titre onglet = brouillon ; favicon reste plateforme (IMG_6526) en admin.
   useEffect(() => {
     applyDocumentBrand({
       siteName: form.siteName,
       tagline: form.tagline,
       logoUrl: form.logoUrl || null,
-      faviconUrl: form.faviconUrl || form.logoUrl || null,
+      faviconUrl: null,
+      faviconFallbackToLogo: false,
     });
-  }, [form.siteName, form.tagline, form.logoUrl, form.faviconUrl]);
+  }, [form.siteName, form.tagline, form.logoUrl]);
 
   /** Ramène l’aperçu sur la page où la section est visible. */
   const syncPreviewToSection = useCallback((section: AppearanceSectionId) => {

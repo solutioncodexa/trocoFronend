@@ -9,6 +9,11 @@ export type StoreThemeInput = {
   tagline?: string | null;
   logoUrl?: string | null;
   faviconUrl?: string | null;
+  /**
+   * Vitrine : si pas de favicon, utiliser le logo (défaut true).
+   * Admin / marketing : false pour garder le favicon plateforme (IMG_6526).
+   */
+  faviconFallbackToLogo?: boolean;
   primaryColor?: string | null;
   secondaryColor?: string | null;
   fontPair?: string | null;
@@ -201,7 +206,9 @@ export function applyDocumentBrand(store: StoreThemeInput | null) {
   const tagline = store.tagline?.trim();
   document.title = tagline ? `${siteName} — ${tagline}` : siteName;
 
-  const favicon = store.faviconUrl?.trim() || store.logoUrl?.trim();
+  const favicon =
+    store.faviconUrl?.trim() ||
+    (store.faviconFallbackToLogo === false ? null : store.logoUrl?.trim());
   if (favicon) {
     applyStoreFavicon(favicon);
   } else {

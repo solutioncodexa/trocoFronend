@@ -457,6 +457,7 @@ const AdminProducts = () => {
       productsApi.createProduct(product, images),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['products'] });
+      queryClient.invalidateQueries({ queryKey: ['stock'] });
       toast.success('Produit ajouté avec succès');
       handleCloseModal();
       if (fromOnboarding) {
@@ -472,6 +473,7 @@ const AdminProducts = () => {
       productsApi.updateProduct(id, product, images),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['products'] });
+      queryClient.invalidateQueries({ queryKey: ['stock'] });
       toast.success('Produit modifié avec succès');
       handleCloseModal();
     },
@@ -482,6 +484,7 @@ const AdminProducts = () => {
     mutationFn: (id: string) => productsApi.deleteProduct(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['products'] });
+      queryClient.invalidateQueries({ queryKey: ['stock'] });
       toast.success('Produit supprimé');
     },
     onError: (err: Error) => toastError(err, 'Erreur lors de la suppression'),
