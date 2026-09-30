@@ -64,8 +64,18 @@ const clearAuthAndRedirect = (): void => {
 
 const isAuthEndpoint = (url: string): boolean => /\/auth\//.test(url);
 
+/** Pages admin : le JWT identifie la boutique. La vitrine suit ?tenant= / le header, pas le compte admin. */
+export function isAdminSurface(pathname?: string): boolean {
+  const path = pathname ?? (typeof window !== 'undefined' ? window.location.pathname : '');
+  return /^\/(admin|super-admin|superadmin)(\/|$)/.test(path);
+}
+
 const getTenantSlug = (): string | null => {
   try {
+    if (typeof window !== 'undefined') {
+      const fromUrl = new URLSearchParams(window.location.search).get('tenant')?.trim();
+      if (fromUrl) return fromUrl;
+    }
     return localStorage.getItem(TENANT_SLUG_STORAGE_KEY);
   } catch {
     return null;
@@ -107,7 +117,8 @@ export const apiRequest = async <T>(
   if (!headers['Content-Type'] && !(fetchOptions.body instanceof FormData)) {
     headers['Content-Type'] = 'application/json';
   }
-  if (token && !skipAuth) {
+  const attachAdminToken = Boolean(token) && !skipAuth && isAdminSurface();
+  if (attachAdminToken && token) {
     headers['Authorization'] = `Bearer ${token}`;
   }
   const tenantSlug = getTenantSlug();
@@ -121,7 +132,7 @@ export const apiRequest = async <T>(
   });
 
   // 401 = token absent/expiré : tenter un refresh puis rejouer la requête une seule fois.
-  if (response.status === 401 && !skipAuth && !isAuthEndpoint(url)) {
+  if (response.status === 401 && attachAdminToken && !isAuthEndpoint(url)) {
     const newToken = await getFreshAccessToken();
     if (newToken) {
       response = await fetch(url, {
@@ -136,7 +147,7 @@ export const apiRequest = async <T>(
   }
 
   if (!response.ok) {
-    if (response.status === 401 && !skipAuth) {
+    if (response.status === 401 && attachAdminToken) {
       // Le retry post-refresh a encore échoué : session terminée.
       clearAuthAndRedirect();
     }

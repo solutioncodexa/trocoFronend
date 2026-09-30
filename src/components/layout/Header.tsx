@@ -44,8 +44,10 @@ const Header = () => {
   const favCount = isDemo ? 3 : wishlistCount;
   const { siteName, store } = useStoreBrand();
   const surMesureOn = isDemo || store?.surMesureEnabled !== false;
-  const boutiquePath = to('/boutique');
-  const homePath = to('/');
+  const homeHref = to('/');
+  const boutiqueHref = to('/boutique');
+  const homePath = homeHref.split('?')[0] || '/';
+  const boutiquePath = boutiqueHref.split('?')[0] || '/boutique';
   const showSearch = appearance.headerShowSearch;
   const showWishlist = appearance.headerShowWishlist;
   const showCart = appearance.headerShowCart;
@@ -110,7 +112,13 @@ const Header = () => {
     }
     const onBoutique =
       location.pathname === boutiquePath || location.pathname.endsWith('/boutique');
-    const params = onBoutique ? new URLSearchParams(location.search) : new URLSearchParams();
+    const params = new URLSearchParams(boutiqueHref.split('?')[1] || '');
+    if (onBoutique) {
+      const current = new URLSearchParams(location.search);
+      current.forEach((value, key) => {
+        if (key !== 'keyword') params.set(key, value);
+      });
+    }
     params.set('keyword', q);
     navigate({ pathname: boutiquePath, search: params.toString() });
     setIsSearchOpen(false);
@@ -141,7 +149,7 @@ const Header = () => {
     ...(appearance.headerShowHome
       ? [
           {
-            ...resolveNav(appearance.headerHrefHome, withLang(homePath)),
+            ...resolveNav(appearance.headerHrefHome, withLang(homeHref)),
             label: navLabel(appearance.headerLabelHome, 'home'),
           },
         ]
@@ -149,7 +157,7 @@ const Header = () => {
     ...(appearance.headerShowShop
       ? [
           {
-            ...resolveNav(appearance.headerHrefShop, withLang(boutiquePath)),
+            ...resolveNav(appearance.headerHrefShop, withLang(boutiqueHref)),
             label: navLabel(appearance.headerLabelShop, 'shop'),
           },
         ]
@@ -351,7 +359,7 @@ const Header = () => {
 
           {showLogo ? (
           <Link
-            to={homePath}
+            to={homeHref}
             aria-label={`${siteName} — accueil`}
             className={cn(
               'flex min-w-0 max-lg:max-w-[56%] shrink items-center overflow-visible py-0.5',

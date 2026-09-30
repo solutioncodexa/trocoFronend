@@ -14,6 +14,28 @@ export type LegalPageTemplate = {
 };
 
 export const PRIVACY_PAGE_SLUG = 'politique-de-confidentialite';
+export const MENTIONS_PAGE_SLUG = 'mentions-legales';
+export const TERMS_PAGE_SLUG = 'conditions-generales-de-vente';
+export const RETURNS_PAGE_SLUG = 'retours-remboursements';
+
+export type LegalFooterLabelKey = 'legalNotice' | 'privacy' | 'terms';
+
+export const LEGAL_FOOTER_LINKS: { slug: string; labelKey: LegalFooterLabelKey }[] = [
+  { slug: MENTIONS_PAGE_SLUG, labelKey: 'legalNotice' },
+  { slug: PRIVACY_PAGE_SLUG, labelKey: 'privacy' },
+  { slug: TERMS_PAGE_SLUG, labelKey: 'terms' },
+];
+
+/** Chemin interne `/page/{slug}` ou URL externe si le marchand a saisi un lien complet. */
+export function resolvePrivacyPolicyLink(privacyPolicyUrl?: string | null): {
+  path: string;
+  external: boolean;
+} {
+  const raw = privacyPolicyUrl?.trim();
+  if (raw && /^https?:\/\//i.test(raw)) return { path: raw, external: true };
+  if (raw?.startsWith('/')) return { path: raw, external: false };
+  return { path: `/page/${PRIVACY_PAGE_SLUG}`, external: false };
+}
 
 /** Rappel affiché au marchand : ces textes sont des modèles à faire valider. */
 export const LEGAL_DISCLAIMER =
@@ -43,7 +65,7 @@ export function buildLegalPages(ctx: LegalPageContext): LegalPageTemplate[] {
   const city = ctx.contactCity?.trim() || '[ville], Maroc';
 
   return [
-    page('mentions-legales', 'Mentions légales', [
+    page(MENTIONS_PAGE_SLUG, 'Mentions légales', [
       [
         'Éditeur du site',
         `${name}\nAdresse : ${city}\nEmail : ${email}\nTéléphone : ${phone}\nIdentifiant légal (RC / ICE) : [à compléter]`,
@@ -57,7 +79,7 @@ export function buildLegalPages(ctx: LegalPageContext): LegalPageTemplate[] {
         `L’ensemble des contenus de ce site (textes, images, logos) est la propriété de ${name} ou de ses partenaires. Toute reproduction sans autorisation est interdite.`,
       ],
     ]),
-    page('conditions-generales-de-vente', 'Conditions générales de vente', [
+    page(TERMS_PAGE_SLUG, 'Conditions générales de vente', [
       [
         'Objet',
         `Les présentes conditions régissent les ventes de produits proposés par ${name} sur ce site. Toute commande implique l’acceptation de ces conditions.`,
@@ -83,7 +105,7 @@ export function buildLegalPages(ctx: LegalPageContext): LegalPageTemplate[] {
         `Pour toute réclamation, contactez-nous à ${email} ou au ${phone}. Nous nous engageons à vous répondre dans les meilleurs délais.`,
       ],
     ]),
-    page('retours-remboursements', 'Retours et remboursements', [
+    page(RETURNS_PAGE_SLUG, 'Retours et remboursements', [
       [
         'Délai de retour',
         'Vous disposez de [7] jours après réception pour demander le retour d’un produit non utilisé, dans son emballage d’origine.',

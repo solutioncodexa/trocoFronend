@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { buildStorefrontPath, buildStorefrontUrl, withStorefrontCacheBust } from './storefrontUrl';
+import { buildStorefrontPath, buildStorefrontUrl, withStorefrontCacheBust, withTenantQuery } from './storefrontUrl';
 
 describe('buildStorefrontPath', () => {
   it('retourne / sans slug', () => {
@@ -9,6 +9,18 @@ describe('buildStorefrontPath', () => {
 
   it('ajoute ?tenant= pour un slug', () => {
     expect(buildStorefrontPath('maison-atlas')).toBe('/?tenant=maison-atlas');
+  });
+});
+
+describe('withTenantQuery', () => {
+  it('ajoute le tenant et conserve les autres paramètres', () => {
+    expect(withTenantQuery('/boutique?category=sacs', 'Atlas')).toBe(
+      '/boutique?category=sacs&tenant=atlas',
+    );
+  });
+
+  it('ne remplace pas un tenant déjà présent', () => {
+    expect(withTenantQuery('/?tenant=autre', 'atlas')).toBe('/?tenant=autre');
   });
 });
 

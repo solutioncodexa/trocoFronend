@@ -54,3 +54,19 @@ export function buildStorefrontPath(slug: string | null | undefined): string {
   if (!s) return '/';
   return `/?tenant=${encodeURIComponent(s)}`;
 }
+
+/** Ajoute ?tenant= sans retirer les autres paramètres (lang, catégorie, recherche). */
+export function withTenantQuery(path: string, slug: string | null | undefined): string {
+  const s = slug?.trim().toLowerCase();
+  const raw = path || '/';
+  if (!s) return raw;
+  const hashIdx = raw.indexOf('#');
+  const hash = hashIdx >= 0 ? raw.slice(hashIdx) : '';
+  const withoutHash = hashIdx >= 0 ? raw.slice(0, hashIdx) : raw;
+  const qIdx = withoutHash.indexOf('?');
+  const pathname = qIdx >= 0 ? withoutHash.slice(0, qIdx) : withoutHash;
+  const params = new URLSearchParams(qIdx >= 0 ? withoutHash.slice(qIdx + 1) : '');
+  if (!params.get('tenant')) params.set('tenant', s);
+  const search = params.toString();
+  return `${pathname || '/'}${search ? `?${search}` : ''}${hash}`;
+}

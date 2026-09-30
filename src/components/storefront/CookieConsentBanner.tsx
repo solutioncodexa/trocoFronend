@@ -3,6 +3,9 @@ import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useTenant } from '@/contexts/TenantContext';
 import { useLocale } from '@/contexts/LocaleContext';
+import { useStorefrontPath } from '@/hooks/useStorefrontPath';
+import { useStoreLang } from '@/hooks/useStoreLang';
+import { resolvePrivacyPolicyLink } from '@/config/legalPages';
 import {
   consentDecisionMade,
   writeCookieConsent,
@@ -11,6 +14,8 @@ import {
 const CookieConsentBanner = () => {
   const { store } = useTenant();
   const { t } = useLocale();
+  const { to } = useStorefrontPath();
+  const { withLang } = useStoreLang();
   const slug = store?.slug;
   const consentRequired = store?.cookieConsentRequired !== false;
   const [visible, setVisible] = useState(false);
@@ -31,7 +36,7 @@ const CookieConsentBanner = () => {
     window.dispatchEvent(new CustomEvent('matjarona:consent-updated'));
   };
 
-  const privacyUrl = store?.privacyPolicyUrl?.trim();
+  const privacy = resolvePrivacyPolicyLink(store?.privacyPolicyUrl);
 
   return (
     <div
@@ -46,9 +51,9 @@ const CookieConsentBanner = () => {
           </p>
           <p className="text-xs text-muted-foreground leading-relaxed">
             {t('cookieBody')}{' '}
-            {privacyUrl ? (
+            {privacy.external ? (
               <a
-                href={privacyUrl}
+                href={privacy.path}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-primary underline-offset-2 hover:underline"
@@ -56,8 +61,11 @@ const CookieConsentBanner = () => {
                 {t('privacyPolicy')}
               </a>
             ) : (
-              <Link to="/page/confidentialite" className="text-primary underline-offset-2 hover:underline">
-                {t('learnMore')}
+              <Link
+                to={withLang(to(privacy.path))}
+                className="text-primary underline-offset-2 hover:underline"
+              >
+                {t('privacyPolicy')}
               </Link>
             )}
           </p>

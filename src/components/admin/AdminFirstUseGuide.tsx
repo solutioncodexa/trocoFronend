@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   ArrowLeft,
@@ -131,6 +131,27 @@ export const GUIDE_STEP_DEFS: GuideStepDef[] = [
 /** @deprecated alias pour les tests — préférer GUIDE_STEP_DEFS */
 export const GUIDE_STEPS = GUIDE_STEP_DEFS;
 
+export function adminGuideSeenKey(userId: number) {
+  return `troco_admin_guide_seen_${userId}`;
+}
+
+export function hasSeenAdminGuide(userId: number | undefined | null) {
+  if (userId == null) return false;
+  try {
+    return localStorage.getItem(adminGuideSeenKey(userId)) === '1';
+  } catch {
+    return false;
+  }
+}
+
+function rememberAdminGuideSeen(userId: number) {
+  try {
+    localStorage.setItem(adminGuideSeenKey(userId), '1');
+  } catch {
+    /* navigation privée */
+  }
+}
+
 type Props = {
   forceOpen?: boolean;
   onForceOpenHandled?: () => void;
@@ -156,21 +177,29 @@ const AdminFirstUseGuide = ({ forceOpen = false, onForceOpenHandled }: Props) =>
   const shouldAutoShow = useMemo(() => {
     if (!user || isSuperAdmin) return false;
     if (user.role !== 'ADMIN' && user.role !== 'STAFF') return false;
-    return user.adminGuideCompleted !== true;
+    if (user.adminGuideCompleted === true || hasSeenAdminGuide(user.id)) return false;
+    return true;
   }, [user, isSuperAdmin]);
+
+  const onForceOpenHandledRef = useRef(onForceOpenHandled);
+  onForceOpenHandledRef.current = onForceOpenHandled;
 
   useEffect(() => {
     if (forceOpen) {
       setStep(0);
       setOpen(true);
-      onForceOpenHandled?.();
+      onForceOpenHandledRef.current?.();
       return;
     }
-    if (shouldAutoShow) {
-      setStep(0);
-      setOpen(true);
-    }
-  }, [forceOpen, shouldAutoShow, onForceOpenHandled]);
+    if (!shouldAutoShow || !user) return;
+    rememberAdminGuideSeen(user.id);
+    setUser({ ...user, adminGuideCompleted: true });
+    setStep(0);
+    setOpen(true);
+    void persistCompleted(true, { silent: true });
+    // Une seule ouverture auto : une dépendance instable rouvrirait le guide à chaque rendu.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [forceOpen, shouldAutoShow, user?.id]);
 
   const def = GUIDE_STEP_DEFS[step];
   const Icon = def.icon;
@@ -178,15 +207,15 @@ const AdminFirstUseGuide = ({ forceOpen = false, onForceOpenHandled }: Props) =>
   const PrevIcon = dir === 'rtl' ? ArrowRight : ArrowLeft;
   const NextIcon = dir === 'rtl' ? ArrowLeft : ArrowRight;
 
-  const persistCompleted = async (completed: boolean) => {
-    setSaving(true);
+  const persistCompleted = async (completed: boolean, opts?: { silent?: boolean }) => {
+    if (!opts?.silent) setSaving(true);
     try {
       const updated = await authApi.updateAdminGuide({ completed });
       if (updated) setUser(updated);
     } catch (err) {
-      toastError(err, t('guide.saveError'));
+      if (!opts?.silent) toastError(err, t('guide.saveError'));
     } finally {
-      setSaving(false);
+      if (!opts?.silent) setSaving(false);
     }
   };
 
@@ -210,6 +239,7 @@ const AdminFirstUseGuide = ({ forceOpen = false, onForceOpenHandled }: Props) =>
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent
+        hideClose
         className="flex max-h-[min(92vh,720px)] w-[calc(100%-1.5rem)] max-w-2xl flex-col gap-0 overflow-hidden p-0 sm:rounded-2xl"
         dir={dir}
         onPointerDownOutside={(e) => e.preventDefault()}

@@ -6,12 +6,18 @@ import { BrandLogoImg } from '@/components/layout/BrandLogoImg';
 import { SocialLinks } from '@/components/layout/SocialLinks';
 import { useStoreBrand } from '@/hooks/useStoreBrand';
 import { useStorefrontPath } from '@/hooks/useStorefrontPath';
+import { useStoreLang } from '@/hooks/useStoreLang';
 import { useSystemNavReplacements } from '@/hooks/useSystemNavReplacements';
 import { useGlobalSections } from '@/hooks/useGlobalSections';
 import { useStoreAppearance } from '@/hooks/useStoreAppearance';
 import { categoriesApi } from '@/services/api/categories';
 import { staticCatalogQueryOptions } from '@/config/queryOptions';
 import { useLocale } from '@/contexts/LocaleContext';
+import {
+  LEGAL_FOOTER_LINKS,
+  RETURNS_PAGE_SLUG,
+  resolvePrivacyPolicyLink,
+} from '@/config/legalPages';
 
 const Footer = () => {
   const {
@@ -24,6 +30,7 @@ const Footer = () => {
     store,
   } = useStoreBrand();
   const { to, isDemo, demo } = useStorefrontPath();
+  const { withLang } = useStoreLang();
   const { navHref, isReplaced } = useSystemNavReplacements();
   const { footerLinksConfig } = useGlobalSections();
   const appearance = useStoreAppearance();
@@ -234,7 +241,14 @@ const Footer = () => {
                     </Link>
                   </li>
                   <li>
-                    <Link className={footerLinkClass} to={navHref('/livraison-retours')}>
+                    <Link
+                      className={footerLinkClass}
+                      to={
+                        isDemo || isReplaced('/livraison-retours')
+                          ? navHref('/livraison-retours')
+                          : withLang(to(`/page/${RETURNS_PAGE_SLUG}`))
+                      }
+                    >
                       {t('shippingReturns')}
                     </Link>
                   </li>
@@ -297,15 +311,38 @@ const Footer = () => {
             {showSocials && !showBrand && !showNewsletter ? (
               <SocialLinks className="justify-center" linkClassName={socialIconClass} />
             ) : null}
-            <Link className={footerLinkClass} to="#">
-              {t('legalNotice')}
-            </Link>
-            <Link className={footerLinkClass} to="#">
-              {t('privacy')}
-            </Link>
-            <Link className={footerLinkClass} to="#">
-              {t('terms')}
-            </Link>
+            {LEGAL_FOOTER_LINKS.map((item) => {
+              if (item.labelKey === 'privacy') {
+                const privacy = resolvePrivacyPolicyLink(store?.privacyPolicyUrl);
+                if (privacy.external) {
+                  return (
+                    <a
+                      key={item.slug}
+                      className={footerLinkClass}
+                      href={privacy.path}
+                      rel="noopener noreferrer"
+                      target="_blank"
+                    >
+                      {t(item.labelKey)}
+                    </a>
+                  );
+                }
+                return (
+                  <Link key={item.slug} className={footerLinkClass} to={withLang(to(privacy.path))}>
+                    {t(item.labelKey)}
+                  </Link>
+                );
+              }
+              return (
+                <Link
+                  key={item.slug}
+                  className={footerLinkClass}
+                  to={withLang(to(`/page/${item.slug}`))}
+                >
+                  {t(item.labelKey)}
+                </Link>
+              );
+            })}
           </div>
         </div>
       </div>

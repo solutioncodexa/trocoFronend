@@ -10,6 +10,7 @@ import { TenantProvider } from "@/contexts/TenantContext";
 import { LocaleProvider } from "@/contexts/LocaleContext";
 import { AdminLocaleProvider } from "@/contexts/AdminLocaleContext";
 import ScrollToTop from "@/components/ui/ScrollToTop";
+import PreserveTenantQuery from "@/components/layout/PreserveTenantQuery";
 import SurMesureGate from "@/components/layout/SurMesureGate";
 import WhatsAppButton from "@/components/ui/WhatsAppButton";
 import { ProtectedAdminRoute } from "@/components/ProtectedAdminRoute";
@@ -133,6 +134,7 @@ const App = () => (
                 <LocaleProvider>
                 <AdminLocaleProvider>
                 <ScrollToTop />
+                <PreserveTenantQuery />
                 <WhatsAppButton />
                 <Suspense
                   fallback={

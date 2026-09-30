@@ -51,6 +51,7 @@ vi.mock('@/utils/toastMessages', () => ({
 describe('AdminFirstUseGuide', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    localStorage.clear();
     updateAdminGuide.mockResolvedValue({
       id: 2,
       email: 'admin@test.local',
@@ -74,6 +75,17 @@ describe('AdminFirstUseGuide', () => {
     );
     expect(screen.getByText(/Bienvenue dans votre back-office/i)).toBeInTheDocument();
     expect(screen.getByText(/Guide · 1\//i)).toBeInTheDocument();
+    expect(localStorage.getItem('troco_admin_guide_seen_2')).toBe('1');
+  });
+
+  it('ne se rouvre pas si le guide a déjà été vu', () => {
+    localStorage.setItem('troco_admin_guide_seen_2', '1');
+    render(
+      <MemoryRouter>
+        <AdminFirstUseGuide />
+      </MemoryRouter>,
+    );
+    expect(screen.queryByText(/Bienvenue dans votre back-office/i)).not.toBeInTheDocument();
   });
 
   it('passe à l’étape suivante puis termine en persist ant completed=true', async () => {

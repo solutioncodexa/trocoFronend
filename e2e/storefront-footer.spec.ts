@@ -22,6 +22,25 @@ test.describe('Footer links vitrine', () => {
     await expect(page).toHaveURL(/\/contact/);
   });
 
+  test('liens légaux du pied de page vers les pages CMS', async ({ page }) => {
+    await page.goto('/boutique?tenant=maison-atlas');
+
+    const footer = page.locator('footer');
+    await expect(footer).toBeVisible({ timeout: 15_000 });
+    await expect(footer.getByRole('link', { name: /mentions légales/i })).toHaveAttribute(
+      'href',
+      /\/page\/mentions-legales/,
+    );
+    await expect(footer.getByRole('link', { name: /^confidentialité$/i })).toHaveAttribute(
+      'href',
+      /\/page\/politique-de-confidentialite/,
+    );
+    await expect(footer.getByRole('link', { name: /^cgv$/i })).toHaveAttribute(
+      'href',
+      /\/page\/conditions-generales-de-vente/,
+    );
+  });
+
   test('admin sections : onglet liens footer', async ({ page }) => {
     await page.goto('/admin');
     await page.getByLabel(/email/i).fill('admin@maison-atlas.test');

@@ -375,7 +375,7 @@ const AdminLayout = ({
             className="w-full justify-start gap-2 text-white/75 hover:bg-white/10 hover:text-white"
             asChild
           >
-            <a href={storefrontUrl} target="troco-storefront" rel="noopener noreferrer" title={storefrontUrl}>
+            <a href={storefrontUrl} target="_blank" rel="noopener noreferrer" title={storefrontUrl}>
               <ExternalLink className="h-4 w-4" />
               {t('common.viewStore')}
             </a>
