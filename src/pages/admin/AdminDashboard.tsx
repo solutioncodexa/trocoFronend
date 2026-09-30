@@ -13,6 +13,8 @@ import {
   ExternalLink,
   Store,
   ImagePlus,
+  Phone,
+  FileText,
 } from 'lucide-react';
 import { useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
@@ -30,7 +32,9 @@ import { getImageUrl } from '@/services/api';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { useStoreBrand } from '@/hooks/useStoreBrand';
 import { buildStorefrontUrl } from '@/utils/storefrontUrl';
-import { normalizeThemeKey } from '@/config/storeThemes';
+import { storePagesApi } from '@/services/api/storePages';
+import { listDemoProducts } from '@/utils/starterPack';
+import { MENTIONS_PAGE_SLUG, PRIVACY_PAGE_SLUG, TERMS_PAGE_SLUG } from '@/config/legalPages';
 import { toast } from 'sonner';
 
 const ORDER_STATUS_KEYS: Record<string, AdminMessageKey> = {
@@ -68,6 +72,20 @@ const AdminDashboard = () => {
   const { data: storeSettings } = useQuery({
     queryKey: ['store-settings', 'me', 'summary'],
     queryFn: () => platformApi.getMyStoreSummary(),
+  });
+  const { data: fullSettings } = useQuery({
+    queryKey: ['store-settings', 'me'],
+    queryFn: () => platformApi.getMyStoreSettings(),
+  });
+  const { data: demoProducts = [] } = useQuery({
+    queryKey: ['products', 'onboarding-demo'],
+    queryFn: () => listDemoProducts(),
+    staleTime: 30_000,
+  });
+  const { data: pages = [] } = useQuery({
+    queryKey: ['store-pages'],
+    queryFn: () => storePagesApi.list(),
+    staleTime: 30_000,
   });
   const storefrontUrl = buildStorefrontUrl(slug || store?.slug || storeSettings?.slug);
   const { data: ordersPage } = useQuery({
@@ -135,18 +153,15 @@ const AdminDashboard = () => {
   };
 
   const productCount = dash?.productCount ?? 0;
+  // Les produits d'exemple (SKU DEMO-) ne comptent pas : on attend un vrai produit.
+  const realProductCount = Math.max(0, productCount - demoProducts.length);
   const hasLogo = !!(logoUrl || storeSettings?.logoUrl);
-  const hasBranding =
-    !!(storeSettings?.tagline?.trim() ||
-      storeSettings?.primaryColor?.trim() ||
-      storeSettings?.aboutText?.trim());
+  const hasContact = !!(fullSettings?.contactPhone?.trim() || fullSettings?.contactWhatsapp?.trim());
+  const pageSlugs = new Set(pages.filter((p) => p.published).map((p) => (p.slug || '').toLowerCase()));
+  const hasLegal = [MENTIONS_PAGE_SLUG, TERMS_PAGE_SLUG, PRIVACY_PAGE_SLUG].every((slug) =>
+    pageSlugs.has(slug),
+  );
   const setupSteps = [
-    {
-      done: !!normalizeThemeKey(storeSettings?.themeKey),
-      label: t('dashboard.setupTheme'),
-      href: '/admin/onboarding',
-      icon: Palette,
-    },
     {
       done: hasLogo,
       label: t('dashboard.setupLogo'),
@@ -154,26 +169,33 @@ const AdminDashboard = () => {
       icon: ImagePlus,
     },
     {
-      done: hasBranding,
-      label: t('dashboard.setupAppearance'),
+      done: hasContact,
+      label: t('dashboard.setupContact'),
       href: '/admin/parametres',
-      icon: Palette,
+      icon: Phone,
     },
     {
-      done: productCount > 0,
-      label: t('dashboard.setupFirstProduct'),
+      done: realProductCount > 0,
+      label: t('dashboard.setupRealProduct'),
       href: '/admin/produits?action=new',
       icon: Package,
     },
     {
-      done: productCount > 0 && hasLogo,
+      done: hasLegal,
+      label: t('dashboard.setupLegal'),
+      href: '/admin/onboarding?step=3',
+      icon: FileText,
+    },
+    {
+      done: hasLogo && realProductCount > 0,
       label: t('dashboard.setupViewStore'),
       href: storefrontUrl,
       icon: ExternalLink,
       external: true,
     },
   ];
-  const pendingSteps = setupSteps.filter((s) => !s.done).length;
+  const doneSteps = setupSteps.filter((s) => s.done).length;
+  const pendingSteps = setupSteps.length - doneSteps;
   const showOnboarding = pendingSteps > 0;
 
   const storeStatus = (storeSettings?.status || '').toUpperCase();
@@ -223,6 +245,23 @@ const AdminDashboard = () => {
           <p className="mt-1 text-sm text-muted-foreground">
             {t('dashboard.setupRemaining', { count: pendingSteps })}
           </p>
+          <div className="mt-3 flex items-center gap-3">
+            <div
+              className="h-2 flex-1 overflow-hidden rounded-full bg-muted"
+              role="progressbar"
+              aria-valuemin={0}
+              aria-valuemax={setupSteps.length}
+              aria-valuenow={doneSteps}
+            >
+              <div
+                className="h-full rounded-full bg-primary transition-all"
+                style={{ width: `${(doneSteps / setupSteps.length) * 100}%` }}
+              />
+            </div>
+            <span className="text-xs font-medium text-muted-foreground">
+              {t('dashboard.setupProgress', { done: doneSteps, total: setupSteps.length })}
+            </span>
+          </div>
           <ul className="mt-5 grid gap-3 sm:grid-cols-2">
             {setupSteps.map((step) => (
               <li key={step.label}>

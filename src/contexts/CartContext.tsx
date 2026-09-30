@@ -26,7 +26,7 @@ function stripLegacyGoldFromItems(raw: unknown): CartItem[] {
     if (!item || typeof item !== 'object') return item as CartItem;
     const o = item as Record<string, unknown>;
     const { selectedGoldType: _g, ...rest } = o;
-    return rest as CartItem;
+    return rest as unknown as CartItem;
   });
 }
 

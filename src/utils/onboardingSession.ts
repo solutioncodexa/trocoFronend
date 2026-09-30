@@ -12,6 +12,8 @@ export type OnboardingDraft = {
   publishHome?: boolean;
   /** Secteur choisi (pack de démarrage : catégories + produits d’exemple). */
   sector?: string;
+  /** Style complet choisi (`STYLE_PRESETS`). */
+  style?: string;
 };
 
 export function readOnboardingDraft(): OnboardingDraft | null {
@@ -42,5 +44,5 @@ export function clearOnboardingDraft() {
 
 /** Retour assistant après création produit. */
 export const ONBOARDING_RETURN_QUERY = 'fromOnboarding';
-export const ONBOARDING_PUBLICATION_PATH = '/admin/onboarding?step=6';
-export const ONBOARDING_PRODUCTS_PATH = '/admin/onboarding?step=5';
+export const ONBOARDING_PUBLICATION_PATH = '/admin/onboarding?step=3';
+export const ONBOARDING_PRODUCTS_PATH = '/admin/onboarding?step=2';

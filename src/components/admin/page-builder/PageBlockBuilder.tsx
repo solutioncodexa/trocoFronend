@@ -29,6 +29,7 @@ import { Button } from '@/components/ui/button';
 import { PageBlockView } from '@/components/storefront/PageRenderer';
 import BlockPalettePreview from '@/components/admin/page-builder/BlockPalettePreview';
 import StorePreviewChrome from '@/components/admin/page-builder/StorePreviewChrome';
+import DeviceFrame from '@/components/admin/page-builder/DeviceFrame';
 import {
   BLOCK_CATALOG,
   type StorePage,
@@ -140,6 +141,18 @@ export default function PageBlockBuilder({
   const [selectedChrome, setSelectedChrome] = useState<'header' | 'footer' | null>(null);
   const [device, setDevice] = useState<'desktop' | 'tablet' | 'mobile'>('desktop');
   const [zoom, setZoom] = useState(90);
+  const canvasRef = useRef<HTMLDivElement>(null);
+  const [canvasWidth, setCanvasWidth] = useState(0);
+  const [frameHeight, setFrameHeight] = useState(600);
+
+  useEffect(() => {
+    const el = canvasRef.current;
+    if (!el) return;
+    const observer = new ResizeObserver(() => setCanvasWidth(el.clientWidth));
+    observer.observe(el);
+    setCanvasWidth(el.clientWidth);
+    return () => observer.disconnect();
+  }, []);
   const [viewMode, setViewMode] = useState<'edit' | 'live'>('edit');
   const [leftTab, setLeftTab] = useState<'components' | 'layers'>('components');
   const [canUndo, setCanUndo] = useState(false);
@@ -405,6 +418,11 @@ export default function PageBlockBuilder({
 
   const deviceMax =
     device === 'mobile' ? 'max-w-[390px]' : device === 'tablet' ? 'max-w-[768px]' : 'max-w-[1100px]';
+  // Largeurs CSS réelles : les media queries (sm / md / lg) s'appliquent dans l'iframe d'aperçu.
+  const deviceWidth = device === 'mobile' ? 390 : device === 'tablet' ? 768 : 1100;
+  const fitZoom = canvasWidth > 0 ? Math.floor(((canvasWidth - 24) / deviceWidth) * 100) : 100;
+  const effectiveZoom = Math.max(30, Math.min(zoom, fitZoom));
+  const chromeExtra = device === 'mobile' ? 30 : 2; // encoche + bordure
 
   const zoomIn = () => {
     const i = ZOOM_STEPS.indexOf(zoom as (typeof ZOOM_STEPS)[number]);
@@ -761,7 +779,7 @@ export default function PageBlockBuilder({
                 </button>
               ) : null}
               <span className="tabular-nums text-muted-foreground">
-                {device === 'desktop' ? 'Bureau' : device === 'tablet' ? 'Tablette' : 'Mobile'} · {zoom}%
+                {device === 'desktop' ? 'Bureau' : device === 'tablet' ? 'Tablette' : 'Mobile'} · {effectiveZoom}%
               </span>
             </div>
           </div>
@@ -786,17 +804,18 @@ export default function PageBlockBuilder({
             </div>
           ) : null}
 
-          <div className="flex justify-center px-3 py-6" onClick={(e) => e.stopPropagation()}>
+          <div ref={canvasRef} className="flex justify-center px-3 py-6" onClick={(e) => e.stopPropagation()}>
             <div
-              className={cn(
-                'origin-top transition-transform',
-                deviceMax,
-                'w-full',
-              )}
               style={{
-                transform: `scale(${zoom / 100})`,
-                width:
-                  device === 'mobile' ? 390 : device === 'tablet' ? 768 : Math.min(1100, 960),
+                width: deviceWidth * (effectiveZoom / 100),
+                height: (frameHeight + chromeExtra) * (effectiveZoom / 100),
+              }}
+            >
+            <div
+              className={cn('origin-top-left transition-transform', deviceMax)}
+              style={{
+                transform: `scale(${effectiveZoom / 100})`,
+                width: deviceWidth,
               }}
             >
             <div
@@ -812,6 +831,7 @@ export default function PageBlockBuilder({
                 </div>
               ) : null}
 
+              <DeviceFrame width={deviceWidth} dir={editLang === 'ar' ? 'rtl' : 'ltr'} onHeightChange={setFrameHeight}>
               <StorePreviewChrome
                 pageTitle={previewPage.title}
                 appBar={appBar}
@@ -1007,6 +1027,8 @@ export default function PageBlockBuilder({
                   </div>
                 )}
               </StorePreviewChrome>
+              </DeviceFrame>
+            </div>
             </div>
             </div>
           </div>

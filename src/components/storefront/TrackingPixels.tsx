@@ -46,8 +46,9 @@ function initMeta(pixelId: string) {
     return;
   }
   const n = (window.fbq = function (...args: unknown[]) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (n as any).callMethod ? (n as any).callMethod(...args) : (n as any).queue.push(args);
+    const stub = n as unknown as { callMethod?: (...a: unknown[]) => void; queue: unknown[] };
+    if (stub.callMethod) stub.callMethod(...args);
+    else stub.queue.push(args);
   }) as typeof window.fbq & { queue: unknown[]; loaded?: boolean; version?: string };
   if (!n.queue) n.queue = [];
   n.loaded = true;

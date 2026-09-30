@@ -14,7 +14,7 @@ export const wishlistApi = {
   getWishlist: async (customerId?: number): Promise<ProductListItemDTO[]> => {
     const id = customerId || getCustomerId();
     const url = buildApiUrl(`/wishlist/${id}`);
-    return apiRequest<ProductListItemDTO[]>(url, {}, true);
+    return apiRequest<ProductListItemDTO[]>(url, { skipAuth: true });
   },
 
   // Ajouter un produit à la wishlist
@@ -23,7 +23,8 @@ export const wishlistApi = {
     const url = buildApiUrl(`/wishlist/${id}/products/${productId}`);
     return apiRequest<void>(url, {
       method: 'POST',
-    }, true);
+      skipAuth: true,
+    });
   },
 
   // Supprimer un produit de la wishlist
@@ -32,7 +33,8 @@ export const wishlistApi = {
     const url = buildApiUrl(`/wishlist/${id}/products/${productId}`);
     return apiRequest<void>(url, {
       method: 'DELETE',
-    }, true);
+      skipAuth: true,
+    });
   },
 
   // Vider la wishlist
@@ -41,6 +43,7 @@ export const wishlistApi = {
     const url = buildApiUrl(`/wishlist/${id}`);
     return apiRequest<void>(url, {
       method: 'DELETE',
-    }, true);
+      skipAuth: true,
+    });
   },
 };

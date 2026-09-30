@@ -31,7 +31,7 @@ export function applyWhatsAppTemplate(
     'Bonjour, je souhaite commander: {productName} ({url})';
   let msg = (template?.trim() || fallback);
   for (const [key, value] of Object.entries(vars)) {
-    msg = msg.replaceAll(`{${key}}`, value);
+    msg = msg.split(`{${key}}`).join(value);
   }
   return msg;
 }

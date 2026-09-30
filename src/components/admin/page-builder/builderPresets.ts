@@ -82,7 +82,7 @@ export function blocksFromTemplate(template: PageTemplate): EditorBlock[] {
 
 export function blocksFromTypes(types: StorePageBlockType[]): EditorBlock[] {
   return types
-    .map((type, i) => {
+    .map((type, i): EditorBlock | null => {
       const block = createEditorBlock(type);
       return block ? { ...block, sortOrder: i } : null;
     })
@@ -112,9 +112,6 @@ export function applyThemeToBlocks(blocks: EditorBlock[], theme: BuilderTheme): 
       } else if (theme.bgColor && ['rich_text', 'products', 'categories', 'faq', 'contact'].includes(type)) {
         next.bgColor = theme.bgColor;
         next.textColor = theme.textColor;
-      }
-      if (theme.buttonColor && (type === 'hero' || type === 'cta')) {
-        next.buttonColor = theme.buttonColor;
       }
     }
     return { ...b, config: next };

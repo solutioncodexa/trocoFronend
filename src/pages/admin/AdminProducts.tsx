@@ -50,7 +50,7 @@ const generateCategorySlug = (name: string) =>
     .replace(/[^a-z0-9-]/g, '');
 
 const uniqueCategorySlug = (base: string, existing: Set<string>) => {
-  let slug = base || 'categorie';
+  const slug = base || 'categorie';
   if (!existing.has(slug)) return slug;
   let i = 2;
   while (existing.has(`${slug}-${i}`)) i += 1;
@@ -427,8 +427,8 @@ const AdminProducts = () => {
   const returnToOnboardingPublication = () => {
     const draft = readOnboardingDraft();
     writeOnboardingDraft({
-      ...(draft ?? { step: 4 }),
-      step: 4,
+      ...(draft ?? { step: 3 }),
+      step: 3,
     });
     navigate(ONBOARDING_PUBLICATION_PATH, { replace: true });
   };
@@ -436,8 +436,8 @@ const AdminProducts = () => {
   const returnToOnboardingProducts = () => {
     const draft = readOnboardingDraft();
     writeOnboardingDraft({
-      ...(draft ?? { step: 3 }),
-      step: 3,
+      ...(draft ?? { step: 2 }),
+      step: 2,
     });
     navigate(ONBOARDING_PRODUCTS_PATH, { replace: true });
   };

@@ -63,6 +63,9 @@ export const storePagesApi = {
       buildApiUrl(`/store-pages/analytics?days=${days}`),
     ),
 
+  /** Slugs des pages publiées (le pied de page n'affiche que les liens qui existent). */
+  publicSlugs: () => apiRequest<string[]>(buildApiUrl('/store-pages/public/slugs')),
+
   publicNav: (lang = 'fr') =>
     apiRequest<StorePageNavItem[]>(buildApiUrl(`/store-pages/public/nav?lang=${lang}`)),
 

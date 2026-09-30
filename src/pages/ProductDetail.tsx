@@ -200,7 +200,7 @@ const ProductDetail = () => {
   const logoInputRef = useRef<HTMLInputElement>(null);
   const sizeFieldRef = useRef<HTMLDivElement>(null);
 
-  const { data: product, isLoading: isLoadingProduct } = useQuery({
+  const { data: product, isLoading: isLoadingProduct, isError: isProductError } = useQuery({
     queryKey: ['product', id],
     queryFn: async () => {
       if (!id) return null;
@@ -209,10 +209,11 @@ const ProductDetail = () => {
     },
     enabled: !!id,
     retry: 1,
-    onError: () => {
-      toast.error('Erreur lors du chargement du produit');
-    },
   });
+
+  useEffect(() => {
+    if (isProductError) toast.error('Erreur lors du chargement du produit');
+  }, [isProductError]);
 
   const { data: relatedProductsData } = useQuery({
     queryKey: ['related-products', product?.category, id],

@@ -11,6 +11,7 @@ import { useSystemNavReplacements } from '@/hooks/useSystemNavReplacements';
 import { useGlobalSections } from '@/hooks/useGlobalSections';
 import { useStoreAppearance } from '@/hooks/useStoreAppearance';
 import { categoriesApi } from '@/services/api/categories';
+import { storePagesApi } from '@/services/api/storePages';
 import { staticCatalogQueryOptions } from '@/config/queryOptions';
 import { useLocale } from '@/contexts/LocaleContext';
 import {
@@ -53,6 +54,14 @@ const Footer = () => {
     ...staticCatalogQueryOptions,
     enabled: !isDemo,
   });
+
+  const { data: publishedSlugs = [] } = useQuery({
+    queryKey: ['store-pages', 'public-slugs'],
+    queryFn: () => storePagesApi.publicSlugs(),
+    ...staticCatalogQueryOptions,
+    enabled: !isDemo,
+  });
+  const hasPage = (slug: string) => isDemo || publishedSlugs.includes(slug);
 
   const rootCategories = isDemo
     ? (demo?.categories ?? []).slice(0, 6).map((c) => ({ id: c.id, name: c.name, slug: c.slug }))
@@ -244,7 +253,7 @@ const Footer = () => {
                     <Link
                       className={footerLinkClass}
                       to={
-                        isDemo || isReplaced('/livraison-retours')
+                        isDemo || isReplaced('/livraison-retours') || !hasPage(RETURNS_PAGE_SLUG)
                           ? navHref('/livraison-retours')
                           : withLang(to(`/page/${RETURNS_PAGE_SLUG}`))
                       }
@@ -311,7 +320,12 @@ const Footer = () => {
             {showSocials && !showBrand && !showNewsletter ? (
               <SocialLinks className="justify-center" linkClassName={socialIconClass} />
             ) : null}
-            {LEGAL_FOOTER_LINKS.map((item) => {
+            {LEGAL_FOOTER_LINKS.filter((item) => {
+              if (item.labelKey !== 'privacy') return hasPage(item.slug);
+              // Confidentialité : lien externe / personnalisé du marchand, sinon page CMS si elle existe.
+              const privacy = resolvePrivacyPolicyLink(store?.privacyPolicyUrl);
+              return privacy.external || privacy.path !== `/page/${item.slug}` || hasPage(item.slug);
+            }).map((item) => {
               if (item.labelKey === 'privacy') {
                 const privacy = resolvePrivacyPolicyLink(store?.privacyPolicyUrl);
                 if (privacy.external) {

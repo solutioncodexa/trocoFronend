@@ -26,7 +26,19 @@ export type PaymentCredentialsTestPayload = {
   cmiStoreKey?: string;
 };
 
+export type SlugAvailability = {
+  slug: string;
+  available: boolean;
+  reason?: 'invalid' | 'reserved' | 'taken';
+  suggestion?: string;
+};
+
 export const platformApi = {
+  checkSlug: (slug: string): Promise<SlugAvailability> =>
+    apiRequest<SlugAvailability>(buildApiUrl(`/platform/slug-available?slug=${encodeURIComponent(slug)}`), {
+      skipAuth: true,
+    }),
+
   getPlans: (): Promise<PlanMarketingDTO[]> =>
     apiRequest<PlanMarketingDTO[]>(buildApiUrl('/platform/plans')),
 

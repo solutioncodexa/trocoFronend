@@ -29,6 +29,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { featuredProductsApi } from '@/services/api/featuredProducts';
 import { productsApi } from '@/services/api/products';
+import type { ProductListItemDTO } from '@/types/api';
 import { FeaturedProductDTO, CreateFeaturedProductRequest, UpdateFeaturedProductRequest } from '@/types/featured-products';
 import { toast } from 'sonner';
 import { toastError } from '@/utils/toastMessages';
@@ -168,11 +169,11 @@ const AdminFeaturedProducts = () => {
     toggleMutation.mutate({ id, isActive });
   };
 
-  const handleImageUpload = async (file: File, setFormData: any) => {
+  const handleImageUpload = async <T extends { imageUrl?: string }>(file: File, setFormData: React.Dispatch<React.SetStateAction<T>>) => {
     setUploadingImage(true);
     try {
       const imageUrl = await uploadImage(file);
-      setFormData(prev => ({ ...prev, imageUrl }));
+      setFormData((prev) => ({ ...prev, imageUrl }));
       toast.success('Image uploadée avec succès');
     } catch (error) {
       console.error('Erreur upload image:', error);
@@ -255,7 +256,7 @@ const AdminFeaturedProducts = () => {
             className="pl-10"
           />
         </div>
-        <Select value={filterSection} onValueChange={(value: any) => setFilterSection(value)}>
+        <Select value={filterSection} onValueChange={(value) => setFilterSection(value as typeof filterSection)}>
           <SelectTrigger className="w-full sm:w-48">
             <SelectValue placeholder="Section" />
           </SelectTrigger>
@@ -265,7 +266,7 @@ const AdminFeaturedProducts = () => {
             <SelectItem value="sur-mesure">Sur-mesure / Devis</SelectItem>
           </SelectContent>
         </Select>
-        <Select value={filterStatus} onValueChange={(value: any) => setFilterStatus(value)}>
+        <Select value={filterStatus} onValueChange={(value) => setFilterStatus(value as typeof filterStatus)}>
           <SelectTrigger className="w-full sm:w-48">
             <SelectValue placeholder="Statut" />
           </SelectTrigger>
@@ -414,9 +415,9 @@ const CreateFeaturedProductDialog = ({
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSubmit: (data: CreateFeaturedProductRequest) => void;
-  availableProducts: any[];
+  availableProducts: ProductListItemDTO[];
   uploadingImage: boolean;
-  onImageUpload: (file: File, setFormData: any) => Promise<void>;
+  onImageUpload: <T extends { imageUrl?: string }>(file: File, setFormData: React.Dispatch<React.SetStateAction<T>>) => Promise<void>;
 }) => {
   const [formData, setFormData] = useState<CreateFeaturedProductRequest>({
     productId: '',
@@ -467,7 +468,7 @@ const CreateFeaturedProductDialog = ({
             <Label htmlFor="section">Section</Label>
             <Select 
               value={formData.section} 
-              onValueChange={(value: any) => setFormData({ ...formData, section: value })}
+              onValueChange={(value) => setFormData({ ...formData, section: value as FeaturedProductDTO['section'] })}
             >
               <SelectTrigger>
                 <SelectValue />
@@ -602,9 +603,9 @@ const EditFeaturedProductDialog = ({
   onOpenChange: (open: boolean) => void;
   product: FeaturedProductDTO | null;
   onSubmit: (data: UpdateFeaturedProductRequest) => void;
-  availableProducts: any[];
+  availableProducts: ProductListItemDTO[];
   uploadingImage: boolean;
-  onImageUpload: (file: File, setFormData: any) => Promise<void>;
+  onImageUpload: <T extends { imageUrl?: string }>(file: File, setFormData: React.Dispatch<React.SetStateAction<T>>) => Promise<void>;
 }) => {
   const [formData, setFormData] = useState<UpdateFeaturedProductRequest>({
     productId: product?.productId || '',
@@ -669,7 +670,7 @@ const EditFeaturedProductDialog = ({
             <Label htmlFor="section">Section</Label>
             <Select 
               value={formData.section} 
-              onValueChange={(value: any) => setFormData({ ...formData, section: value })}
+              onValueChange={(value) => setFormData({ ...formData, section: value as FeaturedProductDTO['section'] })}
             >
               <SelectTrigger>
                 <SelectValue />

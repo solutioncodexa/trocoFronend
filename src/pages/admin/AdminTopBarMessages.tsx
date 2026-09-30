@@ -45,7 +45,7 @@ const AdminTopBarMessages = () => {
     mutationFn: topBarMessagesApi.createMessage,
     onSuccess: (newMessage) => {
       // Mettre à jour le cache immédiatement
-      queryClient.setQueryData(['top-bar-messages'], (old: any) => {
+      queryClient.setQueryData(['top-bar-messages'], (old: TopBarMessageDTO[] | undefined) => {
         const currentMessages = old || [];
         return [...currentMessages, newMessage];
       });
@@ -56,7 +56,7 @@ const AdminTopBarMessages = () => {
       toast.success('Message créé avec succès');
       setIsCreateDialogOpen(false);
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       console.error('❌ Erreur création:', error);
       toastError(error, 'Erreur lors de la création du message');
     },
@@ -71,7 +71,7 @@ const AdminTopBarMessages = () => {
       setIsEditDialogOpen(false);
       setSelectedMessage(null);
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       toastError(error, 'Erreur lors de la mise à jour du message');
     },
   });
@@ -79,16 +79,16 @@ const AdminTopBarMessages = () => {
   const deleteMutation = useMutation({
     mutationFn: topBarMessagesApi.deleteMessage,
     onSuccess: (_, deletedId) => {
-      queryClient.setQueryData(['top-bar-messages'], (old: any) => {
+      queryClient.setQueryData(['top-bar-messages'], (old: TopBarMessageDTO[] | undefined) => {
         const currentMessages = old || [];
-        return currentMessages.filter((msg: any) => msg.id !== deletedId);
+        return currentMessages.filter((msg) => msg.id !== deletedId);
       });
       
       queryClient.invalidateQueries({ queryKey: ['top-bar-messages'] });
       
       toast.success('Message supprimé avec succès');
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       console.error('❌ Erreur suppression:', error);
       toastError(error, 'Erreur lors de la suppression du message');
     },
@@ -101,7 +101,7 @@ const AdminTopBarMessages = () => {
       queryClient.invalidateQueries({ queryKey: ['top-bar-messages'] });
       toast.success('Statut du message mis à jour avec succès');
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       toastError(error, 'Erreur lors de la mise à jour du statut');
     },
   });

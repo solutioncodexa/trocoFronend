@@ -47,7 +47,7 @@ export interface CreatePromoCodeRequest {
   expiresAt?: string;
 }
 
-export interface UpdatePromoCodeRequest extends Partial<CreatePromoCodeRequest> {}
+export type UpdatePromoCodeRequest = Partial<CreatePromoCodeRequest>;
 
 export interface ValidatePromoCodeResponse {
   valid: boolean;

@@ -42,11 +42,11 @@ const AdminPromoModals = () => {
   const [uploadingImage, setUploadingImage] = useState(false);
 
   // Handler pour l'upload d'image (logique FeaturedProducts)
-  const handleImageUpload = async (file: File, setFormData: any) => {
+  const handleImageUpload = async <T extends { imageUrl?: string }>(file: File, setFormData: React.Dispatch<React.SetStateAction<T>>) => {
     setUploadingImage(true);
     try {
       const imageUrl = await uploadImage(file);
-      setFormData(prev => ({ ...prev, imageUrl }));
+      setFormData((prev) => ({ ...prev, imageUrl }));
       toast.success('Image uploadée avec succès');
     } catch (error) {
       console.error('❌ Upload error:', error);
@@ -69,7 +69,7 @@ const AdminPromoModals = () => {
     mutationFn: promoModalsApi.createPromoModal,
     onSuccess: (newModal) => {
       // Mettre à jour le cache immédiatement
-      queryClient.setQueryData(['promo-modals'], (old: any) => {
+      queryClient.setQueryData(['promo-modals'], (old: PromoModalDTO[] | undefined) => {
         const currentModals = old || [];
         return [...currentModals, newModal];
       });
@@ -82,7 +82,7 @@ const AdminPromoModals = () => {
       
       sessionStorage.removeItem('hasSeenPromoModal');
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       console.error('❌ Erreur création:', error);
       toastError(error, 'Erreur lors de la création du promo modal');
     },
@@ -99,7 +99,7 @@ const AdminPromoModals = () => {
 
       sessionStorage.removeItem('hasSeenPromoModal');
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       toastError(error, 'Erreur lors de la mise à jour du promo modal');
     },
   });
@@ -107,9 +107,9 @@ const AdminPromoModals = () => {
   const deleteMutation = useMutation({
     mutationFn: promoModalsApi.deletePromoModal,
     onSuccess: (_, deletedId) => {
-      queryClient.setQueryData(['promo-modals'], (old: any) => {
+      queryClient.setQueryData(['promo-modals'], (old: PromoModalDTO[] | undefined) => {
         const currentModals = old || [];
-        return currentModals.filter((modal: any) => modal.id !== deletedId);
+        return currentModals.filter((modal) => String(modal.id) !== String(deletedId));
       });
       
       queryClient.invalidateQueries({ queryKey: ['promo-modals'] });
@@ -118,7 +118,7 @@ const AdminPromoModals = () => {
       
       toast.success('Promo modal supprimé avec succès');
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       console.error('❌ Erreur suppression:', error);
       toastError(error, 'Erreur lors de la suppression du promo modal');
     },
@@ -133,7 +133,7 @@ const AdminPromoModals = () => {
       
       sessionStorage.removeItem('hasSeenPromoModal');
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       toastError(error, 'Erreur lors de la mise à jour du statut');
     },
   });
@@ -366,7 +366,7 @@ const CreatePromoModalDialog = ({
   onOpenChange: (open: boolean) => void;
   onSubmit: (data: CreatePromoModalRequest) => void;
   uploadingImage: boolean;
-  onImageUpload: (file: File, setFormData: any) => Promise<void>;
+  onImageUpload: <T extends { imageUrl?: string }>(file: File, setFormData: React.Dispatch<React.SetStateAction<T>>) => Promise<void>;
 }) => {
   const [formData, setFormData] = useState<CreatePromoModalRequest>({
     title: '',
@@ -546,7 +546,7 @@ const EditPromoModalDialog = ({
   modal: PromoModalDTO;
   onSubmit: (data: UpdatePromoModalRequest) => void;
   uploadingImage: boolean;
-  onImageUpload: (file: File, setFormData: any) => Promise<void>;
+  onImageUpload: <T extends { imageUrl?: string }>(file: File, setFormData: React.Dispatch<React.SetStateAction<T>>) => Promise<void>;
 }) => {
   const [formData, setFormData] = useState<UpdatePromoModalRequest>({
     title: modal?.title || '',

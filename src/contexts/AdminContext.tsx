@@ -5,6 +5,7 @@ import type { PermissionCode } from '@/config/permissions';
 import { hasEffectivePermission } from '@/config/permissions';
 import { clearStockAlertPending } from '@/utils/stockAlertSession';
 import { useTenant } from '@/contexts/TenantContext';
+import { isAdminSurface } from '@/config/api';
 
 interface AdminContextType {
   isAuthenticated: boolean;
@@ -91,16 +92,19 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
       setIsLoading(false);
       return;
     }
+    // Sur la vitrine (même origine que l'admin : dev, domaine custom), l'appel /auth/me part sans jeton
+    // et répond 401 : ce n'est pas une session invalide, on ne doit surtout pas effacer le jeton.
+    const onAdminSurface = isAdminSurface();
     try {
       const me = await authApi.getMe();
       if (me && isBackofficeRole(me.role) && me.active !== false) {
         setUser(me);
         await syncStoreBrand(me.role, me.fournisseurId);
-      } else {
+      } else if (onAdminSurface) {
         authApi.clearStoredAuth();
       }
     } catch {
-      authApi.clearStoredAuth();
+      if (onAdminSurface) authApi.clearStoredAuth();
     } finally {
       setIsLoading(false);
     }

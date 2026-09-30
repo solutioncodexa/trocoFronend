@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import {
   ArrowLeft,
   ArrowRight,
@@ -173,13 +173,16 @@ const AdminFirstUseGuide = ({ forceOpen = false, onForceOpenHandled }: Props) =>
   const [open, setOpen] = useState(false);
   const [step, setStep] = useState(0);
   const [saving, setSaving] = useState(false);
+  const { pathname } = useLocation();
+  // L'assistant de création a son propre parcours guidé : on attend la page suivante.
+  const onOnboarding = pathname.startsWith('/admin/onboarding');
 
   const shouldAutoShow = useMemo(() => {
-    if (!user || isSuperAdmin) return false;
+    if (!user || isSuperAdmin || onOnboarding) return false;
     if (user.role !== 'ADMIN' && user.role !== 'STAFF') return false;
     if (user.adminGuideCompleted === true || hasSeenAdminGuide(user.id)) return false;
     return true;
-  }, [user, isSuperAdmin]);
+  }, [user, isSuperAdmin, onOnboarding]);
 
   const onForceOpenHandledRef = useRef(onForceOpenHandled);
   onForceOpenHandledRef.current = onForceOpenHandled;

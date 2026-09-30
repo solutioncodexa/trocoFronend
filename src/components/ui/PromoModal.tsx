@@ -106,7 +106,7 @@ const PromoModal = () => {
       >
         <button
           type="button"
-          onClick={handleClose}
+          onClick={() => handleClose()}
           className="absolute right-3 top-3 z-20 flex flex-col items-center gap-0.5 rounded-xl bg-card/90 p-2 text-muted-foreground shadow-soft transition-colors hover:bg-muted hover:text-foreground md:right-4 md:top-4"
           aria-label="Fermer"
         >
@@ -171,7 +171,7 @@ const PromoModal = () => {
               </Button>
               <button
                 type="button"
-                onClick={handleClose}
+                onClick={() => handleClose()}
                 className="text-xs font-medium text-muted-foreground transition-colors hover:text-primary"
               >
                 Continuer sans cette offre

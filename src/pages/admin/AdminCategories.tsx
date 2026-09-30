@@ -74,7 +74,7 @@ const generateSlug = (name: string) =>
     .replace(/[^a-z0-9-]/g, '');
 
 const uniqueSlug = (base: string, existing: Set<string>) => {
-  let slug = base || 'categorie';
+  const slug = base || 'categorie';
   if (!existing.has(slug)) return slug;
   let i = 2;
   while (existing.has(`${slug}-${i}`)) i += 1;

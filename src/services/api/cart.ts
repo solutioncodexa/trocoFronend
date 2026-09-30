@@ -16,7 +16,7 @@ export const cartApi = {
   getCart: async (): Promise<CartDTO> => {
     const sessionId = getSessionId();
     const url = buildApiUrl(`/cart?sessionId=${sessionId}`);
-    return apiRequest<CartDTO>(url, {}, true);
+    return apiRequest<CartDTO>(url, { skipAuth: true });
   },
 
   // Ajouter un article au panier
@@ -26,7 +26,8 @@ export const cartApi = {
     return apiRequest<CartDTO>(url, {
       method: 'POST',
       body: JSON.stringify({ productId, quantity }),
-    }, true);
+      skipAuth: true,
+    });
   },
 
   // Mettre à jour la quantité d'un article
@@ -36,7 +37,8 @@ export const cartApi = {
     return apiRequest<CartDTO>(url, {
       method: 'PUT',
       body: JSON.stringify({ quantity }),
-    }, true);
+      skipAuth: true,
+    });
   },
 
   // Supprimer un article du panier
@@ -45,7 +47,8 @@ export const cartApi = {
     const url = buildApiUrl(`/cart/items/${itemId}?sessionId=${sessionId}`);
     return apiRequest<CartDTO>(url, {
       method: 'DELETE',
-    }, true);
+      skipAuth: true,
+    });
   },
 
   // Vider le panier
@@ -54,6 +57,7 @@ export const cartApi = {
     const url = buildApiUrl(`/cart?sessionId=${sessionId}`);
     return apiRequest<void>(url, {
       method: 'DELETE',
-    }, true);
+      skipAuth: true,
+    });
   },
 };

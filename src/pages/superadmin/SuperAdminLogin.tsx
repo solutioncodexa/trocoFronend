@@ -37,7 +37,7 @@ const SuperAdminLogin = () => {
         navigate('/admin/dashboard');
       }
     } else {
-      setError(result.error || 'Email ou mot de passe incorrect');
+      setError(('error' in result && result.error) || 'Email ou mot de passe incorrect');
     }
 
     setIsLoading(false);

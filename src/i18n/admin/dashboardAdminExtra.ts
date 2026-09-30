@@ -20,6 +20,10 @@ export type DashboardAdminMessageKey =
   | 'dashboard.setupAppearance'
   | 'dashboard.setupFirstProduct'
   | 'dashboard.setupViewStore'
+  | 'dashboard.setupContact'
+  | 'dashboard.setupRealProduct'
+  | 'dashboard.setupLegal'
+  | 'dashboard.setupProgress'
   | 'dashboard.qaNewProduct'
   | 'dashboard.qaCategory'
   | 'dashboard.statProducts'
@@ -66,6 +70,10 @@ const fr: Record<DashboardAdminMessageKey, string> = {
   'dashboard.setupAppearance': 'Personnaliser l’apparence',
   'dashboard.setupFirstProduct': 'Ajouter un premier produit',
   'dashboard.setupViewStore': 'Voir ma boutique en ligne',
+  'dashboard.setupContact': 'Renseigner téléphone / WhatsApp',
+  'dashboard.setupRealProduct': 'Ajouter un vrai produit',
+  'dashboard.setupLegal': 'Créer les pages légales',
+  'dashboard.setupProgress': '{done} / {total} étapes terminées',
   'dashboard.qaNewProduct': 'Nouveau produit',
   'dashboard.qaCategory': 'Catégorie',
   'dashboard.statProducts': 'Total Produits',
@@ -113,6 +121,10 @@ const en: Record<DashboardAdminMessageKey, string> = {
   'dashboard.setupAppearance': 'Customize appearance',
   'dashboard.setupFirstProduct': 'Add a first product',
   'dashboard.setupViewStore': 'View my online store',
+  'dashboard.setupContact': 'Add phone / WhatsApp',
+  'dashboard.setupRealProduct': 'Add a real product',
+  'dashboard.setupLegal': 'Create the legal pages',
+  'dashboard.setupProgress': '{done} / {total} steps done',
   'dashboard.qaNewProduct': 'New product',
   'dashboard.qaCategory': 'Category',
   'dashboard.statProducts': 'Total products',
@@ -160,6 +172,10 @@ const ar: Record<DashboardAdminMessageKey, string> = {
   'dashboard.setupAppearance': 'خصّص المظهر',
   'dashboard.setupFirstProduct': 'أضف منتجك الأول',
   'dashboard.setupViewStore': 'عرض متجري عبر الإنترنت',
+  'dashboard.setupContact': 'أضف الهاتف / واتساب',
+  'dashboard.setupRealProduct': 'أضف منتجًا حقيقيًا',
+  'dashboard.setupLegal': 'أنشئ الصفحات القانونية',
+  'dashboard.setupProgress': '{done} / {total} خطوات منجزة',
   'dashboard.qaNewProduct': 'منتج جديد',
   'dashboard.qaCategory': 'فئة',
   'dashboard.statProducts': 'إجمالي المنتجات',
