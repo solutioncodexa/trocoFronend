@@ -20,6 +20,9 @@ export interface ProductListItemDTO {
 }
 
 export interface ProductDetailDTO extends ProductListItemDTO {
+  /** SEO personnalisé (titre / description meta). */
+  seoTitle?: string;
+  seoDescription?: string;
   description: string;
   shortDescription?: string;
   availableSizes?: string[];

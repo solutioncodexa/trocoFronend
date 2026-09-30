@@ -45,6 +45,7 @@ import {
   type AppBarConfig,
 } from '@/types/store-global-sections';
 import { uploadImage } from '@/services/api/upload';
+import { FEATURE_ICONS } from '@/components/storefront/extraBlocks';
 import {
   type StorePage,
   type StorePageBlock,
@@ -1037,6 +1038,156 @@ function BlockFields({
                 <SelectItem value="devis">Demande de devis</SelectItem>
               </SelectContent>
             </Select>
+          </div>
+        </div>
+      );
+    case 'features': {
+      const items = (Array.isArray(c.items) ? c.items : []) as Record<string, string>[];
+      const setItem = (i: number, patch: Record<string, string>) =>
+        onChange('items', items.map((it, j) => (j === i ? { ...it, ...patch } : it)));
+      return (
+        <div className="space-y-3">
+          {field('title', 'Titre de la section')}
+          {items.map((item, i) => (
+            <div key={i} className="space-y-2 rounded-lg border border-border p-3">
+              <div className="flex items-center justify-between">
+                <p className="text-[11px] font-semibold text-muted-foreground">Avantage {i + 1}</p>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  className="h-6 px-2 text-xs text-destructive"
+                  onClick={() => onChange('items', items.filter((_, j) => j !== i))}
+                >
+                  Retirer
+                </Button>
+              </div>
+              <Select value={String(item.icon || 'sparkles')} onValueChange={(v) => setItem(i, { icon: v })}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.entries(FEATURE_ICONS).map(([key, { label }]) => (
+                    <SelectItem key={key} value={key}>
+                      {label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Input
+                placeholder="Titre (ex. Livraison rapide)"
+                dir={dir}
+                value={String(item.title ?? '')}
+                onChange={(e) => setItem(i, { title: e.target.value })}
+              />
+              <Input
+                placeholder="Détail (optionnel)"
+                dir={dir}
+                value={String(item.text ?? '')}
+                onChange={(e) => setItem(i, { text: e.target.value })}
+              />
+            </div>
+          ))}
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            disabled={items.length >= 8}
+            onClick={() => onChange('items', [...items, { icon: 'sparkles', title: '', text: '' }])}
+          >
+            Ajouter un avantage
+          </Button>
+        </div>
+      );
+    }
+    case 'newsletter':
+      return (
+        <div className="grid gap-3">
+          {field('title', 'Titre')}
+          {field('body', 'Message d’introduction', true)}
+          <p className="text-xs text-muted-foreground">
+            Les emails collectés apparaissent dans Leads (type « newsletter »).
+          </p>
+        </div>
+      );
+    case 'gallery':
+    case 'logos': {
+      const images = Array.isArray(c.images) ? (c.images as string[]) : [];
+      const isLogos = block.type === 'logos';
+      return (
+        <div className="space-y-3">
+          {field('title', 'Titre de la section')}
+          {images.map((url, i) => (
+            <div key={i} className="space-y-1.5 rounded-lg border border-border p-3">
+              <div className="flex items-center justify-between">
+                <p className="text-[11px] font-semibold text-muted-foreground">
+                  {isLogos ? 'Logo ' + (i + 1) : 'Photo ' + (i + 1)}
+                </p>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  className="h-6 px-2 text-xs text-destructive"
+                  onClick={() => onChange('images', images.filter((_, j) => j !== i))}
+                >
+                  Retirer
+                </Button>
+              </div>
+              <ImageUpload
+                value={url}
+                onChange={(next) => onChange('images', images.map((u, j) => (j === i ? next : u)))}
+                onUpload={uploadImage}
+              />
+            </div>
+          ))}
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            disabled={images.length >= 12}
+            onClick={() => onChange('images', [...images, ''])}
+          >
+            {isLogos ? 'Ajouter un logo' : 'Ajouter une photo'}
+          </Button>
+        </div>
+      );
+    }
+    case 'split':
+      return (
+        <div className="grid gap-3">
+          {field('title', 'Titre')}
+          {field('body', 'Votre texte', true)}
+          {imageField('imageUrl', 'Photo')}
+          <div>
+            <Label>Position de la photo</Label>
+            <Select value={String(c.imagePosition ?? 'left')} onValueChange={(v) => onChange('imagePosition', v)}>
+              <SelectTrigger className="mt-1.5 w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="left">À gauche</SelectItem>
+                <SelectItem value="right">À droite</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          {field('ctaLabel', 'Texte du bouton (optionnel)')}
+          {field('ctaHref', 'Lien du bouton (ex. /boutique)')}
+        </div>
+      );
+    case 'blog_posts':
+      return (
+        <div className="grid gap-3">
+          {field('title', 'Titre de la section')}
+          <div>
+            <Label>Combien d’articles afficher ?</Label>
+            <Input
+              className="mt-1.5"
+              type="number"
+              min={1}
+              max={6}
+              value={Number(c.limit ?? 3)}
+              onChange={(e) => onChange('limit', Math.min(6, Math.max(1, Number(e.target.value) || 3)))}
+            />
           </div>
         </div>
       );

@@ -10,6 +10,8 @@ export type OnboardingDraft = {
   primaryColor?: string;
   secondaryColor?: string;
   publishHome?: boolean;
+  /** Secteur choisi (pack de démarrage : catégories + produits d’exemple). */
+  sector?: string;
 };
 
 export function readOnboardingDraft(): OnboardingDraft | null {

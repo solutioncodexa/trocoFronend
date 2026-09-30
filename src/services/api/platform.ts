@@ -85,6 +85,12 @@ export const platformApi = {
       body: JSON.stringify({ status }),
     }),
 
+  extendFournisseurTrial: (id: number, days: number): Promise<FournisseurDTO> =>
+    apiRequest<FournisseurDTO>(buildApiUrl(`/platform/fournisseurs/${id}/trial/extend`), {
+      method: 'POST',
+      body: JSON.stringify({ days }),
+    }),
+
   updateFournisseurPlan: (id: number, planCode: string): Promise<FournisseurDTO> =>
     apiRequest<FournisseurDTO>(buildApiUrl(`/platform/fournisseurs/${id}/plan`), {
       method: 'PATCH',

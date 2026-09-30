@@ -39,6 +39,8 @@ export const mapProductDetailToProduct = (dto: ProductDetailDTO): Product => {
     category: dto.category || '',
     sku: dto.sku,
     marque: dto.marque?.trim() || undefined,
+    seoTitle: dto.seoTitle?.trim() || undefined,
+    seoDescription: dto.seoDescription?.trim() || undefined,
     availableSizes: normalizeAvailableSizes(dto.availableSizes),
     inStock: dto.inStock ?? true,
     stockQuantity: dto.stockQuantity ?? 0,

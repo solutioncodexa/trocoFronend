@@ -7,6 +7,7 @@ import { setStoredTenantSlug } from '@/config/api';
 import { useAdmin } from '@/contexts/AdminContext';
 import { markStockAlertPending } from '@/utils/stockAlertSession';
 import { buildStorefrontUrl } from '@/utils/storefrontUrl';
+import { TRIAL_DAYS } from '@/config/site';
 import { toast } from 'sonner';
 
 function slugify(value: string) {
@@ -79,12 +80,15 @@ const CreateStore = () => {
       const auth = await login(form.adminEmail.trim(), form.adminPassword);
       if (auth.ok) {
         markStockAlertPending();
+        const pendingActivation = (created.status || '').toUpperCase() === 'PENDING';
         toast.success(
-          `Boutique « ${created.name} » créée — en attente d'activation Get STORE`,
+          pendingActivation
+            ? `Boutique « ${created.name} » créée — en attente d'activation Get STORE`
+            : `Boutique « ${created.name} » créée — essai gratuit de ${TRIAL_DAYS} jours démarré`,
         );
         navigate('/admin/onboarding', {
           replace: true,
-          state: { onboarding: true, pendingActivation: true },
+          state: { onboarding: true, pendingActivation },
         });
       } else {
         toast.success(`Boutique créée. Connectez-vous avec ${form.adminEmail.trim()}`);
@@ -120,7 +124,7 @@ const CreateStore = () => {
               Créer ma boutique
             </h1>
             <p className="text-sm text-[#e8f4f2]/65">
-              Activation par Get STORE après inscription
+              Essai gratuit de {TRIAL_DAYS} jours, sans carte bancaire — boutique en ligne immédiatement
             </p>
           </div>
         </div>
@@ -263,6 +267,10 @@ const CreateStore = () => {
           >
             {pending ? 'Création…' : 'Lancer ma boutique'}
           </button>
+          <p className="text-center text-xs text-[#e8f4f2]/60">
+            Puis {form.planCode ? `plan ${plans.find((p) => p.code === form.planCode)?.name ?? form.planCode}` : 'plan choisi'}{' '}
+            à la fin des {TRIAL_DAYS} jours d’essai. Aucune facturation avant.
+          </p>
           <p className="text-center text-xs text-[#e8f4f2]/50">
             Déjà un compte ?{' '}
             <Link to="/admin" className="underline hover:text-[#e8f4f2]">

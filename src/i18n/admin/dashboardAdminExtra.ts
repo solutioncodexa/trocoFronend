@@ -7,6 +7,12 @@ export type DashboardAdminMessageKey =
   | 'dashboard.viewStorefront'
   | 'dashboard.pendingActivationTitle'
   | 'dashboard.pendingActivationBody'
+  | 'trial.activeTitle'
+  | 'trial.activeBody'
+  | 'trial.endingTitle'
+  | 'trial.endedTitle'
+  | 'trial.endedBody'
+  | 'trial.contact'
   | 'dashboard.setupTitle'
   | 'dashboard.setupRemaining'
   | 'dashboard.setupTheme'
@@ -45,6 +51,14 @@ const fr: Record<DashboardAdminMessageKey, string> = {
   'dashboard.pendingActivationTitle': 'Compte en attente d’activation',
   'dashboard.pendingActivationBody':
     'Un Super Admin Get STORE doit activer votre boutique avant qu’elle soit visible en ligne. Vous pouvez déjà préparer logo, design et produits.',
+  'trial.activeTitle': 'Essai gratuit : {count} jour(s) restant(s)',
+  'trial.activeBody':
+    'Votre boutique est en ligne et entièrement utilisable. À la fin de l’essai, vous passerez au plan choisi pour la garder en ligne.',
+  'trial.endingTitle': 'Votre essai se termine dans {count} jour(s)',
+  'trial.endedTitle': 'Votre essai gratuit est terminé',
+  'trial.endedBody':
+    'Votre vitrine est temporairement fermée. Vos données sont conservées : contactez Get STORE pour choisir votre plan et réactiver la boutique.',
+  'trial.contact': 'Contacter Get STORE',
   'dashboard.setupTitle': 'Démarrez votre boutique',
   'dashboard.setupRemaining': '{count} étape(s) restante(s) pour être prêt.',
   'dashboard.setupTheme': 'Choisir un thème',
@@ -84,6 +98,14 @@ const en: Record<DashboardAdminMessageKey, string> = {
   'dashboard.pendingActivationTitle': 'Account pending activation',
   'dashboard.pendingActivationBody':
     'A Get STORE Super Admin must activate your store before it is visible online. You can already prepare your logo, design and products.',
+  'trial.activeTitle': 'Free trial: {count} day(s) left',
+  'trial.activeBody':
+    'Your store is live and fully usable. When the trial ends you will move to your chosen plan to keep it online.',
+  'trial.endingTitle': 'Your trial ends in {count} day(s)',
+  'trial.endedTitle': 'Your free trial has ended',
+  'trial.endedBody':
+    'Your storefront is temporarily closed. Your data is kept: contact Get STORE to choose your plan and reactivate the store.',
+  'trial.contact': 'Contact Get STORE',
   'dashboard.setupTitle': 'Get your store started',
   'dashboard.setupRemaining': '{count} step(s) left to be ready.',
   'dashboard.setupTheme': 'Choose a theme',
@@ -123,6 +145,14 @@ const ar: Record<DashboardAdminMessageKey, string> = {
   'dashboard.pendingActivationTitle': 'الحساب في انتظار التفعيل',
   'dashboard.pendingActivationBody':
     'يجب على مشرف Get STORE تفعيل متجرك قبل أن يظهر عبر الإنترنت. يمكنك بالفعل تجهيز الشعار والتصميم والمنتجات.',
+  'trial.activeTitle': 'تجربة مجانية: {count} يوم متبقٍ',
+  'trial.activeBody':
+    'متجرك متاح عبر الإنترنت وقابل للاستخدام بالكامل. عند انتهاء التجربة ستنتقل إلى الخطة التي تختارها لإبقائه متاحًا.',
+  'trial.endingTitle': 'تنتهي تجربتك خلال {count} يوم',
+  'trial.endedTitle': 'انتهت تجربتك المجانية',
+  'trial.endedBody':
+    'واجهة المتجر مغلقة مؤقتًا. بياناتك محفوظة: تواصل مع Get STORE لاختيار خطتك وإعادة تفعيل المتجر.',
+  'trial.contact': 'تواصل مع Get STORE',
   'dashboard.setupTitle': 'ابدأ متجرك',
   'dashboard.setupRemaining': 'يتبقى {count} خطوة (خطوات) لتكون جاهزًا.',
   'dashboard.setupTheme': 'اختر سمة',

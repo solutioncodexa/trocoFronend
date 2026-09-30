@@ -78,6 +78,20 @@ export async function getMe(): Promise<UserInfoDTO | null> {
   }
 }
 
+/** Confirme l'adresse email avec le token du lien reçu par email. */
+export async function verifyEmail(token: string): Promise<void> {
+  await apiRequest<void>(buildApiUrl('/auth/verify-email'), {
+    method: 'POST',
+    body: JSON.stringify({ token }),
+    skipAuth: true,
+  });
+}
+
+/** Renvoie l'email de vérification à l'utilisateur connecté. */
+export async function resendVerificationEmail(): Promise<void> {
+  await apiRequest<void>(buildApiUrl('/auth/resend-verification'), { method: 'POST' });
+}
+
 /** Persiste l’état du guide 1ère utilisation (ne plus l’afficher à chaque visite). */
 export async function updateAdminGuide(payload: {
   completed: boolean;

@@ -8,6 +8,8 @@ import {
   ExternalLink,
   Loader2,
   Package,
+  Sparkles,
+  Trash2,
 } from 'lucide-react';
 import AdminLayout from '@/components/admin/AdminLayout';
 import { useAdminLocale } from '@/contexts/AdminLocaleContext';
@@ -21,6 +23,14 @@ import { PAGE_TEMPLATES } from '@/config/pageTemplates';
 import { STORE_THEMES, designDemoPath, normalizeThemeKey, type StoreThemeKey } from '@/config/storeThemes';
 import { FONT_PAIRS, RADIUS_PRESETS } from '@/config/storefrontTheme';
 import { useTenant } from '@/contexts/TenantContext';
+import {
+  DEFAULT_STARTER_PACK_KEY,
+  STARTER_PACKS,
+  getStarterPack,
+} from '@/config/starterPacks';
+import { applyStarterPack, listDemoProducts, removeDemoProducts } from '@/utils/starterPack';
+import { createLegalPages } from '@/utils/legalPages';
+import { LEGAL_DISCLAIMER } from '@/config/legalPages';
 import { buildStorefrontUrl } from '@/utils/storefrontUrl';
 import {
   clearOnboardingDraft,
@@ -62,6 +72,8 @@ const AdminOnboarding = () => {
   const [primaryColor, setPrimaryColor] = useState(draft?.primaryColor || '#0F766E');
   const [secondaryColor, setSecondaryColor] = useState(draft?.secondaryColor || '#0369A1');
   const [publishHome, setPublishHome] = useState(draft?.publishHome ?? true);
+  const [sector, setSector] = useState(draft?.sector || '');
+  const [createLegal, setCreateLegal] = useState(true);
 
   const { data: settings, isLoading } = useQuery({
     queryKey: ['store-settings', 'me'],
@@ -108,6 +120,7 @@ const AdminOnboarding = () => {
       primaryColor,
       secondaryColor,
       publishHome,
+      sector,
     });
     setSearchParams(
       clamped === 0 ? {} : { step: String(clamped) },
@@ -126,6 +139,7 @@ const AdminOnboarding = () => {
       primaryColor,
       secondaryColor,
       publishHome,
+      sector,
     });
   }, [
     step,
@@ -137,6 +151,7 @@ const AdminOnboarding = () => {
     primaryColor,
     secondaryColor,
     publishHome,
+    sector,
   ]);
 
   const saveSettings = useMutation({
@@ -159,7 +174,7 @@ const AdminOnboarding = () => {
 
   const createHome = useMutation({
     mutationFn: async () => {
-      const tpl = PAGE_TEMPLATES.find((t) => t.key === 'home-boutique');
+      const tpl = PAGE_TEMPLATES.find((t) => t.key === 'home-complete');
       if (!tpl) throw new Error('Modèle introuvable');
 
       const existing = await storePagesApi.list();
@@ -194,6 +209,61 @@ const AdminOnboarding = () => {
     onError: (e) => toastError(e, 'Création de la page impossible'),
   });
 
+  const chooseSector = (key: string) => {
+    setSector(key);
+    // Thème conseillé pour le secteur (modifiable ensuite).
+    setThemeKey(getStarterPack(key).suggestedTheme);
+  };
+
+  const { data: demoProducts = [] } = useQuery({
+    queryKey: ['products', 'onboarding-demo'],
+    queryFn: () => listDemoProducts(),
+    staleTime: 15_000,
+  });
+
+  const refreshCatalogQueries = () => {
+    queryClient.invalidateQueries({ queryKey: ['products'] });
+    queryClient.invalidateQueries({ queryKey: ['categories'] });
+  };
+
+  const addDemo = useMutation({
+    mutationFn: () => applyStarterPack(sector || DEFAULT_STARTER_PACK_KEY),
+    onSuccess: (res) => {
+      refreshCatalogQueries();
+      toast.success(
+        res.productsCreated > 0
+          ? `${res.productsCreated} produit(s) d’exemple ajouté(s)`
+          : 'Les produits d’exemple sont déjà présents',
+      );
+    },
+    onError: (e) => toastError(e, 'Ajout des produits d’exemple impossible'),
+  });
+
+  const clearDemo = useMutation({
+    mutationFn: () => removeDemoProducts(),
+    onSuccess: (count) => {
+      refreshCatalogQueries();
+      toast.success(`${count} produit(s) d’exemple supprimé(s)`);
+    },
+    onError: (e) => toastError(e, 'Suppression impossible'),
+  });
+
+  const addLegal = useMutation({
+    mutationFn: () =>
+      createLegalPages({
+        storeName: siteName || settings?.siteName || store?.siteName || '',
+        contactEmail: settings?.contactEmail ?? undefined,
+        contactPhone: settings?.contactPhone ?? undefined,
+        contactCity: settings?.contactCity ?? undefined,
+      }),
+    onSuccess: (slugs) => {
+      queryClient.invalidateQueries({ queryKey: ['store-pages'] });
+      queryClient.invalidateQueries({ queryKey: ['store-settings'] });
+      if (slugs.length > 0) toast.success(`${slugs.length} page(s) légale(s) créée(s)`);
+    },
+    onError: (e) => toastError(e, 'Création des pages légales impossible'),
+  });
+
   const storefrontUrl = buildStorefrontUrl(store?.slug ?? settings?.slug);
   const pendingActivation = (settings?.status || store?.status || '').toUpperCase() === 'PENDING';
 
@@ -204,6 +274,9 @@ const AdminOnboarding = () => {
       }
       if (step === 2 && publishHome) {
         await createHome.mutateAsync();
+      }
+      if (step === 5 && createLegal) {
+        await addLegal.mutateAsync();
       }
       goToStep(step + 1);
     } catch {
@@ -227,6 +300,7 @@ const AdminOnboarding = () => {
       primaryColor,
       secondaryColor,
       publishHome,
+      sector,
     });
     navigate(`/admin/produits?action=new&${ONBOARDING_RETURN_QUERY}=1`);
   };
@@ -236,7 +310,12 @@ const AdminOnboarding = () => {
     navigate('/admin/dashboard');
   };
 
-  const busy = saveSettings.isPending || createHome.isPending;
+  const busy =
+    saveSettings.isPending ||
+    createHome.isPending ||
+    addDemo.isPending ||
+    clearDemo.isPending ||
+    addLegal.isPending;
 
   return (
     <AdminLayout
@@ -283,7 +362,27 @@ const AdminOnboarding = () => {
 
         {!isLoading && step === 0 ? (
           <section className="space-y-4 rounded-2xl border border-border bg-card p-6">
-            <h2 className="font-display text-xl font-semibold">Choisissez un thème</h2>
+            <h2 className="font-display text-xl font-semibold">Votre secteur</h2>
+            <p className="text-sm text-muted-foreground">
+              Nous adaptons le thème conseillé et vous proposerons des catégories et des produits d’exemple.
+            </p>
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {STARTER_PACKS.map((pack) => (
+                <button
+                  key={pack.key}
+                  type="button"
+                  aria-pressed={sector === pack.key}
+                  onClick={() => chooseSector(pack.key)}
+                  className={`rounded-xl border p-4 text-left transition ${
+                    sector === pack.key ? 'border-primary ring-2 ring-primary/25' : 'border-border'
+                  }`}
+                >
+                  <p className="font-semibold">{pack.label}</p>
+                  <p className="mt-1 text-xs text-muted-foreground">{pack.description}</p>
+                </button>
+              ))}
+            </div>
+            <h2 className="pt-2 font-display text-xl font-semibold">Choisissez un thème</h2>
             <div className="grid gap-3 sm:grid-cols-2">
               {STORE_THEMES.map((theme) => (
                 <button
@@ -376,7 +475,7 @@ const AdminOnboarding = () => {
           <section className="space-y-4 rounded-2xl border border-border bg-card p-6">
             <h2 className="font-display text-xl font-semibold">Page d’accueil</h2>
             <p className="text-sm text-muted-foreground">
-              Nous créons une page « Accueil boutique » avec hero, catégories et produits. Elle remplace le
+              Nous créons une page « Accueil boutique » (hero, avantages, catégories, produits, histoire, avis, blog et newsletter) que vous pourrez modifier bloc par bloc. Elle remplace le
               design thème par défaut.
             </p>
             <label className="flex items-center gap-2 text-sm">
@@ -437,6 +536,43 @@ const AdminOnboarding = () => {
                 <Package className="h-4 w-4" />
                 {productCount > 0 ? 'Ajouter un autre produit' : 'Ajouter un produit'}
               </Button>
+              <Button
+                type="button"
+                variant="outline"
+                className="gap-2"
+                disabled={busy}
+                onClick={() => addDemo.mutate()}
+              >
+                {addDemo.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+                Ajouter des produits d’exemple ({getStarterPack(sector).label})
+              </Button>
+              {demoProducts.length > 0 ? (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  className="gap-2 text-destructive hover:text-destructive"
+                  disabled={busy}
+                  onClick={() => clearDemo.mutate()}
+                >
+                  <Trash2 className="h-4 w-4" />
+                  Supprimer les {demoProducts.length} produits d’exemple
+                </Button>
+              ) : null}
+            </div>
+            <div className="rounded-xl border border-border bg-muted/30 p-4">
+              <label className="flex items-start gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  className="mt-1"
+                  checked={createLegal}
+                  onChange={(e) => setCreateLegal(e.target.checked)}
+                />
+                <span>
+                  <strong>Créer les pages légales</strong> (mentions légales, CGV, retours, confidentialité) à
+                  l’étape suivante.
+                  <span className="mt-1 block text-xs text-muted-foreground">{LEGAL_DISCLAIMER}</span>
+                </span>
+              </label>
             </div>
           </section>
         ) : null}

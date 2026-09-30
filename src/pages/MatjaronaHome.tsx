@@ -6,6 +6,7 @@ import type { PlanMarketingDTO } from '@/types/api';
 import { useAdmin } from '@/contexts/AdminContext';
 import { useTenant } from '@/contexts/TenantContext';
 import { buildStorefrontUrl } from '@/utils/storefrontUrl';
+import { TRIAL_DAYS } from '@/config/site';
 
 const FALLBACK_PLANS: PlanMarketingDTO[] = [
   {
@@ -240,6 +241,9 @@ const MatjaronaHome = () => {
                 Créer ma boutique
                 <ArrowRight className="h-4 w-4" />
               </Link>
+              <span className="text-xs text-[var(--mj-foam)]/70">
+                Essai gratuit {TRIAL_DAYS} jours · sans carte bancaire
+              </span>
               <a
                 href="#tarifs"
                 className="inline-flex items-center gap-2 rounded-md border border-[var(--mj-foam)]/25 bg-white/5 px-5 py-3 text-sm font-semibold text-[var(--mj-foam)] backdrop-blur-sm transition hover:border-[var(--mj-foam)]/45 hover:bg-white/10"

@@ -16,6 +16,13 @@ import type { StorePage, StorePageBlock } from '@/types/store-pages';
 import { useLocale } from '@/contexts/LocaleContext';
 import { localizeKnownCopy } from '@/utils/localizeKnownCopy';
 import { cn } from '@/lib/utils';
+import {
+  BlogPostsBlock,
+  FeaturesBlock,
+  GalleryBlock,
+  LogosBlock,
+  SplitBlock,
+} from '@/components/storefront/extraBlocks';
 import { toast } from 'sonner';
 import {
   alignClass,
@@ -175,6 +182,19 @@ export function PageBlockView({
       return <CountdownBlock block={block} page={page} pageId={pageId} />;
     case 'instagram':
       return <InstagramBlock block={block} usePreviewMocks={usePreviewMocks} />;
+    case 'features':
+      return <FeaturesBlock block={block} />;
+    case 'newsletter':
+      // Même formulaire que « contact », forcé en inscription newsletter.
+      return <ContactBlock block={{ ...block, config: { ...cfg(block), leadType: 'newsletter' } }} />;
+    case 'gallery':
+      return <GalleryBlock block={block} usePreviewMocks={usePreviewMocks} />;
+    case 'split':
+      return <SplitBlock block={block} />;
+    case 'blog_posts':
+      return <BlogPostsBlock block={block} usePreviewMocks={usePreviewMocks} />;
+    case 'logos':
+      return <LogosBlock block={block} usePreviewMocks={usePreviewMocks} />;
     default:
       return null;
   }

@@ -23,6 +23,9 @@ export const CONTACT_WHATSAPP_URL = 'https://wa.me/212684490098';
 export const CONTACT_EMAIL = 'contact@troco.ma';
 export const CONTACT_CITY = 'Tanger, Maroc';
 
+/** Durée de l'essai gratuit affichée (doit refléter `app.trial.days` côté backend). */
+export const TRIAL_DAYS = 30;
+
 /**
  * ID app Meta (developers.facebook.com) — requis pour le partage Messenger
  * avec sélection de conversation (Send Dialog / fb-messenger://share).

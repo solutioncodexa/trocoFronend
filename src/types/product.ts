@@ -25,6 +25,9 @@ export interface Product {
   variants?: ProductVariant[];
   /** Marque / label produit (ex. Apple, Nike). */
   marque?: string;
+  /** SEO personnalisé (sinon dérivé du nom / de la description). */
+  seoTitle?: string;
+  seoDescription?: string;
   /** Legacy / optional */
   availableSizes?: string[];
   weight?: number;

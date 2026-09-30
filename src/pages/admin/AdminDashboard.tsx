@@ -177,7 +177,8 @@ const AdminDashboard = () => {
   const showOnboarding = pendingSteps > 0;
 
   const storeStatus = (storeSettings?.status || '').toUpperCase();
-  const pendingActivation = storeStatus === 'PENDING';
+  // PENDING avec date d'essai = essai terminé (bannière TrialBanner) ; sinon activation manuelle.
+  const pendingActivation = storeStatus === 'PENDING' && !store?.trialEndsAt;
 
   const quickActions = [
     { href: '/admin/produits?action=new', label: t('dashboard.qaNewProduct'), icon: Package },

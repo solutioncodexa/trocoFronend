@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Building2, ExternalLink, LogOut, Package, Plus, Power } from 'lucide-react';
+import { Building2, CalendarPlus, ExternalLink, LogOut, Package, Plus, Power } from 'lucide-react';
+import { trialDaysLeft } from '@/components/admin/TrialBanner';
+import { TRIAL_DAYS } from '@/config/site';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -101,6 +103,16 @@ const SuperAdminDashboard = () => {
       queryClient.invalidateQueries({ queryKey: ['platform', 'fournisseurs'] });
     },
     onError: (err: unknown) => toastError(err, 'Mise à jour impossible'),
+  });
+
+  const trialMutation = useMutation({
+    mutationFn: ({ id, days }: { id: number; days: number }) =>
+      platformApi.extendFournisseurTrial(id, days),
+    onSuccess: (_data, vars) => {
+      toast.success(`Essai prolongé de ${vars.days} jours`);
+      queryClient.invalidateQueries({ queryKey: ['platform', 'fournisseurs'] });
+    },
+    onError: (err: unknown) => toastError(err, 'Prolongation impossible'),
   });
 
   if (authLoading) {
@@ -240,6 +252,13 @@ const SuperAdminDashboard = () => {
                         >
                           {f.status}
                         </Badge>
+                        {f.trialEndsAt ? (
+                          <p className="mt-1 text-xs text-muted-foreground">
+                            {status === 'TRIAL'
+                              ? `Essai : ${trialDaysLeft(f.trialEndsAt) ?? 0} j restants (fin ${new Date(f.trialEndsAt).toLocaleDateString('fr-FR')})`
+                              : `Essai terminé le ${new Date(f.trialEndsAt).toLocaleDateString('fr-FR')}`}
+                          </p>
+                        ) : null}
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex flex-wrap gap-2">
@@ -249,6 +268,31 @@ const SuperAdminDashboard = () => {
                               Boutique
                             </a>
                           </Button>
+                          {f.trialEndsAt && (status === 'TRIAL' || pending) ? (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="gap-1"
+                              disabled={trialMutation.isPending}
+                              onClick={() => trialMutation.mutate({ id: f.id, days: TRIAL_DAYS })}
+                            >
+                              <CalendarPlus className="h-3.5 w-3.5" />
+                              +{TRIAL_DAYS} j
+                            </Button>
+                          ) : null}
+                          {status === 'TRIAL' ? (
+                            <Button
+                              size="sm"
+                              className="gap-1"
+                              disabled={statusMutation.isPending}
+                              onClick={() =>
+                                statusMutation.mutate({ id: f.id, status: 'ACTIVE' })
+                              }
+                            >
+                              <Power className="h-3.5 w-3.5" />
+                              Passer au plan
+                            </Button>
+                          ) : null}
                           {pending ? (
                             <Button
                               size="sm"
@@ -259,7 +303,7 @@ const SuperAdminDashboard = () => {
                               }
                             >
                               <Power className="h-3.5 w-3.5" />
-                              Activer le compte
+                              {f.trialEndsAt ? 'Activer le plan' : 'Activer le compte'}
                             </Button>
                           ) : (
                             <Button

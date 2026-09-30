@@ -198,6 +198,8 @@ export interface UserInfoDTO {
   permissions?: string[];
   /** Guide 1ère utilisation admin déjà terminé (persisté en base) */
   adminGuideCompleted?: boolean;
+  /** false tant que l'email d'un compte inscrit publiquement n'est pas confirmé. */
+  emailVerified?: boolean;
 }
 
 // Platform / multi-tenant
@@ -354,6 +356,8 @@ export interface AdminStoreSummaryDTO {
   planName?: string | null;
   defaultLocale?: string | null;
   supportedLocales?: string | null;
+  /** Fin de l'essai gratuit (ISO) — renseigné en TRIAL, conservé après expiration. */
+  trialEndsAt?: string | null;
 }
 
 /**
@@ -363,6 +367,7 @@ export interface AdminStoreSummaryDTO {
 export type TenantStoreDTO = StorefrontBootstrapDTO & {
   planCode?: string | null;
   planName?: string | null;
+  trialEndsAt?: string | null;
 };
 
 /** Config complète — page Paramètres admin uniquement. */
@@ -478,6 +483,7 @@ export interface FournisseurDTO {
   planPriceMad?: number | null;
   createdAt?: string | null;
   subscriptionEndsAt?: string | null;
+  trialEndsAt?: string | null;
 }
 
 export interface CreateFournisseurRequest {

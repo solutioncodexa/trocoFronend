@@ -40,6 +40,8 @@ import {
 } from 'lucide-react';
 import AdminNotification from './AdminNotification';
 import AdminFirstUseGuide from './AdminFirstUseGuide';
+import TrialBanner from './TrialBanner';
+import EmailVerificationBanner from './EmailVerificationBanner';
 import StockAlertDialog from './StockAlertDialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -489,6 +491,8 @@ const AdminLayout = ({
                 : cn('mx-auto p-4 sm:p-6 lg:p-8', wide ? 'max-w-7xl' : 'max-w-6xl'),
             )}
           >
+            {!workspace ? <EmailVerificationBanner /> : null}
+            {!workspace ? <TrialBanner /> : null}
             {children}
           </div>
         </main>

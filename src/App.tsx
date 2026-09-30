@@ -10,6 +10,7 @@ import { TenantProvider } from "@/contexts/TenantContext";
 import { LocaleProvider } from "@/contexts/LocaleContext";
 import { AdminLocaleProvider } from "@/contexts/AdminLocaleContext";
 import ScrollToTop from "@/components/ui/ScrollToTop";
+import SurMesureGate from "@/components/layout/SurMesureGate";
 import WhatsAppButton from "@/components/ui/WhatsAppButton";
 import { ProtectedAdminRoute } from "@/components/ProtectedAdminRoute";
 import PageLoader from "@/components/layout/PageLoader";
@@ -33,6 +34,7 @@ const LivraisonRetours = lazy(() => import("./pages/LivraisonRetours"));
 const FAQ = lazy(() => import("./pages/FAQ"));
 const PromoCodes = lazy(() => import("./pages/PromoCodes"));
 const NotFound = lazy(() => import("./pages/NotFound"));
+const VerifyEmail = lazy(() => import("./pages/VerifyEmail"));
 
 const AdminLogin = lazy(() => import("./pages/admin/AdminLogin"));
 const AdminDashboard = lazy(() => import("./pages/admin/AdminDashboard"));
@@ -146,6 +148,7 @@ const App = () => (
                     <Route path="/accueil" element={<Index />} />
                     <Route path="/matjarona" element={<MatjaronaHome />} />
                     <Route path="/creer-boutique" element={<CreateStore />} />
+                    <Route path="/verifier-email" element={<VerifyEmail />} />
                     <Route path="/design-demo/:themeKey" element={<DesignDemo />}>
                       <Route index element={<DemoHomePage />} />
                       <Route path="boutique" element={<DemoBoutiquePage />} />
@@ -164,8 +167,8 @@ const App = () => (
                     <Route path="/panier" element={<Cart />} />
                     <Route path="/checkout" element={<Checkout />} />
                     <Route path="/codes-promo" element={<PromoCodes />} />
-                    <Route path="/sur-mesure" element={<SurMesure />} />
-                    <Route path="/devis" element={<Devis />} />
+                    <Route path="/sur-mesure" element={<SurMesureGate><SurMesure /></SurMesureGate>} />
+                    <Route path="/devis" element={<SurMesureGate><Devis /></SurMesureGate>} />
                     <Route path="/commande-personnalisee" element={<Navigate to="/sur-mesure" replace />} />
                     <Route path="/contact" element={<Contact />} />
                     <Route path="/livraison-retours" element={<LivraisonRetours />} />

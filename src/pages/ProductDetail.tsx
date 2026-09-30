@@ -297,6 +297,8 @@ const ProductDetail = () => {
       description: product.description,
       price: active.price,
       imageUrl,
+      seoTitle: product.seoTitle,
+      seoDescription: product.seoDescription,
     });
     return () => resetProductMeta();
   }, [product, id, selectedVariantKey]);

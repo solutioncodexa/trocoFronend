@@ -38,6 +38,9 @@ export interface ProductFormData {
   variants?: ProductVariant[];
   /** Marque / label produit */
   marque?: string;
+  /** SEO : titre (≤ 200) et description (≤ 500) personnalisés */
+  seoTitle?: string;
+  seoDescription?: string;
   /** Legacy optionnels */
   availableSizes?: string[];
   weight?: number;

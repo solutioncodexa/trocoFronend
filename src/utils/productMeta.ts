@@ -7,6 +7,15 @@ export interface ProductMetaInput {
   description?: string;
   price?: number;
   imageUrl?: string;
+  /** SEO personnalisé par le marchand (priment sur nom / description). */
+  seoTitle?: string;
+  seoDescription?: string;
+}
+
+/** Origine courante (boutique sur domaine custom / sous-domaine) ; repli sur l'URL publique configurée. */
+function storefrontOrigin(): string {
+  if (typeof window !== 'undefined' && window.location?.origin) return window.location.origin;
+  return PUBLIC_SITE_URL;
 }
 
 function upsertMeta(attr: 'name' | 'property', key: string, content: string) {
@@ -37,15 +46,19 @@ export function applyProductMeta({
   description,
   price,
   imageUrl,
+  seoTitle,
+  seoDescription,
 }: ProductMetaInput): void {
   const siteName = getActiveSiteName();
-  const pageUrl = `${PUBLIC_SITE_URL}/produit/${id}`;
-  const title = `${name} | ${siteName}`;
+  // Canonical / og:url = domaine réel de la boutique (jamais celui de la plateforme).
+  const origin = storefrontOrigin();
+  const pageUrl = `${origin}/produit/${id}`;
+  const title = seoTitle?.trim() || `${name} | ${siteName}`;
   const pricePart = price != null ? ` — ${price.toLocaleString('fr-FR')} DH` : '';
-  const desc =
-    (description?.trim() || `Découvrez ce produit sur ${siteName}.`) +
-    pricePart;
-  const ogImage = imageUrl || `${PUBLIC_SITE_URL}/favicon.png`;
+  const desc = seoDescription?.trim()
+    ? seoDescription.trim()
+    : (description?.trim() || `Découvrez ce produit sur ${siteName}.`) + pricePart;
+  const ogImage = imageUrl || `${origin}/favicon.png`;
 
   document.title = title;
   upsertMeta('name', 'description', desc);
@@ -75,5 +88,5 @@ export function resetProductMeta(): void {
   upsertMeta('name', 'description', DEFAULT_DESC);
   upsertMeta('property', 'og:title', defaultTitle);
   upsertMeta('property', 'og:description', DEFAULT_DESC);
-  upsertMeta('property', 'og:url', PUBLIC_SITE_URL);
+  upsertMeta('property', 'og:url', storefrontOrigin());
 }

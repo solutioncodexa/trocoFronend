@@ -66,6 +66,8 @@ type AdminFormData = {
   category: string;
   sku: string;
   marque: string;
+  seoTitle: string;
+  seoDescription: string;
   stockQuantity: string;
   badges: string[];
   customizable: boolean;
@@ -140,6 +142,8 @@ const AdminProducts = () => {
     category: '',
     sku: '',
     marque: '',
+    seoTitle: '',
+    seoDescription: '',
     stockQuantity: '100',
     badges: [],
     customizable: false,
@@ -305,6 +309,8 @@ const AdminProducts = () => {
       category: product.category,
       sku: product.sku ?? '',
       marque: product.marque ?? '',
+      seoTitle: product.seoTitle ?? '',
+      seoDescription: product.seoDescription ?? '',
       stockQuantity: String(product.stockQuantity ?? 0),
       badges: product.badges,
       customizable: product.customizable === true,
@@ -371,6 +377,8 @@ const AdminProducts = () => {
       category: categories[0]?.slug ?? '',
       sku: '',
       marque: '',
+      seoTitle: '',
+      seoDescription: '',
       stockQuantity: '100',
       badges: [],
       customizable: false,
@@ -526,6 +534,8 @@ const AdminProducts = () => {
         category: formData.category,
         sku: formData.sku.trim() || undefined,
         marque: formData.marque.trim() || undefined,
+        seoTitle: formData.seoTitle.trim() || undefined,
+        seoDescription: formData.seoDescription.trim() || undefined,
         stockQuantity,
         badges: formData.badges,
         variants: [],
@@ -605,6 +615,8 @@ const AdminProducts = () => {
         category: formData.category,
         sku: formData.sku.trim() || undefined,
         marque: formData.marque.trim() || undefined,
+        seoTitle: formData.seoTitle.trim() || undefined,
+        seoDescription: formData.seoDescription.trim() || undefined,
         stockQuantity,
         badges: formData.badges,
         variants: parsedVariants,
@@ -1066,6 +1078,40 @@ const AdminProducts = () => {
                         className="mt-1"
                         placeholder="ex. Apple, Nike…"
                       />
+                    </div>
+                    <div className="sm:col-span-2 space-y-3 rounded-lg border border-border bg-muted/20 p-3">
+                      <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                        Référencement Google (optionnel)
+                      </p>
+                      <div>
+                        <Label htmlFor="seoTitle">Titre SEO</Label>
+                        <Input
+                          id="seoTitle"
+                          maxLength={200}
+                          value={formData.seoTitle}
+                          onChange={(e) => setFormData((prev) => ({ ...prev, seoTitle: e.target.value }))}
+                          className="mt-1"
+                          placeholder={formData.name || 'Par défaut : le nom du produit'}
+                        />
+                        <p className="mt-1 text-[11px] text-muted-foreground">
+                          {formData.seoTitle.length}/60 recommandés
+                        </p>
+                      </div>
+                      <div>
+                        <Label htmlFor="seoDescription">Description SEO</Label>
+                        <Textarea
+                          id="seoDescription"
+                          maxLength={500}
+                          rows={2}
+                          value={formData.seoDescription}
+                          onChange={(e) => setFormData((prev) => ({ ...prev, seoDescription: e.target.value }))}
+                          className="mt-1"
+                          placeholder="Par défaut : le début de la description du produit"
+                        />
+                        <p className="mt-1 text-[11px] text-muted-foreground">
+                          {formData.seoDescription.length}/160 recommandés
+                        </p>
+                      </div>
                     </div>
                     <div className="sm:col-span-2">
                       <Label htmlFor="shortDescription">Description courte</Label>

@@ -137,12 +137,18 @@ export default function BlockStylePanel({ blockType, config, onChange }: BlockSt
   const showButton = ['hero', 'cta', 'countdown'].includes(blockType);
   const showOverlay = isHero && style.layout === 'overlay';
   const showColumns =
-    blockType === 'products' || blockType === 'categories' || blockType === 'instagram';
+    blockType === 'products' ||
+    blockType === 'categories' ||
+    blockType === 'instagram' ||
+    blockType === 'features' ||
+    blockType === 'gallery';
   const showGridExtras = blockType === 'products' || blockType === 'categories';
   const showMediaRadius =
     blockType === 'image' ||
     blockType === 'video' ||
     blockType === 'instagram' ||
+    blockType === 'gallery' ||
+    blockType === 'split' ||
     showGridExtras;
 
 

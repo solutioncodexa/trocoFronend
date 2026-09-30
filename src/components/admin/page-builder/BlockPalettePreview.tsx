@@ -120,6 +120,67 @@ export default function BlockPalettePreview({ type }: { type: StorePageBlockType
           ))}
         </div>
       );
+    case 'features':
+      return (
+        <div className="grid h-14 grid-cols-4 items-center gap-1 rounded-md bg-muted/40 px-1.5">
+          {[0, 1, 2, 3].map((i) => (
+            <div key={i} className="flex flex-col items-center gap-0.5">
+              <div className="h-4 w-4 rounded-full bg-primary/40" />
+              <div className="h-1 w-full rounded-sm bg-foreground/30" />
+              <div className="h-1 w-2/3 rounded-sm bg-foreground/15" />
+            </div>
+          ))}
+        </div>
+      );
+    case 'newsletter':
+      return (
+        <div className="flex h-14 flex-col items-center justify-center gap-1 rounded-md bg-muted/50 px-3">
+          <div className="h-1.5 w-2/5 rounded-sm bg-foreground/50" />
+          <div className="flex w-full gap-1">
+            <div className="h-3 flex-1 rounded-sm border border-border bg-background" />
+            <div className="h-3 w-8 rounded-sm bg-primary/80" />
+          </div>
+        </div>
+      );
+    case 'gallery':
+      return (
+        <div className="grid h-14 grid-cols-3 gap-0.5 rounded-md bg-muted/30 p-1">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <div key={i} className="rounded-[2px] bg-stone-300" />
+          ))}
+        </div>
+      );
+    case 'split':
+      return (
+        <div className="grid h-14 grid-cols-2 gap-1.5 rounded-md bg-muted/40 p-1.5">
+          <div className="rounded-sm bg-stone-300" />
+          <div className="flex flex-col justify-center gap-1">
+            <div className="h-1.5 w-4/5 rounded-sm bg-foreground/60" />
+            <div className="h-1 w-full rounded-sm bg-foreground/25" />
+            <div className="h-1 w-3/4 rounded-sm bg-foreground/25" />
+          </div>
+        </div>
+      );
+    case 'blog_posts':
+      return (
+        <div className="grid h-14 grid-cols-3 gap-1 rounded-md bg-muted/40 p-1.5">
+          {[0, 1, 2].map((i) => (
+            <div key={i} className="flex flex-col gap-0.5 rounded-sm bg-background p-0.5">
+              <div className="h-4 rounded-sm bg-stone-300" />
+              <div className="h-1 rounded-sm bg-foreground/40" />
+              <div className="h-1 w-2/3 rounded-sm bg-foreground/20" />
+            </div>
+          ))}
+        </div>
+      );
+    case 'logos':
+      return (
+        <div className="flex h-14 items-center justify-center gap-2 rounded-md bg-muted/30 px-2">
+          {[0, 1, 2, 3].map((i) => (
+            <div key={i} className="h-3 w-full rounded-sm bg-foreground/25" />
+          ))}
+        </div>
+      );
     default:
       return <div className="h-14 rounded-md bg-muted" />;
   }

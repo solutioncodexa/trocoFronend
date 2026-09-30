@@ -11,7 +11,13 @@ export type StorePageBlockType =
   | 'video'
   | 'testimonials'
   | 'countdown'
-  | 'instagram';
+  | 'instagram'
+  | 'features'
+  | 'newsletter'
+  | 'gallery'
+  | 'split'
+  | 'blog_posts'
+  | 'logos';
 
 export type StorePageBlock = {
   id?: number | null;
@@ -197,7 +203,7 @@ export const BLOCK_CATALOG: {
     label: 'Bandeau bouton',
     description: 'Message fort avec un bouton d’action',
     defaults: {
-      title: 'Envie d’un projet sur-mesure ?',
+      title: 'Une question ?',
       body: 'Contactez-nous, réponse sous 24 h.',
       ctaLabel: 'Nous écrire',
       ctaHref: '/contact',
@@ -289,6 +295,91 @@ export const BLOCK_CATALOG: {
       cardDensity: 'compact',
       mediaRadius: 'md',
       images: ['', '', '', '', '', ''],
+    },
+  },
+  {
+    type: 'features',
+    label: 'Avantages',
+    description: 'Livraison, paiement, retours… vos points forts en icônes',
+    defaults: {
+      title: 'Pourquoi nous choisir',
+      columns: 4,
+      align: 'center',
+      paddingY: 'md',
+      maxWidth: 'lg',
+      items: [
+        { icon: 'truck', title: 'Livraison rapide', text: 'Partout au Maroc' },
+        { icon: 'shield', title: 'Paiement sécurisé', text: 'Payez à la livraison ou en ligne' },
+        { icon: 'refresh', title: 'Retours faciles', text: 'Échange simple sous quelques jours' },
+        { icon: 'headset', title: 'Service client', text: 'Une équipe à votre écoute' },
+      ],
+    },
+  },
+  {
+    type: 'newsletter',
+    label: 'Newsletter',
+    description: 'Collectez les emails de vos visiteurs',
+    defaults: {
+      title: 'Restez informé',
+      body: 'Recevez nos nouveautés et offres exclusives.',
+      align: 'center',
+      paddingY: 'md',
+      maxWidth: 'sm',
+    },
+  },
+  {
+    type: 'gallery',
+    label: 'Galerie photos',
+    description: 'Une grille de photos (ambiance, réalisations…)',
+    defaults: {
+      title: 'Galerie',
+      columns: 3,
+      mediaRadius: 'lg',
+      align: 'left',
+      paddingY: 'md',
+      maxWidth: 'lg',
+      images: ['', '', ''],
+    },
+  },
+  {
+    type: 'split',
+    label: 'Image + texte',
+    description: 'Une photo à côté d’un texte, avec bouton optionnel',
+    defaults: {
+      title: 'Notre histoire',
+      body: 'Présentez votre marque, votre savoir-faire ou une nouveauté.',
+      imageUrl: '',
+      imagePosition: 'left',
+      ctaLabel: '',
+      ctaHref: '',
+      mediaRadius: 'xl',
+      align: 'left',
+      paddingY: 'md',
+      maxWidth: 'lg',
+    },
+  },
+  {
+    type: 'blog_posts',
+    label: 'Derniers articles',
+    description: 'Affiche automatiquement vos derniers articles de blog',
+    defaults: {
+      title: 'Du côté du blog',
+      limit: 3,
+      align: 'left',
+      paddingY: 'md',
+      maxWidth: 'lg',
+    },
+  },
+  {
+    type: 'logos',
+    label: 'Logos partenaires',
+    description: 'Marques, revendeurs ou « vu dans » en une rangée',
+    defaults: {
+      title: 'Ils nous font confiance',
+      align: 'center',
+      paddingY: 'md',
+      maxWidth: 'lg',
+      images: ['', '', '', ''],
     },
   },
 ];
