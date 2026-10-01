@@ -10,6 +10,7 @@ import { BrandLogoImg } from '@/components/layout/BrandLogoImg';
 import { markStockAlertPending } from '@/utils/stockAlertSession';
 import { setStoredTenantSlug } from '@/config/api';
 import { useStoreBrand } from '@/hooks/useStoreBrand';
+import { PUBLIC_SITE_NAME } from '@/config/site';
 import {
   ADMIN_LOCALES,
   ADMIN_LOCALE_LABELS,
@@ -53,6 +54,14 @@ const AdminLogin = () => {
       setError(t('login.errorAccess'));
     }
   }, [locationState.createdSlug, locationState.email, locationState.from?.pathname, t]);
+
+  useEffect(() => {
+    const prev = document.title;
+    document.title = `${t('login.signIn')} — ${PUBLIC_SITE_NAME}`;
+    return () => {
+      document.title = prev;
+    };
+  }, [t]);
 
   useEffect(() => {
     if (authLoading || !isAuthenticated) return;
@@ -150,7 +159,8 @@ const AdminLogin = () => {
 
           <div className="mb-8 text-center lg:text-start">
             <BrandLogoImg
-              className="mx-auto mb-4 h-14 w-auto max-w-[220px] lg:mx-0"
+              platformFallback
+              className="mx-auto mb-6 h-16 w-auto max-w-[280px] lg:mx-0"
               draggable={false}
             />
             <h2 className="font-display text-2xl font-semibold tracking-tight text-foreground">

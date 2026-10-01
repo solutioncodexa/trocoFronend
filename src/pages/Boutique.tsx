@@ -36,6 +36,8 @@ import { useStoreBrand } from '@/hooks/useStoreBrand';
 import { useStorefrontTheme } from '@/hooks/useStorefrontTheme';
 import { useLocale } from '@/contexts/LocaleContext';
 import { DEFAULT_APPEARANCE } from '@/config/storeAppearance';
+import { applyPageMeta, resetProductMeta } from '@/utils/productMeta';
+import { getImageUrl } from '@/services/api/upload';
 
 const PRODUCTS_PER_PAGE = 12;
 const PRICE_MAX = 2000;
@@ -152,6 +154,43 @@ const Boutique = ({ embed = false }: { embed?: boolean } = {}) => {
     retry: 1,
     ...staticCatalogQueryOptions,
   });
+
+  const { data: categorySeo } = useQuery({
+    queryKey: ['category-seo', selectedCategory],
+    queryFn: () => categoriesApi.getCategoryBySlug(selectedCategory!),
+    enabled: !!selectedCategory,
+    retry: 1,
+    ...staticCatalogQueryOptions,
+  });
+
+  useEffect(() => {
+    if (selectedCategory && !categorySeo) return;
+    if (selectedCategory && categorySeo) {
+      const title =
+        categorySeo.seoTitle?.trim() || `${categorySeo.name} | ${siteName}`;
+      const description =
+        categorySeo.seoDescription?.trim() ||
+        categorySeo.description?.trim() ||
+        shopSubtitle;
+      applyPageMeta({
+        title,
+        description,
+        path: `/boutique?category=${encodeURIComponent(categorySeo.slug)}`,
+        imageUrl: categorySeo.heroImageUrl
+          ? getImageUrl(categorySeo.heroImageUrl)
+          : undefined,
+      });
+    } else {
+      applyPageMeta({
+        title: `${shopTitle} | ${siteName}`,
+        description: shopSubtitle,
+        path: '/boutique',
+      });
+    }
+    return () => {
+      resetProductMeta();
+    };
+  }, [selectedCategory, categorySeo, shopTitle, shopSubtitle, siteName]);
 
   const sortedCategories = useMemo(() => {
     type CategoryWithParent = (typeof categories)[number] & {

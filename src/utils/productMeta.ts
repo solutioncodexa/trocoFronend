@@ -40,6 +40,41 @@ function upsertCanonical(href: string) {
   el.setAttribute('href', href);
 }
 
+export function applyPageMeta({
+  title,
+  description,
+  path,
+  imageUrl,
+}: {
+  title: string;
+  description?: string;
+  path?: string;
+  imageUrl?: string;
+}): void {
+  const origin = storefrontOrigin();
+  const pageUrl = path
+    ? `${origin}${path.startsWith('/') ? path : `/${path}`}`
+    : origin;
+  const siteName = getActiveSiteName();
+  const ogImage = imageUrl || `${origin}/favicon.png`;
+  document.title = title;
+  if (description) {
+    upsertMeta('name', 'description', description);
+    upsertMeta('property', 'og:description', description);
+    upsertMeta('name', 'twitter:description', description);
+  }
+  upsertCanonical(pageUrl);
+  upsertMeta('property', 'og:type', 'website');
+  upsertMeta('property', 'og:site_name', siteName);
+  upsertMeta('property', 'og:title', title);
+  upsertMeta('property', 'og:url', pageUrl);
+  upsertMeta('property', 'og:image', ogImage);
+  upsertMeta('property', 'og:locale', 'fr_MA');
+  upsertMeta('name', 'twitter:card', 'summary_large_image');
+  upsertMeta('name', 'twitter:title', title);
+  upsertMeta('name', 'twitter:image', ogImage);
+}
+
 export function applyProductMeta({
   id,
   name,

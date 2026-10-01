@@ -58,6 +58,7 @@ type Props = {
   mergeAppearance: (partial: Partial<StoreAppearance>) => void;
   replaceAppearance: (appearance: StoreAppearance) => void;
   applyThemeNow: (themeKey: StoreThemeKey) => void;
+  applyStyleNow?: (styleKey: string) => void;
   themePresets?: Record<string, unknown> | null;
   megaMenuEnabled: boolean;
   pageLinkOptions: AppearanceSectionEditorsProps['pageLinkOptions'];
@@ -83,6 +84,7 @@ export function AppearanceWorkspace({
   mergeAppearance,
   replaceAppearance,
   applyThemeNow,
+  applyStyleNow,
   themePresets,
   megaMenuEnabled,
   pageLinkOptions,
@@ -258,6 +260,10 @@ export function AppearanceWorkspace({
   const applyThemeLive = (themeKey: StoreThemeKey) => {
     syncPreviewToSection('themes');
     applyThemeNow(themeKey);
+  };
+  const applyStyleLive = (styleKey: string) => {
+    syncPreviewToSection('themes');
+    applyStyleNow?.(styleKey);
   };
 
   useEffect(() => {
@@ -642,6 +648,7 @@ export function AppearanceWorkspace({
               patchAppearance={patchAppearanceLive}
               mergeAppearance={mergeAppearanceLive}
               applyThemeNow={applyThemeLive}
+              applyStyleNow={applyStyleNow ? applyStyleLive : undefined}
               themePresets={themePresets}
               megaMenuEnabled={megaMenuEnabled}
               pageLinkOptions={pageLinkOptions}
@@ -693,6 +700,7 @@ export function AppearanceWorkspace({
                 patchAppearance={patchAppearanceLive}
                 mergeAppearance={mergeAppearanceLive}
                 applyThemeNow={applyThemeLive}
+              applyStyleNow={applyStyleNow ? applyStyleLive : undefined}
                 themePresets={themePresets}
                 megaMenuEnabled={megaMenuEnabled}
                 pageLinkOptions={pageLinkOptions}

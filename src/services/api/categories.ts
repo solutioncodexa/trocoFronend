@@ -49,6 +49,8 @@ export const categoriesApi = {
     name: string;
     slug: string;
     description?: string;
+    seoTitle?: string;
+    seoDescription?: string;
     parentId?: number | null;
   }): Promise<CategoryDTO> => {
     const url = buildApiUrl('/categories');
@@ -65,6 +67,8 @@ export const categoriesApi = {
       name: string;
       slug: string;
       description?: string;
+      seoTitle?: string;
+      seoDescription?: string;
       parentId?: number | null;
       clearParent?: boolean;
     }

@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import Layout from '@/components/layout/Layout';
@@ -8,6 +9,7 @@ import { useStoreBrand } from '@/hooks/useStoreBrand';
 import { getImageUrl } from '@/services/api/upload';
 import { staticCatalogQueryOptions } from '@/config/queryOptions';
 import { useLocale } from '@/contexts/LocaleContext';
+import { applyPageMeta, resetProductMeta } from '@/utils/productMeta';
 
 const BlogList = () => {
   const { lang } = useStoreLang();
@@ -22,9 +24,19 @@ const BlogList = () => {
     ...staticCatalogQueryOptions,
   });
 
+  useEffect(() => {
+    applyPageMeta({
+      title: `${t('blogTitle')} — ${siteName}`,
+      description: t('blogIntro', { name: siteName }),
+      path: '/blog',
+    });
+    return () => {
+      resetProductMeta();
+    };
+  }, [siteName, t]);
+
   return (
     <Layout>
-      <title>{`${t('blogTitle')} — ${siteName}`}</title>
       <main className="page-section-y animate-fade-in">
         <div className="mx-auto max-w-4xl page-padding">
           <div className="mb-12 text-center sm:mb-14">

@@ -103,6 +103,8 @@ const AdminCategories = () => {
   const [formData, setFormData] = useState({
     name: '',
     description: '',
+    seoTitle: '',
+    seoDescription: '',
     slug: '',
     parentId: '' as string,
   });
@@ -145,7 +147,7 @@ const AdminCategories = () => {
     setSlugManual(false);
     setKeepOpen(false);
     setBulkNames('');
-    setFormData({ name: '', description: '', slug: '', parentId: '' });
+    setFormData({ name: '', description: '', seoTitle: '', seoDescription: '', slug: '', parentId: '' });
     setIsModalOpen(true);
   };
 
@@ -158,6 +160,8 @@ const AdminCategories = () => {
     setFormData({
       name: '',
       description: '',
+      seoTitle: '',
+      seoDescription: '',
       slug: '',
       parentId: parentId != null ? String(parentId) : '',
     });
@@ -232,6 +236,8 @@ const AdminCategories = () => {
     mutationFn: (data: {
       name: string;
       description?: string;
+      seoTitle?: string;
+      seoDescription?: string;
       slug: string;
       parentId?: number | null;
     }) => categoriesApi.createCategory(data),
@@ -247,6 +253,8 @@ const AdminCategories = () => {
       data: {
         name: string;
         description?: string;
+        seoTitle?: string;
+        seoDescription?: string;
         slug: string;
         parentId?: number | null;
         clearParent?: boolean;
@@ -372,6 +380,8 @@ const AdminCategories = () => {
     setFormData({
       name: category.name,
       description: category.description || '',
+      seoTitle: category.seoTitle || '',
+      seoDescription: category.seoDescription || '',
       slug: category.slug,
       parentId: category.parentId != null ? String(category.parentId) : '',
     });
@@ -398,6 +408,8 @@ const AdminCategories = () => {
     setFormData((prev) => ({
       name: '',
       description: '',
+      seoTitle: '',
+      seoDescription: '',
       slug: '',
       parentId: prev.parentId,
     }));
@@ -467,6 +479,8 @@ const AdminCategories = () => {
         data: {
           name: formData.name.trim(),
           description: formData.description.trim() || undefined,
+          seoTitle: formData.seoTitle.trim() || undefined,
+          seoDescription: formData.seoDescription.trim() || undefined,
           slug,
           parentId: parentId ?? undefined,
           clearParent: parentId == null,
@@ -479,6 +493,8 @@ const AdminCategories = () => {
       await createMutation.mutateAsync({
         name: formData.name.trim(),
         description: formData.description.trim() || undefined,
+        seoTitle: formData.seoTitle.trim() || undefined,
+        seoDescription: formData.seoDescription.trim() || undefined,
         slug: uniqueSlug(slug, existingSlugs),
         parentId: parentId ?? undefined,
       });
@@ -1081,6 +1097,33 @@ const AdminCategories = () => {
                     rows={2}
                     className="mt-1"
                   />
+                </div>
+                <div>
+                  <Label htmlFor="cat-seo-title">Titre SEO</Label>
+                  <Input
+                    id="cat-seo-title"
+                    value={formData.seoTitle}
+                    onChange={(e) =>
+                      setFormData((prev) => ({ ...prev, seoTitle: e.target.value }))
+                    }
+                    placeholder="Optionnel — titre Google (60 car.)"
+                    className="mt-1"
+                  />
+                  <p className="mt-1 text-[11px] text-muted-foreground">{formData.seoTitle.length}/60 recommandés</p>
+                </div>
+                <div>
+                  <Label htmlFor="cat-seo-desc">Description SEO</Label>
+                  <Textarea
+                    id="cat-seo-desc"
+                    value={formData.seoDescription}
+                    onChange={(e) =>
+                      setFormData((prev) => ({ ...prev, seoDescription: e.target.value }))
+                    }
+                    placeholder="Optionnel — meta description (160 car.)"
+                    rows={2}
+                    className="mt-1"
+                  />
+                  <p className="mt-1 text-[11px] text-muted-foreground">{formData.seoDescription.length}/160 recommandés</p>
                 </div>
               </CollapsibleContent>
             </Collapsible>

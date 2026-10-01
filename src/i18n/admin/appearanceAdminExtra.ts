@@ -28,6 +28,8 @@ export type AppearanceAdminMessageKey =
   | 'appearance.themesHint'
   | 'appearance.looksComplete'
   | 'appearance.looksHint'
+  | 'appearance.stylesComplete'
+  | 'appearance.stylesHint'
   | 'appearance.sec.themes'
   | 'appearance.sec.identity'
   | 'appearance.sec.typography'
@@ -172,7 +174,10 @@ const fr: Record<AppearanceAdminMessageKey, string> = {
     'Chaque thème conserve ses couleurs et réglages. Changer de thème sauvegarde l’actuel ; y revenir le restaure.',
   'appearance.looksComplete': 'Looks complets',
   'appearance.looksHint':
-    '1 clic applique styles boutique + layout (sans changer le thème de base).',
+    '1 clic applique l’agencement (grille, cartes, en-tête) sans changer le thème de base.',
+  'appearance.stylesComplete': 'Styles complets',
+  'appearance.stylesHint':
+    'Comme dans l’assistant : un clic règle thème, couleurs, polices, arrondis et agencement. Le thème seul, plus bas, conserve vos couleurs déjà enregistrées.',
   'appearance.sec.themes': 'Thèmes',
   'appearance.sec.identity': 'Identité & couleurs',
   'appearance.sec.typography': 'Typographie',
@@ -325,7 +330,10 @@ const ar: Record<AppearanceAdminMessageKey, string> = {
     'كل ثيم يحتفظ بألوانه وإعداداته. تغيير الثيم يحفظ الحالي؛ والعودة إليه تستعيده.',
   'appearance.looksComplete': 'مظاهر كاملة',
   'appearance.looksHint':
-    'نقرة واحدة تطبق أنماط المتجر والتخطيط (دون تغيير الثيم الأساسي).',
+    'نقرة واحدة تطبق التخطيط دون تغيير الثيم الأساسي.',
+  'appearance.stylesComplete': 'أنماط كاملة',
+  'appearance.stylesHint':
+    'مثل المساعد: نقرة واحدة تضبط الثيم والألوان والخطوط والانحناءات والتخطيط.',
   'appearance.sec.themes': 'الثيمات',
   'appearance.sec.identity': 'الهوية والألوان',
   'appearance.sec.typography': 'الخطوط',
@@ -478,7 +486,10 @@ const en: Record<AppearanceAdminMessageKey, string> = {
     'Each theme keeps its colors and settings. Switching themes saves the current one; coming back restores it.',
   'appearance.looksComplete': 'Full looks',
   'appearance.looksHint':
-    '1 click applies store styles + layout (without changing the base theme).',
+    '1 click applies layout (grid, cards, header) without changing the base theme.',
+  'appearance.stylesComplete': 'Complete styles',
+  'appearance.stylesHint':
+    'Same as onboarding: one click sets theme, colors, fonts, radius and layout. Theme-only below keeps saved colors.',
   'appearance.sec.themes': 'Themes',
   'appearance.sec.identity': 'Identity & colors',
   'appearance.sec.typography': 'Typography',

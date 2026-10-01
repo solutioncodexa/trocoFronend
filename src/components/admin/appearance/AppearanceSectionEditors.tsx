@@ -89,6 +89,7 @@ import {
 } from '@/config/storeAppearance';
 import { FONT_PAIRS, RADIUS_PRESETS } from '@/config/storefrontTheme';
 import { STORE_THEMES, designDemoPath, type StoreThemeKey } from '@/config/storeThemes';
+import { matchStylePreset, STYLE_PRESETS } from '@/config/stylePresets';
 import { getImageUrl } from '@/services/api/upload';
 import { cn } from '@/lib/utils';
 import type { AppearanceSectionId } from '@/components/admin/appearance/appearanceSections';
@@ -122,6 +123,7 @@ export type AppearanceSectionEditorsProps = {
   patchAppearance: <K extends keyof StoreAppearance>(key: K, value: StoreAppearance[K]) => void;
   mergeAppearance?: (partial: Partial<StoreAppearance>) => void;
   applyThemeNow: (themeKey: StoreThemeKey) => void;
+  applyStyleNow?: (styleKey: string) => void;
   themePresets?: Record<string, unknown> | null;
   megaMenuEnabled: boolean;
   pageLinkOptions: StorePageLinkOption[];
@@ -304,6 +306,7 @@ export function AppearanceSectionEditors({
   patch,
   patchAppearance,
   applyThemeNow,
+  applyStyleNow,
   themePresets,
   megaMenuEnabled,
   pageLinkOptions,
@@ -416,6 +419,54 @@ export function AppearanceSectionEditors({
     case 'themes':
       return (
         <div className="space-y-4">
+          {applyStyleNow ? (
+            <div className="space-y-2">
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                {t('appearance.stylesComplete')}
+              </p>
+              <Hint>{t('appearance.stylesHint')}</Hint>
+              <div className="grid grid-cols-2 gap-2">
+                {STYLE_PRESETS.map((preset) => {
+                  const fonts = FONT_PAIRS.find((f) => f.key === preset.fontPair);
+                  const selected = matchStylePreset(form)?.key === preset.key;
+                  return (
+                    <OptionTile
+                      key={preset.key}
+                      selected={selected}
+                      onClick={() => applyStyleNow(preset.key)}
+                    >
+                      <div
+                        className="mb-1.5 flex h-8 items-center justify-between rounded-md px-2"
+                        style={{
+                          background: `linear-gradient(135deg, ${preset.primaryColor}, ${preset.secondaryColor})`,
+                        }}
+                      >
+                        <span
+                          className="text-sm font-semibold text-white"
+                          style={{ fontFamily: fonts?.display }}
+                        >
+                          Aa
+                        </span>
+                        <span
+                          className="h-3 w-8 bg-white/90"
+                          style={{
+                            borderRadius:
+                              preset.radiusPreset === 'sharp'
+                                ? 0
+                                : preset.radiusPreset === 'subtle'
+                                  ? 4
+                                  : 999,
+                          }}
+                        />
+                      </div>
+                      <p className="text-xs font-semibold">{preset.label}</p>
+                      <p className="text-[10px] text-muted-foreground">{preset.description}</p>
+                    </OptionTile>
+                  );
+                })}
+              </div>
+            </div>
+          ) : null}
           <Hint>{t('appearance.themesHint')}</Hint>
           {mergeAppearance ? (
             <div className="space-y-2">

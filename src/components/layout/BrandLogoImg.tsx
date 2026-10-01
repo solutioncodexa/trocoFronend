@@ -1,4 +1,5 @@
-import trocoLogo from '@/assets/troco-logo.png';
+import getStoreLogo from '@/assets/getstore-logo.png';
+import { PUBLIC_SITE_NAME } from '@/config/site';
 import { cn } from '@/lib/utils';
 import { useStoreBrand } from '@/hooks/useStoreBrand';
 
@@ -25,8 +26,10 @@ export function BrandLogoImg({
   const { siteName, logoUrl, hasStore } = useStoreBrand();
   const explicit = src?.trim() || null;
   const storeLogo = !platformFallback ? logoUrl : null;
-  const resolvedSrc = explicit || storeLogo || (platformFallback || !hasStore ? trocoLogo : null);
-  const resolvedAlt = alt ?? siteName;
+  const platformLogo = platformFallback || !hasStore ? getStoreLogo : null;
+  const resolvedSrc = explicit || storeLogo || platformLogo;
+  const wordmark = platformFallback || !hasStore ? PUBLIC_SITE_NAME : siteName;
+  const resolvedAlt = alt ?? wordmark;
 
   if (!resolvedSrc) {
     return (
@@ -37,7 +40,7 @@ export function BrandLogoImg({
         )}
         aria-label={resolvedAlt}
       >
-        <span className="truncate">{siteName}</span>
+        <span className="truncate">{wordmark}</span>
       </span>
     );
   }

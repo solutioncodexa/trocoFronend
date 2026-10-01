@@ -108,3 +108,20 @@ export function getStylePreset(key?: string | null): StylePreset | undefined {
 export function styleAppearanceOverride(preset: StylePreset): Partial<StoreAppearance> {
   return APPEARANCE_LOOK_PRESETS.find((l) => l.key === preset.lookKey)?.appearance ?? {};
 }
+
+/** Retrouve le style complet actuellement appliqué (thème + police + arrondi + couleur). */
+export function matchStylePreset(input: {
+  themeKey?: string | null;
+  fontPair?: string | null;
+  radiusPreset?: string | null;
+  primaryColor?: string | null;
+}): StylePreset | undefined {
+  const primary = (input.primaryColor || '').trim().toUpperCase();
+  return STYLE_PRESETS.find(
+    (s) =>
+      s.themeKey === input.themeKey &&
+      s.fontPair === input.fontPair &&
+      s.radiusPreset === input.radiusPreset &&
+      s.primaryColor.toUpperCase() === primary,
+  );
+}

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation, useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Copy, ExternalLink, Eye, EyeOff, Loader2, Save, Settings2 } from 'lucide-react';
+import { CheckCircle2, Copy, ExternalLink, Eye, EyeOff, Loader2, Save, Settings2 } from 'lucide-react';
 import AdminLayout from '@/components/admin/AdminLayout';
 import { useAdminLocale } from '@/contexts/AdminLocaleContext';
 import { AppearanceWorkspace } from '@/components/admin/appearance/AppearanceWorkspace';
@@ -38,6 +38,7 @@ import {
   themeAppearanceDefaults,
   type StoreThemeKey,
 } from '@/config/storeThemes';
+import { getStylePreset, styleAppearanceOverride } from '@/config/stylePresets';
 import { localeStorageKey } from '@/i18n/localeStorage';
 import { normalizeLocale, parseSupportedLocales } from '@/i18n/messages';
 
@@ -486,6 +487,15 @@ const AdminStoreSettings = () => {
       : buildStorefrontUrl(data.slug)
     : null;
 
+  const copyText = async (value: string, ok: string) => {
+    try {
+      await navigator.clipboard.writeText(value);
+      toast.success(ok);
+    } catch {
+      toast.error('Impossible de copier');
+    }
+  };
+
   const patch = <K extends keyof FormState>(key: K, value: FormState[K]) => {
     setForm((prev) => ({ ...prev, [key]: value }));
   };
@@ -701,6 +711,60 @@ const AdminStoreSettings = () => {
     } catch (err) {
       patch('themeKey', previousKey);
       toastError(err, 'Impossible d’appliquer le design');
+    } finally {
+      window.setTimeout(() => {
+        applyingThemeRef.current = false;
+      }, 1200);
+    }
+  };
+
+  const applyStyleNow = async (styleKey: string) => {
+    const preset = getStylePreset(styleKey);
+    if (!preset) return;
+    const nextAppearance = normalizeAppearance({
+      ...DEFAULT_APPEARANCE,
+      ...form.appearance,
+      ...styleAppearanceOverride(preset),
+    });
+    applyingThemeRef.current = true;
+    patch('themeKey', preset.themeKey);
+    patch('fontPair', preset.fontPair);
+    patch('radiusPreset', preset.radiusPreset);
+    patch('primaryColor', preset.primaryColor);
+    patch('secondaryColor', preset.secondaryColor);
+    replaceAppearance(nextAppearance);
+    try {
+      const updated = await platformApi.updateMyStoreSettings({
+        themeKey: preset.themeKey,
+        fontPair: preset.fontPair,
+        radiusPreset: preset.radiusPreset,
+        primaryColor: preset.primaryColor,
+        secondaryColor: preset.secondaryColor,
+        appearance: nextAppearance,
+      });
+      queryClient.setQueryData(['store-settings', 'me'], updated);
+      setForm((prev) => {
+        const next: FormState = {
+          ...prev,
+          themeKey: normalizeThemeKey(updated.themeKey) || preset.themeKey,
+          fontPair: normalizeFontPair(updated.fontPair || preset.fontPair),
+          radiusPreset: normalizeRadiusPreset(updated.radiusPreset || preset.radiusPreset),
+          primaryColor: updated.primaryColor || preset.primaryColor,
+          secondaryColor: updated.secondaryColor || preset.secondaryColor,
+          appearance: normalizeAppearance(updated.appearance ?? nextAppearance),
+        };
+        savedSnapshotRef.current = formFingerprint(next);
+        return next;
+      });
+      setCleanEpoch((n) => n + 1);
+      const rev = Date.now();
+      setPreviewTick(rev);
+      await refreshTenant();
+      await loadFromAdminSession();
+      queryClient.invalidateQueries({ queryKey: ['store-settings'] });
+      toast.success(`Style « ${preset.label} » appliqué`, { duration: 5000 });
+    } catch (err) {
+      toastError(err, 'Impossible d’appliquer le style');
     } finally {
       window.setTimeout(() => {
         applyingThemeRef.current = false;
@@ -940,6 +1004,7 @@ const AdminStoreSettings = () => {
           mergeAppearance={mergeAppearance}
           replaceAppearance={replaceAppearance}
           applyThemeNow={applyThemeNow}
+          applyStyleNow={applyStyleNow}
           themePresets={data?.themePresets ?? null}
           megaMenuEnabled={megaMenuEnabled}
           pageLinkOptions={pageLinkOptions}
@@ -1081,94 +1146,163 @@ const AdminStoreSettings = () => {
         </section>
 
         <section className="space-y-4 rounded-2xl border border-border bg-card p-5 sm:p-6">
-          <h2 className="font-display text-lg font-semibold">Domaine personnalisé</h2>
-          <div>
-            <Label htmlFor="customDomain">Domaine (sans https://)</Label>
-            <Input
-              id="customDomain"
-              className="mt-1.5"
-              value={form.customDomain}
-              onChange={(e) => patch('customDomain', e.target.value)}
-              placeholder="boutique.ma"
-            />
-            <p className="mt-2 text-xs text-muted-foreground">
-              Vérification DNS :{' '}
-              <span className={data?.domainVerified ? 'text-emerald-600' : 'text-amber-600'}>
-                {data?.domainVerified ? 'vérifié' : 'en attente'}
-              </span>
-            </p>
-          </div>
-          <div className="rounded-xl border border-border/70 bg-muted/40 p-4 text-sm text-muted-foreground">
-            <p className="font-medium text-foreground">Configuration DNS + HTTPS</p>
-            <ol className="mt-2 list-decimal space-y-1.5 pl-5">
-              <li>
-                Chez votre registrar (ou Cloudflare), créez un enregistrement{' '}
-                <span className="font-mono text-foreground">CNAME</span> pour{' '}
-                <span className="font-mono text-foreground">
-                  {form.customDomain || 'votre-domaine.ma'}
-                </span>{' '}
-                pointant vers{' '}
-                <span className="font-mono text-foreground">
-                  {data?.slug || 'votre-slug'}.getstore.com
-                </span>
-                .
-              </li>
-              <li>
-                <strong className="font-medium text-foreground">HTTPS / SSL</strong> — recommandé :
-                proxy Cloudflare (nuage orange) pour un certificat automatique. Sans Cloudflare,
-                le SSL est provisionné côté plateforme après validation DNS.
-              </li>
-              <li>Attendez la propagation DNS (souvent quelques minutes à 24 h).</li>
-              <li>Enregistrez le domaine ci-dessus, puis cliquez sur « Vérifier le DNS ».</li>
-            </ol>
-            {data?.domainVerified ? (
-              <p className="mt-3 text-xs text-emerald-700">
-                DNS OK — votre boutique doit répondre en HTTPS sur{' '}
-                <span className="font-mono">https://{form.customDomain || data.customDomain}</span>.
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <h2 className="font-display text-lg font-semibold">Assistant domaine personnalisé</h2>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Quatre étapes : saisir le nom, publier le CNAME, activer HTTPS, puis vérifier.
               </p>
-            ) : null}
-            {data?.slug ? (
-              <p className="mt-3 text-xs">
-                Lien temporaire Get STORE :{' '}
-                <a
-                  className="text-primary underline"
-                  href={`/?tenant=${encodeURIComponent(data.slug)}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  /?tenant={data.slug}
-                </a>
-              </p>
-            ) : null}
+            </div>
+            <span
+              className={cn(
+                'rounded-full px-2.5 py-1 text-xs font-medium',
+                data?.domainVerified
+                  ? 'bg-emerald-500/10 text-emerald-700'
+                  : 'bg-amber-500/10 text-amber-800',
+              )}
+            >
+              {data?.domainVerified ? 'DNS vérifié' : 'En attente de DNS'}
+            </span>
           </div>
-          <Button
-            type="button"
-            variant="outline"
-            disabled={!form.customDomain.trim() || saveMutation.isPending}
-            onClick={async () => {
-              try {
-                // Enregistrer d'abord le domaine saisi
-                await saveMutation.mutateAsync({
-                  customDomain: form.customDomain
-                    .trim()
-                    .replace(/^https?:\/\//i, '')
-                    .replace(/\/+$/, ''),
-                });
-                const verified = await platformApi.verifyMyDomain();
-                queryClient.setQueryData(['store-settings', 'me'], verified);
-                toast.success(
-                  verified.domainVerified
-                    ? 'Domaine vérifié avec succès'
-                    : 'Domaine enregistré — vérification en attente',
-                );
-                await refreshTenant();
-              } catch (err) {
-                toastError(err, 'Échec de la vérification DNS');
-              }
-            }}
-          >
-            Vérifier le DNS
-          </Button>
+
+          {(() => {
+            const host = form.customDomain.trim().replace(/^https?:\/\//i, '').replace(/\/+$/, '');
+            const cnameTarget = `${data?.slug || 'votre-slug'}.getstore.com`;
+            const step = data?.domainVerified ? 4 : host ? 2 : 1;
+            const steps = [
+              { n: 1, title: 'Saisir le domaine' },
+              { n: 2, title: 'Créer le CNAME' },
+              { n: 3, title: 'HTTPS' },
+              { n: 4, title: 'Vérifier' },
+            ];
+            return (
+              <>
+                <ol className="grid gap-2 sm:grid-cols-4">
+                  {steps.map((s) => (
+                    <li
+                      key={s.n}
+                      className={cn(
+                        'rounded-xl border px-3 py-2 text-xs',
+                        step >= s.n
+                          ? 'border-primary/40 bg-primary/5 text-foreground'
+                          : 'border-border text-muted-foreground',
+                      )}
+                    >
+                      <span className="font-semibold">Étape {s.n}</span>
+                      <p className="mt-0.5">{s.title}</p>
+                    </li>
+                  ))}
+                </ol>
+
+                <div className="space-y-3">
+                  <Label htmlFor="customDomain">1. Domaine (sans https://)</Label>
+                  <Input
+                    id="customDomain"
+                    value={form.customDomain}
+                    onChange={(e) => patch('customDomain', e.target.value)}
+                    placeholder="boutique.ma"
+                  />
+                </div>
+
+                <div className="space-y-3 rounded-xl border border-border/70 bg-muted/40 p-4 text-sm">
+                  <p className="font-medium text-foreground">2. Enregistrement DNS (CNAME)</p>
+                  <p className="text-muted-foreground">
+                    Chez votre registrar ou Cloudflare, créez un CNAME. Pour un apex (
+                    <span className="font-mono">exemple.ma</span>
+                    ), utilisez un CNAME aplati (Cloudflare) ou un ALIAS / ANAME.
+                  </p>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <div className="rounded-lg border border-border bg-background p-3">
+                      <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Hôte / nom</p>
+                      <p className="mt-1 break-all font-mono text-foreground">{host || '@ ou www'}</p>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="mt-2 h-8 gap-1.5 px-2"
+                        disabled={!host}
+                        onClick={() => void copyText(host, 'Hôte copié')}
+                      >
+                        <Copy className="h-3.5 w-3.5" />
+                        Copier
+                      </Button>
+                    </div>
+                    <div className="rounded-lg border border-border bg-background p-3">
+                      <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Cible</p>
+                      <p className="mt-1 break-all font-mono text-foreground">{cnameTarget}</p>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="mt-2 h-8 gap-1.5 px-2"
+                        onClick={() => void copyText(cnameTarget, 'Cible CNAME copiée')}
+                      >
+                        <Copy className="h-3.5 w-3.5" />
+                        Copier
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="rounded-xl border border-border/70 bg-muted/40 p-4 text-sm text-muted-foreground">
+                  <p className="font-medium text-foreground">3. HTTPS / SSL</p>
+                  <p className="mt-1.5">
+                    Recommandé : proxy Cloudflare (nuage orange) pour un certificat automatique. Sans Cloudflare,
+                    le SSL est provisionné côté plateforme après validation DNS (souvent quelques minutes à 24 h).
+                  </p>
+                </div>
+
+                <div className="space-y-3">
+                  <p className="text-sm font-medium text-foreground">4. Enregistrer puis vérifier</p>
+                  {data?.domainVerified ? (
+                    <p className="flex items-start gap-2 text-sm text-emerald-700">
+                      <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" />
+                      DNS OK — la boutique doit répondre en HTTPS sur{' '}
+                      <span className="font-mono">https://{host || data.customDomain}</span>.
+                    </p>
+                  ) : null}
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled={!host || saveMutation.isPending}
+                    onClick={async () => {
+                      try {
+                        await saveMutation.mutateAsync({
+                          customDomain: host,
+                        });
+                        const verified = await platformApi.verifyMyDomain();
+                        queryClient.setQueryData(['store-settings', 'me'], verified);
+                        toast.success(
+                          verified.domainVerified
+                            ? 'Domaine vérifié avec succès'
+                            : 'Domaine enregistré — vérification en attente (propagation DNS)',
+                        );
+                        await refreshTenant();
+                      } catch (err) {
+                        toastError(err, 'Échec de la vérification DNS');
+                      }
+                    }}
+                  >
+                    Vérifier le DNS
+                  </Button>
+                </div>
+
+                {data?.slug ? (
+                  <p className="text-xs text-muted-foreground">
+                    Lien temporaire Get STORE :{' '}
+                    <a
+                      className="text-primary underline"
+                      href={`/?tenant=${encodeURIComponent(data.slug)}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      /?tenant={data.slug}
+                    </a>
+                  </p>
+                ) : null}
+              </>
+            );
+          })()}
         </section>
 
         <section className="space-y-4 rounded-2xl border border-border bg-card p-5 sm:p-6">

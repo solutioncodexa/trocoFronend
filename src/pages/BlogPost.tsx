@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import Layout from '@/components/layout/Layout';
@@ -7,6 +8,7 @@ import { useStoreBrand } from '@/hooks/useStoreBrand';
 import { getImageUrl } from '@/services/api/upload';
 import { staticCatalogQueryOptions } from '@/config/queryOptions';
 import { useLocale } from '@/contexts/LocaleContext';
+import { applyPageMeta, resetProductMeta } from '@/utils/productMeta';
 
 const BlogPost = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -25,10 +27,21 @@ const BlogPost = () => {
   const pageTitle = post?.seoTitle?.trim() || post?.title || t('article');
   const metaDescription = post?.seoDescription?.trim() || post?.excerpt || '';
 
+  useEffect(() => {
+    if (!post || !slug) return;
+    applyPageMeta({
+      title: `${pageTitle} — ${siteName}`,
+      description: metaDescription || undefined,
+      path: `/blog/${slug}`,
+      imageUrl: post.coverUrl ? getImageUrl(post.coverUrl) : undefined,
+    });
+    return () => {
+      resetProductMeta();
+    };
+  }, [post, slug, pageTitle, metaDescription, siteName]);
+
   return (
     <Layout>
-      <title>{`${pageTitle} — ${siteName}`}</title>
-      {metaDescription ? <meta name="description" content={metaDescription} /> : null}
       <main className="page-section-y animate-fade-in">
         <div className="mx-auto max-w-3xl page-padding">
           {isLoading ? (

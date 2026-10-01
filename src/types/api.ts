@@ -144,6 +144,8 @@ export interface CategoryDTO {
   name: string;
   slug: string;
   description?: string;
+  seoTitle?: string;
+  seoDescription?: string;
   parentId?: number | null;
   parentName?: string | null;
   /** Bandeau accueil — géré en admin */
