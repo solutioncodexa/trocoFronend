@@ -117,6 +117,9 @@ jobs:
           script: |
             set -euo pipefail
             DEPLOY_PATH="${DEPLOY_PATH:-/opt/goldyara/deployment}"
+            LOG="${DEPLOY_PATH}/troco-frontend-deploy.log"
+            : > "${LOG}"
+            exec > >(tee -a "${LOG}") 2>&1
             FRONT_ROOT="${DEPLOY_PATH}/troco/frontend"
             ARCHIVE="${FRONT_ROOT}/_upload/web-dist.tar.gz"
             STAGED="${FRONT_ROOT}/_upload/dist"
@@ -189,6 +192,41 @@ jobs:
               fi
               echo "OK: goldyara-nginx joint troco-frontend"
             fi
+
+      - name: Publish remote log
+        if: always()
+        id: remote_log
+        uses: appleboy/ssh-action@v1.2.0
+        env:
+          DEPLOY_PATH: ${{ env.DEPLOY_PATH }}
+        with:
+          host: ${{ secrets.VPS_HOST || vars.VPS_HOST || vars.VPS_IP }}
+          username: ${{ secrets.VPS_USER || vars.VPS_USER || vars.VPS_SSH_USER }}
+          key: ${{ secrets.VPS_SSH_KEY || secrets.VPS_SSH_PRIVATE_KEY }}
+          passphrase: ${{ secrets.VPS_SSH_PASSPHRASE }}
+          port: ${{ secrets.VPS_PORT || vars.VPS_SSH_PORT || 22 }}
+          script_stop: true
+          capture_stdout: true
+          envs: DEPLOY_PATH
+          script: |
+            set -euo pipefail
+            DEPLOY_PATH="${DEPLOY_PATH:-/opt/goldyara/deployment}"
+            LOG="${DEPLOY_PATH}/troco-frontend-deploy.log"
+            if [ ! -f "${LOG}" ]; then
+              echo "NO_LOG"
+              exit 0
+            fi
+            tail -n 120 "${LOG}" | grep -viE 'password|secret|jwt|authorization|mail_password' || true
+
+      - name: Write remote log summary
+        if: always()
+        run: |
+          {
+            echo "### Remote frontend log"
+            echo '```'
+            echo "${{ steps.remote_log.outputs.stdout }}"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Deploy summary
         if: success()
