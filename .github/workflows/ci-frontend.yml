@@ -2,7 +2,7 @@ name: Troco Frontend Deploy
 
 on:
   push:
-    branches: [feature/shopify, shopify, main, master]
+    branches: [feature/shopify]
   workflow_dispatch:
     inputs:
       vite_api_base_url:
