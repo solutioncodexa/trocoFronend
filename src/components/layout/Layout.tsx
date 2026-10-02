@@ -19,6 +19,7 @@ import {
 } from '@/utils/storeTheme';
 import { cn } from '@/lib/utils';
 import TrackingPixels from '@/components/storefront/TrackingPixels';
+import TextOverrides from '@/components/storefront/TextOverrides';
 import CookieConsentBanner from '@/components/storefront/CookieConsentBanner';
 import StickyCta from '@/components/layout/StickyCta';
 import NeutralBootLoader from '@/components/layout/NeutralBootLoader';
@@ -191,6 +192,7 @@ const Layout = ({ children, forceThemeKey, forceBrand }: LayoutProps) => {
         }}
       >
         <TrackingPixels />
+        {!isAdminPath && !demo ? <TextOverrides appearance={appearance} /> : null}
         <div
           ref={shellRef}
           className="fixed inset-x-0 z-50 flex flex-col supports-[padding:max(0px)]:pt-[env(safe-area-inset-top)]"

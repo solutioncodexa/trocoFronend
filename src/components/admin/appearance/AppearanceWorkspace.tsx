@@ -12,7 +12,9 @@ import {
   Save,
   Smartphone,
   Tablet,
+  Type,
   Undo2,
+  X,
 } from 'lucide-react';
 import {
   AppearanceSectionEditors,
@@ -28,6 +30,7 @@ import {
 } from '@/components/admin/appearance/appearanceSections';
 import { StoreAppearanceLivePreview } from '@/components/admin/StoreAppearanceLivePreview';
 import { Button } from '@/components/ui/button';
+import { toast } from 'sonner';
 import { HelpTip } from '@/components/admin/HelpTip';
 import type { StoreAppearance } from '@/config/storeAppearance';
 import { staticCatalogQueryOptions } from '@/config/queryOptions';
@@ -196,6 +199,24 @@ export function AppearanceWorkspace({
   }, []);
 
   /** 1er clic = ouvrir éditeur ; 2ᵉ clic sur la même section = fermer (Shopify). */
+  /** Fenêtre « Modifier » ouverte depuis la barre d'actions de l'aperçu. */
+  const [editPopup, setEditPopup] = useState(false);
+
+  const editFromPreview = (section: AppearanceSectionId) => {
+    setActiveSection(section);
+    syncPreviewToSection(section);
+    setEditPopup(true);
+  };
+
+  const hideFromPreview = (section: AppearanceSectionId) => {
+    if (section !== 'hero') return;
+    patchLive('heroEnabled', false);
+    toast.message('Bannière masquée', {
+      description: 'Vous pouvez la réafficher dans Accueil.',
+      action: { label: 'Annuler', onClick: () => patchLive('heroEnabled', true) },
+    });
+  };
+
   const selectSection = (section: AppearanceSectionId) => {
     if (activeSection === section && showEditor) {
       setShowEditor(false);
@@ -414,6 +435,20 @@ export function AppearanceWorkspace({
 
           {storefrontHref ? (
             <Button type="button" variant="outline" size="sm" className="h-8 gap-1.5" asChild>
+              <a
+                href={`${storefrontHref}${storefrontHref.includes('?') ? '&' : '?'}edit=text`}
+                target="troco-storefront"
+                rel="noopener noreferrer"
+                title="Ouvrir la boutique et cliquer sur n’importe quel texte pour le modifier"
+              >
+                <Type className="h-3.5 w-3.5" />
+                <span className="hidden md:inline">Modifier les textes</span>
+              </a>
+            </Button>
+          ) : null}
+
+          {storefrontHref ? (
+            <Button type="button" variant="outline" size="sm" className="h-8 gap-1.5" asChild>
               <a href={storefrontHref} target="troco-storefront" rel="noopener noreferrer">
                 <ExternalLink className="h-3.5 w-3.5" />
                 <span className="hidden sm:inline">{t('common.viewStoreShort')}</span>
@@ -594,6 +629,8 @@ export function AppearanceWorkspace({
                       href: `/page/${p.slug}`,
                     }))}
                   onSelectSection={(section) => selectSection(section)}
+                  onEditSection={(section) => editFromPreview(section)}
+                  onHideSection={(section) => hideFromPreview(section)}
                   activeSection={
                     isPreviewHotspotSection(activeSection) ? activeSection : null
                   }
@@ -675,6 +712,74 @@ export function AppearanceWorkspace({
           </div>
         </aside>
         </div>
+
+        {editPopup ? (
+          <div
+            role="dialog"
+            aria-label={`Modifier : ${activeLabel}`}
+            className="absolute bottom-3 end-3 top-16 z-40 flex w-[min(24rem,calc(100%-1.5rem))] flex-col overflow-hidden rounded-2xl border border-border bg-white shadow-2xl"
+            onKeyDown={(e) => {
+              if (e.key === 'Escape') {
+                e.stopPropagation();
+                setEditPopup(false);
+              }
+            }}
+          >
+            <div className="flex items-start justify-between gap-2 border-b border-border/70 bg-sky-50 px-4 py-3">
+              <div className="min-w-0">
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-sky-700">Modifier</p>
+                <p className="flex items-center gap-1 truncate font-display text-base font-semibold">
+                  {activeLabel}
+                  <HelpTip topic={`appearance.${activeSection}`} />
+                </p>
+              </div>
+              <Button
+                type="button"
+                size="icon"
+                variant="ghost"
+                className="h-8 w-8 shrink-0"
+                onClick={() => setEditPopup(false)}
+                aria-label="Fermer"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+            <div className="min-h-0 flex-1 space-y-1 overflow-y-auto p-4 scrollbar-app">
+              <AppearanceSectionEditors
+                section={activeSection}
+                form={form}
+                patch={patchLive}
+                patchAppearance={patchAppearanceLive}
+                mergeAppearance={mergeAppearanceLive}
+                applyThemeNow={applyThemeLive}
+                applyStyleNow={applyStyleNow ? applyStyleLive : undefined}
+                themePresets={themePresets}
+                megaMenuEnabled={megaMenuEnabled}
+                pageLinkOptions={pageLinkOptions}
+                customHeaderPages={customHeaderPages}
+                onTogglePageInNav={onTogglePageInNav}
+                togglePagePending={togglePagePending}
+                uploadingLogo={uploadingLogo}
+                onLogoUpload={onLogoUpload}
+                logoInputRef={logoInputRef}
+                uploadingFavicon={uploadingFavicon}
+                onFaviconUpload={onFaviconUpload}
+                faviconInputRef={faviconInputRef}
+                publishedHomePage={publishedHomePage}
+                topBarMessages={topBarMessages}
+                cartPreviewMode={cartPreviewMode}
+                onCartPreviewModeChange={setCartPreviewMode}
+                wishlistPreviewMode={wishlistPreviewMode}
+                onWishlistPreviewModeChange={setWishlistPreviewMode}
+              />
+            </div>
+            <div className="flex items-center justify-end gap-2 border-t border-border/70 bg-muted/30 px-4 py-3">
+              <Button type="button" size="sm" onClick={() => setEditPopup(false)}>
+                Terminé
+              </Button>
+            </div>
+          </div>
+        ) : null}
 
         {/* Éditeur mobile / tablette en bas */}
         {showEditor ? (

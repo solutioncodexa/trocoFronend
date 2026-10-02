@@ -332,6 +332,8 @@ export type StoreAppearance = {
   productShowWhatsapp: boolean;
   /** Ordre des sections sous la fiche produit (clés : frequently, reviews, related). */
   productBelowOrder: string;
+  /** Textes personnalisés : « texte d'origine → nouveau texte » (voir utils/textOverrides). */
+  textOverrides: Record<string, string>;
   productCtaLabel: string;
   productShowTrust: boolean;
   /** Header sticky. */
@@ -444,6 +446,7 @@ export const DEFAULT_APPEARANCE: StoreAppearance = {
   productShowShare: true,
   productShowWhatsapp: true,
   productBelowOrder: 'frequently,reviews,related',
+  textOverrides: {},
   productCtaLabel: 'Commander',
   productShowTrust: true,
   headerSticky: true,
@@ -824,6 +827,8 @@ export type HeaderNavLabelKey = (typeof HEADER_NAV_ITEMS)[number]['labelKey'];
 export type HeaderNavHrefKey = (typeof HEADER_NAV_ITEMS)[number]['hrefKey'];
 export type HeaderNavEnabledKey = (typeof HEADER_NAV_ITEMS)[number]['enabledKey'];
 
+import { sanitizeTextOverrides } from '@/utils/textOverrides';
+
 export const PRODUCT_BELOW_SECTIONS = ['frequently', 'reviews', 'related'] as const;
 export type ProductBelowSection = (typeof PRODUCT_BELOW_SECTIONS)[number];
 
@@ -938,6 +943,7 @@ export function normalizeAppearance(raw?: Partial<StoreAppearance> | Record<stri
     productShowShare: asBool(src.productShowShare, true),
     productShowWhatsapp: asBool(src.productShowWhatsapp, true),
     productBelowOrder: normalizeProductBelowOrder(src.productBelowOrder),
+    textOverrides: sanitizeTextOverrides(src.textOverrides),
     productCtaLabel: asLabel(src.productCtaLabel, DEFAULT_APPEARANCE.productCtaLabel, 80),
     productShowTrust: asBool(src.productShowTrust, true),
     headerSticky: asBool(src.headerSticky, true),

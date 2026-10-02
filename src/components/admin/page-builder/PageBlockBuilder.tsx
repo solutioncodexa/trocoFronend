@@ -13,6 +13,8 @@ import {
   Minimize2,
   Monitor,
   MousePointer2,
+  Pencil,
+  X,
   PanelLeft,
   PanelRight,
   Redo2,
@@ -163,6 +165,8 @@ export default function PageBlockBuilder({
   const [showProperties, setShowProperties] = useState(true);
   const [expanded, setExpanded] = useState(false);
   const [showShortcuts, setShowShortcuts] = useState(false);
+  /** Fenêtre d'édition flottante du bloc sélectionné (ouverte par « Modifier » ou double-clic). */
+  const [editorOpen, setEditorOpen] = useState(false);
   const [activeTheme, setActiveTheme] = useState<string | null>(null);
 
   const setExpandedMode = (next: boolean) => {
@@ -184,6 +188,15 @@ export default function PageBlockBuilder({
     setSelectedIndex(index);
     setViewMode('edit');
   };
+
+  const openEditor = (index: number) => {
+    selectBlock(index);
+    setEditorOpen(true);
+  };
+
+  useEffect(() => {
+    if (editorOpen && (selectedIndex == null || selectedChrome || viewMode === 'live')) setEditorOpen(false);
+  }, [editorOpen, selectedIndex, selectedChrome, viewMode]);
 
   const selectChrome = (part: 'header' | 'footer' | null) => {
     setSelectedIndex(null);
@@ -933,9 +946,16 @@ export default function PageBlockBuilder({
                               if (isLive) return;
                               selectBlock(index);
                             }}
+                            onDoubleClick={() => {
+                              if (isLive) return;
+                              openEditor(index);
+                            }}
                             onKeyDown={(e) => {
                               if (isLive) return;
-                              if (e.key === 'Enter' || e.key === ' ') {
+                              if (e.key === 'Enter') {
+                                e.preventDefault();
+                                openEditor(index);
+                              } else if (e.key === ' ') {
                                 e.preventDefault();
                                 selectBlock(index);
                               }
@@ -991,6 +1011,44 @@ export default function PageBlockBuilder({
                                 </span>
                                 <button
                                   type="button"
+                                  className="flex h-6 items-center gap-1 rounded bg-white/20 px-1.5 text-[11px] font-semibold hover:bg-white/30"
+                                  title="Modifier le contenu (double-clic)"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    openEditor(index);
+                                  }}
+                                >
+                                  <Pencil className="h-3.5 w-3.5" />
+                                  Modifier
+                                </button>
+                                <button
+                                  type="button"
+                                  className="flex h-6 w-6 items-center justify-center rounded hover:bg-white/15 disabled:opacity-40"
+                                  title="Monter"
+                                  disabled={index === 0}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    selectBlock(index);
+                                    moveBy(index, -1);
+                                  }}
+                                >
+                                  <ChevronUp className="h-3.5 w-3.5" />
+                                </button>
+                                <button
+                                  type="button"
+                                  className="flex h-6 w-6 items-center justify-center rounded hover:bg-white/15 disabled:opacity-40"
+                                  title="Descendre"
+                                  disabled={index === blocks.length - 1}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    selectBlock(index);
+                                    moveBy(index, 1);
+                                  }}
+                                >
+                                  <ChevronDown className="h-3.5 w-3.5" />
+                                </button>
+                                <button
+                                  type="button"
                                   className="flex h-6 w-6 items-center justify-center rounded hover:bg-white/15"
                                   title="Dupliquer"
                                   onClick={(e) => {
@@ -1003,7 +1061,7 @@ export default function PageBlockBuilder({
                                 <button
                                   type="button"
                                   className="flex h-6 w-6 items-center justify-center rounded hover:bg-white/15"
-                                  title="Retirer"
+                                  title="Supprimer"
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     removeAt(index);
@@ -1228,6 +1286,83 @@ export default function PageBlockBuilder({
             </Button>
           </div>
           {renderFields(selected, selectedIndex)}
+        </div>
+      ) : null}
+
+      {editorOpen && selected && selectedIndex != null && !isLive ? (
+        <div
+          role="dialog"
+          aria-label={`Modifier : ${selectedMeta?.label ?? 'section'}`}
+          className="absolute bottom-3 right-3 top-16 z-[60] flex w-[min(24rem,calc(100%-1.5rem))] flex-col overflow-hidden rounded-2xl border border-border bg-white shadow-2xl"
+          onKeyDown={(e) => {
+            if (e.key === 'Escape') {
+              e.stopPropagation();
+              setEditorOpen(false);
+            }
+          }}
+        >
+          <div className="flex items-start justify-between gap-2 border-b border-border/70 bg-sky-50 px-4 py-3">
+            <div className="min-w-0">
+              <p className="text-[10px] font-semibold uppercase tracking-wider text-sky-700">Modifier la section</p>
+              <p className="truncate font-display text-base font-semibold">{selectedMeta?.label || 'Section'}</p>
+              {selectedMeta?.description ? (
+                <p className="mt-0.5 text-xs text-muted-foreground">{selectedMeta.description}</p>
+              ) : null}
+            </div>
+            <Button
+              type="button"
+              size="icon"
+              variant="ghost"
+              className="h-8 w-8 shrink-0"
+              onClick={() => setEditorOpen(false)}
+              aria-label="Fermer"
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+          <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-4 scrollbar-app">
+            <div className="flex flex-wrap gap-2">
+              <Button
+                type="button"
+                size="sm"
+                variant={selected.visibleMobile !== false ? 'secondary' : 'outline'}
+                className="gap-1.5"
+                onClick={() => patchMeta(selectedIndex, { visibleMobile: !(selected.visibleMobile !== false) })}
+              >
+                <Smartphone className="h-3.5 w-3.5" />
+                Mobile
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant={selected.visibleDesktop !== false ? 'secondary' : 'outline'}
+                className="gap-1.5"
+                onClick={() => patchMeta(selectedIndex, { visibleDesktop: !(selected.visibleDesktop !== false) })}
+              >
+                <Monitor className="h-3.5 w-3.5" />
+                Bureau
+              </Button>
+            </div>
+            <div className="space-y-3 border-t border-border/70 pt-3">{renderFields(selected, selectedIndex)}</div>
+          </div>
+          <div className="flex items-center justify-between gap-2 border-t border-border/70 bg-muted/30 px-4 py-3">
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              className="gap-1.5 text-destructive hover:text-destructive"
+              onClick={() => {
+                removeAt(selectedIndex);
+                setEditorOpen(false);
+              }}
+            >
+              <Trash2 className="h-4 w-4" />
+              Supprimer
+            </Button>
+            <Button type="button" size="sm" onClick={() => setEditorOpen(false)}>
+              Terminé
+            </Button>
+          </div>
         </div>
       ) : null}
 

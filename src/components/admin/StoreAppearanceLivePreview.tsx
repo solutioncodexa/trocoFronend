@@ -98,6 +98,10 @@ type Props = {
   customNavPages?: Array<{ title: string; href: string }>;
   /** Shopify-like : clic sur une zone → focus l’édition correspondante. */
   onSelectSection?: (section: AppearancePreviewSection) => void;
+  /** Bouton « Modifier » de la barre d'actions : ouvre la fenêtre dédiée à la zone. */
+  onEditSection?: (section: AppearancePreviewSection) => void;
+  /** Bouton « Masquer » (uniquement pour les zones qui peuvent être masquées). */
+  onHideSection?: (section: AppearancePreviewSection) => void;
   activeSection?: AppearancePreviewSection | null;
   /** Page affichée dans l’aperçu (nav 2ᵉ clic). */
   previewPage?: string;
@@ -125,6 +129,8 @@ function PreviewHotspot({
   section,
   activeSection,
   onSelect,
+  onEdit,
+  onHide,
   className,
   label,
   children,
@@ -132,6 +138,8 @@ function PreviewHotspot({
   section: AppearancePreviewSection;
   activeSection?: AppearancePreviewSection | null;
   onSelect?: (section: AppearancePreviewSection) => void;
+  onEdit?: (section: AppearancePreviewSection) => void;
+  onHide?: (section: AppearancePreviewSection) => void;
   className?: string;
   label: string;
   children: ReactNode;
@@ -173,14 +181,35 @@ function PreviewHotspot({
     >
       {children}
       {interactive ? (
-        <span
+        <div
           className={cn(
-            'pointer-events-none absolute right-1.5 top-1.5 z-10 rounded bg-sky-600 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-white opacity-0 shadow-sm transition-opacity group-hover/hotspot:opacity-100',
+            'absolute right-1.5 top-1.5 z-20 flex items-center gap-1 rounded-md bg-sky-600 px-1.5 py-1 text-white opacity-0 shadow-md transition-opacity group-hover/hotspot:opacity-100 focus-within:opacity-100',
             active && 'opacity-100',
+            !onEdit && !onHide && 'pointer-events-none',
           )}
+          onClick={(e) => e.stopPropagation()}
+          onKeyDown={(e) => e.stopPropagation()}
         >
-          {label}
-        </span>
+          <span className="px-0.5 text-[9px] font-semibold uppercase tracking-wide">{label}</span>
+          {onEdit ? (
+            <button
+              type="button"
+              className="rounded bg-white/20 px-1.5 py-0.5 text-[10px] font-semibold hover:bg-white/30"
+              onClick={() => onEdit(section)}
+            >
+              ✎ Modifier
+            </button>
+          ) : null}
+          {onHide ? (
+            <button
+              type="button"
+              className="rounded px-1.5 py-0.5 text-[10px] font-semibold hover:bg-white/20"
+              onClick={() => onHide(section)}
+            >
+              Masquer
+            </button>
+          ) : null}
+        </div>
       ) : null}
     </div>
   );
@@ -201,6 +230,8 @@ export function StoreAppearanceLivePreview({
   topBarMessages = [],
   customNavPages = [],
   onSelectSection,
+  onEditSection,
+  onHideSection,
   activeSection,
   previewPage = 'home',
   onPreviewNavigate,
@@ -374,6 +405,8 @@ export function StoreAppearanceLivePreview({
       label={label}
       activeSection={activeSection}
       onSelect={onSelectSection}
+      onEdit={onEditSection}
+      onHide={section === 'hero' ? onHideSection : undefined}
       className={cn('group/hotspot', className)}
     >
       {children}
