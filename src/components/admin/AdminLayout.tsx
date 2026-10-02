@@ -43,6 +43,11 @@ import AdminFirstUseGuide from './AdminFirstUseGuide';
 import TrialBanner from './TrialBanner';
 import EmailVerificationBanner from './EmailVerificationBanner';
 import StockAlertDialog from './StockAlertDialog';
+import { PlanLockBadge } from './PlanLockBadge';
+import { HelpTip } from './HelpTip';
+import { helpTopicForPath } from '@/config/helpTopics';
+import { PlanUpgradeNotice } from './PlanUpgradeNotice';
+import { adminPlanGate, isPlanAtLeast } from '@/config/planGates';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useAdmin } from '@/contexts/AdminContext';
@@ -346,6 +351,12 @@ const AdminLayout = ({
                   >
                     <item.icon className="h-4 w-4 shrink-0 opacity-90" />
                     <span className="truncate">{t(item.labelKey)}</span>
+                    {(() => {
+                      const gate = adminPlanGate(item.href);
+                      return gate && !isPlanAtLeast(store?.planCode, gate.plan) ? (
+                        <PlanLockBadge plan={gate.plan} className="ms-auto" />
+                      ) : null;
+                    })()}
                   </Link>
                 ))}
               </div>
@@ -451,6 +462,10 @@ const AdminLayout = ({
                 </div>
               )}
               <h1 className="truncate font-display text-lg font-semibold tracking-tight sm:text-xl">{title}</h1>
+              {(() => {
+                const helpTopic = helpTopicForPath(location.pathname);
+                return helpTopic ? <HelpTip topic={helpTopic} /> : null;
+              })()}
               {description ? (
                 <p className="truncate text-xs text-muted-foreground sm:text-sm">{description}</p>
               ) : null}
@@ -493,6 +508,12 @@ const AdminLayout = ({
           >
             {!workspace ? <EmailVerificationBanner /> : null}
             {!workspace ? <TrialBanner /> : null}
+            {(() => {
+              const gate = adminPlanGate(`/${location.pathname.split('/').slice(1, 3).join('/')}`);
+              return gate && !isPlanAtLeast(store?.planCode, gate.plan) ? (
+                <PlanUpgradeNotice plan={gate.plan} feature={gate.feature} />
+              ) : null;
+            })()}
             {children}
           </div>
         </main>

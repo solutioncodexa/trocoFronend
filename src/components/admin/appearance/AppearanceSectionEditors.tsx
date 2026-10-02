@@ -1,4 +1,8 @@
 import { Link } from 'react-router-dom';
+import { toast } from 'sonner';
+import { PlanLockBadge } from '@/components/admin/PlanLockBadge';
+import { useTenant } from '@/contexts/TenantContext';
+import { PLAN_LABEL, isThemeAllowed, themeMinPlan } from '@/config/planGates';
 import type { CSSProperties, ReactNode, RefObject } from 'react';
 import {
   Eye,
@@ -13,6 +17,8 @@ import {
   Search,
   ShoppingBag,
   Sparkles,
+  ChevronUp,
+  ChevronDown,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -82,6 +88,7 @@ import {
   WISHLIST_GRID_COLUMNS,
   appearanceButtonClass,
   appearanceCardClass,
+  parseProductBelowOrder,
   type HeaderNavEnabledKey,
   type HeaderNavHrefKey,
   type HeaderNavLabelKey,
@@ -327,6 +334,8 @@ export function AppearanceSectionEditors({
   onWishlistPreviewModeChange,
   mergeAppearance,
 }: AppearanceSectionEditorsProps) {
+  const { store: planStore } = useTenant();
+  const planCode = planStore?.planCode;
   const { t, locale } = useAdminLocale();
 
   const localizeOpts = <T extends { key: string; label: string; description?: string }>(
@@ -429,11 +438,20 @@ export function AppearanceSectionEditors({
                 {STYLE_PRESETS.map((preset) => {
                   const fonts = FONT_PAIRS.find((f) => f.key === preset.fontPair);
                   const selected = matchStylePreset(form)?.key === preset.key;
+                  const locked = !isThemeAllowed(planCode, preset.themeKey);
                   return (
                     <OptionTile
                       key={preset.key}
                       selected={selected}
-                      onClick={() => applyStyleNow(preset.key)}
+                      onClick={() => {
+                        if (locked) {
+                          toast.message(`Le style « ${preset.label} » demande le plan ${PLAN_LABEL[themeMinPlan(preset.themeKey)]}.`, {
+                            description: 'Passez au plan supérieur dans Réglages pour le débloquer.',
+                          });
+                          return;
+                        }
+                        applyStyleNow(preset.key);
+                      }}
                     >
                       <div
                         className="mb-1.5 flex h-8 items-center justify-between rounded-md px-2"
@@ -459,7 +477,10 @@ export function AppearanceSectionEditors({
                           }}
                         />
                       </div>
-                      <p className="text-xs font-semibold">{preset.label}</p>
+                      <div className="flex flex-wrap items-center gap-1">
+                        <p className="text-xs font-semibold">{preset.label}</p>
+                        {locked ? <PlanLockBadge tone="light" plan={themeMinPlan(preset.themeKey)} /> : null}
+                      </div>
                       <p className="text-[10px] text-muted-foreground">{preset.description}</p>
                     </OptionTile>
                   );
@@ -500,6 +521,7 @@ export function AppearanceSectionEditors({
               const hasPreset = Boolean(
                 themePresets && typeof themePresets === 'object' && themePresets[theme.key],
               );
+              const themeLocked = !isThemeAllowed(planCode, theme.key);
               return (
                 <div
                   key={theme.key}
@@ -520,6 +542,7 @@ export function AppearanceSectionEditors({
                   <div className="space-y-2 p-2.5">
                     <div className="flex flex-wrap items-center gap-1.5">
                       <p className="text-sm font-semibold">{themeLabel(theme.key)}</p>
+                      {themeLocked ? <PlanLockBadge tone="light" plan={themeMinPlan(theme.key)} /> : null}
                       {hasPreset ? (
                         <span className="rounded bg-muted px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-muted-foreground">
                           {t('common.customized')}
@@ -541,6 +564,11 @@ export function AppearanceSectionEditors({
                           {t('common.demo')}
                         </Link>
                       </Button>
+                      {themeLocked ? (
+                        <Button type="button" size="sm" className="h-8 flex-1 text-xs" asChild>
+                          <Link to="/admin/reglages">Passer au plan {PLAN_LABEL[themeMinPlan(theme.key)]}</Link>
+                        </Button>
+                      ) : (
                       <Button
                         type="button"
                         size="sm"
@@ -555,6 +583,7 @@ export function AppearanceSectionEditors({
                             ? t('common.restore')
                             : t('common.apply')}
                       </Button>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -2042,8 +2071,10 @@ export function AppearanceSectionEditors({
             {(
               [
                 ['productStickyBuyBox', 'Buy box sticky', form.appearance.productStickyBuyBox],
-                ['productShowRelated', 'Produits similaires', form.appearance.productShowRelated],
                 ['productShowTrust', 'Badges confiance', form.appearance.productShowTrust],
+                ['productShowDescription', 'Description', form.appearance.productShowDescription],
+                ['productShowWhatsapp', 'Bouton WhatsApp', form.appearance.productShowWhatsapp],
+                ['productShowShare', 'Bouton Partager', form.appearance.productShowShare],
               ] as const
             ).map(([key, label, selected]) => (
               <OptionTile
@@ -2060,6 +2091,44 @@ export function AppearanceSectionEditors({
                 />
               </OptionTile>
             ))}
+          </div>
+          <div>
+            <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+              Sections sous la fiche (ordre et visibilité)
+            </p>
+            <div className="space-y-1.5">
+              {(() => {
+                const order = parseProductBelowOrder(form.appearance.productBelowOrder);
+                const meta = {
+                  frequently: { label: 'Souvent achetés ensemble', key: 'productShowFrequentlyBought' as const },
+                  reviews: { label: 'Avis clients', key: 'productShowReviews' as const },
+                  related: { label: 'Produits similaires', key: 'productShowRelated' as const },
+                };
+                const move = (from: number, to: number) => {
+                  if (to < 0 || to >= order.length) return;
+                  const next = [...order];
+                  const [item] = next.splice(from, 1);
+                  next.splice(to, 0, item);
+                  patchAppearance('productBelowOrder', next.join(','));
+                };
+                return order.map((section, index) => {
+                  const m = meta[section];
+                  const visible = form.appearance[m.key];
+                  return (
+                    <div key={section} className="flex items-center gap-2 rounded-lg border border-border/80 bg-card px-2.5 py-2">
+                      <span className="min-w-0 flex-1 truncate text-sm font-medium">{m.label}</span>
+                      <Button type="button" size="icon" variant="ghost" className="h-7 w-7" aria-label="Monter" disabled={index === 0} onClick={() => move(index, index - 1)}>
+                        <ChevronUp className="h-4 w-4" />
+                      </Button>
+                      <Button type="button" size="icon" variant="ghost" className="h-7 w-7" aria-label="Descendre" disabled={index === order.length - 1} onClick={() => move(index, index + 1)}>
+                        <ChevronDown className="h-4 w-4" />
+                      </Button>
+                      <Switch checked={visible} onCheckedChange={(v) => patchAppearance(m.key, v)} aria-label={`Afficher : ${m.label}`} />
+                    </div>
+                  );
+                });
+              })()}
+            </div>
           </div>
           <Field label={t('appearance.productCta')} htmlFor="productCtaLabel">
             <Input

@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { Fragment, useState, useCallback, useEffect, useRef } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { ChevronLeft, ChevronRight, ShoppingBag, Heart, Truck, Verified, Loader2, X, ZoomIn, Share2, Link as LinkIcon, Mail, MessageCircle, Instagram, Check, CloudUpload, Star } from 'lucide-react';
@@ -13,7 +13,7 @@ import { useCart } from '@/contexts/CartContext';
 import { useWishlist } from '@/contexts/WishlistContext';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
-import { appearanceButtonClass } from '@/config/storeAppearance';
+import { appearanceButtonClass, parseProductBelowOrder } from '@/config/storeAppearance';
 import ProductCard from '@/components/ui/ProductCard';
 import type { ProductDetailDTO } from '@/types/product-dtos';
 import { productsApi } from '@/services/api';
@@ -914,9 +914,11 @@ const ProductDetail = () => {
             )}
 
             {/* Description (collapsed on small screens) */}
-            <p className="text-muted-foreground text-xs sm:text-sm leading-relaxed line-clamp-3 lg:line-clamp-none">
-              {product.description}
-            </p>
+            {appearance.productShowDescription ? (
+              <p className="text-muted-foreground text-xs sm:text-sm leading-relaxed line-clamp-3 lg:line-clamp-none">
+                {product.description}
+              </p>
+            ) : null}
 
             {/* Options + actions */}
             <div className="flex w-full min-w-0 flex-col gap-2.5 mt-1">
@@ -988,7 +990,7 @@ const ProductDetail = () => {
                   {appearance.productCtaLabel || 'Commander'}
                 </Button>
 
-                {whatsappOrderHref ? (
+                {whatsappOrderHref && appearance.productShowWhatsapp ? (
                   <Button
                     type="button"
                     variant="outline"
@@ -1003,7 +1005,7 @@ const ProductDetail = () => {
                 ) : null}
 
                 {/* Secondary CTAs */}
-                <div className="grid grid-cols-3 gap-2">
+                <div className={cn('grid gap-2', appearance.productShowShare ? 'grid-cols-3' : 'grid-cols-2')}>
                   <Button
                     type="button"
                     onClick={handleAddToCart}
@@ -1025,6 +1027,7 @@ const ProductDetail = () => {
                     <Heart className={cn('w-3.5 h-3.5 shrink-0', isWishlisted && 'fill-current')} />
                     Favoris
                   </Button>
+                  {appearance.productShowShare ? (
                   <Popover open={shareOpen} onOpenChange={setShareOpen}>
                     <PopoverTrigger asChild>
                       <Button
@@ -1113,6 +1116,7 @@ const ProductDetail = () => {
                       </button>
                     </PopoverContent>
                   </Popover>
+                  ) : null}
                 </div>
               </div>
 
@@ -1127,7 +1131,11 @@ const ProductDetail = () => {
         </div>
       </section>
 
-      {frequentlyBought.length > 0 && (
+      {parseProductBelowOrder(appearance.productBelowOrder).map((section) => {
+        if (section === 'frequently' && appearance.productShowFrequentlyBought) {
+          return (
+            <Fragment key={section}>
+              {frequentlyBought.length > 0 && (
         <section className="mt-10 sm:mt-16 lg:mt-20 mb-6">
           <div className="flex flex-col items-center mb-6 sm:mb-8 text-center px-3">
             <h3 className="font-display text-xl sm:text-2xl text-foreground mb-1">Souvent achetés ensemble</h3>
@@ -1144,9 +1152,15 @@ const ProductDetail = () => {
           </div>
         </section>
       )}
-
-      {id ? <ProductReviewsSection productId={id} productName={product.name} /> : null}
-
+            </Fragment>
+          );
+        }
+        if (section === 'reviews' && appearance.productShowReviews) {
+          return <Fragment key={section}>{id ? <ProductReviewsSection productId={id} productName={product.name} /> : null}</Fragment>;
+        }
+        if (section === 'related') {
+          return (
+            <Fragment key={section}>
       {/* ============ RELATED PRODUCTS ============ */}
       {appearance.productShowRelated && relatedProducts.length > 0 && (
         <section className="mt-10 sm:mt-16 lg:mt-24 mb-10 sm:mb-16 lg:mb-24">
@@ -1166,6 +1180,11 @@ const ProductDetail = () => {
           </div>
         </section>
       )}
+            </Fragment>
+          );
+        }
+        return null;
+      })}
     </Layout>
   );
 };

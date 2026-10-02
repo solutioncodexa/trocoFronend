@@ -28,6 +28,7 @@ import {
 } from '@/components/admin/appearance/appearanceSections';
 import { StoreAppearanceLivePreview } from '@/components/admin/StoreAppearanceLivePreview';
 import { Button } from '@/components/ui/button';
+import { HelpTip } from '@/components/admin/HelpTip';
 import type { StoreAppearance } from '@/config/storeAppearance';
 import { staticCatalogQueryOptions } from '@/config/queryOptions';
 import type { StoreThemeKey } from '@/config/storeThemes';
@@ -627,7 +628,10 @@ export function AppearanceWorkspace({
               <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                 {t('appearance.properties')}
               </p>
-              <p className="mt-0.5 truncate text-sm font-semibold">{activeLabel}</p>
+              <p className="mt-0.5 flex items-center gap-1 truncate text-sm font-semibold">
+                {activeLabel}
+                <HelpTip topic={`appearance.${activeSection}`} />
+              </p>
             </div>
             <Button
               type="button"
@@ -680,7 +684,10 @@ export function AppearanceWorkspace({
                 <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
                   Propriétés
                 </p>
-                <p className="truncate text-sm font-semibold">{activeLabel}</p>
+                <p className="flex items-center gap-1 truncate text-sm font-semibold">
+                  {activeLabel}
+                  <HelpTip topic={`appearance.${activeSection}`} />
+                </p>
               </div>
               <Button
                 type="button"

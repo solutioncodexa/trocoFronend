@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
-import { FileText, LayoutPanelLeft, MessageSquare, Palette, Store } from 'lucide-react';
+import { FileText, LayoutPanelLeft, MessageSquare, Palette, Settings2, Store } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
@@ -9,6 +9,7 @@ const LINKS = [
   { href: '/admin/pages', label: 'Pages', icon: FileText },
   { href: '/admin/sections', label: 'Navigation', icon: LayoutPanelLeft },
   { href: '/admin/top-bar-messages', label: 'Bandeau', icon: MessageSquare },
+  { href: '/admin/reglages', label: 'Réglages', icon: Settings2 },
 ] as const;
 
 type Props = {

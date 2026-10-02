@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { ArrowLeft, CheckCircle2, Eye, EyeOff, Loader2, Store, XCircle } from 'lucide-react';
@@ -22,11 +22,36 @@ function slugify(value: string) {
     .slice(0, 60);
 }
 
+/** Nettoyage pendant la saisie : on autorise le « - » final (on est en train de taper). */
+function cleanSlugInput(value: string) {
+  return value
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[\s_]+/g, '-')
+    .replace(/[^a-z0-9-]/g, '')
+    .replace(/-{2,}/g, '-')
+    .slice(0, 60);
+}
+
+/** Mêmes règles que le backend : 3 à 60 caractères, lettres minuscules, chiffres et tirets. */
+const SLUG_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+
+type FieldErrors = Partial<Record<'name' | 'slug' | 'adminEmail' | 'adminPassword', string>>;
+
 type SlugState =
   | { status: 'idle' }
   | { status: 'checking' }
   | { status: 'ok' }
   | { status: 'unavailable'; reason?: string; suggestion?: string };
+
+function FieldError({ id, children }: { id: string; children: React.ReactNode }) {
+  return (
+    <p id={id} role="alert" className="mt-1.5 text-xs font-medium text-red-300">
+      {children}
+    </p>
+  );
+}
 
 const inputClass =
   'w-full rounded-xl border border-white/15 bg-black/20 px-4 py-3 text-sm outline-none ring-teal-500/40 focus:ring-2';
@@ -40,6 +65,10 @@ const CreateStore = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [slugState, setSlugState] = useState<SlugState>({ status: 'idle' });
   const [sector, setSector] = useState('');
+  const [errors, setErrors] = useState<FieldErrors>({});
+  // Nom sans lettre latine (ex. arabe) → slug vide : on propose une adresse de secours modifiable.
+  const fallbackSlug = useRef(`boutique-${Math.random().toString(36).slice(2, 6)}`);
+  const formRef = useRef<HTMLFormElement>(null);
   const initialPlan = searchParams.get('plan')?.trim() || 'basic';
   const [form, setForm] = useState({
     name: '',
@@ -95,20 +124,37 @@ const CreateStore = () => {
     setForm((prev) => {
       const next = { ...prev, [key]: value };
       if (key === 'name' && !slugTouched) {
-        next.slug = slugify(value);
+        next.slug = slugify(value) || (value.trim() ? fallbackSlug.current : '');
       }
       return next;
     });
   };
 
+  const validate = (): FieldErrors => {
+    const next: FieldErrors = {};
+    const slug = form.slug.trim().toLowerCase();
+    if (!form.name.trim()) next.name = 'Indiquez le nom de votre boutique.';
+    if (!slug) next.slug = 'Choisissez une adresse pour votre boutique (lettres, chiffres, tirets).';
+    else if (slug.length < 3) next.slug = 'L’adresse doit contenir au moins 3 caractères.';
+    else if (!SLUG_RE.test(slug)) next.slug = 'Utilisez uniquement des lettres, chiffres et tirets (sans tiret au début ou à la fin).';
+    else if (slugState.status === 'unavailable') next.slug = 'Cette adresse n’est pas disponible — choisissez-en une autre.';
+    if (!form.adminEmail.trim() || !/^\S+@\S+\.\S+$/.test(form.adminEmail.trim())) {
+      next.adminEmail = 'Saisissez une adresse email valide.';
+    }
+    if (form.adminPassword.length < 8) next.adminPassword = 'Le mot de passe doit contenir au moins 8 caractères.';
+    return next;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.name.trim() || !form.slug.trim() || !form.adminEmail.trim() || form.adminPassword.length < 8) {
-      toast.error('Remplissez tous les champs (mot de passe min. 8 caractères)');
-      return;
-    }
-    if (slugState.status === 'unavailable') {
-      toast.error('Cette adresse n’est pas disponible — choisissez-en une autre');
+    const found = validate();
+    setErrors(found);
+    const firstInvalid = (['name', 'slug', 'adminEmail', 'adminPassword'] as const).find((k) => found[k]);
+    if (firstInvalid) {
+      toast.error('Corrigez les champs indiqués en rouge');
+      const el = formRef.current?.querySelector<HTMLElement>(`#${firstInvalid}`);
+      el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      el?.focus({ preventScroll: true });
       return;
     }
     setPending(true);
@@ -185,6 +231,8 @@ const CreateStore = () => {
         </div>
 
         <form
+          ref={formRef}
+          noValidate
           onSubmit={handleSubmit}
           className="space-y-6 rounded-2xl border border-white/10 bg-white/5 p-5 backdrop-blur-sm sm:p-6"
         >
@@ -201,10 +249,16 @@ const CreateStore = () => {
                 required
                 className={inputClass}
                 value={form.name}
-                onChange={(e) => patch('name', e.target.value)}
+                onChange={(e) => {
+                  patch('name', e.target.value);
+                  if (errors.name) setErrors((prev) => ({ ...prev, name: undefined }));
+                }}
                 placeholder="Ex. Maison Atlas"
                 autoFocus
+                aria-invalid={!!errors.name}
+                aria-describedby={errors.name ? 'name-error' : undefined}
               />
+              {errors.name ? <FieldError id="name-error">{errors.name}</FieldError> : null}
             </div>
             <div>
               <label className="mb-1.5 block text-sm font-medium" htmlFor="slug">
@@ -214,15 +268,17 @@ const CreateStore = () => {
                 <input
                   id="slug"
                   required
-                  pattern="[a-z0-9]+(?:-[a-z0-9]+)*"
                   className={`${inputClass} pr-10 font-mono`}
                   value={form.slug}
                   onChange={(e) => {
                     setSlugTouched(true);
-                    patch('slug', e.target.value.toLowerCase());
+                    patch('slug', cleanSlugInput(e.target.value));
+                    if (errors.slug) setErrors((prev) => ({ ...prev, slug: undefined }));
                   }}
+                  onBlur={() => patch('slug', form.slug.replace(/^-+|-+$/g, ''))}
                   placeholder="maison-atlas"
-                  aria-describedby="slug-hint"
+                  aria-invalid={!!errors.slug}
+                  aria-describedby={errors.slug ? 'slug-error' : 'slug-hint'}
                 />
                 <span className="absolute right-3 top-1/2 -translate-y-1/2" aria-hidden>
                   {slugState.status === 'checking' ? (
@@ -234,6 +290,7 @@ const CreateStore = () => {
                   ) : null}
                 </span>
               </div>
+              {errors.slug ? <FieldError id="slug-error">{errors.slug}</FieldError> : null}
               <p id="slug-hint" className="mt-1.5 break-all text-xs text-[#e8f4f2]/50" aria-live="polite">
                 {slugState.status === 'unavailable' ? (
                   <span className="text-red-300">
@@ -313,9 +370,15 @@ const CreateStore = () => {
                 required
                 className={inputClass}
                 value={form.adminEmail}
-                onChange={(e) => patch('adminEmail', e.target.value)}
+                onChange={(e) => {
+                  patch('adminEmail', e.target.value);
+                  if (errors.adminEmail) setErrors((prev) => ({ ...prev, adminEmail: undefined }));
+                }}
                 autoComplete="email"
+                aria-invalid={!!errors.adminEmail}
+                aria-describedby={errors.adminEmail ? 'adminEmail-error' : undefined}
               />
+              {errors.adminEmail ? <FieldError id="adminEmail-error">{errors.adminEmail}</FieldError> : null}
             </div>
             <div>
               <label className="mb-1.5 block text-sm font-medium" htmlFor="adminPassword">
@@ -326,11 +389,15 @@ const CreateStore = () => {
                   id="adminPassword"
                   type={showPassword ? 'text' : 'password'}
                   required
-                  minLength={8}
                   className={`${inputClass} pr-12`}
                   value={form.adminPassword}
-                  onChange={(e) => patch('adminPassword', e.target.value)}
+                  onChange={(e) => {
+                    patch('adminPassword', e.target.value);
+                    if (errors.adminPassword) setErrors((prev) => ({ ...prev, adminPassword: undefined }));
+                  }}
                   autoComplete="new-password"
+                  aria-invalid={!!errors.adminPassword}
+                  aria-describedby={errors.adminPassword ? 'adminPassword-error' : undefined}
                 />
                 <button
                   type="button"
@@ -341,7 +408,11 @@ const CreateStore = () => {
                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
               </div>
-              <p className="mt-1.5 text-xs text-[#e8f4f2]/45">Minimum 8 caractères</p>
+              {errors.adminPassword ? (
+                <FieldError id="adminPassword-error">{errors.adminPassword}</FieldError>
+              ) : (
+                <p className="mt-1.5 text-xs text-[#e8f4f2]/45">Minimum 8 caractères</p>
+              )}
             </div>
             <div>
               <label className="mb-1.5 block text-sm font-medium" htmlFor="phone">

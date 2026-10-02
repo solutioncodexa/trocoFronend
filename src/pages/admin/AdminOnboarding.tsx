@@ -38,6 +38,8 @@ import {
   styleAppearanceOverride,
 } from '@/config/stylePresets';
 import { useTenant } from '@/contexts/TenantContext';
+import { PlanLockBadge } from '@/components/admin/PlanLockBadge';
+import { isThemeAllowed, themeMinPlan } from '@/config/planGates';
 import {
   DEFAULT_STARTER_PACK_KEY,
   STARTER_PACKS,
@@ -173,6 +175,10 @@ const AdminOnboarding = () => {
   const applyStyle = (key: string) => {
     const preset = getStylePreset(key);
     if (!preset) return;
+    if (!isThemeAllowed(store?.planCode, preset.themeKey)) {
+      toast.message(`Le style « ${preset.label} » demande un plan supérieur.`);
+      return;
+    }
     setStyleKey(preset.key);
     setThemeKey(preset.themeKey);
     setFontPair(preset.fontPair);
@@ -531,8 +537,11 @@ const AdminOnboarding = () => {
                           aria-pressed={sector === p.key}
                           onClick={() => {
                             setSector(p.key);
-                            if (!styleKey) applyStyle(STYLE_FOR_SECTOR[p.key] ?? 'classique');
-                            else setThemeKey(p.suggestedTheme);
+                            if (!styleKey) {
+                              const suggested = STYLE_FOR_SECTOR[p.key] ?? 'classique';
+                              const sp = getStylePreset(suggested);
+                              applyStyle(sp && isThemeAllowed(store?.planCode, sp.themeKey) ? suggested : 'classique');
+                            } else if (isThemeAllowed(store?.planCode, p.suggestedTheme)) setThemeKey(p.suggestedTheme);
                           }}
                           className={`rounded-xl border p-3 text-left text-xs transition ${
                             sector === p.key ? 'border-primary ring-2 ring-primary/25' : 'border-border hover:border-primary/40'
@@ -569,7 +578,12 @@ const AdminOnboarding = () => {
                               </span>
                               <span className="h-4 w-10 bg-white/90" style={{ borderRadius: preset.radiusPreset === 'sharp' ? 0 : preset.radiusPreset === 'subtle' ? 4 : 999 }} />
                             </div>
-                            <p className="text-sm font-semibold">{preset.label}</p>
+                            <div className="flex flex-wrap items-center gap-1">
+                              <p className="text-sm font-semibold">{preset.label}</p>
+                              {!isThemeAllowed(store?.planCode, preset.themeKey) ? (
+                                <PlanLockBadge tone="light" plan={themeMinPlan(preset.themeKey)} />
+                              ) : null}
+                            </div>
                             <p className="text-xs text-muted-foreground">{preset.description}</p>
                           </button>
                         );
@@ -588,7 +602,13 @@ const AdminOnboarding = () => {
                           key={theme.key}
                           type="button"
                           aria-pressed={themeKey === theme.key}
-                          onClick={() => setThemeKey(theme.key)}
+                          onClick={() => {
+                            if (!isThemeAllowed(store?.planCode, theme.key)) {
+                              toast.message(`Le thème « ${theme.label} » demande un plan supérieur.`);
+                              return;
+                            }
+                            setThemeKey(theme.key);
+                          }}
                           className={`rounded-xl border p-3 text-left transition ${
                             themeKey === theme.key ? 'border-primary ring-2 ring-primary/25' : 'border-border hover:border-primary/40'
                           }`}
@@ -597,7 +617,12 @@ const AdminOnboarding = () => {
                             className="mb-2 h-8 rounded-md"
                             style={{ background: `linear-gradient(135deg, ${theme.demoPrimary}, ${theme.demoSecondary})` }}
                           />
-                          <p className="text-sm font-semibold">{theme.label}</p>
+                          <div className="flex flex-wrap items-center gap-1">
+                            <p className="text-sm font-semibold">{theme.label}</p>
+                            {!isThemeAllowed(store?.planCode, theme.key) ? (
+                              <PlanLockBadge tone="light" plan={themeMinPlan(theme.key)} />
+                            ) : null}
+                          </div>
                           <p className="text-xs text-muted-foreground">{theme.description}</p>
                         </button>
                       ))}

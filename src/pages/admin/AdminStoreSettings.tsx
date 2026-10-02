@@ -1,7 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation, useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { CheckCircle2, Copy, ExternalLink, Eye, EyeOff, Loader2, Save, Settings2 } from 'lucide-react';
+import { CheckCircle2, Copy, ExternalLink, Eye, EyeOff, ImagePlus, Loader2, Save, Settings2 } from 'lucide-react';
+import { HelpTip } from '@/components/admin/HelpTip';
+import { PLAN_LABEL, isThemeAllowed, themeMinPlan } from '@/config/planGates';
+import { SettingsSectionNav } from '@/components/admin/SettingsSectionNav';
+import { BoutiqueWorkspaceLinks } from '@/components/admin/BoutiqueWorkspaceLinks';
+import { getImageUrl } from '@/services/api/upload';
 import AdminLayout from '@/components/admin/AdminLayout';
 import { useAdminLocale } from '@/contexts/AdminLocaleContext';
 import { AppearanceWorkspace } from '@/components/admin/appearance/AppearanceWorkspace';
@@ -349,15 +354,21 @@ const AdminStoreSettings = () => {
   // Depuis la démo : ?applyTheme=minimal → sélectionne le design (à enregistrer).
   useEffect(() => {
     const raw = searchParams.get('applyTheme');
-    if (!raw || applyThemeHandled.current) return;
+    if (!raw || !data || applyThemeHandled.current) return;
     applyThemeHandled.current = true;
     const key = normalizeThemeKey(raw);
-    setForm((prev) => ({ ...prev, themeKey: key }));
-    toast.message(`Design « ${key} » sélectionné — enregistrez pour l’appliquer à votre vitrine.`);
+    if (!isThemeAllowed(data.planCode, key)) {
+      toast.message(`Le design « ${key} » demande le plan ${PLAN_LABEL[themeMinPlan(key)]}.`, {
+        description: 'Passez au plan supérieur pour l’appliquer à votre vitrine.',
+      });
+    } else {
+      setForm((prev) => ({ ...prev, themeKey: key }));
+      toast.message(`Design « ${key} » sélectionné — enregistrez pour l’appliquer à votre vitrine.`);
+    }
     const next = new URLSearchParams(searchParams);
     next.delete('applyTheme');
     setSearchParams(next, { replace: true });
-  }, [searchParams, setSearchParams]);
+  }, [searchParams, setSearchParams, data]);
 
   // Persiste les couleurs dès qu’elles sont valides (vitrine du tenant uniquement).
   useEffect(() => {
@@ -1092,18 +1103,141 @@ const AdminStoreSettings = () => {
         </div>
 
 
-        <div className="flex flex-wrap gap-2">
-          <Button type="button" variant="outline" size="sm" asChild>
-            <Link to="/admin/parametres">{t('appearance.title')}</Link>
-          </Button>
-          <Button type="button" variant="default" size="sm" asChild>
-            <Link to="/admin/reglages">{t('appearance.storeSettings')}</Link>
-          </Button>
-        </div>
+        <BoutiqueWorkspaceLinks current="/admin/reglages" />
 
         <div className="mx-auto max-w-3xl space-y-8">
-<section className="space-y-4 rounded-2xl border border-border bg-card p-5 sm:p-6">
-          <h2 className="font-display text-lg font-semibold">Réseaux sociaux</h2>
+          <SettingsSectionNav
+            items={[
+              { id: 'identite', label: 'Identité' },
+              { id: 'domaine', label: 'Domaine' },
+              { id: 'abonnement', label: 'Abonnement' },
+              { id: 'paiements', label: 'Paiements' },
+              { id: 'livraison', label: 'Livraison' },
+              { id: 'contact', label: 'Contact' },
+              { id: 'reseaux', label: 'Réseaux' },
+              { id: 'langue', label: 'Langue' },
+              { id: 'pixels', label: 'Pixels' },
+              { id: 'fidelite', label: 'Fidélité' },
+              { id: 'whatsapp', label: 'WhatsApp' },
+              { id: 'conformite', label: 'Conformité' },
+            ]}
+          />
+
+          <section id="identite" className="scroll-mt-16 space-y-5 rounded-2xl border border-border bg-card p-5 sm:p-6">
+            <div>
+              <h2 className="flex items-center gap-1.5 font-display text-lg font-semibold">
+                Identité de la boutique
+                <HelpTip topic="identity" />
+              </h2>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Nom, slogan et logo : ce que vos clients voient en premier.
+              </p>
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div>
+                <Label htmlFor="identity-siteName" className="flex items-center gap-1.5">
+                  Nom de la boutique <HelpTip topic="siteName" />
+                </Label>
+                <Input
+                  id="identity-siteName"
+                  className="mt-1.5"
+                  value={form.siteName}
+                  onChange={(e) => patch('siteName', e.target.value)}
+                />
+              </div>
+              <div>
+                <Label htmlFor="identity-tagline" className="flex items-center gap-1.5">
+                  Slogan <HelpTip topic="tagline" />
+                </Label>
+                <Input
+                  id="identity-tagline"
+                  className="mt-1.5"
+                  value={form.tagline}
+                  onChange={(e) => patch('tagline', e.target.value)}
+                  placeholder="Une phrase qui résume votre boutique"
+                />
+              </div>
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="rounded-xl border border-dashed border-border p-3">
+                <p className="mb-2 flex items-center gap-1.5 text-sm font-medium">
+                  Logo <HelpTip topic="logo" />
+                </p>
+                <div className="flex items-center gap-3">
+                  <div className="flex h-14 w-28 items-center justify-center overflow-hidden rounded-lg border border-border bg-muted/40">
+                    {form.logoUrl ? (
+                      <img src={getImageUrl(form.logoUrl)} alt="Logo" className="max-h-full max-w-full object-contain" />
+                    ) : (
+                      <span className="text-[11px] text-muted-foreground">Aucun logo</span>
+                    )}
+                  </div>
+                  <input
+                    ref={logoInputRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => void handleLogoUpload(e.target.files?.[0] ?? null)}
+                  />
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    className="gap-1.5"
+                    disabled={uploadingLogo}
+                    onClick={() => logoInputRef.current?.click()}
+                  >
+                    {uploadingLogo ? <Loader2 className="h-4 w-4 animate-spin" /> : <ImagePlus className="h-4 w-4" />}
+                    {form.logoUrl ? 'Changer' : 'Importer un logo'}
+                  </Button>
+                </div>
+              </div>
+              <div className="rounded-xl border border-dashed border-border p-3">
+                <p className="mb-2 flex items-center gap-1.5 text-sm font-medium">
+                  Favicon <HelpTip topic="favicon" />
+                </p>
+                <div className="flex items-center gap-3">
+                  <div className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-lg border border-border bg-muted/40">
+                    {form.faviconUrl ? (
+                      <img src={getImageUrl(form.faviconUrl)} alt="Favicon" className="max-h-full max-w-full object-contain" />
+                    ) : (
+                      <span className="text-[11px] text-muted-foreground">Aucun</span>
+                    )}
+                  </div>
+                  <input
+                    ref={faviconInputRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => void handleFaviconUpload(e.target.files?.[0] ?? null)}
+                  />
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    className="gap-1.5"
+                    disabled={uploadingFavicon}
+                    onClick={() => faviconInputRef.current?.click()}
+                  >
+                    {uploadingFavicon ? <Loader2 className="h-4 w-4 animate-spin" /> : <ImagePlus className="h-4 w-4" />}
+                    {form.faviconUrl ? 'Changer' : 'Importer'}
+                  </Button>
+                </div>
+              </div>
+            </div>
+            <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+              <span>Le logo et le favicon sont enregistrés immédiatement ; le nom et le slogan avec « Enregistrer ».</span>
+              <button
+                type="button"
+                className="font-medium text-primary underline-offset-2 hover:underline"
+                onClick={() => document.getElementById('domaine')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+              >
+                Configurer mon domaine →
+              </button>
+            </p>
+          </section>
+
+<section id="reseaux" className="scroll-mt-16 space-y-4 rounded-2xl border border-border bg-card p-5 sm:p-6">
+          <h2 className="flex items-center gap-1.5 font-display text-lg font-semibold">Réseaux sociaux<HelpTip topic="social" /></h2>
           <p className="text-sm text-muted-foreground">
             Ces liens sont synchronisés automatiquement vers{' '}
             <Link to="/admin/reseaux-sociaux" className="text-primary underline-offset-2 hover:underline">
@@ -1145,10 +1279,10 @@ const AdminStoreSettings = () => {
           </div>
         </section>
 
-        <section className="space-y-4 rounded-2xl border border-border bg-card p-5 sm:p-6">
+        <section id="domaine" className="scroll-mt-16 space-y-4 rounded-2xl border border-border bg-card p-5 sm:p-6">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
-              <h2 className="font-display text-lg font-semibold">Assistant domaine personnalisé</h2>
+              <h2 className="flex items-center gap-1.5 font-display text-lg font-semibold">Assistant domaine personnalisé<HelpTip topic="customDomain" /></h2>
               <p className="mt-1 text-sm text-muted-foreground">
                 Quatre étapes : saisir le nom, publier le CNAME, activer HTTPS, puis vérifier.
               </p>
@@ -1305,8 +1439,8 @@ const AdminStoreSettings = () => {
           })()}
         </section>
 
-        <section className="space-y-4 rounded-2xl border border-border bg-card p-5 sm:p-6">
-          <h2 className="font-display text-lg font-semibold">Abonnement</h2>
+        <section id="abonnement" className="scroll-mt-16 space-y-4 rounded-2xl border border-border bg-card p-5 sm:p-6">
+          <h2 className="flex items-center gap-1.5 font-display text-lg font-semibold">Abonnement<HelpTip topic="plan" /></h2>
           <p className="text-sm text-muted-foreground">
             Plan actuel : <strong>{data?.planName || data?.planCode || '—'}</strong>
             {data?.planPriceMad != null ? ` — ${Number(data.planPriceMad)} DHS / mois` : null}
@@ -1325,8 +1459,8 @@ const AdminStoreSettings = () => {
           </Button>
         </section>
 
-        <section className="space-y-4 rounded-2xl border border-border bg-card p-5 sm:p-6">
-          <h2 className="font-display text-lg font-semibold">Pixels & conversion</h2>
+        <section id="pixels" className="scroll-mt-16 space-y-4 rounded-2xl border border-border bg-card p-5 sm:p-6">
+          <h2 className="flex items-center gap-1.5 font-display text-lg font-semibold">Pixels & conversion<HelpTip topic="pixels" /></h2>
           <p className="text-sm text-muted-foreground">
             Meta, TikTok et Google (Analytics / Ads), et relance panier abandonné.
           </p>
@@ -1400,8 +1534,8 @@ const AdminStoreSettings = () => {
           </div>
         </section>
 
-        <section className="space-y-4 rounded-2xl border border-border bg-card p-5 sm:p-6">
-          <h2 className="font-display text-lg font-semibold">Langue de la vitrine</h2>
+        <section id="langue" className="scroll-mt-16 space-y-4 rounded-2xl border border-border bg-card p-5 sm:p-6">
+          <h2 className="flex items-center gap-1.5 font-display text-lg font-semibold">Langue de la vitrine<HelpTip topic="language" /></h2>
           <p className="text-sm text-muted-foreground">
             Définissez la langue principale affichée aux visiteurs. Ils pourront toujours changer de
             langue via le sélecteur du header (parmi les langues activées).
@@ -1505,9 +1639,9 @@ const AdminStoreSettings = () => {
           </div>
         </section>
 
-        <section className="space-y-4 rounded-2xl border border-border bg-card p-5 sm:p-6">
+        <section id="paiements" className="scroll-mt-16 space-y-4 rounded-2xl border border-border bg-card p-5 sm:p-6">
           <div>
-            <h2 className="font-display text-lg font-semibold">Paiements</h2>
+            <h2 className="flex items-center gap-1.5 font-display text-lg font-semibold">Paiements<HelpTip topic="payments" /></h2>
             <p className="mt-1 text-sm text-muted-foreground">
               Ajoutez vos clés Stripe, CMI ou PayPal. Le paiement n&apos;apparaît sur votre boutique
               qu&apos;après un test de connexion réussi.
@@ -1823,8 +1957,8 @@ const AdminStoreSettings = () => {
           </div>
         </section>
 
-        <section className="space-y-4 rounded-2xl border border-border bg-card p-5 sm:p-6">
-          <h2 className="font-display text-lg font-semibold">Fidélité</h2>
+        <section id="fidelite" className="scroll-mt-16 space-y-4 rounded-2xl border border-border bg-card p-5 sm:p-6">
+          <h2 className="flex items-center gap-1.5 font-display text-lg font-semibold">Fidélité<HelpTip topic="loyalty" /></h2>
           <div className="flex items-center justify-between gap-4 rounded-xl border border-border/60 px-4 py-3">
             <Label htmlFor="loyaltyEnabled" className="cursor-pointer font-medium">
               Programme de fidélité actif
@@ -1859,8 +1993,8 @@ const AdminStoreSettings = () => {
           </div>
         </section>
 
-        <section className="space-y-4 rounded-2xl border border-border bg-card p-5 sm:p-6">
-          <h2 className="font-display text-lg font-semibold">Conformité CNDP</h2>
+        <section id="conformite" className="scroll-mt-16 space-y-4 rounded-2xl border border-border bg-card p-5 sm:p-6">
+          <h2 className="flex items-center gap-1.5 font-display text-lg font-semibold">Conformité CNDP<HelpTip topic="cndp" /></h2>
           <div className="flex items-center justify-between gap-4 rounded-xl border border-border/60 px-4 py-3">
             <Label htmlFor="cookieConsentRequired" className="cursor-pointer font-medium">
               Bandeau cookies obligatoire
@@ -1905,8 +2039,8 @@ const AdminStoreSettings = () => {
           </div>
         </section>
 
-        <section className="space-y-4 rounded-2xl border border-border bg-card p-5 sm:p-6">
-          <h2 className="font-display text-lg font-semibold">WhatsApp Business</h2>
+        <section id="whatsapp" className="scroll-mt-16 space-y-4 rounded-2xl border border-border bg-card p-5 sm:p-6">
+          <h2 className="flex items-center gap-1.5 font-display text-lg font-semibold">WhatsApp Business<HelpTip topic="whatsapp" /></h2>
           <p className="text-sm text-muted-foreground">
             Chaque boutique utilise son propre numéro WhatsApp Business. Les clients commandent via{' '}
             <code className="text-foreground">wa.me</code> (produit, panier, bouton flottant).
@@ -1983,8 +2117,8 @@ const AdminStoreSettings = () => {
           </div>
         </section>
 
-        <section className="space-y-4 rounded-2xl border border-border bg-card p-5 sm:p-6">
-          <h2 className="font-display text-lg font-semibold">Livraison</h2>
+        <section id="livraison" className="scroll-mt-16 space-y-4 rounded-2xl border border-border bg-card p-5 sm:p-6">
+          <h2 className="flex items-center gap-1.5 font-display text-lg font-semibold">Livraison<HelpTip topic="shipping" /></h2>
           <div>
             <Label htmlFor="freeShippingThreshold">Seuil livraison gratuite (DH)</Label>
             <Input
@@ -2000,8 +2134,8 @@ const AdminStoreSettings = () => {
           </div>
         </section>
 
-        <section className="space-y-4 rounded-2xl border border-border bg-card p-5 sm:p-6">
-          <h2 className="font-display text-lg font-semibold">Contact</h2>
+        <section id="contact" className="scroll-mt-16 space-y-4 rounded-2xl border border-border bg-card p-5 sm:p-6">
+          <h2 className="flex items-center gap-1.5 font-display text-lg font-semibold">Contact<HelpTip topic="contact" /></h2>
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
               <Label htmlFor="contactEmail">Email</Label>

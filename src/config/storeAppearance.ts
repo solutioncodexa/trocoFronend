@@ -325,6 +325,13 @@ export type StoreAppearance = {
   productInfoPosition: ProductInfoPositionKey;
   productStickyBuyBox: boolean;
   productShowRelated: boolean;
+  productShowDescription: boolean;
+  productShowReviews: boolean;
+  productShowFrequentlyBought: boolean;
+  productShowShare: boolean;
+  productShowWhatsapp: boolean;
+  /** Ordre des sections sous la fiche produit (clés : frequently, reviews, related). */
+  productBelowOrder: string;
   productCtaLabel: string;
   productShowTrust: boolean;
   /** Header sticky. */
@@ -431,6 +438,12 @@ export const DEFAULT_APPEARANCE: StoreAppearance = {
   productInfoPosition: 'right',
   productStickyBuyBox: true,
   productShowRelated: true,
+  productShowDescription: true,
+  productShowReviews: true,
+  productShowFrequentlyBought: true,
+  productShowShare: true,
+  productShowWhatsapp: true,
+  productBelowOrder: 'frequently,reviews,related',
   productCtaLabel: 'Commander',
   productShowTrust: true,
   headerSticky: true,
@@ -811,6 +824,24 @@ export type HeaderNavLabelKey = (typeof HEADER_NAV_ITEMS)[number]['labelKey'];
 export type HeaderNavHrefKey = (typeof HEADER_NAV_ITEMS)[number]['hrefKey'];
 export type HeaderNavEnabledKey = (typeof HEADER_NAV_ITEMS)[number]['enabledKey'];
 
+export const PRODUCT_BELOW_SECTIONS = ['frequently', 'reviews', 'related'] as const;
+export type ProductBelowSection = (typeof PRODUCT_BELOW_SECTIONS)[number];
+
+/** Liste ordonnée, sans doublon ni clé inconnue, avec les sections manquantes en fin de liste. */
+export function parseProductBelowOrder(raw: unknown): ProductBelowSection[] {
+  const seen = new Set<ProductBelowSection>();
+  for (const part of String(raw ?? '').split(',')) {
+    const key = part.trim() as ProductBelowSection;
+    if ((PRODUCT_BELOW_SECTIONS as readonly string[]).includes(key)) seen.add(key);
+  }
+  for (const key of PRODUCT_BELOW_SECTIONS) seen.add(key);
+  return [...seen];
+}
+
+function normalizeProductBelowOrder(raw: unknown): string {
+  return parseProductBelowOrder(raw).join(',');
+}
+
 export function normalizeAppearance(raw?: Partial<StoreAppearance> | Record<string, unknown> | null): StoreAppearance {
   const src = (raw ?? {}) as Record<string, unknown>;
   const cta = String(src.heroCtaLabel ?? DEFAULT_APPEARANCE.heroCtaLabel).trim();
@@ -901,6 +932,12 @@ export function normalizeAppearance(raw?: Partial<StoreAppearance> | Record<stri
     productInfoPosition: asEnum(src.productInfoPosition, PRODUCT_INFO_POSITION_KEYS, 'right'),
     productStickyBuyBox: asBool(src.productStickyBuyBox, true),
     productShowRelated: asBool(src.productShowRelated, true),
+    productShowDescription: asBool(src.productShowDescription, true),
+    productShowReviews: asBool(src.productShowReviews, true),
+    productShowFrequentlyBought: asBool(src.productShowFrequentlyBought, true),
+    productShowShare: asBool(src.productShowShare, true),
+    productShowWhatsapp: asBool(src.productShowWhatsapp, true),
+    productBelowOrder: normalizeProductBelowOrder(src.productBelowOrder),
     productCtaLabel: asLabel(src.productCtaLabel, DEFAULT_APPEARANCE.productCtaLabel, 80),
     productShowTrust: asBool(src.productShowTrust, true),
     headerSticky: asBool(src.headerSticky, true),

@@ -27,6 +27,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { PageBlockView } from '@/components/storefront/PageRenderer';
+import { HelpTip } from '@/components/admin/HelpTip';
 import BlockPalettePreview from '@/components/admin/page-builder/BlockPalettePreview';
 import StorePreviewChrome from '@/components/admin/page-builder/StorePreviewChrome';
 import DeviceFrame from '@/components/admin/page-builder/DeviceFrame';
@@ -649,8 +650,9 @@ export default function PageBlockBuilder({
 
           {leftTab === 'components' ? (
             <div className="min-h-0 flex-1 space-y-2 overflow-y-auto p-2.5 scrollbar-app">
-              <p className="px-0.5 text-[11px] text-muted-foreground">
+              <p className="flex items-center gap-1 px-0.5 text-[11px] text-muted-foreground">
                 Glissez sur la page — affichage live boutique
+                <HelpTip topic="pageBuilder" />
               </p>
               {BLOCK_CATALOG.map((item) => (
                 <button
