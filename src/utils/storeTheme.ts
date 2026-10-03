@@ -166,7 +166,10 @@ function faviconMime(url: string): string | null {
 
 function applyStoreFavicon(rawUrl: string) {
   const resolved = resolvePublicImageUrl(rawUrl);
-  if (!resolved) return;
+  if (!resolved) {
+    restoreDefaultFavicons();
+    return;
+  }
   disableDefaultFavicons();
   const bust = `_sf=${Date.now()}`;
   const href = resolved.includes('?') ? `${resolved}&${bust}` : `${resolved}?${bust}`;

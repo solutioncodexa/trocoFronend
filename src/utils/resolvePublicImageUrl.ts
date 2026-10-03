@@ -15,7 +15,7 @@ import { API_BASE_URL } from '@/config/api';
  */
 export function resolvePublicImageUrl(url: string | undefined | null): string {
   if (!url) return '';
-  const u = url.trim();
+  const u = rewriteMinioBrowserUrl(url.trim());
 
   // Cas MinIO / CDN externe : déjà une URL absolue
   if (/^https?:\/\//i.test(u)) return u;
@@ -38,4 +38,33 @@ export function resolvePublicImageUrl(url: string | undefined | null): string {
     return u;
   }
   return `${apiBase}/${u}`;
+}
+
+/**
+ * MinIO console (:9001) et API (:9000) ne sont pas exposés au navigateur.
+ * Les fichiers publics passent par nginx : https://hôte/files/bucket/objet.
+ * Une URL qui n'est que la racine de la console n'est pas un fichier.
+ */
+function rewriteMinioBrowserUrl(u: string): string {
+  if (!/^https?:\/\//i.test(u)) return u;
+  let parsed: URL;
+  try {
+    parsed = new URL(u);
+  } catch {
+    return u;
+  }
+  const minioPort = parsed.port === '9000' || parsed.port === '9001';
+  if (!minioPort && parsed.protocol !== 'http:') return u;
+
+  if (minioPort) {
+    const path = parsed.pathname.replace(/\/+$/, '');
+    if (!path) return '';
+    return `https://${parsed.hostname}/files${parsed.pathname}${parsed.search}`;
+  }
+
+  if (parsed.hostname.endsWith('codexa-solution.com') || parsed.hostname.endsWith('getstore.codexa-solution.com')) {
+    parsed.protocol = 'https:';
+    return parsed.toString();
+  }
+  return u;
 }
