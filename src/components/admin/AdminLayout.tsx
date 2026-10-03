@@ -45,6 +45,7 @@ import EmailVerificationBanner from './EmailVerificationBanner';
 import StockAlertDialog from './StockAlertDialog';
 import { PlanLockBadge } from './PlanLockBadge';
 import { HelpTip } from './HelpTip';
+import { AssistantChat } from './AssistantChat';
 import { helpTopicForPath } from '@/config/helpTopics';
 import { PlanUpgradeNotice } from './PlanUpgradeNotice';
 import { adminPlanGate, isPlanAtLeast } from '@/config/planGates';
@@ -518,6 +519,7 @@ const AdminLayout = ({
           </div>
         </main>
       </div>
+      <AssistantChat />
     </div>
   );
 };
