@@ -107,7 +107,11 @@ export function AppearanceWorkspace({
   saving,
 }: Props) {
   const { t } = useAdminLocale();
-  const [activeSection, setActiveSection] = useState<AppearanceSectionId>('themes');
+  // Lien profond (ex. depuis l'assistant) : /admin/parametres?section=identity ouvre directement cette section.
+  const [activeSection, setActiveSection] = useState<AppearanceSectionId>(() => {
+    const wanted = new URLSearchParams(window.location.search).get('section');
+    return APPEARANCE_OUTLINE.find((s) => s.id === wanted)?.id ?? 'themes';
+  });
   const [showOutline, setShowOutline] = useState(true);
   const [showEditor, setShowEditor] = useState(true);
   const [device, setDevice] = useState<Device>('desktop');
