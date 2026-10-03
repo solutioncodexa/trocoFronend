@@ -5,22 +5,24 @@ import { Loader2, MessageCircle, Send, Sparkles, Trash2, X } from 'lucide-react'
 import { Button } from '@/components/ui/button';
 import { assistantApi, type AssistantMessage } from '@/services/api/assistant';
 import { cn } from '@/lib/utils';
+import { useAdminLocale } from '@/contexts/AdminLocaleContext';
+import type { AdminMessageKey } from '@/i18n/admin/adminMessages';
 
 const STORAGE_KEY = 'troco_assistant_chat';
 const MAX_INPUT = 1000;
 
-/** Questions proposées selon l'écran ouvert (préfixe d'URL → suggestions). */
-const SUGGESTIONS: Record<string, string[]> = {
-  '/admin/dashboard': ['Par où commencer pour ouvrir ma boutique ?', 'Que me reste-t-il à configurer ?'],
-  '/admin/reglages': ['Comment activer le paiement à la livraison ?', 'Comment fixer un seuil de livraison gratuite ?'],
-  '/admin/parametres': ['Comment changer les couleurs de ma boutique ?', 'Comment changer de style ?'],
-  '/admin/produits': ['Comment ajouter mon premier produit ?', 'Comment apparaître sur Google ?'],
-  '/admin/commandes': ['Comment prévenir un client que sa commande est expédiée ?'],
-  '/admin/pages': ['Comment créer une page À propos ?'],
+/** Questions proposées selon l'écran ouvert (préfixe d'URL → clés de suggestions). */
+const SUGGESTIONS: Record<string, AdminMessageKey[]> = {
+  '/admin/dashboard': ['assistant.sug.dashboard1', 'assistant.sug.dashboard2'],
+  '/admin/reglages': ['assistant.sug.settings1', 'assistant.sug.settings2'],
+  '/admin/parametres': ['assistant.sug.appearance1', 'assistant.sug.appearance2'],
+  '/admin/produits': ['assistant.sug.products1', 'assistant.sug.products2'],
+  '/admin/commandes': ['assistant.sug.orders1'],
+  '/admin/pages': ['assistant.sug.pages1'],
 };
-const DEFAULT_SUGGESTIONS = ['Comment changer mon logo ?', 'Comment configurer les paiements ?', 'Comment ajouter un produit ?'];
+const DEFAULT_SUGGESTIONS: AdminMessageKey[] = ['assistant.sug.default1', 'assistant.sug.default2', 'assistant.sug.default3'];
 
-function suggestionsFor(pathname: string): string[] {
+function suggestionsFor(pathname: string): AdminMessageKey[] {
   const hit = Object.keys(SUGGESTIONS).find((p) => pathname === p || pathname.startsWith(`${p}/`));
   return hit ? SUGGESTIONS[hit] : DEFAULT_SUGGESTIONS;
 }
@@ -71,6 +73,7 @@ function linkify(text: string, onNavigate: () => void): ReactNode[] {
  */
 export function AssistantChat() {
   const { pathname } = useLocation();
+  const { t, locale, dir } = useAdminLocale();
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<AssistantMessage[]>(loadHistory);
   const [input, setInput] = useState('');
@@ -85,14 +88,17 @@ export function AssistantChat() {
   });
 
   const chat = useMutation({
-    mutationFn: (history: AssistantMessage[]) => assistantApi.chat(history, pathname),
+    mutationFn: (history: AssistantMessage[]) => assistantApi.chat(history, pathname, locale),
     onSuccess: ({ reply }, history) => {
       const next: AssistantMessage[] = [...history, { role: 'assistant', content: reply }];
       setMessages(next);
       saveHistory(next);
     },
     onError: (e: unknown) => {
-      setError(e instanceof Error ? e.message : 'L’assistant est momentanément indisponible.');
+      // apiRequest renvoie ce texte générique quand la réponse n'a pas de message exploitable
+      // (ex. 504 HTML de nginx quand le modèle met trop de temps à répondre).
+      const msg = e instanceof Error ? e.message : '';
+      setError(!msg || msg === 'Une erreur est survenue' ? t('assistant.errorSlow') : msg);
     },
   });
 
@@ -125,30 +131,31 @@ export function AssistantChat() {
         <button
           type="button"
           onClick={() => setOpen(true)}
-          aria-label="Ouvrir l’assistant de configuration"
-          className="fixed bottom-4 right-4 z-40 flex h-12 items-center gap-2 rounded-full bg-primary px-4 text-sm font-medium text-primary-foreground shadow-lg transition hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+          aria-label={t('assistant.openAria')}
+          className="fixed bottom-4 end-4 z-40 flex h-12 items-center gap-2 rounded-full bg-primary px-4 text-sm font-medium text-primary-foreground shadow-lg transition hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
         >
           <MessageCircle className="h-5 w-5" aria-hidden />
-          <span className="hidden sm:inline">Besoin d’aide ?</span>
+          <span className="hidden sm:inline">{t('assistant.fab')}</span>
         </button>
       ) : (
         <section
           role="dialog"
-          aria-label="Assistant de configuration"
-          className="fixed bottom-4 right-4 z-40 flex h-[min(34rem,calc(100vh-2rem))] w-[min(24rem,calc(100vw-2rem))] flex-col overflow-hidden rounded-xl border bg-background shadow-2xl"
+          aria-label={t('assistant.title')}
+          dir={dir}
+          className="fixed bottom-4 end-4 z-40 flex h-[min(34rem,calc(100vh-2rem))] w-[min(24rem,calc(100vw-2rem))] flex-col overflow-hidden rounded-xl border bg-background shadow-2xl"
         >
           <header className="flex items-center justify-between gap-2 border-b bg-primary/5 px-3 py-2.5">
             <div className="flex items-center gap-2 text-sm font-semibold">
               <Sparkles className="h-4 w-4 text-primary" aria-hidden />
-              Assistant de configuration
+              {t('assistant.title')}
             </div>
             <div className="flex items-center gap-1">
               {messages.length > 0 ? (
-                <Button type="button" variant="ghost" size="icon" className="h-7 w-7" onClick={reset} aria-label="Effacer la conversation" title="Effacer la conversation">
+                <Button type="button" variant="ghost" size="icon" className="h-7 w-7" onClick={reset} aria-label={t('assistant.clear')} title={t('assistant.clear')}>
                   <Trash2 className="h-4 w-4" aria-hidden />
                 </Button>
               ) : null}
-              <Button type="button" variant="ghost" size="icon" className="h-7 w-7" onClick={() => setOpen(false)} aria-label="Fermer l’assistant">
+              <Button type="button" variant="ghost" size="icon" className="h-7 w-7" onClick={() => setOpen(false)} aria-label={t('assistant.close')}>
                 <X className="h-4 w-4" aria-hidden />
               </Button>
             </div>
@@ -157,18 +164,16 @@ export function AssistantChat() {
           <div className="flex-1 space-y-3 overflow-y-auto p-3 text-sm" aria-live="polite">
             {messages.length === 0 ? (
               <div className="space-y-3">
-                <p className="text-muted-foreground">
-                  Posez-moi une question sur la configuration de votre boutique. Je vous explique comment faire, étape par étape.
-                </p>
+                <p className="text-muted-foreground">{t('assistant.intro')}</p>
                 <div className="flex flex-col gap-2">
-                  {suggestionsFor(pathname).map((q) => (
+                  {suggestionsFor(pathname).map((key) => (
                     <button
-                      key={q}
+                      key={key}
                       type="button"
-                      onClick={() => send(q)}
-                      className="rounded-lg border px-3 py-2 text-left text-sm transition hover:bg-primary/5"
+                      onClick={() => send(t(key))}
+                      className="rounded-lg border px-3 py-2 text-start text-sm transition hover:bg-primary/5"
                     >
-                      {q}
+                      {t(key)}
                     </button>
                   ))}
                 </div>
@@ -190,7 +195,7 @@ export function AssistantChat() {
             {chat.isPending ? (
               <div className="flex items-center gap-2 text-muted-foreground">
                 <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-                L’assistant réfléchit…
+                {t('assistant.thinking')}
               </div>
             ) : null}
             {error ? (
@@ -219,11 +224,11 @@ export function AssistantChat() {
               }}
               maxLength={MAX_INPUT}
               rows={2}
-              placeholder="Votre question…"
-              aria-label="Votre question"
+              placeholder={t('assistant.placeholder')}
+              aria-label={t('assistant.inputLabel')}
               className="min-h-[2.5rem] flex-1 resize-none rounded-md border bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
             />
-            <Button type="submit" size="icon" disabled={!input.trim() || chat.isPending} aria-label="Envoyer">
+            <Button type="submit" size="icon" disabled={!input.trim() || chat.isPending} aria-label={t('assistant.send')}>
               <Send className="h-4 w-4" aria-hidden />
             </Button>
           </form>

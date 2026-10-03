@@ -1,5 +1,9 @@
 import type { StoreLocale } from '@/i18n/messages';
 import {
+  assistantAdminExtra,
+  type AssistantAdminMessageKey,
+} from './assistantAdminExtra';
+import {
   appearanceAdminExtra,
   type AppearanceAdminMessageKey,
 } from './appearanceAdminExtra';
@@ -23,6 +27,7 @@ import {
 export type AdminLocale = StoreLocale;
 
 export type AdminMessageKey =
+  | AssistantAdminMessageKey
   | AppearanceAdminMessageKey
   | DashboardAdminMessageKey
   | GuideAdminMessageKey
@@ -242,6 +247,7 @@ export type AdminMessageKey =
 
 type AdminCoreMessageKey = Exclude<
   AdminMessageKey,
+  | AssistantAdminMessageKey
   | AppearanceAdminMessageKey
   | DashboardAdminMessageKey
   | GuideAdminMessageKey
@@ -908,6 +914,7 @@ const en: Record<AdminCoreMessageKey, string> = {
 export const adminMessages: Record<AdminLocale, Record<AdminMessageKey, string>> = {
   fr: {
     ...fr,
+    ...assistantAdminExtra.fr,
     ...appearanceAdminExtra.fr,
     ...dashboardAdminExtra.fr,
     ...guideAdminExtra.fr,
@@ -916,6 +923,7 @@ export const adminMessages: Record<AdminLocale, Record<AdminMessageKey, string>>
   },
   ar: {
     ...ar,
+    ...assistantAdminExtra.ar,
     ...appearanceAdminExtra.ar,
     ...dashboardAdminExtra.ar,
     ...guideAdminExtra.ar,
@@ -924,6 +932,7 @@ export const adminMessages: Record<AdminLocale, Record<AdminMessageKey, string>>
   },
   en: {
     ...en,
+    ...assistantAdminExtra.en,
     ...appearanceAdminExtra.en,
     ...dashboardAdminExtra.en,
     ...guideAdminExtra.en,

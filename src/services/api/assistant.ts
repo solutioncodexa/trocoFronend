@@ -10,9 +10,10 @@ export type AssistantMessage = {
 export const assistantApi = {
   status: () => apiRequest<{ enabled: boolean }>(buildApiUrl('/assistant/status')),
 
-  chat: (messages: AssistantMessage[], route: string) =>
+  /** `locale` : langue de l'interface admin (fr | en | ar) — l'assistant répond dans cette langue. */
+  chat: (messages: AssistantMessage[], route: string, locale: string) =>
     apiRequest<{ reply: string }>(buildApiUrl('/assistant/chat'), {
       method: 'POST',
-      body: JSON.stringify({ messages, route }),
+      body: JSON.stringify({ messages, route, locale }),
     }),
 };
