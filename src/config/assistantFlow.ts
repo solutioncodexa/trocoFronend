@@ -1,5 +1,6 @@
 import { isPlanAtLeast, type PlanCode } from '@/config/planGates';
 import type { ActivityId } from '@/config/catalogTemplates';
+import type { KeyField, Provider } from '@/config/sellFlow';
 import type { StoreSettingsDTO } from '@/types/api';
 
 /**
@@ -103,4 +104,90 @@ export type CatalogWidget =
   | { kind: 'photos' }
   | { kind: 'cconfirm' };
 
-export type AnyWidget = FlowWidget | CatalogWidget;
+
+/** Widgets de la conversation « personnalisation » (thème, en-tête, pages, réseaux sociaux). */
+export type DesignWidget =
+  | { kind: 'dyesno'; id: 'search' | 'promo' | 'home' | 'about' | 'legal' }
+  | { kind: 'themePick' }
+  | { kind: 'layoutPick' }
+  | { kind: 'dfield'; field: 'promo' | 'instagram' | 'facebook' | 'tiktok' };
+
+
+/** Widgets de la conversation « livraison » (transporteurs, frais, délais). */
+export type ShippingWidget =
+  | { kind: 'shyesno'; id: 'add' | 'another' }
+  | { kind: 'shfield'; field: 'name' | 'fee' | 'free' | 'eta' }
+  | { kind: 'shconfirm' };
+
+/** Widgets de la conversation « paiement par carte » : les champs secrets ne sont jamais affichés ni conservés. */
+export type PaymentWidget =
+  | { kind: 'payprovider' }
+  | { kind: 'payfield'; provider: Provider; field: KeyField; secret: boolean }
+  | { kind: 'paymode' }
+  | { kind: 'payyesno' };
+
+/** Widgets de la conversation « marketing et référencement » (pixels, SEO, code promo). */
+export type MarketingWidget =
+  | { kind: 'myesno'; id: 'pixels' | 'catSeo' | 'promo' | 'another' }
+  | { kind: 'mfield'; field: 'meta' | 'tiktok' | 'ga' | 'promoCode' | 'promoValue' | 'promoUses' }
+  | { kind: 'mseo' }
+  | { kind: 'mkind' }
+  | { kind: 'mconfirm' };
+
+/** Widgets de la conversation « fonctions Pro » (paniers abandonnés, WhatsApp, fidélité, domaine). */
+export type GrowthWidget =
+  | { kind: 'gyesno'; id: 'cart' | 'whatsapp' | 'loyalty' | 'domain' | 'verify' }
+  | { kind: 'gpick'; id: 'cartDelay' | 'points' | 'value' | 'template' }
+  | { kind: 'gfield' }
+  | { kind: 'gconfirm' };
+
+/** Widgets de la conversation « conformité » (pages légales, cookies, conservation des données). */
+export type LegalWidget = { kind: 'lyesno'; id: 'pages' | 'cookies' | 'retention' } | { kind: 'lpick' };
+
+/** Widgets de la conversation « modifier l'existant » (produits et catégories). */
+export type ManageWidget =
+  | { kind: 'xpick'; id: 'type' | 'choose' | 'action' }
+  | { kind: 'xfield'; field: 'search' | 'price' | 'stock' | 'name' }
+  | { kind: 'xconfirm' }
+  | { kind: 'xyesno' };
+
+/** Widgets de la conversation « contenu de base » (email, ville, présentation, pages FAQ et Contact). */
+export type ContentWidget =
+  | { kind: 'kyesno'; id: 'faq' | 'contactPage' }
+  | { kind: 'kfield'; field: 'email' | 'city' | 'about' };
+
+export type AnyWidget =
+  | FlowWidget
+  | CatalogWidget
+  | DesignWidget
+  | ShippingWidget
+  | PaymentWidget
+  | MarketingWidget
+  | GrowthWidget
+  | LegalWidget
+  | ManageWidget
+  | ContentWidget;
+
+const CATALOG_KINDS = new Set(['cyesno', 'activity', 'catTree', 'catPick', 'cfield', 'photos', 'cconfirm']);
+export const isCatalogWidget = (w: AnyWidget): w is CatalogWidget => CATALOG_KINDS.has(w.kind);
+
+const DESIGN_KINDS = new Set(['dyesno', 'themePick', 'layoutPick', 'dfield']);
+export const isDesignWidget = (w: AnyWidget): w is DesignWidget => DESIGN_KINDS.has(w.kind);
+
+const SHIPPING_KINDS = new Set(['shyesno', 'shfield', 'shconfirm']);
+export const isShippingWidget = (w: AnyWidget): w is ShippingWidget => SHIPPING_KINDS.has(w.kind);
+
+const MARKETING_KINDS = new Set(['myesno', 'mfield', 'mseo', 'mkind', 'mconfirm']);
+export const isMarketingWidget = (w: AnyWidget): w is MarketingWidget => MARKETING_KINDS.has(w.kind);
+
+const GROWTH_KINDS = new Set(['gyesno', 'gpick', 'gfield', 'gconfirm']);
+export const isGrowthWidget = (w: AnyWidget): w is GrowthWidget => GROWTH_KINDS.has(w.kind);
+
+const LEGAL_KINDS = new Set(['lyesno', 'lpick']);
+export const isLegalWidget = (w: AnyWidget): w is LegalWidget => LEGAL_KINDS.has(w.kind);
+
+const MANAGE_KINDS = new Set(['xpick', 'xfield', 'xconfirm', 'xyesno']);
+export const isManageWidget = (w: AnyWidget): w is ManageWidget => MANAGE_KINDS.has(w.kind);
+
+const CONTENT_KINDS = new Set(['kyesno', 'kfield']);
+export const isContentWidget = (w: AnyWidget): w is ContentWidget => CONTENT_KINDS.has(w.kind);

@@ -6,6 +6,9 @@ import { AssistantChat } from './AssistantChat';
 import { adminMessages } from '@/i18n/admin/adminMessages';
 import type { AdminMessageKey } from '@/i18n/admin/adminMessages';
 
+// Parcours de conversation complets : lents sous la charge d'une suite parallèle.
+vi.setConfig({ testTimeout: 20000 });
+
 const fr = (key: AdminMessageKey, vars?: Record<string, string | number>) => {
   let raw = adminMessages.fr[key] ?? key;
   if (vars) for (const [k, v] of Object.entries(vars)) raw = raw.replace(`{${k}}`, String(v));

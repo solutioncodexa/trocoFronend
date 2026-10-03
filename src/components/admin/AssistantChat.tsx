@@ -1,14 +1,22 @@
 import { Fragment, useEffect, useRef, useState, type ReactNode } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { FolderTree, Loader2, MessageCircle, Send, Sparkles, Trash2, Wand2, X } from 'lucide-react';
+import { BookOpen, CreditCard, Crown, PencilLine, ShieldCheck, FolderTree, Loader2, Megaphone, Palette, MessageCircle, Send, Sparkles, Trash2, Truck, Wand2, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { assistantApi } from '@/services/api/assistant';
 import { platformApi } from '@/services/api/platform';
 import { uploadImage } from '@/services/api/upload';
 import {
   buildFlow,
+  isCatalogWidget,
+  isContentWidget,
+  isDesignWidget,
+  isGrowthWidget,
+  isLegalWidget,
+  isManageWidget,
+  isMarketingWidget,
   isPhone,
+  isShippingWidget,
   parseAmount,
   widgetForStep,
   type AnyWidget,
@@ -22,6 +30,16 @@ import type { AdminMessageKey } from '@/i18n/admin/adminMessages';
 import type { UpdateStoreSettingsRequest } from '@/types/api';
 import type { Entry } from './assistantTypes';
 import { useCatalogFlow } from './useCatalogFlow';
+import { useDesignFlow } from './useDesignFlow';
+import { usePaymentsFlow } from './usePaymentsFlow';
+import { useComplianceFlow } from './useComplianceFlow';
+import { useContentFlow } from './useContentFlow';
+import { useGrowthFlow } from './useGrowthFlow';
+import { useManageFlow } from './useManageFlow';
+import { useMarketingFlow } from './useMarketingFlow';
+import { useShippingFlow } from './useShippingFlow';
+import { looksLikeSecret } from '@/config/sellFlow';
+import type { StoreSettingsDTO } from '@/types/api';
 import {
   ColorsWidget,
   LinkWidget,
@@ -155,6 +173,19 @@ export function AssistantChat() {
     },
   });
 
+  /** Met à jour le cache et la session avec des réglages déjà renvoyés par le serveur. */
+  const applySettings = async (settings: StoreSettingsDTO) => {
+    queryClient.setQueryData(SETTINGS_KEY, settings);
+    await refreshTenant();
+    await loadFromAdminSession();
+  };
+
+  const saveSettings = async (payload: UpdateStoreSettingsRequest) => {
+    const updated = await platformApi.updateMyStoreSettings(payload);
+    await applySettings(updated);
+    return updated;
+  };
+
   const catalog = useCatalogFlow({
     t,
     lang: locale,
@@ -166,6 +197,106 @@ export function AssistantChat() {
     storeName: store?.siteName,
     invalidate: () =>
       void queryClient.invalidateQueries({ predicate: (q) => /categor|product/i.test(JSON.stringify(q.queryKey)) }),
+  });
+
+  const design = useDesignFlow({
+    t,
+    busy,
+    setBusy,
+    push,
+    clearWidgets,
+    setStep: setFlowStep,
+    planCode: store?.planCode,
+    saveSettings,
+    invalidate: () =>
+      void queryClient.invalidateQueries({
+        predicate: (q) => /store-pages|store-settings/i.test(JSON.stringify(q.queryKey)),
+      }),
+  });
+
+  const shipping = useShippingFlow({
+    t,
+    busy,
+    setBusy,
+    push,
+    clearWidgets,
+    setStep: setFlowStep,
+    invalidate: () =>
+      void queryClient.invalidateQueries({ predicate: (q) => /shipping/i.test(JSON.stringify(q.queryKey)) }),
+  });
+
+  const marketing = useMarketingFlow({
+    t,
+    lang: locale,
+    busy,
+    setBusy,
+    push,
+    clearWidgets,
+    setStep: setFlowStep,
+    saveSettings,
+    invalidate: () =>
+      void queryClient.invalidateQueries({
+        predicate: (q) => /store-pages|store-settings|categor|promo/i.test(JSON.stringify(q.queryKey)),
+      }),
+  });
+
+  const growth = useGrowthFlow({
+    t,
+    lang: locale,
+    busy,
+    setBusy,
+    push,
+    clearWidgets,
+    setStep: setFlowStep,
+    saveSettings,
+    applySettings,
+  });
+
+  const compliance = useComplianceFlow({
+    t,
+    busy,
+    setBusy,
+    push,
+    clearWidgets,
+    setStep: setFlowStep,
+    saveSettings,
+    invalidate: () =>
+      void queryClient.invalidateQueries({ predicate: (q) => /store-pages|store-settings/i.test(JSON.stringify(q.queryKey)) }),
+  });
+
+  const manage = useManageFlow({
+    t,
+    busy,
+    setBusy,
+    push,
+    clearWidgets,
+    setStep: setFlowStep,
+    invalidate: () =>
+      void queryClient.invalidateQueries({ predicate: (q) => /product|categor/i.test(JSON.stringify(q.queryKey)) }),
+  });
+
+  const content = useContentFlow({
+    t,
+    lang: locale,
+    busy,
+    setBusy,
+    push,
+    clearWidgets,
+    setStep: setFlowStep,
+    saveSettings,
+    invalidate: () =>
+      void queryClient.invalidateQueries({ predicate: (q) => /store-pages|store-settings/i.test(JSON.stringify(q.queryKey)) }),
+  });
+
+  const payments = usePaymentsFlow({
+    t,
+    busy,
+    setBusy,
+    push,
+    clearWidgets,
+    setStep: setFlowStep,
+    saveSettings,
+    applySettings,
   });
 
   // Seul le dernier outil affiché reste actif (une question libre peut s'intercaler dans la conversation).
@@ -215,18 +346,11 @@ export function AssistantChat() {
     }
   };
 
-  const saveSettings = async (payload: UpdateStoreSettingsRequest) => {
-    const updated = await platformApi.updateMyStoreSettings(payload);
-    queryClient.setQueryData(SETTINGS_KEY, updated);
-    await refreshTenant();
-    await loadFromAdminSession();
-  };
-
   /** Enregistre la réponse puis passe à l'étape suivante ; en cas d'échec, redemande la même chose. */
   const answer = async (
     echo: string,
     retry: FlowWidget,
-    save: () => Promise<void>,
+    save: () => Promise<unknown>,
     doneKey: AdminMessageKey,
   ) => {
     clearWidgets();
@@ -348,7 +472,15 @@ export function AssistantChat() {
       case 'link':
         return <LinkWidget href={w.href} openLabel={t('assistant.flow.wab.open')} onContinue={() => { clearWidgets(); push({ role: 'user', content: t('assistant.flow.continue') }); askNext(); }} />;
       default:
-        return catalog.renderWidget(w);
+        if (isCatalogWidget(w)) return catalog.renderWidget(w);
+        if (isDesignWidget(w)) return design.renderWidget(w);
+        if (isShippingWidget(w)) return shipping.renderWidget(w);
+        if (isMarketingWidget(w)) return marketing.renderWidget(w);
+        if (isGrowthWidget(w)) return growth.renderWidget(w);
+        if (isLegalWidget(w)) return compliance.renderWidget(w);
+        if (isManageWidget(w)) return manage.renderWidget(w);
+        if (isContentWidget(w)) return content.renderWidget(w);
+        return payments.renderWidget(w);
     }
   };
 
@@ -357,6 +489,11 @@ export function AssistantChat() {
   const send = (text: string) => {
     const content = text.trim().slice(0, MAX_INPUT);
     if (!content || chat.isPending) return;
+    if (looksLikeSecret(content)) {
+      setInput('');
+      setError(t('assistant.secret.blocked'));
+      return;
+    }
     const next: Entry[] = [...entries, { role: 'user', content }];
     setEntries(next);
     saveHistory(next);
@@ -413,14 +550,30 @@ export function AssistantChat() {
             {entries.length === 0 ? (
               <div className="space-y-3">
                 <p className="text-muted-foreground">{t('assistant.intro')}</p>
-                <Button type="button" className="w-full justify-start" onClick={() => void startFlow()} disabled={busy}>
-                  {busy ? <Loader2 className="me-2 h-4 w-4 animate-spin" aria-hidden /> : <Wand2 className="me-2 h-4 w-4" aria-hidden />}
-                  {t('assistant.flow.start')}
-                </Button>
-                <Button type="button" variant="outline" className="w-full justify-start" onClick={() => void catalog.start()} disabled={busy}>
-                  <FolderTree className="me-2 h-4 w-4" aria-hidden />
-                  {t('assistant.catalog.start')}
-                </Button>
+                {[
+                  { key: 'basics', label: t('assistant.flow.start'), Icon: Wand2, run: () => void startFlow() },
+                  { key: 'catalog', label: t('assistant.catalog.start'), Icon: FolderTree, run: () => void catalog.start() },
+                  { key: 'design', label: t('assistant.design.start'), Icon: Palette, run: () => void design.start() },
+                  { key: 'shipping', label: t('assistant.ship.start'), Icon: Truck, run: () => void shipping.start() },
+                  { key: 'marketing', label: t('assistant.mkt.start'), Icon: Megaphone, run: () => void marketing.start() },
+                  { key: 'growth', label: t('assistant.growth.start'), Icon: Crown, run: () => void growth.start() },
+                  { key: 'legal', label: t('assistant.legal.start'), Icon: ShieldCheck, run: () => void compliance.start() },
+                  { key: 'manage', label: t('assistant.manage.start'), Icon: PencilLine, run: () => manage.start() },
+                  { key: 'content', label: t('assistant.content.start'), Icon: BookOpen, run: () => void content.start() },
+                  { key: 'payments', label: t('assistant.pay.start'), Icon: CreditCard, run: () => void payments.start() },
+                ].map(({ key, label, Icon, run }, i) => (
+                  <Button
+                    key={key}
+                    type="button"
+                    variant={i === 0 ? 'default' : 'outline'}
+                    className="w-full justify-start"
+                    onClick={run}
+                    disabled={busy}
+                  >
+                    {busy && i === 0 ? <Loader2 className="me-2 h-4 w-4 animate-spin" aria-hidden /> : <Icon className="me-2 h-4 w-4" aria-hidden />}
+                    {label}
+                  </Button>
+                ))}
                 <div className="flex flex-col gap-2">
                   {suggestionsFor(pathname).map((key) => (
                     <button
