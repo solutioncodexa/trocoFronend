@@ -1,9 +1,9 @@
 import { Fragment, useEffect, useRef, useState, type ReactNode } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Loader2, MessageCircle, Send, Sparkles, Trash2, Wand2, X } from 'lucide-react';
+import { FolderTree, Loader2, MessageCircle, Send, Sparkles, Trash2, Wand2, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { assistantApi, type AssistantMessage } from '@/services/api/assistant';
+import { assistantApi } from '@/services/api/assistant';
 import { platformApi } from '@/services/api/platform';
 import { uploadImage } from '@/services/api/upload';
 import {
@@ -11,6 +11,7 @@ import {
   isPhone,
   parseAmount,
   widgetForStep,
+  type AnyWidget,
   type FlowStepId,
   type FlowWidget,
 } from '@/config/assistantFlow';
@@ -19,6 +20,8 @@ import { useAdminLocale } from '@/contexts/AdminLocaleContext';
 import { useTenant } from '@/contexts/TenantContext';
 import type { AdminMessageKey } from '@/i18n/admin/adminMessages';
 import type { UpdateStoreSettingsRequest } from '@/types/api';
+import type { Entry } from './assistantTypes';
+import { useCatalogFlow } from './useCatalogFlow';
 import {
   ColorsWidget,
   LinkWidget,
@@ -30,9 +33,6 @@ import {
 const STORAGE_KEY = 'troco_assistant_chat';
 const MAX_INPUT = 1000;
 const SETTINGS_KEY = ['store-settings', 'me'];
-
-/** Entrée de la conversation : texte envoyé au modèle + éventuel outil affiché (jamais envoyé). */
-type Entry = AssistantMessage & { widget?: FlowWidget };
 
 /** Questions proposées selon l'écran ouvert (préfixe d'URL → clés de suggestions). */
 const SUGGESTIONS: Record<string, AdminMessageKey[]> = {
@@ -117,7 +117,7 @@ export function AssistantChat() {
   const [entries, setEntries] = useState<Entry[]>(loadHistory);
   const [input, setInput] = useState('');
   const [error, setError] = useState<string | null>(null);
-  const [flowStep, setFlowStep] = useState<FlowStepId | null>(null);
+  const [flowStep, setFlowStep] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const queue = useRef<FlowStepId[]>([]);
   const endRef = useRef<HTMLDivElement>(null);
@@ -153,6 +153,19 @@ export function AssistantChat() {
       const msg = e instanceof Error ? e.message : '';
       setError(!msg || msg === 'Une erreur est survenue' ? t('assistant.errorSlow') : msg);
     },
+  });
+
+  const catalog = useCatalogFlow({
+    t,
+    lang: locale,
+    busy,
+    setBusy,
+    push,
+    clearWidgets,
+    setStep: setFlowStep,
+    storeName: store?.siteName,
+    invalidate: () =>
+      void queryClient.invalidateQueries({ predicate: (q) => /categor|product/i.test(JSON.stringify(q.queryKey)) }),
   });
 
   // Seul le dernier outil affiché reste actif (une question libre peut s'intercaler dans la conversation).
@@ -281,7 +294,7 @@ export function AssistantChat() {
     }
   };
 
-  const renderWidget = (w: FlowWidget): ReactNode => {
+  const renderWidget = (w: AnyWidget): ReactNode => {
     switch (w.kind) {
       case 'yesno':
         return <YesNoWidget busy={busy} onYes={() => onYes(w)} onNo={skip} />;
@@ -334,6 +347,8 @@ export function AssistantChat() {
         );
       case 'link':
         return <LinkWidget href={w.href} openLabel={t('assistant.flow.wab.open')} onContinue={() => { clearWidgets(); push({ role: 'user', content: t('assistant.flow.continue') }); askNext(); }} />;
+      default:
+        return catalog.renderWidget(w);
     }
   };
 
@@ -401,6 +416,10 @@ export function AssistantChat() {
                 <Button type="button" className="w-full justify-start" onClick={() => void startFlow()} disabled={busy}>
                   {busy ? <Loader2 className="me-2 h-4 w-4 animate-spin" aria-hidden /> : <Wand2 className="me-2 h-4 w-4" aria-hidden />}
                   {t('assistant.flow.start')}
+                </Button>
+                <Button type="button" variant="outline" className="w-full justify-start" onClick={() => void catalog.start()} disabled={busy}>
+                  <FolderTree className="me-2 h-4 w-4" aria-hidden />
+                  {t('assistant.catalog.start')}
                 </Button>
                 <div className="flex flex-col gap-2">
                   {suggestionsFor(pathname).map((key) => (

@@ -62,7 +62,58 @@ export type AssistantAdminMessageKey =
   | 'assistant.flow.shipping.placeholder'
   | 'assistant.flow.wab.ask'
   | 'assistant.flow.wab.open'
-  | 'assistant.flow.wab.hint';
+  | 'assistant.flow.wab.hint'
+  | 'assistant.catalog.start'
+  | 'assistant.catalog.intro'
+  | 'assistant.catalog.haveCats'
+  | 'assistant.catalog.activity.ask'
+  | 'assistant.catalog.activity.fashion'
+  | 'assistant.catalog.activity.beauty'
+  | 'assistant.catalog.activity.home'
+  | 'assistant.catalog.activity.tech'
+  | 'assistant.catalog.activity.food'
+  | 'assistant.catalog.activity.crafts'
+  | 'assistant.catalog.activity.otherPlaceholder'
+  | 'assistant.catalog.tree.ask'
+  | 'assistant.catalog.tree.custom'
+  | 'assistant.catalog.tree.add'
+  | 'assistant.catalog.tree.addPlaceholder'
+  | 'assistant.catalog.tree.parentTop'
+  | 'assistant.catalog.tree.create'
+  | 'assistant.catalog.tree.count'
+  | 'assistant.catalog.tree.creating'
+  | 'assistant.catalog.tree.done'
+  | 'assistant.catalog.tree.nothingNew'
+  | 'assistant.catalog.product.ask'
+  | 'assistant.catalog.product.another'
+  | 'assistant.catalog.product.noCats'
+  | 'assistant.catalog.product.category'
+  | 'assistant.catalog.product.name'
+  | 'assistant.catalog.product.namePlaceholder'
+  | 'assistant.catalog.product.price'
+  | 'assistant.catalog.product.pricePlaceholder'
+  | 'assistant.catalog.product.photos'
+  | 'assistant.catalog.product.photosPick'
+  | 'assistant.catalog.product.photosCount'
+  | 'assistant.catalog.product.photosInvalid'
+  | 'assistant.catalog.product.desc'
+  | 'assistant.catalog.product.descPlaceholder'
+  | 'assistant.catalog.product.descUse'
+  | 'assistant.catalog.product.stock'
+  | 'assistant.catalog.product.stockPlaceholder'
+  | 'assistant.catalog.product.confirm'
+  | 'assistant.catalog.product.create'
+  | 'assistant.catalog.product.cancel'
+  | 'assistant.catalog.product.created'
+  | 'assistant.catalog.product.cancelled'
+  | 'assistant.catalog.product.view'
+  | 'assistant.catalog.summary.name'
+  | 'assistant.catalog.summary.price'
+  | 'assistant.catalog.summary.category'
+  | 'assistant.catalog.summary.stock'
+  | 'assistant.catalog.summary.photos'
+  | 'assistant.catalog.error'
+  | 'assistant.catalog.done';
 
 const fr: Record<AssistantAdminMessageKey, string> = {
   'assistant.fab': 'Besoin d’aide ?',
@@ -127,6 +178,57 @@ const fr: Record<AssistantAdminMessageKey, string> = {
   'assistant.flow.wab.ask': 'Voulez-vous envoyer les confirmations de commande à vos clients par WhatsApp Business ?',
   'assistant.flow.wab.open': 'Ouvrir les réglages WhatsApp',
   'assistant.flow.wab.hint': 'La configuration se fait dans Réglages. Je vous attends ici, cliquez sur « Continuer » ensuite.',
+  'assistant.catalog.start': 'Créer mes catégories et articles',
+  'assistant.catalog.intro': 'Parfait ! On organise d’abord votre catalogue en catégories et sous-catégories, puis on ajoute vos articles. Je vous guide pas à pas.',
+  'assistant.catalog.haveCats': 'Vous avez déjà {n} catégorie(s). Voulez-vous en ajouter d’autres ?',
+  'assistant.catalog.activity.ask': 'Quel type de produits vendez-vous ? Choisissez une activité : je vous propose des catégories adaptées. Sinon, décrivez la vôtre.',
+  'assistant.catalog.activity.fashion': 'Mode et vêtements',
+  'assistant.catalog.activity.beauty': 'Beauté et soins',
+  'assistant.catalog.activity.home': 'Maison et déco',
+  'assistant.catalog.activity.tech': 'High-tech',
+  'assistant.catalog.activity.food': 'Alimentation',
+  'assistant.catalog.activity.crafts': 'Artisanat',
+  'assistant.catalog.activity.otherPlaceholder': 'Autre activité (ex. : Jouets, Sport…)',
+  'assistant.catalog.tree.ask': 'Voici une structure que je vous propose. Décochez ce que vous ne voulez pas, ou ajoutez vos propres catégories.',
+  'assistant.catalog.tree.custom': 'Je n’ai pas de modèle pour cette activité. Ajoutez vos catégories une par une ; vous pouvez choisir une catégorie principale pour créer une sous-catégorie.',
+  'assistant.catalog.tree.add': 'Ajouter',
+  'assistant.catalog.tree.addPlaceholder': 'Nouvelle catégorie',
+  'assistant.catalog.tree.parentTop': 'Catégorie principale',
+  'assistant.catalog.tree.create': 'Créer ces catégories',
+  'assistant.catalog.tree.count': '{n} sélectionnée(s)',
+  'assistant.catalog.tree.creating': 'Création…',
+  'assistant.catalog.tree.done': '{n} catégorie(s) créée(s) ✅',
+  'assistant.catalog.tree.nothingNew': 'Ces catégories existent déjà, rien à créer ✅',
+  'assistant.catalog.product.ask': 'Voulez-vous ajouter votre premier article maintenant ?',
+  'assistant.catalog.product.another': 'Voulez-vous ajouter un autre article ?',
+  'assistant.catalog.product.noCats': 'Il faut au moins une catégorie pour ranger un article. Créons-en d’abord.',
+  'assistant.catalog.product.category': 'Dans quelle catégorie ranger cet article ?',
+  'assistant.catalog.product.name': 'Comment s’appelle l’article ?',
+  'assistant.catalog.product.namePlaceholder': 'Ex. : Caftan brodé main',
+  'assistant.catalog.product.price': 'Quel est son prix, en MAD ?',
+  'assistant.catalog.product.pricePlaceholder': 'Ex. : 299',
+  'assistant.catalog.product.photos': 'Ajoutez une ou plusieurs photos (la première sera l’image principale).',
+  'assistant.catalog.product.photosPick': 'Choisir des photos',
+  'assistant.catalog.product.photosCount': '{n} photo(s) sélectionnée(s)',
+  'assistant.catalog.product.photosInvalid': 'Images uniquement, 10 Mo maximum chacune, 8 photos au plus.',
+  'assistant.catalog.product.desc': 'Décrivez l’article en quelques phrases. Je vous propose un texte à reprendre ou à modifier.',
+  'assistant.catalog.product.descPlaceholder': 'Description de l’article',
+  'assistant.catalog.product.descUse': 'Utiliser cette proposition',
+  'assistant.catalog.product.stock': 'Combien en avez-vous en stock ?',
+  'assistant.catalog.product.stockPlaceholder': 'Ex. : 10',
+  'assistant.catalog.product.confirm': 'Voici votre article. Je le crée ?',
+  'assistant.catalog.product.create': 'Créer l’article',
+  'assistant.catalog.product.cancel': 'Annuler',
+  'assistant.catalog.product.created': 'Article « {name} » créé ✅',
+  'assistant.catalog.product.cancelled': 'D’accord, article annulé.',
+  'assistant.catalog.product.view': 'Voir mes produits',
+  'assistant.catalog.summary.name': 'Nom',
+  'assistant.catalog.summary.price': 'Prix',
+  'assistant.catalog.summary.category': 'Catégorie',
+  'assistant.catalog.summary.stock': 'Stock',
+  'assistant.catalog.summary.photos': 'Photos',
+  'assistant.catalog.error': 'Impossible de continuer : {msg}',
+  'assistant.catalog.done': 'Votre catalogue est prêt ✅ Vous pourrez ajouter d’autres articles depuis le menu Produits.',
 };
 
 const en: Record<AssistantAdminMessageKey, string> = {
@@ -191,6 +293,57 @@ const en: Record<AssistantAdminMessageKey, string> = {
   'assistant.flow.wab.ask': 'Would you like to send order confirmations to customers via WhatsApp Business?',
   'assistant.flow.wab.open': 'Open WhatsApp settings',
   'assistant.flow.wab.hint': 'Setup happens in Settings. I’ll wait here, click “Continue” afterwards.',
+  'assistant.catalog.start': 'Create my categories and products',
+  'assistant.catalog.intro': 'Perfect! First we’ll organize your catalog into categories and subcategories, then add your products. I’ll guide you step by step.',
+  'assistant.catalog.haveCats': 'You already have {n} categories. Would you like to add more?',
+  'assistant.catalog.activity.ask': 'What kind of products do you sell? Pick an activity and I’ll suggest suitable categories. Otherwise, describe yours.',
+  'assistant.catalog.activity.fashion': 'Fashion and clothing',
+  'assistant.catalog.activity.beauty': 'Beauty and care',
+  'assistant.catalog.activity.home': 'Home and decor',
+  'assistant.catalog.activity.tech': 'Electronics',
+  'assistant.catalog.activity.food': 'Food and drinks',
+  'assistant.catalog.activity.crafts': 'Crafts',
+  'assistant.catalog.activity.otherPlaceholder': 'Other activity (e.g. Toys, Sports…)',
+  'assistant.catalog.tree.ask': 'Here’s a structure I suggest. Untick what you don’t want, or add your own categories.',
+  'assistant.catalog.tree.custom': 'I don’t have a template for that activity. Add your categories one by one; pick a main category to create a subcategory.',
+  'assistant.catalog.tree.add': 'Add',
+  'assistant.catalog.tree.addPlaceholder': 'New category',
+  'assistant.catalog.tree.parentTop': 'Main category',
+  'assistant.catalog.tree.create': 'Create these categories',
+  'assistant.catalog.tree.count': '{n} selected',
+  'assistant.catalog.tree.creating': 'Creating…',
+  'assistant.catalog.tree.done': '{n} categories created ✅',
+  'assistant.catalog.tree.nothingNew': 'These categories already exist, nothing to create ✅',
+  'assistant.catalog.product.ask': 'Would you like to add your first product now?',
+  'assistant.catalog.product.another': 'Would you like to add another product?',
+  'assistant.catalog.product.noCats': 'You need at least one category to file a product. Let’s create some first.',
+  'assistant.catalog.product.category': 'Which category should this product go in?',
+  'assistant.catalog.product.name': 'What is the product called?',
+  'assistant.catalog.product.namePlaceholder': 'E.g. Hand-embroidered kaftan',
+  'assistant.catalog.product.price': 'What is its price, in MAD?',
+  'assistant.catalog.product.pricePlaceholder': 'E.g. 299',
+  'assistant.catalog.product.photos': 'Add one or more photos (the first one will be the main image).',
+  'assistant.catalog.product.photosPick': 'Choose photos',
+  'assistant.catalog.product.photosCount': '{n} photo(s) selected',
+  'assistant.catalog.product.photosInvalid': 'Images only, 10 MB max each, up to 8 photos.',
+  'assistant.catalog.product.desc': 'Describe the product in a few sentences. I’ll suggest a text you can use or edit.',
+  'assistant.catalog.product.descPlaceholder': 'Product description',
+  'assistant.catalog.product.descUse': 'Use this suggestion',
+  'assistant.catalog.product.stock': 'How many do you have in stock?',
+  'assistant.catalog.product.stockPlaceholder': 'E.g. 10',
+  'assistant.catalog.product.confirm': 'Here’s your product. Shall I create it?',
+  'assistant.catalog.product.create': 'Create product',
+  'assistant.catalog.product.cancel': 'Cancel',
+  'assistant.catalog.product.created': 'Product “{name}” created ✅',
+  'assistant.catalog.product.cancelled': 'OK, product cancelled.',
+  'assistant.catalog.product.view': 'View my products',
+  'assistant.catalog.summary.name': 'Name',
+  'assistant.catalog.summary.price': 'Price',
+  'assistant.catalog.summary.category': 'Category',
+  'assistant.catalog.summary.stock': 'Stock',
+  'assistant.catalog.summary.photos': 'Photos',
+  'assistant.catalog.error': 'Couldn’t continue: {msg}',
+  'assistant.catalog.done': 'Your catalog is ready ✅ You can add more products from the Products menu.',
 };
 
 const ar: Record<AssistantAdminMessageKey, string> = {
@@ -255,6 +408,57 @@ const ar: Record<AssistantAdminMessageKey, string> = {
   'assistant.flow.wab.ask': 'هل تريد إرسال تأكيدات الطلبات لزبائنك عبر واتساب للأعمال؟',
   'assistant.flow.wab.open': 'فتح إعدادات واتساب',
   'assistant.flow.wab.hint': 'يتم الإعداد من صفحة الإعدادات. سأنتظرك هنا، ثم اضغط «متابعة».',
+  'assistant.catalog.start': 'إنشاء الفئات والمنتجات',
+  'assistant.catalog.intro': 'ممتاز! سننظّم أولًا كتالوجك في فئات وفئات فرعية، ثم نضيف منتجاتك. سأرشدك خطوة بخطوة.',
+  'assistant.catalog.haveCats': 'لديك بالفعل {n} فئة. هل تريد إضافة المزيد؟',
+  'assistant.catalog.activity.ask': 'ما نوع المنتجات التي تبيعها؟ اختر نشاطًا وسأقترح فئات مناسبة، أو صِف نشاطك بنفسك.',
+  'assistant.catalog.activity.fashion': 'الأزياء والملابس',
+  'assistant.catalog.activity.beauty': 'الجمال والعناية',
+  'assistant.catalog.activity.home': 'المنزل والديكور',
+  'assistant.catalog.activity.tech': 'الإلكترونيات',
+  'assistant.catalog.activity.food': 'المواد الغذائية',
+  'assistant.catalog.activity.crafts': 'الصناعة التقليدية',
+  'assistant.catalog.activity.otherPlaceholder': 'نشاط آخر (مثال: ألعاب، رياضة…)',
+  'assistant.catalog.tree.ask': 'هذه بنية أقترحها عليك. ألغِ تحديد ما لا تريده أو أضف فئاتك الخاصة.',
+  'assistant.catalog.tree.custom': 'ليس لدي نموذج لهذا النشاط. أضف فئاتك واحدة تلو الأخرى؛ اختر فئة رئيسية لإنشاء فئة فرعية.',
+  'assistant.catalog.tree.add': 'إضافة',
+  'assistant.catalog.tree.addPlaceholder': 'فئة جديدة',
+  'assistant.catalog.tree.parentTop': 'فئة رئيسية',
+  'assistant.catalog.tree.create': 'إنشاء هذه الفئات',
+  'assistant.catalog.tree.count': '{n} محددة',
+  'assistant.catalog.tree.creating': 'جارٍ الإنشاء…',
+  'assistant.catalog.tree.done': 'تم إنشاء {n} فئة ✅',
+  'assistant.catalog.tree.nothingNew': 'هذه الفئات موجودة بالفعل، لا شيء لإنشائه ✅',
+  'assistant.catalog.product.ask': 'هل تريد إضافة أول منتج الآن؟',
+  'assistant.catalog.product.another': 'هل تريد إضافة منتج آخر؟',
+  'assistant.catalog.product.noCats': 'تحتاج إلى فئة واحدة على الأقل لتصنيف المنتج. لننشئ بعضها أولًا.',
+  'assistant.catalog.product.category': 'في أي فئة نضع هذا المنتج؟',
+  'assistant.catalog.product.name': 'ما اسم المنتج؟',
+  'assistant.catalog.product.namePlaceholder': 'مثال: قفطان مطرّز يدويًا',
+  'assistant.catalog.product.price': 'ما سعره بالدرهم؟',
+  'assistant.catalog.product.pricePlaceholder': 'مثال: 299',
+  'assistant.catalog.product.photos': 'أضف صورة أو أكثر (الأولى ستكون الصورة الرئيسية).',
+  'assistant.catalog.product.photosPick': 'اختيار الصور',
+  'assistant.catalog.product.photosCount': 'تم اختيار {n} صورة',
+  'assistant.catalog.product.photosInvalid': 'صور فقط، بحد أقصى 10 ميغابايت لكل صورة، و8 صور كحد أقصى.',
+  'assistant.catalog.product.desc': 'صِف المنتج في بضع جمل. سأقترح نصًا يمكنك اعتماده أو تعديله.',
+  'assistant.catalog.product.descPlaceholder': 'وصف المنتج',
+  'assistant.catalog.product.descUse': 'استخدام هذا الاقتراح',
+  'assistant.catalog.product.stock': 'كم عدد القطع المتوفرة في المخزون؟',
+  'assistant.catalog.product.stockPlaceholder': 'مثال: 10',
+  'assistant.catalog.product.confirm': 'هذا هو منتجك. هل أنشئه؟',
+  'assistant.catalog.product.create': 'إنشاء المنتج',
+  'assistant.catalog.product.cancel': 'إلغاء',
+  'assistant.catalog.product.created': 'تم إنشاء المنتج «{name}» ✅',
+  'assistant.catalog.product.cancelled': 'حسنًا، تم إلغاء المنتج.',
+  'assistant.catalog.product.view': 'عرض منتجاتي',
+  'assistant.catalog.summary.name': 'الاسم',
+  'assistant.catalog.summary.price': 'السعر',
+  'assistant.catalog.summary.category': 'الفئة',
+  'assistant.catalog.summary.stock': 'المخزون',
+  'assistant.catalog.summary.photos': 'الصور',
+  'assistant.catalog.error': 'تعذّر المتابعة: {msg}',
+  'assistant.catalog.done': 'كتالوجك جاهز ✅ يمكنك إضافة منتجات أخرى من قائمة المنتجات.',
 };
 
 export const assistantAdminExtra: Record<StoreLocale, Record<AssistantAdminMessageKey, string>> = {

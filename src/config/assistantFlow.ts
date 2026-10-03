@@ -1,4 +1,5 @@
 import { isPlanAtLeast, type PlanCode } from '@/config/planGates';
+import type { ActivityId } from '@/config/catalogTemplates';
 import type { StoreSettingsDTO } from '@/types/api';
 
 /**
@@ -91,3 +92,15 @@ export function widgetForStep(id: FlowStepId): FlowWidget {
       return { kind: 'text', stepId: id };
   }
 }
+
+/** Widgets de la conversation « catalogue » (catégories, sous-catégories, articles). */
+export type CatalogWidget =
+  | { kind: 'cyesno'; id: 'moreCats' | 'addProduct' | 'another' }
+  | { kind: 'activity' }
+  | { kind: 'catTree'; activity: ActivityId | null }
+  | { kind: 'catPick' }
+  | { kind: 'cfield'; field: 'name' | 'price' | 'desc' | 'stock'; proposal?: string }
+  | { kind: 'photos' }
+  | { kind: 'cconfirm' };
+
+export type AnyWidget = FlowWidget | CatalogWidget;
