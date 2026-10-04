@@ -121,6 +121,10 @@ export const apiRequest = async <T>(
   if (attachAdminToken && token) {
     headers['Authorization'] = `Bearer ${token}`;
   }
+  const previewKey = readPreviewKey();
+  if (previewKey && !headers['X-Preview-Key']) {
+    headers['X-Preview-Key'] = previewKey;
+  }
   const tenantSlug = getTenantSlug();
   if (tenantSlug && !headers['X-Fournisseur-Slug']) {
     headers['X-Fournisseur-Slug'] = tenantSlug;
@@ -186,3 +190,22 @@ export const apiRequest = async <T>(
 
   return data as T;
 };
+
+const PREVIEW_KEY_STORAGE = 'troco_preview_key';
+
+/**
+ * Clé d'aperçu d'une boutique pas encore lancée : le marchand ouvre sa vitrine avec `?preview=…`, on la garde le
+ * temps de la session pour que toutes les pages de la vitrine fonctionnent.
+ */
+function readPreviewKey(): string | null {
+  try {
+    const fromUrl = new URLSearchParams(window.location.search).get('preview');
+    if (fromUrl && /^[a-f0-9]{16,64}$/i.test(fromUrl)) {
+      sessionStorage.setItem(PREVIEW_KEY_STORAGE, fromUrl);
+      return fromUrl;
+    }
+    return sessionStorage.getItem(PREVIEW_KEY_STORAGE);
+  } catch {
+    return null;
+  }
+}

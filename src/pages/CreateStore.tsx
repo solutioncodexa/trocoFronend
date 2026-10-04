@@ -1,10 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { ArrowLeft, CheckCircle2, Eye, EyeOff, Loader2, Store, XCircle } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, ChevronDown, Eye, EyeOff, Loader2, Pencil, Store, XCircle } from 'lucide-react';
 import { platformApi } from '@/services/api/platform';
 import { setStoredTenantSlug } from '@/config/api';
 import { useAdmin } from '@/contexts/AdminContext';
+import { useAdminLocale } from '@/contexts/AdminLocaleContext';
+import { ADMIN_LOCALES } from '@/i18n/admin/adminMessages';
+import { createStoreMessages, type CreateStoreKey } from '@/i18n/createStoreMessages';
+import { interpolate } from '@/i18n/messages';
 import { markStockAlertPending } from '@/utils/stockAlertSession';
 import { buildStorefrontUrl } from '@/utils/storefrontUrl';
 import { writeOnboardingDraft } from '@/utils/onboardingSession';
@@ -27,7 +31,7 @@ function cleanSlugInput(value: string) {
   return value
     .toLowerCase()
     .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[̀-ͯ]/g, '')
     .replace(/[\s_]+/g, '-')
     .replace(/[^a-z0-9-]/g, '')
     .replace(/-{2,}/g, '-')
@@ -56,12 +60,25 @@ function FieldError({ id, children }: { id: string; children: React.ReactNode })
 const inputClass =
   'w-full rounded-xl border border-white/15 bg-black/20 px-4 py-3 text-sm outline-none ring-teal-500/40 focus:ring-2';
 
+const LOCALE_LABEL = { fr: 'Français', ar: 'العربية', en: 'English' } as const;
+
+/**
+ * Inscription en trois champs (nom, email, mot de passe) : l'adresse de la boutique se déduit du nom et reste
+ * modifiable ; téléphone et nom complet sont repliés. La langue choisie ici devient celle de l'admin.
+ */
 const CreateStore = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { login } = useAdmin();
+  const { locale, setLocale, dir } = useAdminLocale();
+  const m = createStoreMessages[locale];
+  const t = (key: CreateStoreKey, vars?: Record<string, string | number>) =>
+    vars ? interpolate(m[key], vars) : m[key];
+
   const [pending, setPending] = useState(false);
   const [slugTouched, setSlugTouched] = useState(false);
+  const [editSlug, setEditSlug] = useState(false);
+  const [showMore, setShowMore] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [slugState, setSlugState] = useState<SlugState>({ status: 'idle' });
   const [sector, setSector] = useState('');
@@ -120,6 +137,11 @@ const CreateStore = () => {
     };
   }, [form.slug]);
 
+  // Une adresse prise est un problème à régler tout de suite : on ouvre le champ pour la corriger.
+  useEffect(() => {
+    if (slugState.status === 'unavailable') setEditSlug(true);
+  }, [slugState.status]);
+
   const patch = (key: keyof typeof form, value: string) => {
     setForm((prev) => {
       const next = { ...prev, [key]: value };
@@ -133,15 +155,15 @@ const CreateStore = () => {
   const validate = (): FieldErrors => {
     const next: FieldErrors = {};
     const slug = form.slug.trim().toLowerCase();
-    if (!form.name.trim()) next.name = 'Indiquez le nom de votre boutique.';
-    if (!slug) next.slug = 'Choisissez une adresse pour votre boutique (lettres, chiffres, tirets).';
-    else if (slug.length < 3) next.slug = 'L’adresse doit contenir au moins 3 caractères.';
-    else if (!SLUG_RE.test(slug)) next.slug = 'Utilisez uniquement des lettres, chiffres et tirets (sans tiret au début ou à la fin).';
-    else if (slugState.status === 'unavailable') next.slug = 'Cette adresse n’est pas disponible — choisissez-en une autre.';
+    if (!form.name.trim()) next.name = t('name.required');
+    if (!slug) next.slug = t('url.empty');
+    else if (slug.length < 3) next.slug = t('url.short');
+    else if (!SLUG_RE.test(slug)) next.slug = t('url.format');
+    else if (slugState.status === 'unavailable') next.slug = t('url.taken');
     if (!form.adminEmail.trim() || !/^\S+@\S+\.\S+$/.test(form.adminEmail.trim())) {
-      next.adminEmail = 'Saisissez une adresse email valide.';
+      next.adminEmail = t('email.invalid');
     }
-    if (form.adminPassword.length < 8) next.adminPassword = 'Le mot de passe doit contenir au moins 8 caractères.';
+    if (form.adminPassword.length < 8) next.adminPassword = t('password.short');
     return next;
   };
 
@@ -151,9 +173,10 @@ const CreateStore = () => {
     setErrors(found);
     const firstInvalid = (['name', 'slug', 'adminEmail', 'adminPassword'] as const).find((k) => found[k]);
     if (firstInvalid) {
-      toast.error('Corrigez les champs indiqués en rouge');
+      toast.error(t('fix'));
+      if (firstInvalid === 'slug') setEditSlug(true);
       const el = formRef.current?.querySelector<HTMLElement>(`#${firstInvalid}`);
-      el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      el?.scrollIntoView?.({ behavior: 'smooth', block: 'center' });
       el?.focus({ preventScroll: true });
       return;
     }
@@ -184,49 +207,64 @@ const CreateStore = () => {
         const pendingActivation = (created.status || '').toUpperCase() === 'PENDING';
         toast.success(
           pendingActivation
-            ? `Boutique « ${created.name} » créée — en attente d'activation Get STORE`
-            : `Boutique « ${created.name} » créée — essai gratuit de ${TRIAL_DAYS} jours démarré`,
+            ? t('created.pending', { name: created.name })
+            : t('created.trial', { name: created.name, days: TRIAL_DAYS }),
         );
         navigate('/admin/onboarding', {
           replace: true,
           state: { onboarding: true, pendingActivation },
         });
       } else {
-        toast.success(`Boutique créée. Connectez-vous avec ${form.adminEmail.trim()}`);
+        toast.success(t('created.login', { email: form.adminEmail.trim() }));
         navigate('/admin', {
           replace: true,
           state: { email: form.adminEmail.trim(), createdSlug: created.slug },
         });
       }
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Impossible de créer la boutique');
+      toast.error(err instanceof Error ? err.message : t('failed'));
     } finally {
       setPending(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-[linear-gradient(165deg,#071018_0%,#0a1628_42%,#0c1f2e_100%)] text-[#e8f4f2]">
+    <div
+      dir={dir}
+      lang={locale}
+      className="min-h-screen bg-[linear-gradient(165deg,#071018_0%,#0a1628_42%,#0c1f2e_100%)] text-[#e8f4f2]"
+    >
       <div className="mx-auto max-w-lg px-5 py-10 sm:px-8">
-        <Link
-          to="/matjarona"
-          className="mb-8 inline-flex items-center gap-2 text-sm text-[#e8f4f2]/70 hover:text-[#e8f4f2]"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          Retour Get STORE
-        </Link>
+        <div className="mb-8 flex items-center justify-between gap-3">
+          <Link to="/matjarona" className="inline-flex items-center gap-2 text-sm text-[#e8f4f2]/70 hover:text-[#e8f4f2]">
+            <ArrowLeft className="h-4 w-4 rtl:rotate-180" />
+            {t('back')}
+          </Link>
+          <div className="flex gap-1" role="group" aria-label="Language">
+            {ADMIN_LOCALES.map((l) => (
+              <button
+                key={l}
+                type="button"
+                lang={l}
+                aria-pressed={locale === l}
+                onClick={() => setLocale(l)}
+                className={`rounded-full px-2.5 py-1 text-xs transition ${
+                  locale === l ? 'bg-teal-500/25 text-[#e8f4f2]' : 'text-[#e8f4f2]/60 hover:text-[#e8f4f2]'
+                }`}
+              >
+                {LOCALE_LABEL[l]}
+              </button>
+            ))}
+          </div>
+        </div>
 
         <div className="mb-8 flex items-center gap-3">
           <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-teal-500/20 text-teal-300">
             <Store className="h-6 w-6" />
           </div>
           <div>
-            <h1 className="font-['Syne',sans-serif] text-2xl font-bold tracking-tight sm:text-3xl">
-              Créer ma boutique
-            </h1>
-            <p className="text-sm text-[#e8f4f2]/65">
-              Essai gratuit de {TRIAL_DAYS} jours, sans carte bancaire — en ligne en 3 minutes
-            </p>
+            <h1 className="font-['Syne',sans-serif] text-2xl font-bold tracking-tight sm:text-3xl">{t('title')}</h1>
+            <p className="text-sm text-[#e8f4f2]/65">{t('subtitle', { days: TRIAL_DAYS })}</p>
           </div>
         </div>
 
@@ -234,41 +272,130 @@ const CreateStore = () => {
           ref={formRef}
           noValidate
           onSubmit={handleSubmit}
-          className="space-y-6 rounded-2xl border border-white/10 bg-white/5 p-5 backdrop-blur-sm sm:p-6"
+          className="space-y-5 rounded-2xl border border-white/10 bg-white/5 p-5 backdrop-blur-sm sm:p-6"
         >
-          <fieldset className="space-y-4">
-            <legend className="mb-1 text-xs font-semibold uppercase tracking-wider text-teal-300">
-              1 · Votre boutique
-            </legend>
-            <div>
-              <label className="mb-1.5 block text-sm font-medium" htmlFor="name">
-                Nom de la boutique
-              </label>
-              <input
-                id="name"
-                required
-                className={inputClass}
-                value={form.name}
-                onChange={(e) => {
-                  patch('name', e.target.value);
-                  if (errors.name) setErrors((prev) => ({ ...prev, name: undefined }));
-                }}
-                placeholder="Ex. Maison Atlas"
-                autoFocus
-                aria-invalid={!!errors.name}
-                aria-describedby={errors.name ? 'name-error' : undefined}
-              />
-              {errors.name ? <FieldError id="name-error">{errors.name}</FieldError> : null}
+          <div>
+            <label className="mb-1.5 block text-sm font-medium" htmlFor="name">
+              {t('name.label')}
+            </label>
+            <input
+              id="name"
+              required
+              className={inputClass}
+              value={form.name}
+              onChange={(e) => {
+                patch('name', e.target.value);
+                if (errors.name) setErrors((prev) => ({ ...prev, name: undefined }));
+              }}
+              placeholder={t('name.placeholder')}
+              autoFocus
+              aria-invalid={!!errors.name}
+              aria-describedby={errors.name ? 'name-error' : undefined}
+            />
+            {errors.name ? <FieldError id="name-error">{errors.name}</FieldError> : null}
+          </div>
+
+          <div>
+            <span className="mb-1.5 block text-sm font-medium">{t('sector.label')}</span>
+            <div className="grid grid-cols-2 gap-2">
+              {STARTER_PACKS.map((pack) => (
+                <button
+                  key={pack.key}
+                  type="button"
+                  aria-pressed={sector === pack.key}
+                  onClick={() => setSector(sector === pack.key ? '' : pack.key)}
+                  className={`rounded-xl border px-3 py-2.5 text-start text-xs transition ${
+                    sector === pack.key
+                      ? 'border-teal-400 bg-teal-500/15 text-[#e8f4f2]'
+                      : 'border-white/15 bg-black/10 text-[#e8f4f2]/75 hover:border-white/30'
+                  }`}
+                >
+                  <span className="block font-semibold">{t(`sector.${pack.key}` as CreateStoreKey)}</span>
+                </button>
+              ))}
             </div>
-            <div>
-              <label className="mb-1.5 block text-sm font-medium" htmlFor="slug">
-                Adresse (slug)
-              </label>
-              <div className="relative">
+            <p className="mt-1.5 text-xs text-[#e8f4f2]/45">{t('sector.hint')}</p>
+          </div>
+
+          <div>
+            <label className="mb-1.5 block text-sm font-medium" htmlFor="adminEmail">
+              {t('email.label')}
+            </label>
+            <input
+              id="adminEmail"
+              type="email"
+              required
+              dir="ltr"
+              className={inputClass}
+              value={form.adminEmail}
+              onChange={(e) => {
+                patch('adminEmail', e.target.value);
+                if (errors.adminEmail) setErrors((prev) => ({ ...prev, adminEmail: undefined }));
+              }}
+              autoComplete="email"
+              aria-invalid={!!errors.adminEmail}
+              aria-describedby={errors.adminEmail ? 'adminEmail-error' : undefined}
+            />
+            {errors.adminEmail ? <FieldError id="adminEmail-error">{errors.adminEmail}</FieldError> : null}
+          </div>
+
+          <div>
+            <label className="mb-1.5 block text-sm font-medium" htmlFor="adminPassword">
+              {t('password.label')}
+            </label>
+            <div className="relative">
+              <input
+                id="adminPassword"
+                type={showPassword ? 'text' : 'password'}
+                required
+                dir="ltr"
+                className={`${inputClass} pe-12`}
+                value={form.adminPassword}
+                onChange={(e) => {
+                  patch('adminPassword', e.target.value);
+                  if (errors.adminPassword) setErrors((prev) => ({ ...prev, adminPassword: undefined }));
+                }}
+                autoComplete="new-password"
+                aria-invalid={!!errors.adminPassword}
+                aria-describedby={errors.adminPassword ? 'adminPassword-error' : undefined}
+              />
+              <button
+                type="button"
+                className="absolute end-3 top-1/2 -translate-y-1/2 text-[#e8f4f2]/55 hover:text-[#e8f4f2]"
+                onClick={() => setShowPassword((v) => !v)}
+                aria-label={showPassword ? t('password.hide') : t('password.show')}
+              >
+                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
+            </div>
+            {errors.adminPassword ? (
+              <FieldError id="adminPassword-error">{errors.adminPassword}</FieldError>
+            ) : (
+              <p className="mt-1.5 text-xs text-[#e8f4f2]/45">{t('password.hint')}</p>
+            )}
+          </div>
+
+          {/* Adresse de la boutique : déduite du nom, modifiable à la demande. */}
+          <div className="rounded-xl border border-white/10 bg-black/10 p-3">
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-xs font-medium text-[#e8f4f2]/70">{t('url.label')}</span>
+              <button
+                type="button"
+                className="inline-flex items-center gap-1 text-xs text-teal-300 hover:text-teal-200"
+                onClick={() => setEditSlug((v) => !v)}
+              >
+                <Pencil className="h-3 w-3" aria-hidden />
+                {t('url.edit')}
+              </button>
+            </div>
+            {editSlug ? (
+              <div className="relative mt-2">
                 <input
                   id="slug"
                   required
-                  className={`${inputClass} pr-10 font-mono`}
+                  dir="ltr"
+                  aria-label={t('url.slugLabel')}
+                  className={`${inputClass} pe-10 font-mono`}
                   value={form.slug}
                   onChange={(e) => {
                     setSlugTouched(true);
@@ -280,7 +407,7 @@ const CreateStore = () => {
                   aria-invalid={!!errors.slug}
                   aria-describedby={errors.slug ? 'slug-error' : 'slug-hint'}
                 />
-                <span className="absolute right-3 top-1/2 -translate-y-1/2" aria-hidden>
+                <span className="absolute end-3 top-1/2 -translate-y-1/2" aria-hidden>
                   {slugState.status === 'checking' ? (
                     <Loader2 className="h-4 w-4 animate-spin text-[#e8f4f2]/50" />
                   ) : slugState.status === 'ok' ? (
@@ -290,145 +417,75 @@ const CreateStore = () => {
                   ) : null}
                 </span>
               </div>
-              {errors.slug ? <FieldError id="slug-error">{errors.slug}</FieldError> : null}
-              <p id="slug-hint" className="mt-1.5 break-all text-xs text-[#e8f4f2]/50" aria-live="polite">
-                {slugState.status === 'unavailable' ? (
-                  <span className="text-red-300">
-                    {slugState.reason === 'invalid'
-                      ? 'Adresse invalide (3 caractères minimum : lettres, chiffres, tirets).'
-                      : 'Cette adresse est déjà prise.'}{' '}
-                    {slugState.suggestion ? (
-                      <button
-                        type="button"
-                        className="underline hover:text-red-200"
-                        onClick={() => {
-                          setSlugTouched(true);
-                          patch('slug', slugState.suggestion!);
-                        }}
-                      >
-                        Utiliser « {slugState.suggestion} »
-                      </button>
-                    ) : null}
-                  </span>
-                ) : previewUrl ? (
-                  <>
-                    Votre boutique : <span className="text-[#e8f4f2]/80">{previewUrl}</span>
-                  </>
-                ) : (
-                  'Choisissez un slug pour voir l’URL de votre boutique'
-                )}
-              </p>
-            </div>
-            <div>
-              <span className="mb-1.5 block text-sm font-medium">Que vendez-vous ? (optionnel)</span>
-              <div className="grid grid-cols-2 gap-2">
-                {STARTER_PACKS.map((pack) => (
-                  <button
-                    key={pack.key}
-                    type="button"
-                    aria-pressed={sector === pack.key}
-                    onClick={() => setSector(sector === pack.key ? '' : pack.key)}
-                    className={`rounded-xl border px-3 py-2.5 text-left text-xs transition ${
-                      sector === pack.key
-                        ? 'border-teal-400 bg-teal-500/15 text-[#e8f4f2]'
-                        : 'border-white/15 bg-black/10 text-[#e8f4f2]/75 hover:border-white/30'
-                    }`}
-                  >
-                    <span className="block font-semibold">{pack.label}</span>
-                  </button>
-                ))}
-              </div>
-              <p className="mt-1.5 text-xs text-[#e8f4f2]/45">
-                Nous préparons le design, les catégories et des produits d’exemple adaptés.
-              </p>
-            </div>
-          </fieldset>
-
-          <fieldset className="space-y-4">
-            <legend className="mb-1 text-xs font-semibold uppercase tracking-wider text-teal-300">
-              2 · Votre compte
-            </legend>
-            <div>
-              <label className="mb-1.5 block text-sm font-medium" htmlFor="adminFullName">
-                Votre nom
-              </label>
-              <input
-                id="adminFullName"
-                className={inputClass}
-                value={form.adminFullName}
-                onChange={(e) => patch('adminFullName', e.target.value)}
-                autoComplete="name"
-              />
-            </div>
-            <div>
-              <label className="mb-1.5 block text-sm font-medium" htmlFor="adminEmail">
-                Email admin
-              </label>
-              <input
-                id="adminEmail"
-                type="email"
-                required
-                className={inputClass}
-                value={form.adminEmail}
-                onChange={(e) => {
-                  patch('adminEmail', e.target.value);
-                  if (errors.adminEmail) setErrors((prev) => ({ ...prev, adminEmail: undefined }));
-                }}
-                autoComplete="email"
-                aria-invalid={!!errors.adminEmail}
-                aria-describedby={errors.adminEmail ? 'adminEmail-error' : undefined}
-              />
-              {errors.adminEmail ? <FieldError id="adminEmail-error">{errors.adminEmail}</FieldError> : null}
-            </div>
-            <div>
-              <label className="mb-1.5 block text-sm font-medium" htmlFor="adminPassword">
-                Mot de passe
-              </label>
-              <div className="relative">
-                <input
-                  id="adminPassword"
-                  type={showPassword ? 'text' : 'password'}
-                  required
-                  className={`${inputClass} pr-12`}
-                  value={form.adminPassword}
-                  onChange={(e) => {
-                    patch('adminPassword', e.target.value);
-                    if (errors.adminPassword) setErrors((prev) => ({ ...prev, adminPassword: undefined }));
-                  }}
-                  autoComplete="new-password"
-                  aria-invalid={!!errors.adminPassword}
-                  aria-describedby={errors.adminPassword ? 'adminPassword-error' : undefined}
-                />
-                <button
-                  type="button"
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[#e8f4f2]/55 hover:text-[#e8f4f2]"
-                  onClick={() => setShowPassword((v) => !v)}
-                  aria-label={showPassword ? 'Masquer le mot de passe' : 'Afficher le mot de passe'}
-                >
-                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                </button>
-              </div>
-              {errors.adminPassword ? (
-                <FieldError id="adminPassword-error">{errors.adminPassword}</FieldError>
+            ) : null}
+            {errors.slug ? <FieldError id="slug-error">{errors.slug}</FieldError> : null}
+            <p id="slug-hint" dir="ltr" className="mt-1.5 break-all text-xs text-[#e8f4f2]/50 text-start" aria-live="polite">
+              {slugState.status === 'unavailable' ? (
+                <span className="text-red-300">
+                  {slugState.reason === 'invalid' ? t('url.invalid') : t('url.taken')}{' '}
+                  {slugState.suggestion ? (
+                    <button
+                      type="button"
+                      className="underline hover:text-red-200"
+                      onClick={() => {
+                        setSlugTouched(true);
+                        patch('slug', slugState.suggestion!);
+                      }}
+                    >
+                      {t('url.use', { slug: slugState.suggestion })}
+                    </button>
+                  ) : null}
+                </span>
+              ) : previewUrl ? (
+                <span className="text-[#e8f4f2]/80">{previewUrl}</span>
               ) : (
-                <p className="mt-1.5 text-xs text-[#e8f4f2]/45">Minimum 8 caractères</p>
+                <span dir={dir}>{t('url.empty')}</span>
               )}
-            </div>
-            <div>
-              <label className="mb-1.5 block text-sm font-medium" htmlFor="phone">
-                Téléphone / WhatsApp (optionnel)
-              </label>
-              <input
-                id="phone"
-                type="tel"
-                className={inputClass}
-                value={form.phone}
-                onChange={(e) => patch('phone', e.target.value)}
-                autoComplete="tel"
-                placeholder="06 00 00 00 00"
-              />
-            </div>
-          </fieldset>
+            </p>
+          </div>
+
+          <div>
+            <button
+              type="button"
+              className="inline-flex items-center gap-1 text-xs text-[#e8f4f2]/60 hover:text-[#e8f4f2]"
+              aria-expanded={showMore}
+              onClick={() => setShowMore((v) => !v)}
+            >
+              <ChevronDown className={`h-3.5 w-3.5 transition ${showMore ? 'rotate-180' : ''}`} aria-hidden />
+              {showMore ? t('less') : t('more')}
+            </button>
+            {showMore ? (
+              <div className="mt-3 space-y-4">
+                <div>
+                  <label className="mb-1.5 block text-sm font-medium" htmlFor="adminFullName">
+                    {t('fullName.label')}
+                  </label>
+                  <input
+                    id="adminFullName"
+                    className={inputClass}
+                    value={form.adminFullName}
+                    onChange={(e) => patch('adminFullName', e.target.value)}
+                    autoComplete="name"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1.5 block text-sm font-medium" htmlFor="phone">
+                    {t('phone.label')}
+                  </label>
+                  <input
+                    id="phone"
+                    type="tel"
+                    dir="ltr"
+                    className={inputClass}
+                    value={form.phone}
+                    onChange={(e) => patch('phone', e.target.value)}
+                    autoComplete="tel"
+                    placeholder="06 00 00 00 00"
+                  />
+                </div>
+              </div>
+            ) : null}
+          </div>
 
           <div>
             <button
@@ -436,16 +493,15 @@ const CreateStore = () => {
               disabled={pending}
               className="w-full rounded-xl bg-[#e8a317] px-5 py-3.5 text-sm font-semibold text-[#0a1628] transition hover:brightness-110 disabled:opacity-60"
             >
-              {pending ? 'Création…' : 'Lancer ma boutique'}
+              {pending ? t('submitting') : t('submit')}
             </button>
             <p className="mt-3 text-center text-xs text-[#e8f4f2]/60">
-              {TRIAL_DAYS} jours d’essai gratuit, puis{' '}
-              {planName ? `plan ${planName}` : 'le plan choisi'} — vous pourrez changer de plan à tout moment.
+              {t('trial', { days: TRIAL_DAYS, plan: planName ? t('plan.named', { plan: planName }) : t('plan.fallback') })}
             </p>
             <p className="mt-2 text-center text-xs text-[#e8f4f2]/50">
-              Déjà un compte ?{' '}
+              {t('login.prompt')}{' '}
               <Link to="/admin" className="underline hover:text-[#e8f4f2]">
-                Connexion admin
+                {t('login.link')}
               </Link>
             </p>
           </div>

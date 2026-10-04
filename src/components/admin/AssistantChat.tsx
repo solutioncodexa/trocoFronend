@@ -34,6 +34,7 @@ import { useCatalogFlow } from './useCatalogFlow';
 import { useDesignFlow } from './useDesignFlow';
 import { usePaymentsFlow } from './usePaymentsFlow';
 import { paletteFromFile, paletteFromUrl, type Palette as LogoPalette } from '@/config/paletteFromImage';
+import { ASSISTANT_FLOW_EVENT, type AssistantFlowId } from '@/utils/assistantBus';
 import { useAssistantTools } from './useAssistantTools';
 import { useComplianceFlow } from './useComplianceFlow';
 import { useContentFlow } from './useContentFlow';
@@ -157,6 +158,9 @@ export function AssistantChat() {
   const [error, setError] = useState<string | null>(null);
   const [flowStep, setFlowStep] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [showAllFlows, setShowAllFlows] = useState(false);
+  // Rempli à chaque rendu : lance un parcours demandé depuis un autre écran (ex. liste « Premiers pas »).
+  const runFlow = useRef<((id: AssistantFlowId) => void) | null>(null);
   const [logoPalette, setLogoPalette] = useState<LogoPalette | null>(null);
   const queue = useRef<FlowStepId[]>([]);
   const endRef = useRef<HTMLDivElement>(null);
@@ -373,6 +377,18 @@ export function AssistantChat() {
     : 0;
   const showNudge = pendingSteps > 0 && !nudgeSeen();
 
+  useEffect(() => {
+    const onFlow = (e: Event) => {
+      const flow = (e as CustomEvent<{ flow: AssistantFlowId }>).detail?.flow;
+      if (!flow) return;
+      markNudgeSeen();
+      setOpen(true);
+      runFlow.current?.(flow);
+    };
+    window.addEventListener(ASSISTANT_FLOW_EVENT, onFlow);
+    return () => window.removeEventListener(ASSISTANT_FLOW_EVENT, onFlow);
+  }, []);
+
   if (!status?.enabled) return null;
 
   // ───────────── Configuration guidée ─────────────
@@ -481,6 +497,22 @@ export function AssistantChat() {
       }
     }
   };
+
+  const flowList: { key: AssistantFlowId; label: string; Icon: typeof Wand2; run: () => void }[] = [
+    { key: 'basics', label: t('assistant.flow.start'), Icon: Wand2, run: () => void startFlow() },
+    { key: 'catalog', label: t('assistant.catalog.start'), Icon: FolderTree, run: () => void catalog.start() },
+    { key: 'design', label: t('assistant.design.start'), Icon: Palette, run: () => void design.start() },
+    { key: 'shipping', label: t('assistant.ship.start'), Icon: Truck, run: () => void shipping.start() },
+    { key: 'marketing', label: t('assistant.mkt.start'), Icon: Megaphone, run: () => void marketing.start() },
+    { key: 'growth', label: t('assistant.growth.start'), Icon: Crown, run: () => void growth.start() },
+    { key: 'legal', label: t('assistant.legal.start'), Icon: ShieldCheck, run: () => void compliance.start() },
+    { key: 'manage', label: t('assistant.manage.start'), Icon: PencilLine, run: () => manage.start() },
+    { key: 'content', label: t('assistant.content.start'), Icon: BookOpen, run: () => void content.start() },
+    { key: 'payments', label: t('assistant.pay.start'), Icon: CreditCard, run: () => void payments.start() },
+  ];
+  runFlow.current = (id) => flowList.find((f) => f.key === id)?.run();
+  // Écran d'accueil du chat : les 4 parcours essentiels, les autres derrière « Plus de parcours ».
+  const visibleFlows = showAllFlows ? flowList : flowList.slice(0, 4);
 
   const renderWidget = (w: AnyWidget): ReactNode => {
     switch (w.kind) {
@@ -629,18 +661,7 @@ export function AssistantChat() {
             {entries.length === 0 ? (
               <div className="space-y-3">
                 <p className="text-muted-foreground">{t('assistant.intro')}</p>
-                {[
-                  { key: 'basics', label: t('assistant.flow.start'), Icon: Wand2, run: () => void startFlow() },
-                  { key: 'catalog', label: t('assistant.catalog.start'), Icon: FolderTree, run: () => void catalog.start() },
-                  { key: 'design', label: t('assistant.design.start'), Icon: Palette, run: () => void design.start() },
-                  { key: 'shipping', label: t('assistant.ship.start'), Icon: Truck, run: () => void shipping.start() },
-                  { key: 'marketing', label: t('assistant.mkt.start'), Icon: Megaphone, run: () => void marketing.start() },
-                  { key: 'growth', label: t('assistant.growth.start'), Icon: Crown, run: () => void growth.start() },
-                  { key: 'legal', label: t('assistant.legal.start'), Icon: ShieldCheck, run: () => void compliance.start() },
-                  { key: 'manage', label: t('assistant.manage.start'), Icon: PencilLine, run: () => manage.start() },
-                  { key: 'content', label: t('assistant.content.start'), Icon: BookOpen, run: () => void content.start() },
-                  { key: 'payments', label: t('assistant.pay.start'), Icon: CreditCard, run: () => void payments.start() },
-                ].map(({ key, label, Icon, run }, i) => (
+                {visibleFlows.map(({ key, label, Icon, run }, i) => (
                   <Button
                     key={key}
                     type="button"
@@ -653,6 +674,16 @@ export function AssistantChat() {
                     {label}
                   </Button>
                 ))}
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="w-full"
+                  aria-expanded={showAllFlows}
+                  onClick={() => setShowAllFlows((v) => !v)}
+                >
+                  {showAllFlows ? t('assistant.flows.less') : t('assistant.flows.more')}
+                </Button>
                 <div className="flex flex-col gap-2">
                   {suggestionsFor(pathname).map((key) => (
                     <button

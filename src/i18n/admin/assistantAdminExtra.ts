@@ -375,7 +375,20 @@ export type AssistantAdminMessageKey =
   | 'assistant.tool.undo'
   | 'assistant.tool.undone'
   | 'assistant.flow.colors.fromLogo'
-  | 'assistant.nudge';
+  | 'assistant.nudge'
+  | 'dashboard.setupShipping'
+  | 'dashboard.setupWithAssistant'
+  | 'assistant.flows.more'
+  | 'assistant.flows.less'
+  | 'orders.confirmWhatsApp'
+  | 'orders.confirmWhatsAppHint'
+  | 'orders.confirmWhatsAppNoPhone'
+  | 'launch.title'
+  | 'launch.body'
+  | 'launch.preview'
+  | 'launch.action'
+  | 'launch.done'
+  | 'launch.error';
 
 const fr: Record<AssistantAdminMessageKey, string> = {
   'assistant.fab': 'Besoin d’aide ?',
@@ -753,6 +766,19 @@ const fr: Record<AssistantAdminMessageKey, string> = {
   'assistant.tool.undone': 'Action annulée, la boutique est revenue à l’état précédent ✅',
   'assistant.flow.colors.fromLogo': 'Couleurs de mon logo',
   'assistant.nudge': '{n} étape(s) de configuration à terminer',
+  'dashboard.setupShipping': 'Configurer la livraison',
+  'dashboard.setupWithAssistant': 'Avec l’assistant',
+  'assistant.flows.more': 'Plus de parcours',
+  'assistant.flows.less': 'Moins de parcours',
+  'orders.confirmWhatsApp': 'Confirmer par WhatsApp',
+  'orders.confirmWhatsAppHint': 'Ouvre WhatsApp avec le message de confirmation prêt à envoyer.',
+  'orders.confirmWhatsAppNoPhone': 'Numéro du client inutilisable pour WhatsApp.',
+  'launch.title': 'Votre boutique n’est pas encore visible des clients',
+  'launch.body': 'Vous seul pouvez la voir pour l’instant. Prévisualisez-la, puis lancez-la quand vous êtes prêt.',
+  'launch.preview': 'Prévisualiser',
+  'launch.action': 'Lancer ma boutique',
+  'launch.done': 'Votre boutique est en ligne 🎉',
+  'launch.error': 'Impossible de lancer la boutique. Réessayez.',
 };
 
 const en: Record<AssistantAdminMessageKey, string> = {
@@ -1130,6 +1156,19 @@ const en: Record<AssistantAdminMessageKey, string> = {
   'assistant.tool.undone': 'Action undone, the store is back to its previous state ✅',
   'assistant.flow.colors.fromLogo': 'Colors from my logo',
   'assistant.nudge': '{n} setup step(s) left to finish',
+  'dashboard.setupShipping': 'Set up delivery',
+  'dashboard.setupWithAssistant': 'With the assistant',
+  'assistant.flows.more': 'More guided setups',
+  'assistant.flows.less': 'Fewer guided setups',
+  'orders.confirmWhatsApp': 'Confirm on WhatsApp',
+  'orders.confirmWhatsAppHint': 'Opens WhatsApp with the confirmation message ready to send.',
+  'orders.confirmWhatsAppNoPhone': 'The customer’s number cannot be used for WhatsApp.',
+  'launch.title': 'Your store is not visible to customers yet',
+  'launch.body': 'Only you can see it for now. Preview it, then launch it when you are ready.',
+  'launch.preview': 'Preview',
+  'launch.action': 'Launch my store',
+  'launch.done': 'Your store is live 🎉',
+  'launch.error': 'Could not launch the store. Try again.',
 };
 
 const ar: Record<AssistantAdminMessageKey, string> = {
@@ -1507,6 +1546,19 @@ const ar: Record<AssistantAdminMessageKey, string> = {
   'assistant.tool.undone': 'تم إلغاء الإجراء وعاد المتجر إلى حالته السابقة ✅',
   'assistant.flow.colors.fromLogo': 'ألوان شعاري',
   'assistant.nudge': 'تبقّى {n} خطوة إعداد لإنهائها',
+  'dashboard.setupShipping': 'إعداد التوصيل',
+  'dashboard.setupWithAssistant': 'مع المساعد',
+  'assistant.flows.more': 'المزيد من المسارات',
+  'assistant.flows.less': 'مسارات أقل',
+  'orders.confirmWhatsApp': 'التأكيد عبر واتساب',
+  'orders.confirmWhatsAppHint': 'يفتح واتساب مع رسالة التأكيد الجاهزة للإرسال.',
+  'orders.confirmWhatsAppNoPhone': 'رقم الزبون غير صالح لواتساب.',
+  'launch.title': 'متجرك غير ظاهر للزبائن بعد',
+  'launch.body': 'أنت وحدك من يراه حاليًا. عاينه ثم أطلقه عندما تكون جاهزًا.',
+  'launch.preview': 'معاينة',
+  'launch.action': 'أطلق متجري',
+  'launch.done': 'متجرك أصبح متاحًا على الإنترنت 🎉',
+  'launch.error': 'تعذّر إطلاق المتجر. أعد المحاولة.',
 };
 
 export const assistantAdminExtra: Record<StoreLocale, Record<AssistantAdminMessageKey, string>> = {

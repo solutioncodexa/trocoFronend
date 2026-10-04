@@ -40,6 +40,7 @@ const VerifyEmail = lazy(() => import("./pages/VerifyEmail"));
 const AdminLogin = lazy(() => import("./pages/admin/AdminLogin"));
 const AdminDashboard = lazy(() => import("./pages/admin/AdminDashboard"));
 const AdminProducts = lazy(() => import("./pages/admin/AdminProducts"));
+const AdminProductImport = lazy(() => import("./pages/admin/AdminProductImport"));
 const AdminOrders = lazy(() => import("./pages/admin/AdminOrders"));
 const AdminCustomRequests = lazy(() => import("./pages/admin/AdminCustomRequests"));
 const AdminCategories = lazy(() => import("./pages/admin/AdminCategories"));
@@ -209,6 +210,7 @@ const App = () => (
 
                     <Route path="/admin" element={<AdminLogin />} />
                     <Route path="/admin/dashboard" element={<ProtectedAdminRoute><AdminDashboard /></ProtectedAdminRoute>} />
+                    <Route path="/admin/produits/import" element={<ProtectedAdminRoute permission={PERMISSIONS.PRODUCTS_CREATE}><AdminProductImport /></ProtectedAdminRoute>} />
                     <Route path="/admin/produits" element={<ProtectedAdminRoute permission={PERMISSIONS.PRODUCTS_VIEW}><AdminProducts /></ProtectedAdminRoute>} />
                     <Route path="/admin/commandes" element={<ProtectedAdminRoute permission={PERMISSIONS.ORDERS_VIEW}><AdminOrders /></ProtectedAdminRoute>} />
                     <Route path="/admin/personnalisations" element={<ProtectedAdminRoute permission={PERMISSIONS.CUSTOM_ORDERS_VIEW}><AdminCustomRequests /></ProtectedAdminRoute>} />

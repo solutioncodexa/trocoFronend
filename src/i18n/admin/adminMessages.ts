@@ -15,6 +15,7 @@ import {
   guideAdminExtra,
   type GuideAdminMessageKey,
 } from './guideAdminExtra';
+import { importAdminExtra, type ImportAdminMessageKey } from './importAdminExtra';
 import {
   morePagesAdminExtra,
   type MorePagesAdminMessageKey,
@@ -31,6 +32,7 @@ export type AdminMessageKey =
   | AppearanceAdminMessageKey
   | DashboardAdminMessageKey
   | GuideAdminMessageKey
+  | ImportAdminMessageKey
   | MorePagesAdminMessageKey
   | PagesAdminMessageKey
   | 'nav.overview'
@@ -251,6 +253,7 @@ type AdminCoreMessageKey = Exclude<
   | AppearanceAdminMessageKey
   | DashboardAdminMessageKey
   | GuideAdminMessageKey
+  | ImportAdminMessageKey
   | MorePagesAdminMessageKey
   | PagesAdminMessageKey
 >;
@@ -918,6 +921,7 @@ export const adminMessages: Record<AdminLocale, Record<AdminMessageKey, string>>
     ...appearanceAdminExtra.fr,
     ...dashboardAdminExtra.fr,
     ...guideAdminExtra.fr,
+    ...importAdminExtra.fr,
     ...morePagesAdminExtra.fr,
     ...pagesAdminExtra.fr,
   },
@@ -927,6 +931,7 @@ export const adminMessages: Record<AdminLocale, Record<AdminMessageKey, string>>
     ...appearanceAdminExtra.ar,
     ...dashboardAdminExtra.ar,
     ...guideAdminExtra.ar,
+    ...importAdminExtra.ar,
     ...morePagesAdminExtra.ar,
     ...pagesAdminExtra.ar,
   },
@@ -936,6 +941,7 @@ export const adminMessages: Record<AdminLocale, Record<AdminMessageKey, string>>
     ...appearanceAdminExtra.en,
     ...dashboardAdminExtra.en,
     ...guideAdminExtra.en,
+    ...importAdminExtra.en,
     ...morePagesAdminExtra.en,
     ...pagesAdminExtra.en,
   },

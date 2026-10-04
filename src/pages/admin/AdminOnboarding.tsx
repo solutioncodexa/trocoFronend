@@ -291,6 +291,8 @@ const AdminOnboarding = () => {
     mutationFn: async () => {
       if (publishHome) await createHome.mutateAsync();
       if (createLegal) await addLegal.mutateAsync();
+      // « Publier ma boutique » la rend aussi visible des clients.
+      await platformApi.setStorefrontLive(true);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['store-pages'] });

@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Package,
   ShoppingCart,
@@ -18,6 +18,10 @@ import {
 } from 'lucide-react';
 import { useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Sparkles, Truck } from 'lucide-react';
+import { assistantApi } from '@/services/api/assistant';
+import { shippingApi } from '@/services/api/shipping';
+import { requestAssistantFlow, type AssistantFlowId } from '@/utils/assistantBus';
 import AdminLayout from '@/components/admin/AdminLayout';
 import { useAdminLocale } from '@/contexts/AdminLocaleContext';
 import type { AdminMessageKey } from '@/i18n/admin/adminMessages';
@@ -52,6 +56,7 @@ const AdminDashboard = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { siteName, logoUrl, slug, store } = useStoreBrand();
+  const queryClient = useQueryClient();
 
   useEffect(() => {
     const state = location.state as { onboarding?: boolean; pendingActivation?: boolean } | null;
@@ -86,6 +91,25 @@ const AdminDashboard = () => {
     queryKey: ['store-pages'],
     queryFn: () => storePagesApi.list(),
     staleTime: 30_000,
+  });
+  const { data: assistantStatus } = useQuery({
+    queryKey: ['assistant-status'],
+    queryFn: assistantApi.status,
+    staleTime: Infinity,
+    retry: false,
+  });
+  const { data: carriers } = useQuery({
+    queryKey: ['shipping-carriers', 'admin'],
+    queryFn: () => shippingApi.listAdmin(),
+    staleTime: 30_000,
+  });
+  const launchStore = useMutation({
+    mutationFn: () => platformApi.setStorefrontLive(true),
+    onSuccess: () => {
+      toast.success(t('launch.done'));
+      void queryClient.invalidateQueries({ queryKey: ['store-settings'] });
+    },
+    onError: () => toast.error(t('launch.error')),
   });
   const storefrontUrl = buildStorefrontUrl(slug || store?.slug || storeSettings?.slug);
   const { data: ordersPage } = useQuery({
@@ -161,30 +185,49 @@ const AdminDashboard = () => {
   const hasLegal = [MENTIONS_PAGE_SLUG, TERMS_PAGE_SLUG, PRIVACY_PAGE_SLUG].every((slug) =>
     pageSlugs.has(slug),
   );
-  const setupSteps = [
+  // Chaque étape non faite peut être menée par l'assistant (parcours guidé) quand il est activé.
+  const setupSteps: {
+    done: boolean;
+    label: string;
+    href: string;
+    icon: typeof Package;
+    external?: boolean;
+    assistant?: AssistantFlowId;
+  }[] = [
     {
       done: hasLogo,
       label: t('dashboard.setupLogo'),
       href: '/admin/parametres',
       icon: ImagePlus,
+      assistant: 'basics',
     },
     {
       done: hasContact,
       label: t('dashboard.setupContact'),
       href: '/admin/parametres',
       icon: Phone,
+      assistant: 'basics',
     },
     {
       done: realProductCount > 0,
       label: t('dashboard.setupRealProduct'),
       href: '/admin/produits?action=new',
       icon: Package,
+      assistant: 'catalog',
+    },
+    {
+      done: (carriers?.length ?? 0) > 0,
+      label: t('dashboard.setupShipping'),
+      href: '/admin/livraison',
+      icon: Truck,
+      assistant: 'shipping',
     },
     {
       done: hasLegal,
       label: t('dashboard.setupLegal'),
       href: '/admin/onboarding?step=3',
       icon: FileText,
+      assistant: 'legal',
     },
     {
       done: hasLogo && realProductCount > 0,
@@ -227,6 +270,27 @@ const AdminDashboard = () => {
         </Button>
       }
     >
+      {storeSettings?.storefrontLive === false ? (
+        <div className="mb-6 rounded-2xl border border-primary/30 bg-primary/5 p-4 sm:p-5">
+          <p className="font-display text-base font-semibold">{t('launch.title')}</p>
+          <p className="mt-1 text-sm text-muted-foreground">{t('launch.body')}</p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <Button variant="outline" size="sm" asChild>
+              <a
+                href={`${storefrontUrl}${storefrontUrl.includes('?') ? '&' : '?'}preview=${storeSettings.previewKey ?? ''}`}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <ExternalLink className="me-1.5 h-3.5 w-3.5" />
+                {t('launch.preview')}
+              </a>
+            </Button>
+            <Button size="sm" disabled={launchStore.isPending} onClick={() => launchStore.mutate()}>
+              {t('launch.action')}
+            </Button>
+          </div>
+        </div>
+      ) : null}
       {pendingActivation ? (
         <div className="mb-6 rounded-2xl border border-amber-500/40 bg-amber-50 p-4 sm:p-5">
           <p className="font-display text-base font-semibold text-amber-950">
@@ -264,7 +328,7 @@ const AdminDashboard = () => {
           </div>
           <ul className="mt-5 grid gap-3 sm:grid-cols-2">
             {setupSteps.map((step) => (
-              <li key={step.label}>
+              <li key={step.label} className="flex items-center gap-2">
                 {step.external ? (
                   <a
                     href={step.href}
@@ -294,6 +358,18 @@ const AdminDashboard = () => {
                     <span className="text-sm font-medium">{step.label}</span>
                   </Link>
                 )}
+                {assistantStatus?.enabled && !step.done && step.assistant ? (
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    className="shrink-0 gap-1"
+                    onClick={() => requestAssistantFlow(step.assistant as AssistantFlowId)}
+                  >
+                    <Sparkles className="h-3.5 w-3.5" aria-hidden />
+                    {t('dashboard.setupWithAssistant')}
+                  </Button>
+                ) : null}
               </li>
             ))}
           </ul>

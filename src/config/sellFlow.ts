@@ -5,7 +5,8 @@
 
 // ───────────── Livraison ─────────────
 
-export const CARRIER_SUGGESTIONS = ['Amana', 'Aramex', 'DHL'] as const;
+// Transporteurs courants au Maroc (suggestions : la boutique reste libre d'en saisir un autre).
+export const CARRIER_SUGGESTIONS = ['Amana', 'Ozon Express', 'Cathedis', 'Aramex', 'DHL'] as const;
 
 /** Code transporteur : majuscules, chiffres et tirets bas, 30 caractères max, unique parmi les existants. */
 export function carrierCode(name: string, existing: string[]): string {

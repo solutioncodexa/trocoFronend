@@ -340,6 +340,10 @@ export interface StorePaymentsConfigDTO {
 
 /** Shell admin (GET /store-settings/me/summary). */
 export interface AdminStoreSummaryDTO {
+  /** false : boutique pas encore lancée, invisible des clients. */
+  storefrontLive?: boolean;
+  /** Clé à ajouter à l'adresse de la boutique (?preview=…) pour la voir avant son lancement. */
+  previewKey?: string;
   fournisseurId: number;
   slug: string;
   status?: string | null;

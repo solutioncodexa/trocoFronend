@@ -110,6 +110,13 @@ export const platformApi = {
     }),
 
   /** Shell admin — layout / dashboard / session. */
+  /** Lance la boutique (visible des clients) ou la remet en préparation. */
+  setStorefrontLive: (live: boolean): Promise<AdminStoreSummaryDTO> =>
+    apiRequest<AdminStoreSummaryDTO>(buildApiUrl('/store-settings/me/launch'), {
+      method: 'PUT',
+      body: JSON.stringify({ live }),
+    }),
+
   getMyStoreSummary: (): Promise<AdminStoreSummaryDTO> =>
     apiRequest<AdminStoreSummaryDTO>(buildApiUrl('/store-settings/me/summary')),
 

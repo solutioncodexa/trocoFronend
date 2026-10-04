@@ -40,6 +40,7 @@ import {
 } from 'lucide-react';
 import AdminNotification from './AdminNotification';
 import AdminFirstUseGuide from './AdminFirstUseGuide';
+import { useAdminPwa } from '@/hooks/useAdminPwa';
 import TrialBanner from './TrialBanner';
 import EmailVerificationBanner from './EmailVerificationBanner';
 import StockAlertDialog from './StockAlertDialog';
@@ -215,6 +216,7 @@ const AdminLayout = ({
   const { store } = useTenant();
   const { siteName, logoUrl, slug } = useStoreBrand();
   const { t, locale, setLocale, dir } = useAdminLocale();
+  useAdminPwa();
   const storefrontUrl = buildFreshStorefrontUrl(slug || store?.slug);
   const [sidebarOpenInternal, setSidebarOpenInternal] = useState(() => window.innerWidth >= 1024);
   const isSidebarOpen = sidebarOpenProp ?? sidebarOpenInternal;

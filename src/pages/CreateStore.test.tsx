@@ -18,6 +18,10 @@ vi.mock('@/contexts/AdminContext', () => ({
   }),
 }));
 
+vi.mock('@/contexts/AdminLocaleContext', () => ({
+  useAdminLocale: () => ({ locale: 'fr', setLocale: vi.fn(), dir: 'ltr' }),
+}));
+
 vi.mock('sonner', () => ({
   toast: { success: vi.fn(), error: vi.fn() },
 }));
@@ -42,9 +46,10 @@ describe('CreateStore', () => {
     fireEvent.change(screen.getByLabelText(/Nom de la boutique/i), {
       target: { value: 'Maison Atlas' },
     });
-    expect(screen.getByLabelText(/Adresse \(slug\)/i)).toHaveValue('maison-atlas');
+    // L'adresse se déduit du nom ; le champ n'apparaît que si on choisit de la modifier.
+    expect(screen.getByText(/maison-atlas/i)).toBeInTheDocument();
 
-    fireEvent.change(screen.getByLabelText(/Email admin/i), {
+    fireEvent.change(screen.getByLabelText(/Votre email/i), {
       target: { value: 'admin@maison-atlas.test' },
     });
     fireEvent.change(screen.getByLabelText(/^Mot de passe$/i), {
@@ -71,7 +76,7 @@ describe('CreateStore', () => {
     renderWithProviders(<CreateStore />);
 
     fireEvent.change(screen.getByLabelText(/Nom de la boutique/i), { target: { value: 'Shop' } });
-    fireEvent.change(screen.getByLabelText(/Email admin/i), { target: { value: 'a@b.com' } });
+    fireEvent.change(screen.getByLabelText(/Votre email/i), { target: { value: 'a@b.com' } });
     fireEvent.change(screen.getByLabelText(/^Mot de passe$/i), { target: { value: 'short' } });
     fireEvent.click(screen.getByRole('button', { name: /Lancer ma boutique/i }));
 

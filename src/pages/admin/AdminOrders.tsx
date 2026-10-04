@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Eye, Search, Phone, MapPin, ShoppingCart } from 'lucide-react';
+import { Eye, Search, Phone, MapPin, MessageCircle, ShoppingCart } from 'lucide-react';
 import AdminLayout from '@/components/admin/AdminLayout';
 import { useAdminLocale } from '@/contexts/AdminLocaleContext';
 import AdminPagination from '@/components/admin/AdminPagination';
@@ -18,9 +18,16 @@ import { formatDateTime } from '@/utils/formatDateTime';
 import { toast } from 'sonner';
 import { toastError, toastInfo } from '@/utils/toastMessages';
 import { cn } from '@/lib/utils';
+import { useStoreBrand } from '@/hooks/useStoreBrand';
+import {
+  buildOrderConfirmationMessage,
+  normalizeMessageLang,
+  orderConfirmationUrl,
+} from '@/utils/orderWhatsapp';
 
 const AdminOrders = () => {
   const { t } = useAdminLocale();
+  const brand = useStoreBrand();
   const [searchParams, setSearchParams] = useSearchParams();
   const orderIdParam = searchParams.get('order');
   const queryClient = useQueryClient();
@@ -419,6 +426,34 @@ const AdminOrders = () => {
                     >
                       {selectedOrder.customer?.phone}
                     </a>
+                  </div>
+                  <div className="sm:col-span-2">
+                    {(() => {
+                      const url = orderConfirmationUrl(
+                        selectedOrder.customer?.phone,
+                        buildOrderConfirmationMessage({
+                          lang: normalizeMessageLang(brand.store?.defaultLocale),
+                          storeName: brand.siteName || '',
+                          customerName: selectedOrder.customer?.fullName,
+                          items: (selectedOrder.items ?? []).map((it) => ({
+                            name: it.product?.name ?? '',
+                            quantity: it.quantity,
+                          })),
+                          total: formatPrice(selectedOrder.total ?? 0),
+                          city: selectedOrder.customer?.city,
+                        }),
+                      );
+                      return url ? (
+                        <Button type="button" variant="outline" size="sm" className="gap-1.5" asChild title={t('orders.confirmWhatsAppHint')}>
+                          <a href={url} target="_blank" rel="noopener noreferrer">
+                            <MessageCircle className="h-4 w-4" aria-hidden />
+                            {t('orders.confirmWhatsApp')}
+                          </a>
+                        </Button>
+                      ) : (
+                        <p className="text-xs text-muted-foreground">{t('orders.confirmWhatsAppNoPhone')}</p>
+                      );
+                    })()}
                   </div>
                   <div className="flex items-start gap-2 sm:col-span-2">
                     <MapPin className="w-4 h-4 text-muted-foreground mt-0.5" />

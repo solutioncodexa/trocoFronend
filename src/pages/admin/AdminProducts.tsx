@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Package, Plus, Pencil, Trash2, Search, Upload, X, ArrowLeft, ArrowRight, Star } from 'lucide-react';
 import type { CategoryDTO } from '@/types/api';
 import { createEmptyVariantRow, type ProductVariantFormRow } from '@/types/product-variant';
@@ -363,7 +363,8 @@ const AdminProducts = () => {
       ]);
     }
 
-    setExistingImageUrls(product.images || []);
+    // L'image par défaut des produits sans photo n'est pas une vraie image : on ne la propose pas à l'édition.
+    setExistingImageUrls((product.images || []).filter((u) => u !== '/placeholder.svg'));
     setImageFiles([]);
   };
 
@@ -501,9 +502,9 @@ const AdminProducts = () => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
+    // Une photo n'est plus obligatoire : le produit s'affiche avec une image par défaut jusqu'à son ajout.
     if (imageFiles.length === 0 && existingImageUrls.length === 0) {
-      toast.error('Veuillez ajouter au moins une image');
-      return;
+      toast.info('Produit enregistré sans photo : une image par défaut sera affichée. Vous pourrez l’ajouter plus tard.');
     }
 
     if (!formData.category) {
@@ -778,6 +779,11 @@ const AdminProducts = () => {
             ))}
           </SelectContent>
         </Select>
+        {canCreate && (
+          <Button variant="outline" asChild className="font-body">
+            <Link to="/admin/produits/import">{t('import.button')}</Link>
+          </Button>
+        )}
         {canCreate && (
           <Button onClick={() => handleOpenModal()} className="font-body">
             <Plus className="w-4 h-4 mr-2" />
