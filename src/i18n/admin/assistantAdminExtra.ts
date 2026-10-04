@@ -352,7 +352,30 @@ export type AssistantAdminMessageKey =
   | 'assistant.content.contactPage.done'
   | 'assistant.content.team'
   | 'assistant.content.done'
-  | 'assistant.content.error';
+  | 'assistant.content.error'
+  | 'assistant.tool.update_store_texts.done'
+  | 'assistant.tool.update_contact.done'
+  | 'assistant.tool.set_free_shipping_threshold.done'
+  | 'assistant.tool.create_category.done'
+  | 'assistant.tool.delete_category.done'
+  | 'assistant.tool.delete_product.done'
+  | 'assistant.tool.set_theme.done'
+  | 'assistant.tool.done'
+  | 'assistant.tool.delete_category.confirm'
+  | 'assistant.tool.delete_product.confirm'
+  | 'assistant.tool.set_theme.confirm'
+  | 'assistant.tool.confirm'
+  | 'assistant.tool.confirm.yes'
+  | 'assistant.tool.summary.item'
+  | 'assistant.tool.cancelled'
+  | 'assistant.tool.failed'
+  | 'assistant.tool.expired'
+  | 'assistant.tool.create_promo_code.done'
+  | 'assistant.tool.create_promo_code.confirm'
+  | 'assistant.tool.undo'
+  | 'assistant.tool.undone'
+  | 'assistant.flow.colors.fromLogo'
+  | 'assistant.nudge';
 
 const fr: Record<AssistantAdminMessageKey, string> = {
   'assistant.fab': 'Besoin d’aide ?',
@@ -707,6 +730,29 @@ const fr: Record<AssistantAdminMessageKey, string> = {
   'assistant.content.team': 'Pour ajouter un collaborateur, ouvrez /admin/membres : il faut choisir ses droits et définir son mot de passe, ce que je ne fais pas dans le chat par sécurité.',
   'assistant.content.done': 'Contenu de base terminé 🎉',
   'assistant.content.error': 'Impossible de continuer : {msg}',
+  'assistant.tool.update_store_texts.done': 'Textes de la boutique mis à jour ✅',
+  'assistant.tool.update_contact.done': 'Coordonnées mises à jour ✅',
+  'assistant.tool.set_free_shipping_threshold.done': 'Livraison gratuite dès {amount} MAD ✅',
+  'assistant.tool.create_category.done': 'Catégorie « {name} » créée ✅',
+  'assistant.tool.delete_category.done': 'Catégorie « {name} » supprimée ✅',
+  'assistant.tool.delete_product.done': 'Produit « {name} » supprimé ✅',
+  'assistant.tool.set_theme.done': 'Thème « {theme} » appliqué ✅',
+  'assistant.tool.done': 'Action effectuée ✅',
+  'assistant.tool.delete_category.confirm': 'Supprimer la catégorie « {name} » ?',
+  'assistant.tool.delete_product.confirm': 'Supprimer le produit « {name} » ?',
+  'assistant.tool.set_theme.confirm': 'Appliquer le thème « {theme} » ? L’apparence de la boutique va changer.',
+  'assistant.tool.confirm': 'Confirmer l’action ?',
+  'assistant.tool.confirm.yes': 'Oui, confirmer',
+  'assistant.tool.summary.item': 'Élément',
+  'assistant.tool.cancelled': 'Action annulée, rien n’a été modifié.',
+  'assistant.tool.failed': 'L’action n’a pas pu être faite : {msg}',
+  'assistant.tool.expired': 'Cette action a expiré. Redemandez-la-moi si vous le souhaitez.',
+  'assistant.tool.create_promo_code.done': 'Code promo « {code} » créé ✅',
+  'assistant.tool.create_promo_code.confirm': 'Créer le code promo « {code} » ({discount}) ?',
+  'assistant.tool.undo': 'Annuler cette action',
+  'assistant.tool.undone': 'Action annulée, la boutique est revenue à l’état précédent ✅',
+  'assistant.flow.colors.fromLogo': 'Couleurs de mon logo',
+  'assistant.nudge': '{n} étape(s) de configuration à terminer',
 };
 
 const en: Record<AssistantAdminMessageKey, string> = {
@@ -1061,6 +1107,29 @@ const en: Record<AssistantAdminMessageKey, string> = {
   'assistant.content.team': 'To add a team member, open /admin/membres: you need to choose their permissions and set their password, which I don’t do in chat for security.',
   'assistant.content.done': 'Basic content done 🎉',
   'assistant.content.error': 'Couldn’t continue: {msg}',
+  'assistant.tool.update_store_texts.done': 'Store texts updated ✅',
+  'assistant.tool.update_contact.done': 'Contact details updated ✅',
+  'assistant.tool.set_free_shipping_threshold.done': 'Free delivery from {amount} MAD ✅',
+  'assistant.tool.create_category.done': 'Category “{name}” created ✅',
+  'assistant.tool.delete_category.done': 'Category “{name}” deleted ✅',
+  'assistant.tool.delete_product.done': 'Product “{name}” deleted ✅',
+  'assistant.tool.set_theme.done': 'Theme “{theme}” applied ✅',
+  'assistant.tool.done': 'Action done ✅',
+  'assistant.tool.delete_category.confirm': 'Delete the category “{name}”?',
+  'assistant.tool.delete_product.confirm': 'Delete the product “{name}”?',
+  'assistant.tool.set_theme.confirm': 'Apply the theme “{theme}”? The store’s look will change.',
+  'assistant.tool.confirm': 'Confirm the action?',
+  'assistant.tool.confirm.yes': 'Yes, confirm',
+  'assistant.tool.summary.item': 'Item',
+  'assistant.tool.cancelled': 'Action cancelled, nothing was changed.',
+  'assistant.tool.failed': 'The action could not be done: {msg}',
+  'assistant.tool.expired': 'This action has expired. Ask me again if you wish.',
+  'assistant.tool.create_promo_code.done': 'Promo code “{code}” created ✅',
+  'assistant.tool.create_promo_code.confirm': 'Create the promo code “{code}” ({discount})?',
+  'assistant.tool.undo': 'Undo this action',
+  'assistant.tool.undone': 'Action undone, the store is back to its previous state ✅',
+  'assistant.flow.colors.fromLogo': 'Colors from my logo',
+  'assistant.nudge': '{n} setup step(s) left to finish',
 };
 
 const ar: Record<AssistantAdminMessageKey, string> = {
@@ -1415,6 +1484,29 @@ const ar: Record<AssistantAdminMessageKey, string> = {
   'assistant.content.team': 'لإضافة معاون افتح /admin/membres: يجب تحديد صلاحياته وكلمة مروره، وهو ما لا أفعله في المحادثة لأسباب أمنية.',
   'assistant.content.done': 'انتهى المحتوى الأساسي 🎉',
   'assistant.content.error': 'تعذّرت المتابعة: {msg}',
+  'assistant.tool.update_store_texts.done': 'تم تحديث نصوص المتجر ✅',
+  'assistant.tool.update_contact.done': 'تم تحديث بيانات الاتصال ✅',
+  'assistant.tool.set_free_shipping_threshold.done': 'التوصيل مجاني ابتداءً من {amount} درهم ✅',
+  'assistant.tool.create_category.done': 'تم إنشاء الفئة «{name}» ✅',
+  'assistant.tool.delete_category.done': 'تم حذف الفئة «{name}» ✅',
+  'assistant.tool.delete_product.done': 'تم حذف المنتج «{name}» ✅',
+  'assistant.tool.set_theme.done': 'تم تطبيق القالب «{theme}» ✅',
+  'assistant.tool.done': 'تم تنفيذ الإجراء ✅',
+  'assistant.tool.delete_category.confirm': 'حذف الفئة «{name}»؟',
+  'assistant.tool.delete_product.confirm': 'حذف المنتج «{name}»؟',
+  'assistant.tool.set_theme.confirm': 'تطبيق القالب «{theme}»؟ سيتغيّر مظهر المتجر.',
+  'assistant.tool.confirm': 'تأكيد الإجراء؟',
+  'assistant.tool.confirm.yes': 'نعم، أكّد',
+  'assistant.tool.summary.item': 'العنصر',
+  'assistant.tool.cancelled': 'تم إلغاء الإجراء ولم يتغيّر شيء.',
+  'assistant.tool.failed': 'تعذّر تنفيذ الإجراء: {msg}',
+  'assistant.tool.expired': 'انتهت صلاحية هذا الإجراء. اطلبه مني مجددًا إن شئت.',
+  'assistant.tool.create_promo_code.done': 'تم إنشاء الرمز الترويجي «{code}» ✅',
+  'assistant.tool.create_promo_code.confirm': 'إنشاء الرمز الترويجي «{code}» ({discount})؟',
+  'assistant.tool.undo': 'إلغاء هذا الإجراء',
+  'assistant.tool.undone': 'تم إلغاء الإجراء وعاد المتجر إلى حالته السابقة ✅',
+  'assistant.flow.colors.fromLogo': 'ألوان شعاري',
+  'assistant.nudge': 'تبقّى {n} خطوة إعداد لإنهائها',
 };
 
 export const assistantAdminExtra: Record<StoreLocale, Record<AssistantAdminMessageKey, string>> = {

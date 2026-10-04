@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useAdminLocale } from '@/contexts/AdminLocaleContext';
 import { COLOR_PRESETS, isHexColor } from '@/config/assistantFlow';
+import type { Palette } from '@/config/paletteFromImage';
 import { cn } from '@/lib/utils';
 
 /** Lien vers l'aperçu en direct de l'apparence, ouvert dans un autre onglet pour garder la conversation. */
@@ -56,7 +57,8 @@ export function ColorsWidget({
   onApply,
   onSkip,
   busy,
-}: SkipProps & { onApply: (primary: string, secondary: string) => void }) {
+  logoPalette,
+}: SkipProps & { onApply: (primary: string, secondary: string) => void; logoPalette?: Palette | null }) {
   const { t } = useAdminLocale();
   const [primary, setPrimary] = useState(COLOR_PRESETS[0].primary);
   const [secondary, setSecondary] = useState(COLOR_PRESETS[0].secondary);
@@ -65,6 +67,20 @@ export function ColorsWidget({
   return (
     <div className="mt-2 space-y-3">
       <div className="flex flex-wrap gap-2">
+        {logoPalette ? (
+          <button
+            type="button"
+            onClick={() => {
+              setPrimary(logoPalette.primary);
+              setSecondary(logoPalette.secondary);
+            }}
+            className="flex h-8 items-center gap-1.5 rounded-full border border-primary/40 px-2 text-xs transition hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+          >
+            <span className="h-4 w-4 rounded-full border" style={{ backgroundColor: logoPalette.primary }} aria-hidden />
+            <span className="h-4 w-4 rounded-full border" style={{ backgroundColor: logoPalette.secondary }} aria-hidden />
+            {t('assistant.flow.colors.fromLogo')}
+          </button>
+        ) : null}
         {COLOR_PRESETS.map((p) => (
           <button
             key={p.primary}

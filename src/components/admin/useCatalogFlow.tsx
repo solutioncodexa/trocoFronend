@@ -1,5 +1,5 @@
 import { useRef, type ReactNode } from 'react';
-import { aiCopyApi } from '@/services/api/aiCopy';
+import { proposeCopy } from '@/config/copyProposal';
 import { categoriesApi } from '@/services/api/categories';
 import { productsApi } from '@/services/api/products';
 import { compressImageWithReport } from '@/utils/compressImage';
@@ -169,13 +169,8 @@ export function useCatalogFlow(ctx: Ctx) {
       draft.current.files = files;
       clearWidgets();
       // Proposition de texte : l'utilisateur la reprend d'un clic ou écrit la sienne.
-      let proposal: string | undefined;
-      try {
-        const res = await aiCopyApi.generate({ kind: 'seo_description', topic: draft.current.name, storeName });
-        proposal = typeof res.text === 'string' ? res.text : undefined;
-      } catch {
-        proposal = undefined;
-      }
+      const proposal =
+        (await proposeCopy('product_description', draft.current.name, { storeName, locale: lang })) ?? undefined;
       say(t('assistant.catalog.product.desc'), { kind: 'cfield', field: 'desc', proposal });
     });
 

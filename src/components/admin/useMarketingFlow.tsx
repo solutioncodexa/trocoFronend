@@ -3,6 +3,7 @@ import { categoriesApi } from '@/services/api/categories';
 import { platformApi } from '@/services/api/platform';
 import { promoCodesApi } from '@/services/api/promoCodes';
 import { storePagesApi } from '@/services/api/storePages';
+import { proposeCopy } from '@/config/copyProposal';
 import { parseAmount, type MarketingWidget } from '@/config/assistantFlow';
 import {
   PROMO_CODE_SUGGESTIONS,
@@ -65,6 +66,7 @@ export function useMarketingFlow(ctx: Ctx) {
   const homePage = useRef<StorePage | null>(null);
   const seoCats = useRef<CategoryDTO[]>([]);
   const promo = useRef<PromoDraft>({ code: '', kind: 'percentage', value: 0 });
+  const homeSeo = useRef<{ title: string; description: string } | null>(null);
 
   const say = (content: string, widget?: MarketingWidget) => push({ role: 'assistant', content, widget });
   const echo = (content: string) => push({ role: 'user', content });
@@ -89,6 +91,19 @@ export function useMarketingFlow(ctx: Ctx) {
     return updated;
   };
 
+  /** Titre et description proposés : rédigés par le modèle dans la langue de l'interface, sinon modèle de phrase. */
+  const prepareHomeSeo = async () => {
+    const name = storeName() || homePage.current?.title || '';
+    const tagline = settings.current?.tagline;
+    const fallback = seoForStore(lang, name, tagline);
+    const topic = [name, tagline].filter(Boolean).join(' — ');
+    const [title, description] = await Promise.all([
+      proposeCopy('seo_title', topic, { storeName: name, locale: lang }),
+      proposeCopy('seo_description', topic, { storeName: name, locale: lang }),
+    ]);
+    homeSeo.current = { title: title ?? fallback.title, description: description ?? fallback.description };
+  };
+
   const askNext = () => {
     const next = queue.current.shift();
     if (!next) {
@@ -106,7 +121,12 @@ export function useMarketingFlow(ctx: Ctx) {
         { kind: 'myesno', id: 'pixels' },
       );
     }
-    if (next === 'homeSeo') return say(t('assistant.mkt.homeSeo.ask'), { kind: 'mseo' });
+    if (next === 'homeSeo') {
+      return void act(async () => {
+        await prepareHomeSeo();
+        say(t('assistant.mkt.homeSeo.ask'), { kind: 'mseo' });
+      });
+    }
     if (next === 'catSeo') return say(t('assistant.mkt.catSeo.ask', { n: seoCats.current.length }), { kind: 'myesno', id: 'catSeo' });
     return say(t('assistant.mkt.promo.ask'), { kind: 'myesno', id: 'promo' });
   };
@@ -200,7 +220,7 @@ export function useMarketingFlow(ctx: Ctx) {
     act(async () => {
       const page = homePage.current;
       if (!page) return askNext();
-      const seo = seoForStore(lang, storeName() || page.title, settings.current?.tagline);
+      const seo = homeSeo.current ?? seoForStore(lang, storeName() || page.title, settings.current?.tagline);
       await storePagesApi.update(page.id, {
         title: page.title,
         titleAr: page.titleAr ?? undefined,
@@ -324,7 +344,8 @@ export function useMarketingFlow(ctx: Ctx) {
       case 'myesno':
         return <YesNoWidget busy={busy} onYes={() => onYesNo(w.id, true)} onNo={() => onYesNo(w.id, false)} />;
       case 'mseo': {
-        const seo = seoForStore(lang, storeName() || homePage.current?.title || '', settings.current?.tagline);
+        const seo =
+          homeSeo.current ?? seoForStore(lang, storeName() || homePage.current?.title || '', settings.current?.tagline);
         return (
           <SummaryWidget
             busy={busy}

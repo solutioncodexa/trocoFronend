@@ -156,6 +156,11 @@ export type ContentWidget =
   | { kind: 'kyesno'; id: 'faq' | 'contactPage' }
   | { kind: 'kfield'; field: 'email' | 'city' | 'about' };
 
+/** Carte de confirmation d'une action à fort impact proposée par le modèle. */
+export type ToolWidget =
+  | { kind: 'tpending'; actionId: string; tool: string; display: Record<string, string> }
+  | { kind: 'tundo'; undoId: string };
+
 export type AnyWidget =
   | FlowWidget
   | CatalogWidget
@@ -166,7 +171,8 @@ export type AnyWidget =
   | GrowthWidget
   | LegalWidget
   | ManageWidget
-  | ContentWidget;
+  | ContentWidget
+  | ToolWidget;
 
 const CATALOG_KINDS = new Set(['cyesno', 'activity', 'catTree', 'catPick', 'cfield', 'photos', 'cconfirm']);
 export const isCatalogWidget = (w: AnyWidget): w is CatalogWidget => CATALOG_KINDS.has(w.kind);
@@ -191,3 +197,5 @@ export const isManageWidget = (w: AnyWidget): w is ManageWidget => MANAGE_KINDS.
 
 const CONTENT_KINDS = new Set(['kyesno', 'kfield']);
 export const isContentWidget = (w: AnyWidget): w is ContentWidget => CONTENT_KINDS.has(w.kind);
+
+export const isToolWidget = (w: AnyWidget): w is ToolWidget => w.kind === 'tpending' || w.kind === 'tundo';

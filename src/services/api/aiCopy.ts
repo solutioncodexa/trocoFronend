@@ -1,6 +1,14 @@
 import { apiRequest, buildApiUrl } from '@/config/api';
 
-export type AiCopyKind = 'seo_title' | 'seo_description' | 'hero' | 'faq' | 'cta';
+export type AiCopyKind =
+  | 'seo_title'
+  | 'seo_description'
+  | 'tagline'
+  | 'about'
+  | 'product_description'
+  | 'hero'
+  | 'faq'
+  | 'cta';
 export type AiCopyTone = 'pro' | 'friendly' | 'luxury';
 
 export type AiCopyGeneratePayload = {
@@ -8,6 +16,8 @@ export type AiCopyGeneratePayload = {
   topic: string;
   storeName?: string;
   tone?: AiCopyTone;
+  /** Langue du texte (fr | en | ar), pour les types rédigés par le modèle. */
+  locale?: 'fr' | 'en' | 'ar';
 };
 
 export const aiCopyApi = {

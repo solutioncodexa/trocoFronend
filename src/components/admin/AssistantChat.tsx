@@ -17,6 +17,7 @@ import {
   isMarketingWidget,
   isPhone,
   isShippingWidget,
+  isToolWidget,
   parseAmount,
   widgetForStep,
   type AnyWidget,
@@ -32,6 +33,8 @@ import type { Entry } from './assistantTypes';
 import { useCatalogFlow } from './useCatalogFlow';
 import { useDesignFlow } from './useDesignFlow';
 import { usePaymentsFlow } from './usePaymentsFlow';
+import { paletteFromFile, paletteFromUrl, type Palette as LogoPalette } from '@/config/paletteFromImage';
+import { useAssistantTools } from './useAssistantTools';
 import { useComplianceFlow } from './useComplianceFlow';
 import { useContentFlow } from './useContentFlow';
 import { useGrowthFlow } from './useGrowthFlow';
@@ -51,6 +54,23 @@ import {
 const STORAGE_KEY = 'troco_assistant_chat';
 const MAX_INPUT = 1000;
 const SETTINGS_KEY = ['store-settings', 'me'];
+const NUDGE_KEY = 'troco_assistant_nudge_seen';
+
+// sessionStorage peut être indisponible (navigation privée) : le rappel s'affiche alors simplement tant que le chat est fermé.
+const nudgeSeen = () => {
+  try {
+    return sessionStorage.getItem(NUDGE_KEY) === '1';
+  } catch {
+    return false;
+  }
+};
+const markNudgeSeen = () => {
+  try {
+    sessionStorage.setItem(NUDGE_KEY, '1');
+  } catch {
+    /* ignore */
+  }
+};
 
 /** Questions proposées selon l'écran ouvert (préfixe d'URL → clés de suggestions). */
 const SUGGESTIONS: Record<string, AdminMessageKey[]> = {
@@ -137,6 +157,7 @@ export function AssistantChat() {
   const [error, setError] = useState<string | null>(null);
   const [flowStep, setFlowStep] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [logoPalette, setLogoPalette] = useState<LogoPalette | null>(null);
   const queue = useRef<FlowStepId[]>([]);
   const endRef = useRef<HTMLDivElement>(null);
 
@@ -156,6 +177,21 @@ export function AssistantChat() {
 
   const clearWidgets = () => setEntries((prev) => prev.map((e) => (e.widget ? { ...e, widget: undefined } : e)));
 
+  const tools = useAssistantTools({
+    t,
+    busy,
+    setBusy,
+    push,
+    clearWidgets,
+    refresh: async () => {
+      await queryClient.invalidateQueries({
+        predicate: (q) => /store-settings|categor|product|store-pages/i.test(JSON.stringify(q.queryKey)),
+      });
+      await refreshTenant();
+      await loadFromAdminSession();
+    },
+  });
+
   const chat = useMutation({
     mutationFn: (history: Entry[]) =>
       assistantApi.chat(
@@ -164,7 +200,7 @@ export function AssistantChat() {
         locale,
         flowStep ?? undefined,
       ),
-    onSuccess: ({ reply }) => push({ role: 'assistant', content: reply }),
+    onSuccess: ({ reply, actions }) => tools.handleReply(reply, actions),
     onError: (e: unknown) => {
       // apiRequest renvoie ce texte générique quand la réponse n'a pas de message exploitable
       // (ex. 504 HTML de nginx quand le modèle met trop de temps à répondre).
@@ -309,6 +345,34 @@ export function AssistantChat() {
     if (open) endRef.current?.scrollIntoView({ block: 'end' });
   }, [open, entries, chat.isPending]);
 
+  // Palette du logo déjà en ligne : lue seulement quand le chat est ouvert, sans erreur si l'image n'est pas lisible.
+  const existingLogo = store?.logoUrl;
+  useEffect(() => {
+    if (!open || logoPalette || !existingLogo) return;
+    let cancelled = false;
+    void paletteFromUrl(existingLogo).then((p) => {
+      if (!cancelled && p) setLogoPalette(p);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [open, existingLogo, logoPalette]);
+
+  // Rappel discret : nombre d'étapes de base encore à faire, tant que le chat n'a pas été ouvert pendant cette session.
+  const { data: nudgeSettings } = useQuery({
+    queryKey: SETTINGS_KEY,
+    queryFn: () => platformApi.getMyStoreSettings(),
+    enabled: Boolean(status?.enabled) && !open,
+    staleTime: 5 * 60 * 1000,
+    retry: false,
+  });
+  const pendingSteps = nudgeSettings
+    ? buildFlow(nudgeSettings, nudgeSettings.planCode ?? store?.planCode).filter(
+        (s) => s !== 'colors' && s !== 'whatsappBusiness',
+      ).length
+    : 0;
+  const showNudge = pendingSteps > 0 && !nudgeSeen();
+
   if (!status?.enabled) return null;
 
   // ───────────── Configuration guidée ─────────────
@@ -427,20 +491,22 @@ export function AssistantChat() {
           <UploadWidget
             busy={busy}
             onSkip={skip}
-            onFile={(file) =>
+            onFile={(file) => {
+              void paletteFromFile(file).then((p) => p && setLogoPalette(p));
               void answer(
                 file.name,
                 w,
                 async () => saveSettings({ logoUrl: await uploadImage(file) }),
                 'assistant.flow.logo.done',
-              )
-            }
+              );
+            }}
           />
         );
       case 'colors':
         return (
           <ColorsWidget
             busy={busy}
+            logoPalette={logoPalette}
             onSkip={skip}
             onApply={(primary, secondary) =>
               void answer(
@@ -480,6 +546,7 @@ export function AssistantChat() {
         if (isLegalWidget(w)) return compliance.renderWidget(w);
         if (isManageWidget(w)) return manage.renderWidget(w);
         if (isContentWidget(w)) return content.renderWidget(w);
+        if (isToolWidget(w)) return tools.renderWidget(w);
         return payments.renderWidget(w);
     }
   };
@@ -515,12 +582,24 @@ export function AssistantChat() {
       {!open ? (
         <button
           type="button"
-          onClick={() => setOpen(true)}
+          onClick={() => {
+            markNudgeSeen();
+            setOpen(true);
+          }}
           aria-label={t('assistant.openAria')}
           className="fixed bottom-4 end-4 z-40 flex h-12 items-center gap-2 rounded-full bg-primary px-4 text-sm font-medium text-primary-foreground shadow-lg transition hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
         >
           <MessageCircle className="h-5 w-5" aria-hidden />
           <span className="hidden sm:inline">{t('assistant.fab')}</span>
+          {showNudge ? (
+            <span
+              className="absolute -end-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-destructive px-1 text-[11px] font-semibold text-destructive-foreground"
+              title={t('assistant.nudge', { n: pendingSteps })}
+            >
+              {pendingSteps}
+              <span className="sr-only">{t('assistant.nudge', { n: pendingSteps })}</span>
+            </span>
+          ) : null}
         </button>
       ) : (
         <section

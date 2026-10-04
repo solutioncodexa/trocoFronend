@@ -1,6 +1,7 @@
 import { useRef, type ReactNode } from 'react';
 import { platformApi } from '@/services/api/platform';
 import { storePagesApi } from '@/services/api/storePages';
+import { proposeCopy } from '@/config/copyProposal';
 import type { ContentWidget } from '@/config/assistantFlow';
 import {
   aboutProposal,
@@ -40,6 +41,7 @@ export function useContentFlow(ctx: Ctx) {
   const { t, lang, busy, setBusy, push, clearWidgets, setStep, saveSettings, invalidate } = ctx;
   const settings = useRef<StoreSettingsDTO | null>(null);
   const queue = useRef<ContentStepId[]>([]);
+  const aboutText = useRef<string | undefined>(undefined);
 
   const say = (content: string, widget?: ContentWidget) => push({ role: 'assistant', content, widget });
   const echo = (content: string) => push({ role: 'user', content });
@@ -67,6 +69,17 @@ export function useContentFlow(ctx: Ctx) {
     setStep(`content${next.charAt(0).toUpperCase()}${next.slice(1)}`);
     if (next === 'faq' || next === 'contactPage') {
       return say(t(`assistant.content.${next}.ask`), { kind: 'kyesno', id: next });
+    }
+    if (next === 'about') {
+      return void act(async () => {
+        const s = settings.current;
+        const name = s?.siteName ?? '';
+        const topic = [name, s?.tagline, s?.contactCity].filter(Boolean).join(' — ');
+        aboutText.current =
+          (await proposeCopy('about', topic, { storeName: name, locale: lang })) ??
+          aboutProposal(lang, name, s?.tagline, s?.contactCity);
+        say(t('assistant.content.about.ask'), { kind: 'kfield', field: 'about' });
+      });
     }
     say(t(`assistant.content.${next}.ask`), { kind: 'kfield', field: next });
   };
@@ -137,7 +150,9 @@ export function useContentFlow(ctx: Ctx) {
         onSkip={skip}
         placeholder={t(`assistant.content.${w.field}.placeholder`)}
         proposal={
-          w.field === 'about' ? aboutProposal(lang, s?.siteName ?? '', s?.tagline, s?.contactCity) : undefined
+          w.field === 'about'
+            ? (aboutText.current ?? aboutProposal(lang, s?.siteName ?? '', s?.tagline, s?.contactCity))
+            : undefined
         }
       />
     );
