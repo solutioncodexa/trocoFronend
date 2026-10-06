@@ -23,6 +23,8 @@ import AdminLayout from '@/components/admin/AdminLayout';
 import ImageUpload from '@/components/admin/ImageUpload';
 import { uploadImage } from '@/services/api/upload';
 import { heroCategoryDisplaySrc } from '@/components/home/heroCategoryImage';
+import { suggestSubcategories } from '@/config/catalogTemplates';
+import { nameKey, slugify as slugifyName, splitNames } from '@/utils/slug';
 import { useAdminLocale } from '@/contexts/AdminLocaleContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -68,13 +70,7 @@ import { cn } from '@/lib/utils';
 
 type CreateMode = 'parent' | 'child';
 
-const generateSlug = (name: string) =>
-  name
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/\s+/g, '-')
-    .replace(/[^a-z0-9-]/g, '');
+const generateSlug = (name: string) => slugifyName(name);
 
 const uniqueSlug = (base: string, existing: Set<string>) => {
   const slug = base || 'categorie';
@@ -435,11 +431,7 @@ const AdminCategories = () => {
     window.setTimeout(() => nameInputRef.current?.focus(), 40);
   };
 
-  const parseBulkNames = (raw: string) =>
-    raw
-      .split(/[\n,;]+/)
-      .map((s) => s.trim())
-      .filter(Boolean);
+  const parseBulkNames = (raw: string) => splitNames(raw);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -530,24 +522,53 @@ const AdminCategories = () => {
     }
   };
 
+  /** Noms de sous-catégories suggérés (modèles marocains/fr/en/ar) qui n'existent pas encore sous ce parent. */
+  const suggestionsFor = (parentName: string, parentId: number, alsoExclude: string[] = []) => {
+    const taken = new Set([
+      ...(childrenByParent.get(parentId) ?? []).map((c) => nameKey(c.name)),
+      ...alsoExclude.map(nameKey),
+    ]);
+    return suggestSubcategories(parentName).filter((n) => !taken.has(nameKey(n)));
+  };
+
+  /** Crée plusieurs sous-catégories d'un coup : ignore celles qui existent déjà sous ce parent. */
+  const createChildren = async (parentId: number, rawNames: string[]) => {
+    const siblings = new Set((childrenByParent.get(parentId) ?? []).map((c) => nameKey(c.name)));
+    const names = rawNames.filter((n) => !siblings.has(nameKey(n)));
+    const skipped = rawNames.length - names.length;
+    const used = new Set(existingSlugs);
+    let ok = 0;
+    for (const name of names) {
+      const slug = uniqueSlug(generateSlug(name), used);
+      used.add(slug);
+      try {
+        await createMutation.mutateAsync({ name, slug, parentId });
+        ok += 1;
+      } catch {
+        /* toasted */
+      }
+    }
+    if (ok > 0) {
+      invalidate();
+      toast.success(ok === 1 ? `« ${names[0]} » ajoutée` : `${ok} sous-catégories ajoutées`);
+      setExpandedParents((prev) => new Set(prev).add(parentId));
+    }
+    if (skipped > 0) {
+      toast.info(`${skipped} existai${skipped > 1 ? 'ent' : 't'} déjà — ignorée${skipped > 1 ? 's' : ''}`);
+    }
+    return ok;
+  };
+
   const handleQuickAdd = async (parentId: number) => {
-    const name = (quickAddByParent[parentId] || '').trim();
-    if (!name) {
+    const names = splitNames(quickAddByParent[parentId] || '');
+    if (names.length === 0) {
       toast.error('Indiquez un nom de sous-catégorie');
       quickAddRefs.current[parentId]?.focus();
       return;
     }
-    const slug = uniqueSlug(generateSlug(name), existingSlugs);
-    try {
-      await createMutation.mutateAsync({ name, slug, parentId });
-      invalidate();
-      toast.success(`« ${name} » ajoutée`);
-      setQuickAddByParent((prev) => ({ ...prev, [parentId]: '' }));
-      setExpandedParents((prev) => new Set(prev).add(parentId));
-      window.setTimeout(() => quickAddRefs.current[parentId]?.focus(), 40);
-    } catch {
-      /* toasted */
-    }
+    await createChildren(parentId, names);
+    setQuickAddByParent((prev) => ({ ...prev, [parentId]: '' }));
+    window.setTimeout(() => quickAddRefs.current[parentId]?.focus(), 40);
   };
 
   const toggleExpand = (id: number) => {
@@ -891,6 +912,38 @@ const AdminCategories = () => {
                       );
                     })}
 
+                    {/* Suggestions (modèles) */}
+                    {(() => {
+                      const suggestions = suggestionsFor(root.name, id);
+                      if (suggestions.length === 0) return null;
+                      return (
+                        <div className="flex flex-wrap items-center gap-1.5 pl-12 pr-3 pt-2.5 sm:pl-16 sm:pr-4">
+                          <span className="inline-flex items-center gap-1 text-[11px] font-medium text-muted-foreground">
+                            <Sparkles className="h-3 w-3 text-primary" /> Suggestions
+                          </span>
+                          {suggestions.slice(0, 8).map((name) => (
+                            <button
+                              key={name}
+                              type="button"
+                              disabled={createMutation.isPending}
+                              onClick={() => void createChildren(id, [name])}
+                              className="rounded-full border border-border bg-background px-2.5 py-0.5 text-xs transition hover:border-primary/50 hover:bg-primary/5 disabled:opacity-50"
+                            >
+                              + {name}
+                            </button>
+                          ))}
+                          <button
+                            type="button"
+                            disabled={createMutation.isPending}
+                            onClick={() => void createChildren(id, suggestions)}
+                            className="text-xs font-medium text-primary hover:underline disabled:opacity-50"
+                          >
+                            Tout ajouter ({suggestions.length})
+                          </button>
+                        </div>
+                      );
+                    })()}
+
                     {/* Quick add inline */}
                     <div className="flex items-center gap-2 pl-12 pr-3 py-2.5 sm:pl-16 sm:pr-4">
                       <Plus className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
@@ -909,6 +962,7 @@ const AdminCategories = () => {
                           }
                         }}
                         placeholder={t('categories.quickAddPlaceholder', { name: root.name })}
+                        title="Astuce : séparez plusieurs noms par une virgule pour en créer plusieurs d’un coup"
                         className="h-8 text-sm bg-background"
                         disabled={createMutation.isPending}
                       />
@@ -1085,8 +1139,40 @@ const AdminCategories = () => {
                   />
                   <p className="text-[11px] text-muted-foreground mt-1">
                     Remplissez <em>soit</em> le Nom, <em>soit</em> cette liste (pas les deux
-                    obligatoires). Ex. T-shirts / Robes — pas XS / S / M.
+                    obligatoires). Séparez par une ligne, une virgule ou « ، ». Ex. T-shirts / Robes — pas XS / S / M.
                   </p>
+                  {(() => {
+                    const parent = roots.find((r) => String(r.id) === formData.parentId);
+                    if (!parent) return null;
+                    const suggestions = suggestionsFor(parent.name, Number(parent.id), parseBulkNames(bulkNames));
+                    if (suggestions.length === 0) return null;
+                    const append = (names: string[]) =>
+                      setBulkNames((prev) => [prev.trim(), ...names].filter(Boolean).join('\n'));
+                    return (
+                      <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                        <span className="inline-flex items-center gap-1 text-[11px] font-medium text-muted-foreground">
+                          <Sparkles className="h-3 w-3 text-primary" /> Suggestions pour « {parent.name} »
+                        </span>
+                        {suggestions.slice(0, 10).map((name) => (
+                          <button
+                            key={name}
+                            type="button"
+                            onClick={() => append([name])}
+                            className="rounded-full border border-border bg-background px-2.5 py-0.5 text-xs transition hover:border-primary/50 hover:bg-primary/5"
+                          >
+                            + {name}
+                          </button>
+                        ))}
+                        <button
+                          type="button"
+                          onClick={() => append(suggestions)}
+                          className="text-xs font-medium text-primary hover:underline"
+                        >
+                          Tout ajouter
+                        </button>
+                      </div>
+                    );
+                  })()}
                 </div>
               </div>
             )}

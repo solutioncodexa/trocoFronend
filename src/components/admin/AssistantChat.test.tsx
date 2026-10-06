@@ -106,7 +106,7 @@ describe('AssistantChat — catalogue guidé', () => {
     expect(screen.getByRole('checkbox', { name: 'Robes' })).toBeTruthy();
 
     // 2. Le commerçant décoche « Homme » (et ses enfants restent proposés mais le parent est décoché)
-    for (const name of ['Homme', 'Chemises', 'Pantalons', 'Chaussures']) {
+    for (const name of ['Homme', 'Chemises', 'Pantalons', 'Chaussures', 'Djellabas & jabadors', 'Babouches']) {
       fireEvent.click(screen.getByRole('checkbox', { name }));
     }
 

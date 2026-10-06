@@ -98,6 +98,10 @@ export const STYLE_FOR_SECTOR: Record<string, string> = {
   maison: 'artisan',
   electronique: 'flash',
   general: 'classique',
+  artisanat: 'artisan',
+  traditionnel: 'editorial',
+  naturel: 'nordique',
+  patisserie: 'marche',
 };
 
 export function getStylePreset(key?: string | null): StylePreset | undefined {

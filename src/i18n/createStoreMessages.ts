@@ -15,6 +15,10 @@ export type CreateStoreKey =
   | 'sector.alimentation'
   | 'sector.maison'
   | 'sector.electronique'
+  | 'sector.artisanat'
+  | 'sector.traditionnel'
+  | 'sector.naturel'
+  | 'sector.patisserie'
   | 'sector.general'
   | 'email.label'
   | 'email.invalid'
@@ -65,6 +69,10 @@ const fr: Dict = {
   'sector.alimentation': 'Alimentation & épicerie fine',
   'sector.maison': 'Maison & déco',
   'sector.electronique': 'High-tech & accessoires',
+  'sector.artisanat': "Artisanat marocain",
+  'sector.traditionnel': "Caftans & tenues traditionnelles",
+  'sector.naturel': "Cosmétiques naturels & hammam",
+  'sector.patisserie': "Pâtisseries & traiteur",
   'sector.general': 'Boutique généraliste',
   'email.label': 'Votre email',
   'email.invalid': 'Saisissez une adresse email valide.',
@@ -114,6 +122,10 @@ const en: Dict = {
   'sector.alimentation': 'Food & delicatessen',
   'sector.maison': 'Home & decor',
   'sector.electronique': 'Tech & accessories',
+  'sector.artisanat': "Moroccan crafts",
+  'sector.traditionnel': "Kaftans & traditional wear",
+  'sector.naturel': "Natural cosmetics & hammam",
+  'sector.patisserie': "Pastries & catering",
   'sector.general': 'General store',
   'email.label': 'Your email',
   'email.invalid': 'Enter a valid email address.',
@@ -163,6 +175,10 @@ const ar: Dict = {
   'sector.alimentation': 'المواد الغذائية',
   'sector.maison': 'المنزل والديكور',
   'sector.electronique': 'التكنولوجيا والإكسسوارات',
+  'sector.artisanat': "الصناعة التقليدية المغربية",
+  'sector.traditionnel': "القفاطين والأزياء التقليدية",
+  'sector.naturel': "مستحضرات طبيعية وحمام",
+  'sector.patisserie': "حلويات وخدمات الطعام",
   'sector.general': 'متجر عام',
   'email.label': 'بريدك الإلكتروني',
   'email.invalid': 'أدخل بريدًا إلكترونيًا صالحًا.',

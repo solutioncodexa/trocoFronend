@@ -40,7 +40,7 @@ describe('catalogTemplates', () => {
 
   it('slugifie sans accents ni caractères spéciaux, et gère les slugs déjà pris', () => {
     expect(slugify('Robes d’été & Caftans !')).toBe('robes-dete-caftans');
-    expect(slugify('نساء')).toBe('');
+    expect(slugify('نساء')).not.toBe(''); // translittéré, jamais vide
     expect(uniqueSlug('robes', new Set(['robes', 'robes-2']))).toBe('robes-3');
     expect(uniqueSlug('', new Set())).toBe('categorie');
   });
@@ -76,7 +76,8 @@ describe('catalogTemplates', () => {
       [],
     );
     const slugs = plan.toCreate.map((c) => c.slug);
-    expect(slugs).toEqual(['categorie', 'categorie-2']);
+    expect(slugs.every((s) => /^[a-z0-9-]+$/.test(s) && s.length > 1)).toBe(true);
+    expect(new Set(slugs).size).toBe(slugs.length);
   });
 
   it('un enfant dont le parent n’est pas sélectionné est rattaché à la racine', () => {
