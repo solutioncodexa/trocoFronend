@@ -26,6 +26,7 @@ import { heroCategoryDisplaySrc } from '@/components/home/heroCategoryImage';
 import { suggestSubcategories } from '@/config/catalogTemplates';
 import { nameKey, slugify as slugifyName, splitNames } from '@/utils/slug';
 import { useAdminLocale } from '@/contexts/AdminLocaleContext';
+import { useConfirm } from '@/components/ui/confirm-dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -40,16 +41,6 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
 import {
   Select,
   SelectContent,
@@ -82,6 +73,7 @@ const uniqueSlug = (base: string, existing: Set<string>) => {
 
 const AdminCategories = () => {
   const { t } = useAdminLocale();
+  const confirm = useConfirm();
   const queryClient = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
   const [search, setSearch] = useState('');
@@ -93,8 +85,6 @@ const AdminCategories = () => {
   const [keepOpen, setKeepOpen] = useState(false);
   const [bulkNames, setBulkNames] = useState('');
   const [quickAddByParent, setQuickAddByParent] = useState<Record<number, string>>({});
-  const [pendingDelete, setPendingDelete] = useState<CategoryDTO | null>(null);
-  const [pendingBulkDelete, setPendingBulkDelete] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [imageUrl, setImageUrl] = useState('');
   const nameInputRef = useRef<HTMLInputElement>(null);
@@ -281,13 +271,12 @@ const AdminCategories = () => {
 
   const deleteMutation = useMutation({
     mutationFn: (id: number) => categoriesApi.deleteCategory(id),
-    onSuccess: () => {
+    onSuccess: (_data, id) => {
       invalidate();
       toast.success('Catégorie supprimée');
-      setPendingDelete(null);
       setSelectedIds((prev) => {
         const next = new Set(prev);
-        if (pendingDelete) next.delete(Number(pendingDelete.id));
+        next.delete(id);
         return next;
       });
     },
@@ -298,7 +287,6 @@ const AdminCategories = () => {
     mutationFn: (ids: number[]) => categoriesApi.bulkDeleteCategories(ids),
     onSuccess: (result) => {
       invalidate();
-      setPendingBulkDelete(false);
       setSelectedIds(new Set());
       if (result.failureCount === 0) {
         toast.success(`${result.successCount} catégorie(s) supprimée(s)`);
@@ -311,6 +299,39 @@ const AdminCategories = () => {
     },
     onError: (e: Error) => toastError(e, 'Erreur suppression multiple'),
   });
+
+  const askDelete = (category: CategoryDTO) => {
+    const kids = childrenByParent.get(Number(category.id))?.length ?? 0;
+    const products = category.productCount ?? 0;
+    void confirm({
+      title: `Supprimer « ${category.name} » ?`,
+      description:
+        kids > 0
+          ? `Cette catégorie a ${kids} sous-catégorie(s). La suppression sera refusée tant qu’elles existent — sélectionnez aussi les sous-catégories pour tout supprimer.`
+          : products > 0
+            ? `Cette catégorie contient ${products} produit(s). La suppression peut être refusée s’ils y sont encore liés.`
+            : 'Cette action est définitive.',
+      tone: 'destructive',
+      confirmLabel: t('common.delete'),
+      cancelLabel: t('common.cancel'),
+    }).then((ok) => {
+      if (ok) deleteMutation.mutate(Number(category.id));
+    });
+  };
+
+  const askBulkDelete = () => {
+    const count = selectedIds.size;
+    void confirm({
+      title: `Supprimer ${count} catégorie(s) ?`,
+      description:
+        'Les sous-catégories sélectionnées sont supprimées avant les parentes. Les catégories encore liées à des produits (ou ayant des enfants non sélectionnés) seront refusées.',
+      tone: 'destructive',
+      confirmLabel: t('categories.deleteSelection'),
+      cancelLabel: t('common.cancel'),
+    }).then((ok) => {
+      if (ok) bulkDeleteMutation.mutate([...selectedIds]);
+    });
+  };
 
   const bulkActiveMutation = useMutation({
     mutationFn: ({ ids, active }: { ids: number[]; active: boolean }) =>
@@ -447,18 +468,27 @@ const AdminCategories = () => {
     const parentId = effectiveMode === 'parent' ? null : Number(formData.parentId);
     const bulk = !editingCategory && effectiveMode === 'child' ? parseBulkNames(bulkNames) : [];
 
-    // Bulk: plusieurs sous-catégories d’un coup
-    if (bulk.length > 0) {
+    // Bulk: plusieurs sous-catégories d’un coup (doublons du formulaire et déjà existants ignorés)
+    if (bulk.length > 0 && parentId != null) {
+      const siblings = new Set((childrenByParent.get(parentId) ?? []).map((c) => nameKey(c.name)));
+      const seen = new Set<string>();
+      const names = bulk.filter((n) => {
+        const key = nameKey(n);
+        if (siblings.has(key) || seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+      const skipped = bulk.length - names.length;
       const used = new Set(existingSlugs);
       let ok = 0;
-      for (const name of bulk) {
+      for (const name of names) {
         const slug = uniqueSlug(generateSlug(name), used);
         used.add(slug);
         try {
           await createMutation.mutateAsync({
             name,
             slug,
-            parentId: parentId ?? undefined,
+            parentId,
           });
           ok += 1;
         } catch {
@@ -470,6 +500,12 @@ const AdminCategories = () => {
         toast.success(`${ok} sous-catégorie${ok > 1 ? 's' : ''} créée${ok > 1 ? 's' : ''}`);
         if (keepOpen) resetFormKeepParent();
         else handleCloseModal();
+      }
+      if (skipped > 0) {
+        toast.info(`${skipped} doublon${skipped > 1 ? 's' : ''} ignoré${skipped > 1 ? 's' : ''}`);
+      }
+      if (ok === 0 && skipped === bulk.length) {
+        toast.info('Ces sous-catégories existent déjà');
       }
       return;
     }
@@ -586,10 +622,6 @@ const AdminCategories = () => {
   const selectedParentName =
     formData.parentId && roots.find((r) => String(r.id) === formData.parentId)?.name;
 
-  const pendingKids = pendingDelete
-    ? childrenByParent.get(Number(pendingDelete.id))?.length ?? 0
-    : 0;
-
   return (
     <AdminLayout title={t('categories.title')} breadcrumbs={[{ label: t('categories.breadcrumb') }]}>
       {/* Toolbar */}
@@ -680,7 +712,7 @@ const AdminCategories = () => {
               size="sm"
               variant="destructive"
               disabled={bulkDeleteMutation.isPending}
-              onClick={() => setPendingBulkDelete(true)}
+              onClick={() => askBulkDelete()}
             >
               <Trash2 className="w-3.5 h-3.5 mr-1" />
               {t('common.delete')}
@@ -818,7 +850,7 @@ const AdminCategories = () => {
                       size="sm"
                       variant="ghost"
                       className="h-8 w-8 p-0 text-destructive hover:text-destructive"
-                      onClick={() => setPendingDelete(root)}
+                      onClick={() => askDelete(root)}
                       title={t('common.delete')}
                     >
                       <Trash2 className="h-3.5 w-3.5" />
@@ -903,7 +935,7 @@ const AdminCategories = () => {
                               size="sm"
                               variant="ghost"
                               className="h-7 w-7 p-0 text-destructive hover:text-destructive"
-                              onClick={() => setPendingDelete(child)}
+                              onClick={() => askDelete(child)}
                             >
                               <Trash2 className="h-3.5 w-3.5" />
                             </Button>
@@ -1289,72 +1321,6 @@ const AdminCategories = () => {
           </form>
         </DialogContent>
       </Dialog>
-
-      {/* Delete confirm */}
-      <AlertDialog
-        open={pendingDelete != null}
-        onOpenChange={(open) => {
-          if (!open) setPendingDelete(null);
-        }}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Supprimer « {pendingDelete?.name} » ?</AlertDialogTitle>
-            <AlertDialogDescription>
-              {pendingKids > 0
-                ? `Cette catégorie a ${pendingKids} sous-catégorie(s). La suppression sera refusée tant qu’elles existent — sélectionnez aussi les sous-catégories pour tout supprimer.`
-                : (pendingDelete?.productCount ?? 0) > 0
-                  ? `Cette catégorie contient ${pendingDelete?.productCount} produit(s). La suppression peut être refusée s’ils y sont encore liés.`
-                  : 'Cette action est définitive.'}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
-            <AlertDialogAction
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              onClick={() => pendingDelete && deleteMutation.mutate(Number(pendingDelete.id))}
-            >
-              {deleteMutation.isPending ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                t('common.delete')
-              )}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      <AlertDialog
-        open={pendingBulkDelete}
-        onOpenChange={(open) => {
-          if (!open) setPendingBulkDelete(false);
-        }}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>
-              Supprimer {selectedIds.size} catégorie(s) ?
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              Les sous-catégories sélectionnées sont supprimées avant les parentes. Les catégories
-              encore liées à des produits (ou ayant des enfants non sélectionnés) seront refusées.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
-            <AlertDialogAction
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              onClick={() => bulkDeleteMutation.mutate([...selectedIds])}
-            >
-              {bulkDeleteMutation.isPending ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                t('categories.deleteSelection')
-              )}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </AdminLayout>
   );
 };

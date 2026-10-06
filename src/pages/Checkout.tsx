@@ -12,7 +12,7 @@ import { formatPrice } from '@/utils/formatPrice';
 import { toast } from 'sonner';
 import { toastError } from '@/utils/toastMessages';
 import { PaymentMethod } from '@/types/product';
-import { ordersApi, productsApi, shippingApi, loyaltyApi } from '@/services/api';
+import { ordersApi, productsApi, shippingApi, loyaltyApi, marketApi } from '@/services/api';
 import { platformApi, submitCmiCheckout } from '@/services/api/platform';
 import {
   StripeCardSection,
@@ -72,6 +72,10 @@ function paymentSubmitLabel(method: PaymentMethod): string {
       return 'Continuer vers PayPal';
     case 'bnpl':
       return 'Continuer le paiement échelonné';
+    case 'payzone':
+      return 'Payer avec PayZone';
+    case 'bank_transfer':
+      return 'Confirmer le virement';
     default:
       return 'Confirmer la commande';
   }
@@ -98,6 +102,16 @@ function paymentConfirmCopy(method: PaymentMethod): { title: string; body: strin
       return {
         title: 'Paiement en plusieurs fois',
         body: 'Après validation, notre équipe vous contactera pour finaliser le paiement échelonné.',
+      };
+    case 'payzone':
+      return {
+        title: 'PayZone',
+        body: 'La commande est enregistrée. Le paiement PayZone reste en attente de confirmation, sans redirection carte.',
+      };
+    case 'bank_transfer':
+      return {
+        title: 'Virement',
+        body: 'La commande est enregistrée. Effectuez le virement avec les instructions affichées.',
       };
     default:
       return {
@@ -190,6 +204,8 @@ const Checkout = () => {
   });
 
   const [promoCodeInput, setPromoCodeInput] = useState('');
+  const [referralInput, setReferralInput] = useState('');
+  const [appliedReferral, setAppliedReferral] = useState<{ code: string; rewardMad: number } | null>(null);
   const [appliedPromo, setAppliedPromo] = useState<{
     code: string;
     discountType: DiscountType;
@@ -240,11 +256,23 @@ const Checkout = () => {
   const discount = calculateDiscount();
   const afterDiscount = subtotal - discount;
 
-  const { data: carriers = [] } = useQuery({
-    queryKey: ['shipping-carriers-public', afterDiscount],
-    queryFn: () => shippingApi.getPublic(afterDiscount),
-    enabled: afterDiscount >= 0,
+  const { data: marketConfig } = useQuery({
+    queryKey: ['market-public-config'],
+    queryFn: () => marketApi.publicConfig(),
     staleTime: 60_000,
+  });
+  const seasonalPercent = Number(marketConfig?.campaign?.discountPercent ?? 0);
+  const seasonalDiscount = seasonalPercent > 0 ? Math.round(afterDiscount * (seasonalPercent / 100)) : 0;
+  const referralDiscount = appliedReferral
+    ? Math.min(Number(appliedReferral.rewardMad) || 0, Math.max(0, afterDiscount - seasonalDiscount))
+    : 0;
+  const merchandise = Math.max(0, afterDiscount - seasonalDiscount - referralDiscount);
+
+  const { data: carriers = [] } = useQuery({
+    queryKey: ['shipping-carriers-public', merchandise, formData.city],
+    queryFn: () => shippingApi.getPublic(merchandise, formData.city),
+    enabled: merchandise >= 0,
+    staleTime: 30_000,
   });
 
   useEffect(() => {
@@ -279,8 +307,10 @@ const Checkout = () => {
   /** Uniquement si clés + test réussis (pas le simple toggle). */
   const cmiEnabled = !!checkoutStore?.cmiReady;
   const bnplEnabled = !!checkoutStore?.paymentBnplEnabled;
+  const payzoneEnabled = !!marketConfig?.payzoneEnabled;
+  const transferEnabled = !!marketConfig?.transferEnabled;
   const paymentOptionsAvailable =
-    codEnabled || cmiEnabled || bnplEnabled || stripeReady || paypalReady;
+    codEnabled || cmiEnabled || bnplEnabled || stripeReady || paypalReady || payzoneEnabled || transferEnabled;
 
   useEffect(() => {
     const options: PaymentMethod[] = [];
@@ -289,10 +319,12 @@ const Checkout = () => {
     if (cmiEnabled) options.push('card_cmi');
     if (paypalReady) options.push('paypal');
     if (bnplEnabled) options.push('bnpl');
+    if (payzoneEnabled) options.push('payzone');
+    if (transferEnabled) options.push('bank_transfer');
     if (options.length && !options.includes(paymentMethod)) {
       setPaymentMethod(options[0]);
     }
-  }, [codEnabled, cmiEnabled, bnplEnabled, stripeReady, paypalReady, paymentMethod]);
+  }, [codEnabled, cmiEnabled, bnplEnabled, stripeReady, paypalReady, payzoneEnabled, transferEnabled, paymentMethod]);
 
   const loyaltyRedeemNum = (() => {
     const n = Number(loyaltyPointsToRedeem.trim());
@@ -301,7 +333,7 @@ const Checkout = () => {
     return Math.min(Math.floor(n), maxPts);
   })();
 
-  const total = afterDiscount + shippingFee;
+  const total = merchandise + shippingFee;
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -417,7 +449,6 @@ const Checkout = () => {
     }
     setIsSubmitting(true);
     const discount = calculateDiscount();
-    const afterDiscountSubmit = getTotal() - discount;
 
     const cartItems: CartItemDTO[] = items.map(item => ({
       product: {
@@ -429,12 +460,12 @@ const Checkout = () => {
         sku: item.product.sku,
       },
       quantity: item.quantity,
-      selectedSize: item.selectedSize,
+      selectedSize: item.selectedSize || item.variantLabel || undefined,
       selectedVariantId: item.selectedVariantId,
       customLogoUrl: item.customLogoUrl,
     }));
 
-    const orderTotal = afterDiscountSubmit + shippingFee;
+    const orderTotal = merchandise + shippingFee;
 
     const baseOrder: OrderDTO = {
       id: '',
@@ -457,8 +488,15 @@ const Checkout = () => {
         : {}),
       ...(appliedPromo && {
         promoCode: appliedPromo.code,
-        discount,
+        discount: discount + seasonalDiscount + referralDiscount,
       }),
+      ...(!appliedPromo && (seasonalDiscount > 0 || referralDiscount > 0)
+        ? { discount: seasonalDiscount + referralDiscount }
+        : {}),
+      ...(appliedReferral ? { referralCode: appliedReferral.code } : {}),
+      ...(marketConfig?.campaign?.code && seasonalDiscount > 0
+        ? { seasonalCode: marketConfig.campaign.code }
+        : {}),
     };
 
     try {
@@ -566,7 +604,7 @@ const Checkout = () => {
             id: 'cash_on_delivery' as const,
             title: t('payCod'),
             description: 'Payez en espèces à la réception',
-            badge: 'Sans carte',
+            badge: 'Recommandé',
             icon: <Banknote className="size-5" aria-hidden />,
             accentClass: 'text-emerald-700 bg-emerald-50',
           },
@@ -621,6 +659,30 @@ const Checkout = () => {
             badge: 'Échelonné',
             icon: <CreditCard className="size-5" aria-hidden />,
             accentClass: 'text-amber-800 bg-amber-50',
+          },
+        ]
+      : []),
+    ...(payzoneEnabled
+      ? [
+          {
+            id: 'payzone' as const,
+            title: 'PayZone',
+            description: 'Paiement local enregistré, confirmation manuelle',
+            badge: 'Maroc',
+            icon: <CreditCard className="size-5" aria-hidden />,
+            accentClass: 'text-violet-800 bg-violet-50',
+          },
+        ]
+      : []),
+    ...(transferEnabled
+      ? [
+          {
+            id: 'bank_transfer' as const,
+            title: 'Virement',
+            description: marketConfig?.transferInstructions?.trim() || 'Instructions de virement après commande',
+            badge: 'Banque',
+            icon: <CreditCard className="size-5" aria-hidden />,
+            accentClass: 'text-slate-800 bg-slate-100',
           },
         ]
       : []),
@@ -785,12 +847,18 @@ const Checkout = () => {
                   <Input 
                     id="city"
                     name="city"
+                    list="ma-cities"
                     value={formData.city}
                     onChange={handleInputChange}
                     placeholder="Ex: Casablanca" 
                     className="rounded-xl"
                     required 
                   />
+                  <datalist id="ma-cities">
+                    {['Casablanca', 'Rabat', 'Marrakech', 'Fès', 'Tanger', 'Agadir'].map((city) => (
+                      <option key={city} value={city} />
+                    ))}
+                  </datalist>
                 </div>
                 {appearance.checkoutShowNotes ? (
                 <div className="col-span-full">
@@ -1082,13 +1150,18 @@ const Checkout = () => {
               
               <div className="space-y-6 mb-8">
                 {items.map((item, index) => (
-                  <div key={`${item.product.id}-${item.selectedSize ?? ''}-${index}`} className="flex gap-4">
+                  <div key={`${item.product.id}-${item.variantKey ?? item.selectedVariantId ?? ''}-${item.selectedSize ?? ''}-${index}`} className="flex gap-4">
                     <div className="size-20 bg-muted border border-border overflow-hidden rounded-xl flex-shrink-0">
                       <img src={item.product.images[0]} alt={item.product.name} className="w-full h-full object-cover" />
                     </div>
                     <div className="flex-1 flex flex-col justify-between py-1">
                       <div>
                         <h4 className="text-sm font-bold font-display text-foreground leading-tight">{item.product.name}</h4>
+                        {(item.variantLabel || item.selectedSize) && (
+                          <p className="text-[10px] text-muted-foreground uppercase tracking-widest mt-1">
+                            {item.variantLabel || item.selectedSize}
+                          </p>
+                        )}
                         {item.product.category && (
                           <p className="text-[10px] text-muted-foreground uppercase tracking-widest mt-1">
                             {item.product.category}
@@ -1154,6 +1227,46 @@ const Checkout = () => {
               </div>
               ) : null}
 
+              <div className="border-t border-border pt-6 mb-4">
+                <Label className="block text-xs uppercase tracking-widest text-muted-foreground mb-2 font-bold">
+                  Code parrain
+                </Label>
+                {appliedReferral ? (
+                  <div className="flex items-center justify-between rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm">
+                    <span className="font-mono font-bold">{appliedReferral.code}</span>
+                    <button type="button" onClick={() => setAppliedReferral(null)} className="text-green-700">
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex gap-2">
+                    <Input
+                      value={referralInput}
+                      onChange={(e) => setReferralInput(e.target.value.toUpperCase())}
+                      placeholder="CODE PARRAIN"
+                      className="rounded-xl"
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="rounded-xl shrink-0"
+                      onClick={async () => {
+                        const code = referralInput.trim();
+                        if (!code) return;
+                        try {
+                          const res = await marketApi.previewReferral(code);
+                          setAppliedReferral({ code: res.code, rewardMad: Number(res.rewardMad) || 0 });
+                        } catch (err) {
+                          toastError(err, 'Code parrain invalide');
+                        }
+                      }}
+                    >
+                      Appliquer
+                    </Button>
+                  </div>
+                )}
+              </div>
+
               {/* Promo suggestions — AliExpress style */}
               {appearance.checkoutShowPromoField && promoSuggestions.length > 0 && !appliedPromo && (
                 <div className="mb-4 space-y-2">
@@ -1216,6 +1329,18 @@ const Checkout = () => {
                   <div className="flex justify-between text-sm">
                     <span className="text-green-600 uppercase tracking-wider">Réduction</span>
                     <span className="text-green-600 font-medium">−{formatPrice(discount)}</span>
+                  </div>
+                )}
+                {seasonalDiscount > 0 && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-green-600 uppercase tracking-wider">{marketConfig?.campaign?.title || 'Offre'}</span>
+                    <span className="text-green-600 font-medium">−{formatPrice(seasonalDiscount)}</span>
+                  </div>
+                )}
+                {referralDiscount > 0 && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-green-600 uppercase tracking-wider">Parrainage</span>
+                    <span className="text-green-600 font-medium">−{formatPrice(referralDiscount)}</span>
                   </div>
                 )}
                 <div className="flex justify-between text-sm">

@@ -77,7 +77,7 @@ function clampStep(value: number) {
 }
 
 const AdminOnboarding = () => {
-  const { t } = useAdminLocale();
+  const { t, locale } = useAdminLocale();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const queryClient = useQueryClient();
@@ -266,7 +266,7 @@ const AdminOnboarding = () => {
   };
 
   const addDemo = useMutation({
-    mutationFn: () => applyStarterPack(sector || DEFAULT_STARTER_PACK_KEY),
+    mutationFn: () => applyStarterPack(sector || DEFAULT_STARTER_PACK_KEY, locale),
     onSuccess: (res) => {
       refreshCatalog();
       toast.success(

@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Eye, Search, Phone, MapPin, MessageCircle, ShoppingCart } from 'lucide-react';
+import { Eye, Search, Phone, MapPin, MessageCircle, ShoppingCart, Download } from 'lucide-react';
 import AdminLayout from '@/components/admin/AdminLayout';
 import { useAdminLocale } from '@/contexts/AdminLocaleContext';
 import AdminPagination from '@/components/admin/AdminPagination';
@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { EmptyState } from '@/components/ui/EmptyState';
-import { ordersApi, getImageUrl } from '@/services/api';
+import { ordersApi, getImageUrl, marketApi } from '@/services/api';
 import { OrderDTO, OrderListItemDTO } from '@/types/api';
 import { formatPrice } from '@/utils/formatPrice';
 import { formatDateTime } from '@/utils/formatDateTime';
@@ -21,7 +21,6 @@ import { cn } from '@/lib/utils';
 import { useStoreBrand } from '@/hooks/useStoreBrand';
 import {
   buildOrderConfirmationMessage,
-  normalizeMessageLang,
   orderConfirmationUrl,
 } from '@/utils/orderWhatsapp';
 
@@ -84,8 +83,11 @@ const AdminOrders = () => {
   const getStatusStyle = (status: string) => {
     const styles: Record<string, string> = {
       new: 'bg-blue-100 text-blue-800 border-blue-200',
+      calling: 'bg-indigo-100 text-indigo-800 border-indigo-200',
+      unreachable: 'bg-orange-100 text-orange-800 border-orange-200',
       confirmed: 'bg-yellow-100 text-yellow-800 border-yellow-200',
       delivered: 'bg-green-100 text-green-800 border-green-200',
+      returned: 'bg-rose-100 text-rose-800 border-rose-200',
       cancelled: 'bg-red-100 text-red-800 border-red-200',
     };
     return styles[status] ?? '';
@@ -94,8 +96,11 @@ const AdminOrders = () => {
   const getStatusLabel = (status: string) => {
     const labels: Record<string, string> = {
       new: t('status.new'),
+      calling: t('status.calling'),
+      unreachable: t('status.unreachable'),
       confirmed: t('status.confirmed'),
       delivered: t('status.delivered'),
+      returned: t('status.returned'),
       cancelled: t('status.cancelled'),
     };
     return labels[status] ?? status;
@@ -115,6 +120,10 @@ const AdminOrders = () => {
         return 'BNPL';
       case 'cash_on_delivery':
         return 'COD';
+      case 'payzone':
+        return 'PayZone';
+      case 'bank_transfer':
+        return 'Virement';
       default:
         return method?.trim() || '—';
     }
@@ -181,6 +190,16 @@ const AdminOrders = () => {
         {filterStatus !== 'all' && (
           <>· {t('common.filterLabel')} <Badge className={cn('text-[10px] px-1.5 py-0', getStatusStyle(filterStatus))}>{getStatusLabel(filterStatus)}</Badge></>
         )}
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="ms-auto h-8"
+          onClick={() => marketApi.downloadOrdersCsv().catch((err: Error) => toastError(err, 'Export impossible'))}
+        >
+          <Download className="me-1 h-3.5 w-3.5" />
+          CSV
+        </Button>
       </p>
 
       <div className="flex flex-col sm:flex-row gap-4 mb-6">
@@ -200,8 +219,11 @@ const AdminOrders = () => {
           <SelectContent>
             <SelectItem value="all">{t('orders.allStatuses')}</SelectItem>
             <SelectItem value="new">{t('status.new')}</SelectItem>
+            <SelectItem value="calling">{t('status.calling')}</SelectItem>
+            <SelectItem value="unreachable">{t('status.unreachable')}</SelectItem>
             <SelectItem value="confirmed">{t('status.confirmed')}</SelectItem>
             <SelectItem value="delivered">{t('status.delivered')}</SelectItem>
+            <SelectItem value="returned">{t('status.returned')}</SelectItem>
             <SelectItem value="cancelled">{t('status.cancelled')}</SelectItem>
           </SelectContent>
         </Select>
@@ -262,8 +284,11 @@ const AdminOrders = () => {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="new">{t('status.new')}</SelectItem>
+                  <SelectItem value="calling">{t('status.calling')}</SelectItem>
+                  <SelectItem value="unreachable">{t('status.unreachable')}</SelectItem>
                   <SelectItem value="confirmed">{t('status.confirmed')}</SelectItem>
                   <SelectItem value="delivered">{t('status.delivered')}</SelectItem>
+                  <SelectItem value="returned">{t('status.returned')}</SelectItem>
                   <SelectItem value="cancelled">{t('status.cancelled')}</SelectItem>
                 </SelectContent>
               </Select>
@@ -357,8 +382,11 @@ const AdminOrders = () => {
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="new">{t('status.new')}</SelectItem>
+                        <SelectItem value="calling">{t('status.calling')}</SelectItem>
+                        <SelectItem value="unreachable">{t('status.unreachable')}</SelectItem>
                         <SelectItem value="confirmed">{t('status.confirmed')}</SelectItem>
                         <SelectItem value="delivered">{t('status.delivered')}</SelectItem>
+                        <SelectItem value="returned">{t('status.returned')}</SelectItem>
                         <SelectItem value="cancelled">{t('status.cancelled')}</SelectItem>
                       </SelectContent>
                     </Select>
@@ -429,27 +457,40 @@ const AdminOrders = () => {
                   </div>
                   <div className="sm:col-span-2">
                     {(() => {
-                      const url = orderConfirmationUrl(
-                        selectedOrder.customer?.phone,
-                        buildOrderConfirmationMessage({
-                          lang: normalizeMessageLang(brand.store?.defaultLocale),
-                          storeName: brand.siteName || '',
-                          customerName: selectedOrder.customer?.fullName,
-                          items: (selectedOrder.items ?? []).map((it) => ({
-                            name: it.product?.name ?? '',
-                            quantity: it.quantity,
-                          })),
-                          total: formatPrice(selectedOrder.total ?? 0),
-                          city: selectedOrder.customer?.city,
-                        }),
-                      );
-                      return url ? (
-                        <Button type="button" variant="outline" size="sm" className="gap-1.5" asChild title={t('orders.confirmWhatsAppHint')}>
-                          <a href={url} target="_blank" rel="noopener noreferrer">
-                            <MessageCircle className="h-4 w-4" aria-hidden />
-                            {t('orders.confirmWhatsApp')}
-                          </a>
-                        </Button>
+                      const messageInput = {
+                        storeName: brand.siteName || '',
+                        customerName: selectedOrder.customer?.fullName,
+                        items: (selectedOrder.items ?? []).map((it) => ({
+                          name: it.product?.name ?? '',
+                          quantity: it.quantity,
+                        })),
+                        total: formatPrice(selectedOrder.total ?? 0),
+                        city: selectedOrder.customer?.city,
+                      };
+                      const links = (
+                        [
+                          ['fr', t('orders.confirmWhatsApp')],
+                          ['darija', 'WhatsApp darija'],
+                          ['darija-ar', 'واتساب بالدارجة'],
+                        ] as const
+                      ).map(([lang, label]) => ({
+                        label,
+                        url: orderConfirmationUrl(
+                          selectedOrder.customer?.phone,
+                          buildOrderConfirmationMessage({ ...messageInput, lang }),
+                        ),
+                      }));
+                      return links[0].url ? (
+                        <div className="flex flex-wrap gap-2">
+                          {links.map((link) => (
+                            <Button key={link.label} type="button" variant="outline" size="sm" className="gap-1.5" asChild>
+                              <a href={link.url ?? undefined} target="_blank" rel="noopener noreferrer">
+                                <MessageCircle className="h-4 w-4" aria-hidden />
+                                {link.label}
+                              </a>
+                            </Button>
+                          ))}
+                        </div>
                       ) : (
                         <p className="text-xs text-muted-foreground">{t('orders.confirmWhatsAppNoPhone')}</p>
                       );
@@ -510,8 +551,11 @@ const AdminOrders = () => {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="new">{t('status.new')}</SelectItem>
+                    <SelectItem value="calling">{t('status.calling')}</SelectItem>
+                    <SelectItem value="unreachable">{t('status.unreachable')}</SelectItem>
                     <SelectItem value="confirmed">{t('status.confirmed')}</SelectItem>
                     <SelectItem value="delivered">{t('status.delivered')}</SelectItem>
+                    <SelectItem value="returned">{t('status.returned')}</SelectItem>
                     <SelectItem value="cancelled">{t('status.cancelled')}</SelectItem>
                   </SelectContent>
                 </Select>

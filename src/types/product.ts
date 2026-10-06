@@ -6,7 +6,9 @@ export type PaymentMethod =
   | 'card_cmi'
   | 'card_stripe'
   | 'paypal'
-  | 'bnpl';
+  | 'bnpl'
+  | 'payzone'
+  | 'bank_transfer';
 
 export interface Product {
   id: string;

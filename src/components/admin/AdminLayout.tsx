@@ -170,6 +170,7 @@ const ALL_NAV: NavSection[] = [
     items: [
       { href: '/admin/conformite', labelKey: 'nav.privacy', icon: Shield, permission: PERMISSIONS.PRIVACY_MANAGE },
       { href: '/admin/livraison', labelKey: 'nav.shipping', icon: Truck, permission: PERMISSIONS.ORDERS_VIEW },
+      { href: '/admin/marche', labelKey: 'nav.market', icon: Store, permission: PERMISSIONS.ORDERS_VIEW },
     ],
   },
   {

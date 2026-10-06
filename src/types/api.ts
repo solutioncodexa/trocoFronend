@@ -61,7 +61,9 @@ export type CheckoutPaymentMethod =
   | 'card_cmi'
   | 'card_stripe'
   | 'paypal'
-  | 'bnpl';
+  | 'bnpl'
+  | 'payzone'
+  | 'bank_transfer';
 
 export interface OrderDTO {
   id: string;
@@ -78,6 +80,8 @@ export interface OrderDTO {
   loyaltyPointsToRedeem?: number;
   loyaltyPointsEarned?: number;
   loyaltyPointsRedeemed?: number;
+  referralCode?: string;
+  seasonalCode?: string;
 }
 
 /** Accusé de création (POST /orders) — sans lignes. */

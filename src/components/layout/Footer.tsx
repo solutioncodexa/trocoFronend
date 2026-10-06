@@ -130,7 +130,7 @@ const Footer = () => {
               <p
                 className={cn(
                   'max-w-xs text-center text-sm leading-relaxed text-muted-foreground',
-                  !centered && 'lg:text-left',
+                  !centered && 'lg:text-start',
                 )}
               >
                 {tagline}
@@ -139,7 +139,7 @@ const Footer = () => {
                 <div
                   className={cn(
                     'space-y-1 text-center text-sm text-muted-foreground',
-                    !centered && 'lg:text-left',
+                    !centered && 'lg:text-start',
                   )}
                 >
                   {contactCity ? <p>{contactCity}</p> : null}
@@ -312,7 +312,7 @@ const Footer = () => {
           )}
         </div>
 
-        <div className="flex flex-col items-center justify-between gap-4 border-t border-border pt-6 text-center text-xs text-muted-foreground sm:pt-8 md:flex-row md:text-left">
+        <div className="flex flex-col items-center justify-between gap-4 border-t border-border pt-6 text-center text-xs text-muted-foreground sm:pt-8 md:flex-row md:text-start">
           <p>
             © {new Date().getFullYear()} {siteName}. {t('allRightsReserved')}
           </p>

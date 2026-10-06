@@ -47,7 +47,7 @@ export function buildProductWhatsAppMessage(
 export function buildCartWhatsAppMessage(items: CartItem[], total: number): string {
   const lines = items.map(
     (i) =>
-      `• ${i.product.name}${i.selectedSize ? ` (${i.selectedSize})` : ''} x${i.quantity} — ${formatPrice(i.product.price * i.quantity)}`,
+      `• ${i.product.name}${i.variantLabel || i.selectedSize ? ` (${i.variantLabel || i.selectedSize})` : ''} x${i.quantity} — ${formatPrice(i.product.price * i.quantity)}`,
   );
   return ['Bonjour, je souhaite commander mon panier :', '', ...lines, '', `Total indicatif : ${formatPrice(total)}`].join(
     '\n',

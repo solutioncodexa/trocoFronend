@@ -20,6 +20,7 @@ export * from './platform';
 export * from './productReviews';
 export * from './abandonedCarts';
 export * from './shipping';
+export * from './market';
 export * from './loyalty';
 export * from './privacy';
 export * from './apiKeys';

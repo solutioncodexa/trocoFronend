@@ -38,8 +38,11 @@ export type DashboardAdminMessageKey =
   | 'dashboard.pendingCustomizations'
   | 'dashboard.modelAlt'
   | 'status.new'
+  | 'status.calling'
+  | 'status.unreachable'
   | 'status.confirmed'
   | 'status.delivered'
+  | 'status.returned'
   | 'status.cancelled'
   | 'status.contacted'
   | 'status.completed'
@@ -88,8 +91,11 @@ const fr: Record<DashboardAdminMessageKey, string> = {
   'dashboard.pendingCustomizations': 'Personnalisations en attente',
   'dashboard.modelAlt': 'Modèle',
   'status.new': 'Nouvelle',
+  'status.calling': 'Appel client',
+  'status.unreachable': 'Injoignable',
   'status.confirmed': 'Confirmée',
   'status.delivered': 'Livrée',
+  'status.returned': 'Retour',
   'status.cancelled': 'Annulée',
   'status.contacted': 'Contacté',
   'status.completed': 'Terminée',
@@ -139,8 +145,11 @@ const en: Record<DashboardAdminMessageKey, string> = {
   'dashboard.pendingCustomizations': 'Pending custom requests',
   'dashboard.modelAlt': 'Model',
   'status.new': 'New',
+  'status.calling': 'Calling',
+  'status.unreachable': 'Unreachable',
   'status.confirmed': 'Confirmed',
   'status.delivered': 'Delivered',
+  'status.returned': 'Returned',
   'status.cancelled': 'Cancelled',
   'status.contacted': 'Contacted',
   'status.completed': 'Completed',
@@ -190,8 +199,11 @@ const ar: Record<DashboardAdminMessageKey, string> = {
   'dashboard.pendingCustomizations': 'تخصيصات قيد الانتظار',
   'dashboard.modelAlt': 'نموذج',
   'status.new': 'جديدة',
+  'status.calling': 'اتصال بالزبون',
+  'status.unreachable': 'ما جاوبش',
   'status.confirmed': 'مؤكدة',
   'status.delivered': 'مسلَّمة',
+  'status.returned': 'رجوع',
   'status.cancelled': 'ملغاة',
   'status.contacted': 'تم التواصل',
   'status.completed': 'مكتملة',

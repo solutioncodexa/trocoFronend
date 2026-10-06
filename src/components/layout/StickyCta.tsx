@@ -89,7 +89,7 @@ const StickyCta = () => {
       <div
         className={cn(
           'fixed z-[45] px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))]',
-          bottomRight ? 'bottom-4 right-4 left-auto' : 'inset-x-0 bottom-0 flex justify-center',
+          bottomRight ? 'bottom-4 end-4 start-auto' : 'inset-x-0 bottom-0 flex justify-center',
         )}
         role="complementary"
         aria-label={t('callToAction')}
@@ -108,7 +108,7 @@ const StickyCta = () => {
       <div
         className={cn(
           'fixed z-[45] w-[min(100%-2rem,22rem)] rounded-2xl border border-border bg-card/95 p-4 shadow-elegant backdrop-blur-sm',
-          'bottom-[max(1rem,env(safe-area-inset-bottom))] right-4',
+          'bottom-[max(1rem,env(safe-area-inset-bottom))] end-4',
         )}
         role="complementary"
         aria-label={t('callToAction')}

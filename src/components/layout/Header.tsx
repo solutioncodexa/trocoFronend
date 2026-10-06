@@ -292,7 +292,7 @@ const Header = () => {
           {item.label}
           <ChevronDown className="h-3.5 w-3.5 opacity-70 transition-transform group-hover:rotate-180" />
         </span>
-        <div className="invisible absolute left-0 top-full z-[60] min-w-[12rem] pt-1 opacity-0 transition-all group-hover:visible group-hover:opacity-100 group-focus-within:visible group-focus-within:opacity-100">
+        <div className="invisible absolute start-0 top-full z-[60] min-w-[12rem] pt-1 opacity-0 transition-all group-hover:visible group-hover:opacity-100 group-focus-within:visible group-focus-within:opacity-100">
           <div className="rounded-xl border border-border bg-card py-1 shadow-elegant">
             <Link
               to={href}
@@ -406,7 +406,7 @@ const Header = () => {
           <nav
             className={cn(
               'hidden shrink-0 items-center gap-0.5 lg:flex xl:gap-1',
-              appearance.headerLayout === 'inline' && 'ml-6 xl:ml-10',
+              appearance.headerLayout === 'inline' && 'ms-6 xl:ms-10',
               appearance.headerLayout === 'centered' && 'order-3 w-full justify-center',
               appearance.headerLayout === 'stacked' && 'order-3 w-full justify-center border-t border-border/50 pt-2',
             )}
@@ -435,12 +435,12 @@ const Header = () => {
             {showSearch ? (
             <div className="relative" ref={searchRootRef}>
               {isSearchOpen ? (
-                <div className="fixed left-3 right-3 top-[4.75rem] z-[60] sm:absolute sm:left-auto sm:right-0 sm:top-1/2 sm:w-[min(100vw-2rem,24rem)] sm:-translate-y-1/2 md:w-[22rem]">
+                <div className="fixed start-3 end-3 top-[4.75rem] z-[60] sm:absolute sm:start-auto sm:end-0 sm:top-1/2 sm:w-[min(100vw-2rem,24rem)] sm:-translate-y-1/2 md:w-[22rem]">
                   <form
                     onSubmit={submitHeaderSearch}
                     className="relative w-full rounded-2xl border border-primary/25 bg-card p-1.5 shadow-elegant"
                   >
-                    <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-primary" />
+                    <Search className="pointer-events-none absolute start-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-primary" />
                     <Input
                       type="text"
                       inputMode="search"
@@ -448,12 +448,12 @@ const Header = () => {
                       value={searchDraft}
                       onChange={(e) => setSearchDraft(e.target.value)}
                       placeholder={t('searchPlaceholder')}
-                      className="h-11 w-full border-0 bg-transparent pl-9 pr-[4.5rem] text-base shadow-none focus-visible:ring-0 md:text-sm"
+                      className="h-11 w-full border-0 bg-transparent ps-9 pe-[4.5rem] text-base shadow-none focus-visible:ring-0 md:text-sm"
                       autoFocus
                       autoComplete="off"
                       enterKeyHint="search"
                     />
-                    <div className="absolute right-1.5 top-1/2 flex -translate-y-1/2 items-center gap-0.5">
+                    <div className="absolute end-1.5 top-1/2 flex -translate-y-1/2 items-center gap-0.5">
                       <button
                         type="submit"
                         className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary text-primary-foreground transition-opacity hover:opacity-90"
@@ -521,7 +521,7 @@ const Header = () => {
             <Link to={withLang(to('/favoris'))} className={cn(iconBtnClass, 'relative')} style={iconTone} aria-label={t('wishlist')}>
               <Heart className="h-5 w-5 sm:h-[1.35rem] sm:w-[1.35rem]" />
               {favCount > 0 && (
-                <span className="absolute -right-0.5 -top-0.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1 text-[11px] font-bold text-primary-foreground animate-scale-in">
+                <span className="absolute -end-0.5 -top-0.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1 text-[11px] font-bold text-primary-foreground animate-scale-in">
                   {favCount}
                 </span>
               )}
@@ -532,7 +532,7 @@ const Header = () => {
             <Link to={withLang(to('/panier'))} className={cn(iconBtnClass, 'relative')} style={iconTone} aria-label={t('cart')}>
               <ShoppingBag className="h-5 w-5 sm:h-[1.35rem] sm:w-[1.35rem]" />
               {itemCount > 0 && (
-                <span className="absolute -right-0.5 -top-0.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1 text-[11px] font-bold text-primary-foreground animate-scale-in">
+                <span className="absolute -end-0.5 -top-0.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1 text-[11px] font-bold text-primary-foreground animate-scale-in">
                   {itemCount}
                 </span>
               )}
@@ -600,7 +600,7 @@ const Header = () => {
                         ) : null}
                       </div>
                       {expanded && children.length > 0 ? (
-                        <div className="pb-2 pl-6">
+                        <div className="pb-2 ps-6">
                           {children.map((child, ci) => {
                             const childHref = resolveStoreHref(child.href);
                             const childExternal = /^https?:\/\//i.test(child.href);

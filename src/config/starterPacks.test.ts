@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { STARTER_PACKS } from './starterPacks';
+import { localizeStarterPack } from './starterPacks.ar';
 import { STYLE_FOR_SECTOR, getStylePreset } from './stylePresets';
 import { createStoreMessages } from '@/i18n/createStoreMessages';
 
@@ -24,6 +25,15 @@ describe('starterPacks', () => {
         expect(msgs[`sector.${pack.key}`]?.length, `${pack.key}:${lang}`).toBeGreaterThan(0);
       }
     }
+  });
+
+  it('traduit les packs marocains en arabe', () => {
+    const pack = STARTER_PACKS.find((p) => p.key === 'artisanat')!;
+    const ar = localizeStarterPack(pack, 'ar');
+    expect(ar.label).toBe('الصناعة التقليدية المغربية');
+    expect(ar.products[0].name).not.toBe(pack.products[0].name);
+    expect(ar.products[0].price).toBe(pack.products[0].price);
+    expect(localizeStarterPack(pack, 'fr').products[0].name).toBe(pack.products[0].name);
   });
 
   it('propose des secteurs marocains', () => {

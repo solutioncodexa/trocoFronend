@@ -15,7 +15,7 @@ export function customerWhatsAppNumber(phone?: string | null): string | null {
   return digits.length >= 10 && digits.length <= 15 ? digits : null;
 }
 
-type Lang = 'fr' | 'en' | 'ar';
+type Lang = 'fr' | 'en' | 'ar' | 'darija' | 'darija-ar';
 
 export function normalizeMessageLang(locale?: string | null): Lang {
   const l = (locale ?? '').toLowerCase().slice(0, 2);
@@ -57,6 +57,20 @@ export function buildOrderConfirmationMessage(i: OrderMessageInput): string {
       ...lines,
       `المبلغ المطلوب عند الاستلام: ${i.total}${where ? ` — التوصيل إلى ${where}` : ''}.`,
       'هل يمكنكم تأكيد الطلب بالرد بكلمة «نعم»؟ شكرًا لكم!',
+    ],
+    darija: [
+      `Salam${name ? ` ${name}` : ''}, m3akom ${i.storeName}.`,
+      'Wesletna commande dyalek:',
+      ...lines,
+      `Total tkhalles f livraison: ${i.total}${where ? ` — l ${where}` : ''}.`,
+      'Wach t2ekked lina b « OUI »? Chokran!',
+    ],
+    'darija-ar': [
+      `السلام${name ? ` ${name}` : ''}، معكم ${i.storeName}.`,
+      'وصلاتنا الطلبية ديالكم:',
+      ...lines,
+      `المجموع غادي تخلصوه فالليڤريزون: ${i.total}${where ? ` — ل${where}` : ''}.`,
+      'واش تأكدوا لينا بالرد «نعم»؟ شكراً!',
     ],
   }[i.lang];
   return text.join('\n');

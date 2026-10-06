@@ -28,6 +28,7 @@ const Boutique = lazy(() => import("./pages/Boutique"));
 const ProductDetail = lazy(() => import("./pages/ProductDetail"));
 const Cart = lazy(() => import("./pages/Cart"));
 const Checkout = lazy(() => import("./pages/Checkout"));
+const ReturnRequest = lazy(() => import("./pages/ReturnRequest"));
 const Wishlist = lazy(() => import("./pages/Wishlist"));
 const SurMesure = lazy(() => import("./pages/SurMesure"));
 const Devis = lazy(() => import("./pages/Devis"));
@@ -68,6 +69,7 @@ const AdminWebhooks = lazy(() => import("./pages/admin/AdminWebhooks"));
 const AdminPrivacy = lazy(() => import("./pages/admin/AdminPrivacy"));
 const AdminApiKeys = lazy(() => import("./pages/admin/AdminApiKeys"));
 const AdminShipping = lazy(() => import("./pages/admin/AdminShipping"));
+const AdminMarket = lazy(() => import("./pages/admin/AdminMarket"));
 const AdminOnboarding = lazy(() => import("./pages/admin/AdminOnboarding"));
 const AdminOnlineStore = lazy(() => import("./pages/admin/AdminOnlineStore"));
 const BlogList = lazy(() => import("./pages/BlogList"));
@@ -171,6 +173,7 @@ const App = () => (
                     <Route path="/produit/:id" element={<ProductDetail />} />
                     <Route path="/panier" element={<Cart />} />
                     <Route path="/checkout" element={<Checkout />} />
+                    <Route path="/retours" element={<ReturnRequest />} />
                     <Route path="/codes-promo" element={<PromoCodes />} />
                     <Route path="/sur-mesure" element={<SurMesureGate><SurMesure /></SurMesureGate>} />
                     <Route path="/devis" element={<SurMesureGate><Devis /></SurMesureGate>} />
@@ -243,6 +246,7 @@ const App = () => (
                     <Route path="/admin/conformite" element={<ProtectedAdminRoute permission={PERMISSIONS.PRIVACY_MANAGE}><AdminPrivacy /></ProtectedAdminRoute>} />
                     <Route path="/admin/api-keys" element={<ProtectedAdminRoute permission={PERMISSIONS.API_KEYS_MANAGE}><AdminApiKeys /></ProtectedAdminRoute>} />
                     <Route path="/admin/livraison" element={<ProtectedAdminRoute permission={PERMISSIONS.ORDERS_VIEW}><AdminShipping /></ProtectedAdminRoute>} />
+                    <Route path="/admin/marche" element={<ProtectedAdminRoute permission={PERMISSIONS.ORDERS_VIEW}><AdminMarket /></ProtectedAdminRoute>} />
                     <Route path="/admin/*" element={<Navigate to="/admin" replace />} />
                     <Route path="*" element={<NotFound />} />
                   </Routes>

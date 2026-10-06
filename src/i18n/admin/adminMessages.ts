@@ -70,6 +70,7 @@ export type AdminMessageKey =
   | 'nav.apiKeys'
   | 'nav.privacy'
   | 'nav.shipping'
+  | 'nav.market'
   | 'nav.members'
   | 'nav.audit'
   | 'common.save'
@@ -294,6 +295,7 @@ const fr: Record<AdminCoreMessageKey, string> = {
   'nav.apiKeys': 'Clés API',
   'nav.privacy': 'Données personnelles',
   'nav.shipping': 'Livraison',
+  'nav.market': 'Marché',
   'nav.members': 'Membres',
   'nav.audit': 'Journal d’audit',
   'common.save': 'Enregistrer',
@@ -514,6 +516,7 @@ const ar: Record<AdminCoreMessageKey, string> = {
   'nav.apiKeys': 'مفاتيح API',
   'nav.privacy': 'البيانات الشخصية',
   'nav.shipping': 'التوصيل',
+  'nav.market': 'السوق',
   'nav.members': 'الأعضاء',
   'nav.audit': 'سجل التدقيق',
   'common.save': 'حفظ',
@@ -732,6 +735,7 @@ const en: Record<AdminCoreMessageKey, string> = {
   'nav.apiKeys': 'API keys',
   'nav.privacy': 'Personal data',
   'nav.shipping': 'Shipping',
+  'nav.market': 'Market',
   'nav.members': 'Members',
   'nav.audit': 'Audit log',
   'common.save': 'Save',

@@ -2,11 +2,12 @@ import { buildApiUrl, apiRequest } from '@/config/api';
 import type { ShippingCarrierDTO } from '@/types/api';
 
 export const shippingApi = {
-  getPublic: (subtotal?: number): Promise<ShippingCarrierDTO[]> => {
+  getPublic: (subtotal?: number, city?: string): Promise<ShippingCarrierDTO[]> => {
     const qs = new URLSearchParams();
     if (subtotal !== undefined && Number.isFinite(subtotal)) {
       qs.set('subtotal', String(subtotal));
     }
+    if (city?.trim()) qs.set('city', city.trim());
     const suffix = qs.toString() ? `?${qs.toString()}` : '';
     return apiRequest<ShippingCarrierDTO[]>(buildApiUrl(`/shipping-carriers/public${suffix}`));
   },

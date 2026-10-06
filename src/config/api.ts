@@ -191,6 +191,24 @@ export const apiRequest = async <T>(
   return data as T;
 };
 
+/** Télécharge un fichier authentifié (CSV admin). */
+export async function apiDownload(url: string, filename: string): Promise<void> {
+  const token = getAuthToken();
+  const headers: Record<string, string> = {};
+  if (token && isAdminSurface()) headers.Authorization = `Bearer ${token}`;
+  const tenantSlug = getTenantSlug();
+  if (tenantSlug) headers['X-Fournisseur-Slug'] = tenantSlug;
+  const response = await fetch(url, { headers });
+  if (!response.ok) throw new Error('Téléchargement impossible');
+  const blob = await response.blob();
+  const href = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = href;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(href);
+}
+
 const PREVIEW_KEY_STORAGE = 'troco_preview_key';
 
 /**

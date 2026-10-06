@@ -28,6 +28,8 @@ type Draft = Omit<CarrierForm, 'enabled'>;
 
 const PRESETS: { code: string; name: string; trackingUrlTemplate: string }[] = [
   { code: 'AMANA', name: 'Amana', trackingUrlTemplate: '' },
+  { code: 'CHRONODIALI', name: 'Chronodiali', trackingUrlTemplate: '' },
+  { code: 'GLOVO', name: 'Glovo', trackingUrlTemplate: '' },
   { code: 'CTM', name: 'CTM', trackingUrlTemplate: '' },
   { code: 'DHL', name: 'DHL', trackingUrlTemplate: 'https://www.dhl.com/ma-fr/home/tracking.html?tracking-id={tracking}' },
 ];

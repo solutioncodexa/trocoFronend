@@ -1,6 +1,7 @@
 import { categoriesApi } from '@/services/api/categories';
 import { productsApi } from '@/services/api/products';
 import { DEMO_SKU_PREFIX, getStarterPack } from '@/config/starterPacks';
+import { localizeStarterPack } from '@/config/starterPacks.ar';
 
 export type StarterPackResult = {
   categoriesCreated: number;
@@ -11,8 +12,8 @@ export type StarterPackResult = {
  * Crée (sans doublon) les catégories puis les produits d'exemple du secteur choisi.
  * Les produits portent un SKU `DEMO-…` pour pouvoir être retirés ensuite.
  */
-export async function applyStarterPack(packKey: string): Promise<StarterPackResult> {
-  const pack = getStarterPack(packKey);
+export async function applyStarterPack(packKey: string, lang?: string | null): Promise<StarterPackResult> {
+  const pack = localizeStarterPack(getStarterPack(packKey), lang);
 
   const existingCategories = await categoriesApi.getAllCategories();
   const knownSlugs = new Set(existingCategories.map((c) => c.slug));
@@ -58,8 +59,23 @@ export async function listDemoProducts() {
 /** Supprime tous les produits d'exemple ; retourne le nombre supprimé. */
 export async function removeDemoProducts(): Promise<number> {
   const demo = await listDemoProducts();
+  const errors: string[] = [];
+  let removed = 0;
   for (const p of demo) {
-    await productsApi.deleteProduct(p.id);
+    try {
+      await productsApi.deleteProduct(p.id);
+      removed += 1;
+    } catch (e) {
+      const msg = e instanceof Error && e.message ? e.message : 'erreur';
+      errors.push(`${p.name} : ${msg}`);
+    }
   }
-  return demo.length;
+  if (errors.length > 0) {
+    throw new Error(
+      removed > 0
+        ? `${removed} supprimé(s). Échec : ${errors.slice(0, 3).join(' · ')}`
+        : errors.slice(0, 3).join(' · '),
+    );
+  }
+  return removed;
 }
