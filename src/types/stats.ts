@@ -17,6 +17,8 @@ export interface RevenueStatsDTO {
   deliveredOrders: number;
   confirmedOrders: number;
   newOrders: number;
+  pendingOrders: number;
+  pendingAmount: number;
   cancelledOrders: number;
   totalOrders: number;
   averageBasket: number;

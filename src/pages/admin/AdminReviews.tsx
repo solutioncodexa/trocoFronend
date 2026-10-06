@@ -1,3 +1,4 @@
+import { useConfirm } from '@/components/ui/confirm-dialog';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Check, MessageSquareQuote, Star, Trash2, X } from 'lucide-react';
 import AdminLayout from '@/components/admin/AdminLayout';
@@ -12,6 +13,7 @@ import { toastError } from '@/utils/toastMessages';
 const AdminReviews = () => {
   const { t } = useAdminLocale();
   const queryClient = useQueryClient();
+  const confirm = useConfirm();
 
   const { data: reviews = [], isLoading } = useQuery({
     queryKey: ['admin-product-reviews'],
@@ -122,7 +124,7 @@ const AdminReviews = () => {
                         className="text-destructive hover:text-destructive"
                         disabled={deleteMutation.isPending}
                         onClick={() => {
-                          if (window.confirm('Supprimer cet avis ?')) deleteMutation.mutate(r.id);
+                          void confirm({ title: 'Supprimer cet avis ?', description: 'L’avis client sera retiré de la boutique.', tone: 'destructive' }).then((ok) => { if (ok) deleteMutation.mutate(r.id); });
                         }}
                       >
                         <Trash2 className="h-3.5 w-3.5" />

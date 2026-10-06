@@ -1,3 +1,4 @@
+import { useConfirm } from '@/components/ui/confirm-dialog';
 import { useMemo, useState } from 'react';
 import { Plus, Trash2, Pencil, SlidersHorizontal, Store } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -41,6 +42,7 @@ const BRAND_KEY = 'brand';
 const AdminAttributeTemplates = () => {
   const { t } = useAdminLocale();
   const queryClient = useQueryClient();
+  const confirm = useConfirm();
 
   const { data: categories = [] } = useQuery({
     queryKey: ['categories'],
@@ -118,9 +120,7 @@ const AdminAttributeTemplates = () => {
 
   const handleDelete = (tpl: ProductAttributeTemplate | null) => {
     if (!tpl?.id) return;
-    if (confirm('Supprimer ce modèle d’attributs ?')) {
-      deleteMutation.mutate(tpl.id);
-    }
+    void confirm({ title: "Supprimer ce modèle d’attributs ?", description: "Les produits déjà créés avec ce modèle ne sont pas modifiés.", tone: "destructive" }).then((ok) => { if (ok) deleteMutation.mutate(tpl.id); });
   };
 
   const addAxis = () => setAxes((prev) => [...prev, { name: '', valuesText: '', required: false }]);

@@ -1,3 +1,4 @@
+import { useConfirm } from '@/components/ui/confirm-dialog';
 import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Loader2, Pencil, Plus, Trash2 } from 'lucide-react';
@@ -40,6 +41,7 @@ const AdminBlog = () => {
   const { t } = useAdminLocale();
   const { isAdmin } = useAdmin();
   const queryClient = useQueryClient();
+  const confirm = useConfirm();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<StoreBlogPost | null>(null);
   const [form, setForm] = useState<UpsertBlogPostPayload>(emptyForm());
@@ -155,9 +157,7 @@ const AdminBlog = () => {
                     variant="ghost"
                     className="text-destructive"
                     onClick={() => {
-                      if (window.confirm(`Supprimer « ${post.title} » ?`)) {
-                        deleteMutation.mutate(post.id);
-                      }
+                      void confirm({ title: `Supprimer « ${post.title} » ?`, description: "L’article sera retiré du blog de la boutique.", tone: "destructive" }).then((ok) => { if (ok) deleteMutation.mutate(post.id); });
                     }}
                   >
                     <Trash2 className="h-3.5 w-3.5" />

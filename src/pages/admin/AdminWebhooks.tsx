@@ -1,3 +1,4 @@
+import { useConfirm } from '@/components/ui/confirm-dialog';
 import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Loader2, Pencil, Plus, Trash2, Webhook } from 'lucide-react';
@@ -51,6 +52,7 @@ const emptyForm = (): FormState => ({
 const AdminWebhooks = () => {
   const { t } = useAdminLocale();
   const queryClient = useQueryClient();
+  const confirm = useConfirm();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<StoreWebhook | null>(null);
   const [form, setForm] = useState<FormState>(emptyForm());
@@ -213,9 +215,7 @@ const AdminWebhooks = () => {
                       className="text-destructive"
                       disabled={deleteMutation.isPending}
                       onClick={() => {
-                        if (window.confirm(`Supprimer le webhook « ${w.name} » ?`)) {
-                          deleteMutation.mutate(w.id);
-                        }
+                        void confirm({ title: `Supprimer le webhook « ${w.name} » ?`, description: "Les événements ne seront plus envoyés à cette URL.", tone: "destructive" }).then((ok) => { if (ok) deleteMutation.mutate(w.id); });
                       }}
                     >
                       <Trash2 className="h-3.5 w-3.5" />

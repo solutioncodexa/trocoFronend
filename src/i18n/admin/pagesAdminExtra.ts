@@ -125,7 +125,13 @@ export type PagesAdminMessageKey =
   | 'revenue.newOrders'
   | 'revenue.totalOrders'
   | 'revenue.topProducts'
-  | 'revenue.noProductsSold';
+  | 'revenue.noProductsSold'
+  | 'revenue.pendingOrders'
+  | 'revenue.pendingHint'
+  | 'revenue.pendingAmount'
+  | 'revenue.liveOn'
+  | 'revenue.liveOff'
+  | 'revenue.updatedAt';
 
 const fr: Record<PagesAdminMessageKey, string> = {
   'common.customer': 'Client',
@@ -258,6 +264,12 @@ const fr: Record<PagesAdminMessageKey, string> = {
   'revenue.totalOrders': 'Total commandes',
   'revenue.topProducts': 'Top produits',
   'revenue.noProductsSold': 'Aucun produit vendu sur la période',
+  'revenue.pendingOrders': 'En attente',
+  'revenue.pendingHint': 'Commandes à traiter',
+  'revenue.pendingAmount': 'Montant en attente',
+  'revenue.liveOn': 'En direct',
+  'revenue.liveOff': 'Hors ligne',
+  'revenue.updatedAt': 'Mis à jour à {time}',
 };
 
 const en: Record<PagesAdminMessageKey, string> = {
@@ -391,6 +403,12 @@ const en: Record<PagesAdminMessageKey, string> = {
   'revenue.totalOrders': 'Total orders',
   'revenue.topProducts': 'Top products',
   'revenue.noProductsSold': 'No products sold in this period',
+  'revenue.pendingOrders': 'Pending',
+  'revenue.pendingHint': 'Orders to process',
+  'revenue.pendingAmount': 'Pending amount',
+  'revenue.liveOn': 'Live',
+  'revenue.liveOff': 'Offline',
+  'revenue.updatedAt': 'Updated at {time}',
 };
 
 const ar: Record<PagesAdminMessageKey, string> = {
@@ -524,6 +542,12 @@ const ar: Record<PagesAdminMessageKey, string> = {
   'revenue.totalOrders': 'إجمالي الطلبات',
   'revenue.topProducts': 'أفضل المنتجات',
   'revenue.noProductsSold': 'لم يُباع أي منتج خلال هذه الفترة',
+  'revenue.pendingOrders': 'قيد الانتظار',
+  'revenue.pendingHint': 'طلبات بحاجة للمعالجة',
+  'revenue.pendingAmount': 'المبلغ قيد الانتظار',
+  'revenue.liveOn': 'مباشر',
+  'revenue.liveOff': 'غير متصل',
+  'revenue.updatedAt': 'آخر تحديث {time}',
 };
 
 export const pagesAdminExtra: Record<StoreLocale, Record<PagesAdminMessageKey, string>> = {

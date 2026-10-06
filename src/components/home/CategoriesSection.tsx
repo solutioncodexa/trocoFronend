@@ -39,11 +39,11 @@ const CategoriesSection = () => {
     queryKey: ['categories', 'nav'],
     queryFn: () => categoriesApi.getNavCategories(),
     ...categoriesQueryOptions,
-    enabled: heroList.length === 0 || heroList.every((c) => !(c.heroImageUrl ?? '').trim()),
+    enabled: heroList.length === 0,
   });
 
   const visible = useMemo(() => {
-    const withImg = heroList.filter((c) => (c.heroImageUrl ?? '').trim().length > 0);
+    const withImg = heroList; // sans photo : image par défaut générée (heroCategoryDisplaySrc)
     if (withImg.length > 0) return orderHeroCategoriesForDisplay(withImg);
 
     // Fallback si rien n’est encore configuré en admin
@@ -71,7 +71,7 @@ const CategoriesSection = () => {
 
         <ul className="grid grid-cols-2 gap-6 sm:grid-cols-3 sm:gap-8 lg:grid-cols-6">
           {visible.map((cat) => {
-            const src = heroCategoryDisplaySrc(cat.heroImageUrl ?? undefined);
+            const src = heroCategoryDisplaySrc(cat.heroImageUrl ?? undefined, cat.name);
             return (
               <li key={cat.id}>
                 <Link

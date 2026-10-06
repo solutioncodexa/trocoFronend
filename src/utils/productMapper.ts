@@ -110,5 +110,7 @@ export function applyVariantToProduct(product: Product, variant: ProductVariant)
 }
 
 export function getVariantKey(v: ProductVariant): string {
-  return v.id ?? `a-${v.attributeName ?? ''}-${v.attributeValue ?? v.label ?? v.price}`;
+  if (v.id != null && v.id !== '') return v.id;
+  const attrs = (v.attributes ?? []).map((a) => `${a.name}=${a.value}`).join('|');
+  return `a-${v.attributeName ?? ''}-${v.attributeValue ?? ''}-${attrs}-${v.label ?? ''}-${v.price}`;
 }

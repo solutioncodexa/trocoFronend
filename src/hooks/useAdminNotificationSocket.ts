@@ -5,7 +5,7 @@ import { API_BASE_URL } from '@/config/api';
 import { getStoredToken } from '@/services/api/auth';
 import type { NotificationDTO } from '@/types/api';
 
-function buildWsUrl(token: string): string {
+export function buildWsUrl(token: string): string {
   const base = API_BASE_URL || '/api';
   if (base.startsWith('http://') || base.startsWith('https://')) {
     const u = new URL(base);

@@ -1,7 +1,10 @@
 import { useState, useEffect, useRef, type CSSProperties } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Search, ShoppingBag, Menu, X, Heart, ArrowRight, ChevronDown } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
 import { Input } from '@/components/ui/input';
+import { storePagesApi } from '@/services/api/storePages';
+import { staticCatalogQueryOptions } from '@/config/queryOptions';
 import { useCart } from '@/contexts/CartContext';
 import { useWishlist } from '@/contexts/WishlistContext';
 import { cn } from '@/lib/utils';
@@ -36,6 +39,14 @@ const Header = () => {
   const location = useLocation();
   const { to, isDemo, demo } = useStorefrontPath();
   const { customNav, isReplaced, navHref } = useSystemNavReplacements();
+  const { data: publishedSlugsRaw } = useQuery({
+    queryKey: ['store-pages', 'public-slugs'],
+    queryFn: () => storePagesApi.publicSlugs(),
+    ...staticCatalogQueryOptions,
+    enabled: !isDemo,
+  });
+  const slugsLoaded = publishedSlugsRaw !== undefined;
+  const publishedSlugs = (publishedSlugsRaw ?? []).map((s) => s.toLowerCase());
   const { megaMenuConfig, useMegaMenuNav, appBarConfig } = useGlobalSections();
   const appearance = useStoreAppearance();
   const { setLang, withLang } = useStoreLang();
@@ -137,6 +148,13 @@ const Header = () => {
     return { href: resolveStoreHref(raw), external: false as const };
   };
 
+  /** Lien vers /page/<slug> dont la page n'est pas (ou plus) publiée → masqué (évite « Page introuvable »). */
+  const isDeadPageLink = (href: string) => {
+    if (isDemo || !slugsLoaded || /^https?:\/\//i.test(href)) return false;
+    const m = href.split(/[?#]/)[0].match(/\/page\/([^/]+)\/?$/);
+    return !!m && !publishedSlugs.includes(decodeURIComponent(m[1]).toLowerCase());
+  };
+
   const customExtra = customNav.filter(
     (p) => !(SYSTEM_NAV_REPLACEMENTS as readonly string[]).includes(p.slug.toLowerCase()),
   );
@@ -205,10 +223,20 @@ const Header = () => {
           },
         ]
       : []),
-  ].filter((link, i, arr) => arr.findIndex((x) => x.href === link.href && x.label === link.label) === i);
+  ]
+    .filter((link, i, arr) => arr.findIndex((x) => x.href === link.href && x.label === link.label) === i)
+    .filter((link) => !isDeadPageLink(link.href));
 
   const megaMenuItems: MegaMenuItem[] | null =
-    useMegaMenuNav && megaMenuConfig?.items.length ? megaMenuConfig.items : null;
+    useMegaMenuNav && megaMenuConfig?.items.length
+      ? megaMenuConfig.items
+          .filter((item) => !isDeadPageLink(item.href))
+          .map((item) =>
+            item.children
+              ? { ...item, children: item.children.filter((c) => !isDeadPageLink(c.href)) }
+              : item,
+          )
+      : null;
 
   const navLinks = defaultNavLinks;
 

@@ -1,3 +1,4 @@
+import { useConfirm } from '@/components/ui/confirm-dialog';
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { 
@@ -28,6 +29,7 @@ import { cn } from '@/lib/utils';
 const AdminTopBarMessages = () => {
   const { t } = useAdminLocale();
   const queryClient = useQueryClient();
+  const confirm = useConfirm();
   const [selectedMessage, setSelectedMessage] = useState<TopBarMessageDTO | null>(null);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -117,9 +119,7 @@ const AdminTopBarMessages = () => {
   };
 
   const handleDelete = (id: string) => {
-    if (confirm('Êtes-vous sûr de vouloir supprimer ce message ?')) {
-      deleteMutation.mutate(id);
-    }
+    void confirm({ title: "Supprimer ce message ?", description: "Il disparaîtra immédiatement de la barre d’annonce.", tone: "destructive" }).then((ok) => { if (ok) deleteMutation.mutate(id); });
   };
 
   const handleToggleActive = (id: string, isActive: boolean) => {

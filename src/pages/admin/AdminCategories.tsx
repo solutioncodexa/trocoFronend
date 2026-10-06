@@ -20,6 +20,9 @@ import {
   PowerOff,
 } from 'lucide-react';
 import AdminLayout from '@/components/admin/AdminLayout';
+import ImageUpload from '@/components/admin/ImageUpload';
+import { uploadImage } from '@/services/api/upload';
+import { heroCategoryDisplaySrc } from '@/components/home/heroCategoryImage';
 import { useAdminLocale } from '@/contexts/AdminLocaleContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -97,6 +100,7 @@ const AdminCategories = () => {
   const [pendingDelete, setPendingDelete] = useState<CategoryDTO | null>(null);
   const [pendingBulkDelete, setPendingBulkDelete] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const [imageUrl, setImageUrl] = useState('');
   const nameInputRef = useRef<HTMLInputElement>(null);
   const quickAddRefs = useRef<Record<number, HTMLInputElement | null>>({});
 
@@ -147,6 +151,7 @@ const AdminCategories = () => {
     setSlugManual(false);
     setKeepOpen(false);
     setBulkNames('');
+    setImageUrl('');
     setFormData({ name: '', description: '', seoTitle: '', seoDescription: '', slug: '', parentId: '' });
     setIsModalOpen(true);
   };
@@ -157,6 +162,7 @@ const AdminCategories = () => {
     setSlugManual(false);
     setKeepOpen(true);
     setBulkNames('');
+    setImageUrl('');
     setFormData({
       name: '',
       description: '',
@@ -245,11 +251,14 @@ const AdminCategories = () => {
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({
+    mutationFn: async ({
       id,
       data,
+      imageUrl: newImageUrl,
     }: {
       id: number;
+      /** undefined = image inchangée ; '' = retirer l’image */
+      imageUrl?: string;
       data: {
         name: string;
         description?: string;
@@ -259,7 +268,13 @@ const AdminCategories = () => {
         parentId?: number | null;
         clearParent?: boolean;
       };
-    }) => categoriesApi.updateCategory(id, data),
+    }) => {
+      const updated = await categoriesApi.updateCategory(id, data);
+      if (newImageUrl !== undefined) {
+        await categoriesApi.patchCategoryHero(id, { heroImageUrl: newImageUrl });
+      }
+      return updated;
+    },
     onSuccess: () => {
       invalidate();
       toast.success('Catégorie modifiée');
@@ -377,6 +392,7 @@ const AdminCategories = () => {
     setSlugManual(true);
     setKeepOpen(false);
     setBulkNames('');
+    setImageUrl('');
     setFormData({
       name: category.name,
       description: category.description || '',
@@ -385,6 +401,7 @@ const AdminCategories = () => {
       slug: category.slug,
       parentId: category.parentId != null ? String(category.parentId) : '',
     });
+    setImageUrl(category.heroImageUrl ?? '');
     setIsModalOpen(true);
   };
 
@@ -392,6 +409,7 @@ const AdminCategories = () => {
     setIsModalOpen(false);
     setEditingCategory(null);
     setBulkNames('');
+    setImageUrl('');
   };
 
   const handleNameChange = (name: string) => {
@@ -405,6 +423,7 @@ const AdminCategories = () => {
   const resetFormKeepParent = () => {
     setSlugManual(false);
     setBulkNames('');
+    setImageUrl('');
     setFormData((prev) => ({
       name: '',
       description: '',
@@ -485,12 +504,13 @@ const AdminCategories = () => {
           parentId: parentId ?? undefined,
           clearParent: parentId == null,
         },
+        imageUrl: imageUrl !== (editingCategory.heroImageUrl ?? '') ? imageUrl : undefined,
       });
       return;
     }
 
     try {
-      await createMutation.mutateAsync({
+      const created = await createMutation.mutateAsync({
         name: formData.name.trim(),
         description: formData.description.trim() || undefined,
         seoTitle: formData.seoTitle.trim() || undefined,
@@ -498,6 +518,9 @@ const AdminCategories = () => {
         slug: uniqueSlug(slug, existingSlugs),
         parentId: parentId ?? undefined,
       });
+      if (imageUrl && created?.id != null) {
+        await categoriesApi.patchCategoryHero(Number(created.id), { heroImageUrl: imageUrl });
+      }
       invalidate();
       toast.success(effectiveMode === 'parent' ? 'Catégorie créée' : 'Sous-catégorie créée');
       if (keepOpen && effectiveMode === 'child') resetFormKeepParent();
@@ -705,9 +728,12 @@ const AdminCategories = () => {
                   >
                     {open ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
                   </button>
-                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10">
-                    <FolderTree className="h-4 w-4 text-primary" />
-                  </div>
+                  <img
+                    src={heroCategoryDisplaySrc(root.heroImageUrl ?? undefined, root.name)}
+                    alt=""
+                    loading="lazy"
+                    className="h-9 w-9 shrink-0 rounded-lg object-cover"
+                  />
                   <button
                     type="button"
                     className="min-w-0 flex-1 text-left"
@@ -952,6 +978,7 @@ const AdminCategories = () => {
                     setCreateMode('parent');
                     setKeepOpen(false);
                     setBulkNames('');
+    setImageUrl('');
                     setFormData((p) => ({ ...p, parentId: '', name: '', slug: '' }));
                     setSlugManual(false);
                   }}
@@ -1085,6 +1112,22 @@ const AdminCategories = () => {
                     />
                   </div>
                 )}
+                <div>
+                  <Label>Image de la catégorie</Label>
+                  <div className="mt-1 flex items-start gap-3">
+                    <img
+                      src={heroCategoryDisplaySrc(imageUrl || undefined, formData.name)}
+                      alt=""
+                      className="h-16 w-16 shrink-0 rounded-xl border border-border object-cover"
+                    />
+                    <div className="min-w-0 flex-1">
+                      <ImageUpload value={imageUrl} onChange={setImageUrl} onUpload={uploadImage} />
+                      <p className="mt-1 text-[11px] text-muted-foreground">
+                        Optionnel — sans image, une illustration par défaut est affichée.
+                      </p>
+                    </div>
+                  </div>
+                </div>
                 <div>
                   <Label htmlFor="cat-desc">Description</Label>
                   <Textarea

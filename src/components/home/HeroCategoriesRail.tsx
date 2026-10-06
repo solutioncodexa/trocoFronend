@@ -29,11 +29,11 @@ const HeroCategoriesRail = ({
     queryKey: ['categories', 'nav'],
     queryFn: () => categoriesApi.getNavCategories(),
     ...heroQueryOptions,
-    enabled: heroList.length === 0 || heroList.every((c) => !(c.heroImageUrl ?? '').trim()),
+    enabled: heroList.length === 0,
   });
 
   const visible = useMemo(() => {
-    const withImg = heroList.filter((c) => (c.heroImageUrl ?? '').trim().length > 0);
+    const withImg = heroList; // sans photo : image par défaut générée (heroCategoryDisplaySrc)
     if (withImg.length > 0) return orderHeroCategoriesForDisplay(withImg);
     // Fallback: catégories principales (sans image hero admin)
     const roots = ['sachets-pochettes', 'carton-boites', 'protections', 'decorations', 'materiels'];
@@ -58,7 +58,7 @@ const HeroCategoriesRail = ({
     >
       <ul className="flex max-md:flex-nowrap max-md:gap-5 max-md:px-4 max-md:pb-1 max-md:pt-1 md:flex-wrap md:justify-center md:gap-8 md:px-6">
         {visible.map((cat) => {
-          const src = heroCategoryDisplaySrc(cat.heroImageUrl ?? undefined);
+          const src = heroCategoryDisplaySrc(cat.heroImageUrl ?? undefined, cat.name);
           return (
             <li key={cat.id} className="max-md:shrink-0 max-md:snap-start md:min-w-0">
               <Link

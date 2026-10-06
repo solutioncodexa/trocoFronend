@@ -1,4 +1,5 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import {
   Area,
@@ -9,7 +10,7 @@ import {
   XAxis,
   YAxis,
 } from 'recharts';
-import { DollarSign, ShoppingCart, TrendingUp, Ban } from 'lucide-react';
+import { DollarSign, ShoppingCart, TrendingUp, Ban, Hourglass, Radio } from 'lucide-react';
 import AdminLayout from '@/components/admin/AdminLayout';
 import { useAdminLocale } from '@/contexts/AdminLocaleContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -18,13 +19,32 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { statsApi } from '@/services/api/stats';
 import { formatPrice } from '@/utils/formatPrice';
+import { useAdmin } from '@/contexts/AdminContext';
+import { useRevenueSocket } from '@/hooks/useRevenueSocket';
+import { cn } from '@/lib/utils';
 
 function isoDate(d: Date) {
   return d.toISOString().slice(0, 10);
 }
 
+/** Anime brièvement une valeur quand elle change (mise à jour temps réel visible). */
+function useFlashOnChange(value: unknown) {
+  const prev = useRef(value);
+  const [flash, setFlash] = useState(false);
+  useEffect(() => {
+    if (prev.current === value) return;
+    prev.current = value;
+    setFlash(true);
+    const id = setTimeout(() => setFlash(false), 1400);
+    return () => clearTimeout(id);
+  }, [value]);
+  return flash;
+}
+
 const AdminRevenue = () => {
   const { t } = useAdminLocale();
+  const { user } = useAdmin();
+  const { connected, lastEventAt } = useRevenueSocket(user?.fournisseurId);
   const today = useMemo(() => new Date(), []);
   const [preset, setPreset] = useState<'7' | '30' | '90' | 'custom'>('30');
   const [from, setFrom] = useState(() => isoDate(new Date(Date.now() - 30 * 86400000)));
@@ -42,7 +62,13 @@ const AdminRevenue = () => {
   const { data, isLoading } = useQuery({
     queryKey: ['stats', 'revenue', from, to],
     queryFn: () => statsApi.getRevenue(from, to),
+    // Socket coupé : repli sur un rafraîchissement périodique.
+    refetchInterval: connected ? false : 30_000,
   });
+
+  const pendingFlash = useFlashOnChange(data?.pendingOrders);
+  const revenueFlash = useFlashOnChange(data?.deliveredRevenue);
+  const deliveredFlash = useFlashOnChange(data?.deliveredOrders);
 
   const chartData = (data?.daily ?? []).map((d) => ({
     date: d.date,
@@ -96,14 +122,55 @@ const AdminRevenue = () => {
             className="mt-1 w-[160px]"
           />
         </div>
+        <div
+          className={cn(
+            'ml-auto inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium',
+            connected
+              ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-700'
+              : 'border-border bg-muted text-muted-foreground',
+          )}
+          title={lastEventAt ? t('revenue.updatedAt', { time: lastEventAt.toLocaleTimeString() }) : undefined}
+        >
+          <span className="relative flex h-2 w-2">
+            {connected ? (
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-500 opacity-60" />
+            ) : null}
+            <span className={cn('relative inline-flex h-2 w-2 rounded-full', connected ? 'bg-emerald-500' : 'bg-muted-foreground/50')} />
+          </span>
+          <Radio className="h-3.5 w-3.5" />
+          {connected ? t('revenue.liveOn') : t('revenue.liveOff')}
+        </div>
       </div>
 
       {isLoading ? (
         <p className="text-muted-foreground">{t('common.loading')}</p>
       ) : (
         <>
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-            <Card>
+          <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
+            <Card
+              className={cn(
+                'border-amber-500/40 bg-amber-500/5 transition-shadow',
+                pendingFlash && 'ring-2 ring-amber-500/60',
+              )}
+            >
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm text-amber-700 flex items-center gap-2">
+                  <Hourglass className="w-4 h-4" /> {t('revenue.pendingOrders')}
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-display tabular-nums">{data?.pendingOrders ?? 0}</div>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {formatPrice(data?.pendingAmount ?? 0)} · {t('revenue.pendingHint')}
+                </p>
+                {(data?.pendingOrders ?? 0) > 0 ? (
+                  <Link to="/admin/commandes" className="mt-2 inline-block text-xs font-medium text-amber-700 hover:underline">
+                    {t('common.view')} →
+                  </Link>
+                ) : null}
+              </CardContent>
+            </Card>
+            <Card className={cn('transition-shadow', revenueFlash && 'ring-2 ring-primary/50')}>
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm text-muted-foreground flex items-center gap-2">
                   <DollarSign className="w-4 h-4" /> {t('revenue.deliveredRevenue')}
@@ -113,7 +180,7 @@ const AdminRevenue = () => {
                 {formatPrice(data?.deliveredRevenue ?? 0)}
               </CardContent>
             </Card>
-            <Card>
+            <Card className={cn('transition-shadow', deliveredFlash && 'ring-2 ring-primary/50')}>
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm text-muted-foreground flex items-center gap-2">
                   <ShoppingCart className="w-4 h-4" /> {t('revenue.deliveredOrders')}

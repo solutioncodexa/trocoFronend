@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { CartProvider } from "@/contexts/CartContext";
 import { AdminProvider } from "@/contexts/AdminContext";
+import { ConfirmProvider } from "@/components/ui/confirm-dialog";
 import { WishlistProvider } from "@/contexts/WishlistContext";
 import { TenantProvider } from "@/contexts/TenantContext";
 import { LocaleProvider } from "@/contexts/LocaleContext";
@@ -125,6 +126,7 @@ const App = () => (
         <AdminProvider>
           <CartProvider>
             <WishlistProvider>
+              <ConfirmProvider>
               <Sonner />
               <BrowserRouter
                 future={{
@@ -248,6 +250,7 @@ const App = () => (
                 </AdminLocaleProvider>
                 </LocaleProvider>
               </BrowserRouter>
+              </ConfirmProvider>
             </WishlistProvider>
           </CartProvider>
         </AdminProvider>

@@ -1,3 +1,4 @@
+import { useConfirm } from '@/components/ui/confirm-dialog';
 import { useState, useEffect, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import {
@@ -64,6 +65,7 @@ const emptyPromoForm: CreatePromoCodeRequest = {
 const AdminPromoCodes = () => {
   const { t } = useAdminLocale();
   const queryClient = useQueryClient();
+  const confirm = useConfirm();
   const [page, setPage] = useState(0);
   const [pageSize, setPageSize] = useState(20);
   const [searchTerm, setSearchTerm] = useState('');
@@ -324,8 +326,7 @@ const AdminPromoCodes = () => {
                     size="sm"
                     className="h-8 w-8 p-0 text-red-600 hover:text-red-700"
                     onClick={() => {
-                      if (confirm('Supprimer ce code promo ?'))
-                        deletePromoMut.mutate(promo.id);
+                      void confirm({ title: 'Supprimer ce code promo ?', description: 'Les clients ne pourront plus l’utiliser. Les commandes déjà passées ne changent pas.', tone: 'destructive' }).then((ok) => { if (ok) deletePromoMut.mutate(promo.id); });
                     }}
                   >
                     <Trash2 className="w-3.5 h-3.5" />
@@ -418,8 +419,7 @@ const AdminPromoCodes = () => {
                             size="icon"
                             className="text-red-600 hover:text-red-700"
                             onClick={() => {
-                              if (confirm('Supprimer ce code promo ?'))
-                                deletePromoMut.mutate(promo.id);
+                              void confirm({ title: 'Supprimer ce code promo ?', description: 'Les clients ne pourront plus l’utiliser. Les commandes déjà passées ne changent pas.', tone: 'destructive' }).then((ok) => { if (ok) deletePromoMut.mutate(promo.id); });
                             }}
                           >
                             <Trash2 className="w-4 h-4" />

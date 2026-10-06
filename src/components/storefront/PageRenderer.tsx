@@ -6,6 +6,7 @@ import { formatPrice } from '@/utils/formatPrice';
 import { productsApi, categoriesApi } from '@/services/api';
 import { mapProductListItemListToProducts } from '@/utils/productMapper';
 import { getImageUrl } from '@/services/api/upload';
+import { categoryPlaceholderSrc } from '@/components/home/heroCategoryImage';
 import { storePagesApi } from '@/services/api/storePages';
 import { storeLeadsApi } from '@/services/api/storeLeads';
 import type { StoreLeadType } from '@/types/store-leads';
@@ -603,15 +604,13 @@ function CategoriesBlock({
               )}
               onClick={usingMocks ? (e) => e.preventDefault() : undefined}
             >
-              {img ? (
-                <img
-                  src={img.startsWith('data:') ? img : getImageUrl(img)}
-                  alt=""
-                  loading="lazy"
-                  decoding="async"
-                  className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
-                />
-              ) : null}
+              <img
+                src={img ? (img.startsWith('data:') ? img : getImageUrl(img)) : categoryPlaceholderSrc(cat.name)}
+                alt=""
+                loading="lazy"
+                decoding="async"
+                className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
+              />
               <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
               <div className="absolute inset-x-0 bottom-0 p-4 text-white">
                 <p className="font-display text-lg font-semibold">{cat.name}</p>

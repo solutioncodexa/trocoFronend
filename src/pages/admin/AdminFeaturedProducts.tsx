@@ -1,3 +1,4 @@
+import { useConfirm } from '@/components/ui/confirm-dialog';
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { 
@@ -40,6 +41,7 @@ import { ErrorState } from '@/components/ui/ErrorState';
 const AdminFeaturedProducts = () => {
   const { t } = useAdminLocale();
   const queryClient = useQueryClient();
+  const confirm = useConfirm();
   const [searchTerm, setSearchTerm] = useState('');
   const [filterSection, setFilterSection] = useState<'all' | 'heritage' | 'sur-mesure'>('all');
   const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'inactive'>('all');
@@ -160,9 +162,7 @@ const AdminFeaturedProducts = () => {
   };
 
   const handleDelete = (id: string) => {
-    if (confirm('Êtes-vous sûr de vouloir supprimer ce produit sélectionné ?')) {
-      deleteMutation.mutate(id);
-    }
+    void confirm({ title: "Retirer ce produit de la sélection ?", description: "Le produit reste dans votre catalogue, il n’apparaîtra plus en vedette.", confirmLabel: "Retirer", tone: "destructive" }).then((ok) => { if (ok) deleteMutation.mutate(id); });
   };
 
   const handleToggleActive = (id: string, isActive: boolean) => {

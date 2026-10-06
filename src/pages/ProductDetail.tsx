@@ -3,6 +3,7 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { ChevronLeft, ChevronRight, ShoppingBag, Heart, Truck, Verified, Loader2, X, ZoomIn, Share2, Link as LinkIcon, Mail, MessageCircle, Instagram, Check, CloudUpload, Star } from 'lucide-react';
 import Layout from '@/components/layout/Layout';
+import { QuantityInput } from '@/components/ui/QuantityInput';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
@@ -445,7 +446,10 @@ const ProductDetail = () => {
 
   const handleAddToCart = () => {
     if (!ensureCanOrder()) return;
-    addToCart(cartProduct, quantity, selectedSize || undefined, selectedVariant.id, logoUrl);
+    addToCart(cartProduct, quantity, selectedSize || undefined, selectedVariant.id, logoUrl, {
+      key: getVariantKey(selectedVariant),
+      label: attributeLabel || undefined,
+    });
   };
 
   const handleWishlistToggle = () => {
@@ -536,7 +540,10 @@ const ProductDetail = () => {
 
   const handleBuyNow = () => {
     if (!ensureCanOrder()) return;
-    addToCart(cartProduct, quantity, selectedSize || undefined, selectedVariant.id, logoUrl);
+    addToCart(cartProduct, quantity, selectedSize || undefined, selectedVariant.id, logoUrl, {
+      key: getVariantKey(selectedVariant),
+      label: attributeLabel || undefined,
+    });
     navigate('/panier');
   };
 
@@ -962,11 +969,14 @@ const ProductDetail = () => {
                   ) : null}
                   <div>
                     <Label className="text-[11px] sm:text-xs mb-1 block">{packStepperLabel}</Label>
-                    <div className="flex h-9 max-w-[12rem] items-center rounded-xl border border-border overflow-hidden">
-                      <button type="button" onClick={() => setQuantity(Math.max(1, quantity - 1))} className="h-full touch-manipulation px-2.5 text-sm hover:bg-muted transition-colors">-</button>
-                      <span className="min-w-[2rem] flex-1 px-2.5 text-center text-xs">{quantity}</span>
-                      <button type="button" onClick={() => setQuantity(Math.min(MAX_ORDER_QUANTITY, quantity + 1))} className="h-full touch-manipulation px-2.5 text-sm hover:bg-muted transition-colors">+</button>
-                    </div>
+                    <QuantityInput
+                      value={quantity}
+                      onChange={setQuantity}
+                      max={MAX_ORDER_QUANTITY}
+                      quickSteps={[5, 10, 25]}
+                      size="sm"
+                      aria-label={packStepperLabel}
+                    />
                     {hasPackQtyAxis && (
                       <p className="text-[10px] text-muted-foreground mt-1">
                         Packs à commander (en plus du conditionnement ci-dessus)

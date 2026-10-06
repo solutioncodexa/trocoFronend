@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { useConfirm } from '@/components/ui/confirm-dialog';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Package, Plus, Pencil, Trash2, Search, Upload, X, ArrowLeft, ArrowRight, Star } from 'lucide-react';
 import type { CategoryDTO } from '@/types/api';
@@ -78,6 +79,7 @@ const PLACEHOLDER_IMAGE = '/placeholder-modern-fixed.svg';
 const AdminProducts = () => {
   const { t } = useAdminLocale();
   const queryClient = useQueryClient();
+  const confirm = useConfirm();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const fromOnboarding = searchParams.get(ONBOARDING_RETURN_QUERY) === '1';
@@ -637,9 +639,14 @@ const AdminProducts = () => {
   };
 
   const handleDelete = (productId: string) => {
-    if (confirm('Êtes-vous sûr de vouloir supprimer ce produit ?')) {
-      deleteMutation.mutate(productId);
-    }
+    const product = products.find((p) => String(p.id) === String(productId));
+    void confirm({
+      title: product?.name ? `Supprimer « ${product.name} » ?` : 'Supprimer ce produit ?',
+      description: 'Le produit disparaît de la boutique et du catalogue. Les commandes déjà passées sont conservées.',
+      tone: 'destructive',
+    }).then((ok) => {
+      if (ok) deleteMutation.mutate(productId);
+    });
   };
 
   const toggleBadge = (badge: string) => {

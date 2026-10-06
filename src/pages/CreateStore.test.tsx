@@ -71,6 +71,28 @@ describe('CreateStore', () => {
     expect(login).toHaveBeenCalledWith('admin@maison-atlas.test', 'Password123!');
   });
 
+  it('propose une adresse de secours pour un nom arabe (INS-05)', async () => {
+    renderWithProviders(<CreateStore />);
+
+    fireEvent.change(screen.getByLabelText(/Nom de la boutique/i), {
+      target: { value: 'متجر الأطلس' },
+    });
+    expect(screen.getByText(/boutique-[a-z0-9]{4}\b/)).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText(/Votre email/i), { target: { value: 'a@b.com' } });
+    fireEvent.change(screen.getByLabelText(/^Mot de passe$/i), { target: { value: 'Password123!' } });
+    fireEvent.click(screen.getByRole('button', { name: /Lancer ma boutique/i }));
+
+    await waitFor(() => {
+      expect(registerStore).toHaveBeenCalledWith(
+        expect.objectContaining({
+          name: 'متجر الأطلس',
+          slug: expect.stringMatching(/^boutique-[a-z0-9]{4}$/),
+        }),
+      );
+    });
+  });
+
   it('refuse un mot de passe trop court', async () => {
     const { toast } = await import('sonner');
     renderWithProviders(<CreateStore />);

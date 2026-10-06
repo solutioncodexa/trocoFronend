@@ -41,6 +41,10 @@ export interface CartItem {
   quantity: number;
   selectedSize?: string;
   selectedVariantId?: string;
+  /** Clé d'identité de la ligne (front uniquement) : distingue deux variantes sans id. */
+  variantKey?: string;
+  /** Libellé lisible de la variante choisie (ex. « Quantité : 10 »). */
+  variantLabel?: string;
   /** Logo client (URL upload) pour produits personnalisés */
   customLogoUrl?: string;
 }

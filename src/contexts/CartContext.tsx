@@ -9,10 +9,12 @@ interface CartContextType {
     quantity?: number,
     selectedSize?: string,
     selectedVariantId?: string,
-    customLogoUrl?: string
+    customLogoUrl?: string,
+    variant?: { key: string; label?: string }
   ) => void;
-  removeFromCart: (productId: string, selectedSize?: string, selectedVariantId?: string) => void;
-  updateQuantity: (productId: string, quantity: number, selectedSize?: string, selectedVariantId?: string) => void;
+  /** Le 3e argument est la clé de ligne : `item.variantKey ?? item.selectedVariantId`. */
+  removeFromCart: (productId: string, selectedSize?: string, lineVariantKey?: string) => void;
+  updateQuantity: (productId: string, quantity: number, selectedSize?: string, lineVariantKey?: string) => void;
   clearCart: () => void;
   getTotal: () => number;
   getItemCount: () => number;
@@ -55,26 +57,26 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     item: CartItem,
     productId: string,
     selectedSize?: string,
-    selectedVariantId?: string
+    lineVariantKey?: string
   ) =>
     normalizeId(item.product.id) === normalizeId(productId) &&
     normalizeVariant(item.selectedSize) === normalizeVariant(selectedSize) &&
-    normalizeVariant(item.selectedVariantId) === normalizeVariant(selectedVariantId);
+    normalizeVariant(item.variantKey ?? item.selectedVariantId) === normalizeVariant(lineVariantKey);
 
   const addToCart = (
     product: Product,
     quantity = 1,
     selectedSize?: string,
     selectedVariantId?: string,
-    customLogoUrl?: string
+    customLogoUrl?: string,
+    variant?: { key: string; label?: string }
   ) => {
+    const lineKey = variant?.key ?? selectedVariantId;
     setItems((prev) => {
-      const existing = prev.find((item) =>
-        sameLine(item, product.id, selectedSize, selectedVariantId)
-      );
+      const existing = prev.find((item) => sameLine(item, product.id, selectedSize, lineKey));
       if (existing) {
         const newItems = prev.map((item) =>
-          sameLine(item, product.id, selectedSize, selectedVariantId)
+          sameLine(item, product.id, selectedSize, lineKey)
             ? {
                 ...item,
                 quantity: item.quantity + quantity,
@@ -89,7 +91,15 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
       }
       const newItems = [
         ...prev,
-        { product, quantity, selectedSize, selectedVariantId, customLogoUrl },
+        {
+          product,
+          quantity,
+          selectedSize,
+          selectedVariantId,
+          customLogoUrl,
+          variantKey: variant?.key,
+          variantLabel: variant?.label,
+        },
       ];
       localStorage.setItem('cart', JSON.stringify(newItems));
       toast.success('Produit ajouté au panier');
@@ -97,10 +107,10 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     });
   };
 
-  const removeFromCart = (productId: string, selectedSize?: string, selectedVariantId?: string) => {
+  const removeFromCart = (productId: string, selectedSize?: string, lineVariantKey?: string) => {
     setItems((prev) => {
       const newItems = prev.filter(
-        (item) => !sameLine(item, productId, selectedSize, selectedVariantId)
+        (item) => !sameLine(item, productId, selectedSize, lineVariantKey)
       );
       localStorage.setItem('cart', JSON.stringify(newItems));
       toast.success('Produit supprimé du panier');
@@ -112,16 +122,16 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     productId: string,
     quantity: number,
     selectedSize?: string,
-    selectedVariantId?: string
+    lineVariantKey?: string
   ) => {
     if (quantity <= 0) {
-      removeFromCart(productId, selectedSize, selectedVariantId);
+      removeFromCart(productId, selectedSize, lineVariantKey);
       return;
     }
 
     setItems((prev) => {
       const newItems = prev.map((item) =>
-        sameLine(item, productId, selectedSize, selectedVariantId)
+        sameLine(item, productId, selectedSize, lineVariantKey)
           ? { ...item, quantity }
           : item
       );

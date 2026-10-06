@@ -1,8 +1,12 @@
+import { useConfirm } from '@/components/ui/confirm-dialog';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   ArrowLeft,
+  EyeOff,
+  ExternalLink,
+  Rocket,
   History,
   Link2,
   Loader2,
@@ -59,6 +63,7 @@ import { useTenant } from '@/contexts/TenantContext';
 import { useStoreBrand } from '@/hooks/useStoreBrand';
 import { aiCopyApi } from '@/services/api/aiCopy';
 import { PERMISSIONS } from '@/config/permissions';
+import { cn } from '@/lib/utils';
 
 function toLocalInput(iso?: string | null) {
   if (!iso) return '';
@@ -78,6 +83,7 @@ const AdminPageEditor = () => {
   const pageId = Number(id);
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const confirm = useConfirm();
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [editLang, setEditLang] = useState<'fr' | 'ar'>('fr');
   const [adminSidebarOpen, setAdminSidebarOpen] = useState(() => window.innerWidth >= 1024);
@@ -305,6 +311,29 @@ const AdminPageEditor = () => {
     onError: (err) => toastError(err, 'Enregistrement impossible'),
   });
 
+  /** Publication / dépublication immédiate depuis la barre du haut (sans passer par Réglages). */
+  const quickPublishMutation = useMutation({
+    mutationFn: (next: boolean) =>
+      storePagesApi.update(pageId, {
+        title: title.trim() || 'Page',
+        published: next,
+        showInNav,
+      }),
+    onSuccess: (_page, next) => {
+      setPublished(next);
+      queryClient.invalidateQueries({ queryKey: ['store-pages'] });
+      void refetchVersions();
+      toast.success(
+        next
+          ? showInNav && !isHome
+            ? 'Page publiée — elle apparaît dans le menu de la boutique'
+            : 'Page publiée'
+          : 'Page repassée en brouillon',
+      );
+    },
+    onError: (err) => toastError(err, 'Publication impossible'),
+  });
+
   const blocksMutation = useMutation({
     mutationFn: () => storePagesApi.replaceBlocks(pageId, blocks, 'Éditeur'),
     onSuccess: (page) => {
@@ -425,7 +454,50 @@ const AdminPageEditor = () => {
       sidebarOpen={adminSidebarOpen}
       onSidebarOpenChange={setAdminSidebarOpen}
       actions={
-        <div className="flex gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <span
+            className={cn(
+              'inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium',
+              published
+                ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-700'
+                : 'border-amber-500/30 bg-amber-500/10 text-amber-700',
+            )}
+          >
+            <span
+              className={cn('h-1.5 w-1.5 rounded-full', published ? 'bg-emerald-500' : 'bg-amber-500')}
+            />
+            {published ? (data.currentlyLive === false ? 'Planifiée' : 'Publiée') : 'Brouillon'}
+          </span>
+          {published ? (
+            <Button variant="outline" size="sm" asChild className="gap-1.5">
+              <a
+                href={buildPreviewUrl(isHome ? '/' : `/page/${slug.trim() || data.slug}`)}
+                target="_blank"
+                rel="noreferrer"
+              >
+                <ExternalLink className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">Voir en ligne</span>
+              </a>
+            </Button>
+          ) : null}
+          {canPublish ? (
+            <Button
+              size="sm"
+              variant={published ? 'outline' : 'default'}
+              className="gap-1.5"
+              disabled={quickPublishMutation.isPending}
+              onClick={() => quickPublishMutation.mutate(!published)}
+            >
+              {quickPublishMutation.isPending ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : published ? (
+                <EyeOff className="h-3.5 w-3.5" />
+              ) : (
+                <Rocket className="h-3.5 w-3.5" />
+              )}
+              {published ? 'Dépublier' : 'Publier'}
+            </Button>
+          ) : null}
           <Button variant="outline" size="sm" asChild className="gap-1.5">
             <Link to="/admin/pages">
               <ArrowLeft className="h-3.5 w-3.5" />
@@ -748,9 +820,7 @@ const AdminPageEditor = () => {
                     className="h-7 shrink-0 px-2"
                     disabled={restoreMutation.isPending}
                     onClick={() => {
-                      if (window.confirm('Restaurer cette version ?')) {
-                        restoreMutation.mutate(v.id);
-                      }
+                      void confirm({ title: "Restaurer cette version ?", description: "Le contenu actuel de la page sera remplacé par cette version (une copie reste dans l’historique).", confirmLabel: "Restaurer", tone: "warning" }).then((ok) => { if (ok) restoreMutation.mutate(v.id); });
                     }}
                   >
                     OK

@@ -5,6 +5,7 @@ import { useEffect, useRef } from 'react';
 import Layout from '@/components/layout/Layout';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { QuantityInput } from '@/components/ui/QuantityInput';
 import { useCart } from '@/contexts/CartContext';
 import { formatPrice } from '@/utils/formatPrice';
 import { productsApi } from '@/services/api';
@@ -211,7 +212,7 @@ const Cart = () => {
             {/* Cart Items */}
             <div className={cn('lg:col-span-2', cartItemGap)}>
               {items.map((item, index) => (
-                <div key={`${item.product.id}-${item.selectedVariantId ?? ''}-${item.selectedSize ?? ''}-${index}`} className={cn('bg-card border border-border rounded-2xl shadow-soft', cartPad)}>
+                <div key={`${item.product.id}-${item.variantKey ?? item.selectedVariantId ?? ''}-${item.selectedSize ?? ''}-${index}`} className={cn('bg-card border border-border rounded-2xl shadow-soft', cartPad)}>
                   <div className="flex flex-col md:flex-row gap-6">
                     <div className="w-full md:w-40 aspect-square rounded-xl border border-border/60 p-2 bg-muted/30 shrink-0">
                       <div className="w-full h-full rounded-lg bg-cover bg-center" style={{ backgroundImage: `url(${item.product.images[0]})` }}></div>
@@ -221,7 +222,7 @@ const Cart = () => {
                         <div className="flex justify-between items-start mb-2">
                           <h3 className="text-xl font-display font-bold text-foreground">{item.product.name}</h3>
                           <button 
-                            onClick={() => removeFromCart(item.product.id, item.selectedSize, item.selectedVariantId)}
+                            onClick={() => removeFromCart(item.product.id, item.selectedSize, item.variantKey ?? item.selectedVariantId)}
                             className="text-muted-foreground hover:text-destructive transition-colors"
                           >
                             <X className="text-xl" />
@@ -231,11 +232,12 @@ const Cart = () => {
                           {item.product.category && (
                             <p><span className="uppercase tracking-widest text-[10px] font-bold">{t('category')}:</span> {item.product.category}</p>
                           )}
-                          {item.selectedVariantId && item.product.variants && (
+                          {(item.variantLabel || (item.selectedVariantId && item.product.variants)) && (
                             <p>
                               <span className="uppercase tracking-widest text-[10px] font-bold">{t('option')}:</span>{' '}
-                              {item.product.variants.find((v) => String(v.id) === String(item.selectedVariantId))?.label
-                                || item.product.variants.find((v) => String(v.id) === String(item.selectedVariantId))?.attributeValue
+                              {item.variantLabel
+                                || item.product.variants?.find((v) => String(v.id) === String(item.selectedVariantId))?.label
+                                || item.product.variants?.find((v) => String(v.id) === String(item.selectedVariantId))?.attributeValue
                                 || '—'}
                               {' · '}{formatPrice(item.product.price)}
                             </p>
@@ -249,24 +251,12 @@ const Cart = () => {
                         </div>
                       </div>
                       <div className="mt-6 flex items-center justify-between">
-                        <div className="flex items-center rounded-xl border border-border overflow-hidden">
-                          <button 
-                            type="button"
-                            onClick={() => updateQuantity(item.product.id, Math.max(1, item.quantity - 1), item.selectedSize, item.selectedVariantId)}
-                            disabled={item.quantity <= 1}
-                            className="px-3 py-1 text-muted-foreground hover:bg-muted transition-colors border-r border-border disabled:opacity-40"
-                          >
-                            -
-                          </button>
-                          <span className="px-4 py-1 text-sm font-bold text-foreground">{item.quantity}</span>
-                          <button 
-                            type="button"
-                            onClick={() => updateQuantity(item.product.id, item.quantity + 1, item.selectedSize, item.selectedVariantId)}
-                            className="px-3 py-1 text-muted-foreground hover:bg-muted transition-colors border-l border-border"
-                          >
-                            +
-                          </button>
-                        </div>
+                        <QuantityInput
+                          value={item.quantity}
+                          max={999}
+                          size="sm"
+                          onChange={(q) => updateQuantity(item.product.id, q, item.selectedSize, item.variantKey ?? item.selectedVariantId)}
+                        />
                         <p className="text-lg font-bold text-primary">{formatPrice(item.product.price * item.quantity)}</p>
                       </div>
                     </div>
