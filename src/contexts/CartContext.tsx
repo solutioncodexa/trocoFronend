@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { Product, CartItem } from '@/types/product';
 import { toast } from 'sonner';
+import { lineTotal } from '@/utils/rental';
 
 interface CartContextType {
   items: CartItem[];
@@ -10,7 +11,8 @@ interface CartContextType {
     selectedSize?: string,
     selectedVariantId?: string,
     customLogoUrl?: string,
-    variant?: { key: string; label?: string }
+    variant?: { key: string; label?: string },
+    rental?: { start: string; end: string; unit: 'DAY' | 'WEEK'; deposit?: number | null }
   ) => void;
   /** Le 3e argument est la clé de ligne : `item.variantKey ?? item.selectedVariantId`. */
   removeFromCart: (productId: string, selectedSize?: string, lineVariantKey?: string) => void;
@@ -69,7 +71,8 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     selectedSize?: string,
     selectedVariantId?: string,
     customLogoUrl?: string,
-    variant?: { key: string; label?: string }
+    variant?: { key: string; label?: string },
+    rental?: { start: string; end: string; unit: 'DAY' | 'WEEK'; deposit?: number | null }
   ) => {
     const lineKey = variant?.key ?? selectedVariantId;
     setItems((prev) => {
@@ -99,6 +102,9 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
           customLogoUrl,
           variantKey: variant?.key,
           variantLabel: variant?.label,
+          ...(rental
+            ? { rentalStart: rental.start, rentalEnd: rental.end, rentalUnit: rental.unit, rentalDeposit: rental.deposit ?? null }
+            : {}),
         },
       ];
       localStorage.setItem('cart', JSON.stringify(newItems));
@@ -148,7 +154,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const getTotal = () => {
-    return items.reduce((total, item) => total + item.product.price * item.quantity, 0);
+    return items.reduce((total, item) => total + lineTotal(item), 0);
   };
 
   const getItemCount = () => {

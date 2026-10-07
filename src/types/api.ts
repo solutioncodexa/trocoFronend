@@ -37,6 +37,11 @@ export interface CartItemDTO {
   selectedVariantId?: string;
   /** Libellé lisible de la variante (ex. « Quantité : 10 »). */
   variantLabel?: string;
+  /** Location : période (jours inclus), unités facturées et caution. */
+  rentalStart?: string;
+  rentalEnd?: string;
+  rentalUnits?: number;
+  rentalDeposit?: number | null;
   /** @deprecated leftover jewelry field — unused for packaging */
   selectedGoldType?: string;
   customLogoUrl?: string;

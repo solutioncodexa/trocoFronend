@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { formatRentalPeriod, isRentalOverdue } from '@/utils/rental';
 import { useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Eye, Search, Phone, MapPin, MessageCircle, ShoppingCart, Download } from 'lucide-react';
@@ -524,6 +525,24 @@ const AdminOrders = () => {
                         <p className="font-body text-sm text-muted-foreground">
                           {item.product?.weight}g • {t('orders.qty')}: {item.quantity}
                         </p>
+                        {item.rentalStart && item.rentalEnd ? (
+                          <p className="mt-1 inline-flex flex-wrap items-center gap-1.5 text-xs">
+                            <span className="rounded-full bg-amber-500/15 px-2 py-0.5 font-medium text-amber-800">
+                              Location {formatRentalPeriod(item.rentalStart, item.rentalEnd)}
+                              {item.rentalUnits ? ` · ${item.rentalUnits} ${item.rentalUnits > 1 ? 'unités' : 'unité'}` : ''}
+                            </span>
+                            {item.rentalDeposit ? (
+                              <span className="rounded-full bg-muted px-2 py-0.5 font-medium">
+                                Caution {formatPrice(item.rentalDeposit * item.quantity)}
+                              </span>
+                            ) : null}
+                            {isRentalOverdue(item.rentalEnd, selectedOrder.status) ? (
+                              <span className="rounded-full bg-destructive/10 px-2 py-0.5 font-semibold text-destructive">
+                                En retard — non retourné
+                              </span>
+                            ) : null}
+                          </p>
+                        ) : null}
                         {item.variantLabel || item.selectedSize ? (
                           <p className="mt-1 inline-flex flex-wrap gap-1.5 text-xs">
                             {item.variantLabel ? (

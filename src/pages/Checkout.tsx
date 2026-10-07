@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef, type ReactNode } from 'react';
 import { isValidPhone, normalizePhone } from '@/utils/phone';
+import { formatRentalPeriod, isRentalLine, lineTotal } from '@/utils/rental';
 import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { Check, Banknote, CheckCircle, Verified, Tag, X, Loader2, ArrowRight, Sparkles, CreditCard, Truck, ShieldCheck } from 'lucide-react';
@@ -467,6 +468,8 @@ const Checkout = () => {
       quantity: item.quantity,
       selectedSize: item.selectedSize || undefined,
       variantLabel: item.variantLabel || undefined,
+      rentalStart: item.rentalStart,
+      rentalEnd: item.rentalEnd,
       selectedVariantId: item.selectedVariantId,
       customLogoUrl: item.customLogoUrl,
     }));
@@ -1168,6 +1171,12 @@ const Checkout = () => {
                             {item.variantLabel || item.selectedSize}
                           </p>
                         )}
+                        {isRentalLine(item) && (
+                          <p className="text-[11px] font-medium text-primary mt-1">
+                            Location : {formatRentalPeriod(item.rentalStart!, item.rentalEnd!)}
+                            {item.rentalDeposit ? ` · caution ${formatPrice(item.rentalDeposit * item.quantity)} à la remise` : ''}
+                          </p>
+                        )}
                         {item.product.category && (
                           <p className="text-[10px] text-muted-foreground uppercase tracking-widest mt-1">
                             {item.product.category}
@@ -1176,7 +1185,7 @@ const Checkout = () => {
                       </div>
                       <div className="flex justify-between items-end">
                         <span className="text-xs text-muted-foreground">Qté: {item.quantity}</span>
-                        <span className="text-sm font-bold text-primary">{formatPrice(item.product.price * item.quantity)}</span>
+                        <span className="text-sm font-bold text-primary">{formatPrice(lineTotal(item))}</span>
                       </div>
                     </div>
                   </div>

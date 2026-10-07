@@ -17,6 +17,11 @@ export interface ProductListItemDTO {
   marque?: string;
   weight?: number;
   customizable?: boolean;
+  rentalEnabled?: boolean;
+  rentalUnit?: string;
+  rentalDeposit?: number | null;
+  rentalMinUnits?: number | null;
+  rentalMaxUnits?: number | null;
 }
 
 export interface ProductDetailDTO extends ProductListItemDTO {

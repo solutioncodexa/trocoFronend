@@ -4,6 +4,8 @@ import { useQuery } from '@tanstack/react-query';
 import { ChevronLeft, ChevronRight, ShoppingBag, Heart, Truck, Verified, Loader2, X, ZoomIn, Share2, Link as LinkIcon, Mail, MessageCircle, Instagram, Check, CloudUpload, Star } from 'lucide-react';
 import Layout from '@/components/layout/Layout';
 import { QuantityInput } from '@/components/ui/QuantityInput';
+import { RentalPicker, type RentalSelection } from '@/components/storefront/RentalPicker';
+import { formatRentalDuration, normalizeRentalUnit, rentalLineKey, unitSuffix } from '@/utils/rental';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
@@ -185,6 +187,8 @@ const ProductDetail = () => {
     : galleryLayout;
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [quantity, setQuantity] = useState(1);
+  /** Location : période choisie dans le calendrier (null tant que le client n'a pas choisi). */
+  const [rental, setRental] = useState<RentalSelection>(null);
   /** `undefined` = aucune taille (requis pour Radix Select + validation explicite) */
   const [selectedSize, setSelectedSize] = useState<string | undefined>(undefined);
   const [selectedVariantKey, setSelectedVariantKey] = useState<string>('');
@@ -345,9 +349,12 @@ const ProductDetail = () => {
   const cartProduct = applyVariantToProduct(product, selectedVariant);
   const unitPrice = selectedVariant.price;
   const unitOriginalPrice = selectedVariant.originalPrice;
-  const displayPrice = unitPrice * quantity;
+  const isRental = product.rentalEnabled === true;
+  const rentalUnit = normalizeRentalUnit(product.rentalUnit);
+  const rentalFactor = isRental && rental ? rental.units : 1;
+  const displayPrice = unitPrice * quantity * rentalFactor;
   const displayOriginalPrice =
-    unitOriginalPrice != null ? unitOriginalPrice * quantity : undefined;
+    unitOriginalPrice != null ? unitOriginalPrice * quantity * rentalFactor : undefined;
   const attributeLabel = getVariantAttributes(selectedVariant)
     .map((a) => `${a.name} : ${a.value}`)
     .join(' · ') || selectedVariant.label || '';
@@ -437,6 +444,24 @@ const ProductDetail = () => {
       toast.error('La quantité doit être au moins 1');
       return false;
     }
+    if (isRental) {
+      if (!rental) {
+        toast.error('Choisissez vos dates de location');
+        return false;
+      }
+      if (product.rentalMinUnits != null && rental.units < product.rentalMinUnits) {
+        toast.error(`Durée minimale : ${formatRentalDuration(rentalUnit, product.rentalMinUnits)}`);
+        return false;
+      }
+      if (product.rentalMaxUnits != null && rental.units > product.rentalMaxUnits) {
+        toast.error(`Durée maximale : ${formatRentalDuration(rentalUnit, product.rentalMaxUnits)}`);
+        return false;
+      }
+      if (quantity > rental.maxQuantity) {
+        toast.error(`Seulement ${rental.maxQuantity} disponible(s) sur cette période`);
+        return false;
+      }
+    }
     if (quantity > MAX_ORDER_QUANTITY) {
       toast.error(`Quantité maximale : ${MAX_ORDER_QUANTITY}`);
       return false;
@@ -446,10 +471,18 @@ const ProductDetail = () => {
 
   const handleAddToCart = () => {
     if (!ensureCanOrder()) return;
-    addToCart(cartProduct, quantity, selectedSize || undefined, selectedVariant.id, logoUrl, {
-      key: getVariantKey(selectedVariant),
-      label: attributeLabel || undefined,
-    });
+    addToCart(
+      cartProduct,
+      quantity,
+      selectedSize || undefined,
+      selectedVariant.id,
+      logoUrl,
+      {
+        key: isRental && rental ? rentalLineKey(getVariantKey(selectedVariant), rental.start, rental.end) : getVariantKey(selectedVariant),
+        label: attributeLabel || undefined,
+      },
+      isRental && rental ? { start: rental.start, end: rental.end, unit: rentalUnit, deposit: product.rentalDeposit } : undefined,
+    );
   };
 
   const handleWishlistToggle = () => {
@@ -540,10 +573,18 @@ const ProductDetail = () => {
 
   const handleBuyNow = () => {
     if (!ensureCanOrder()) return;
-    addToCart(cartProduct, quantity, selectedSize || undefined, selectedVariant.id, logoUrl, {
-      key: getVariantKey(selectedVariant),
-      label: attributeLabel || undefined,
-    });
+    addToCart(
+      cartProduct,
+      quantity,
+      selectedSize || undefined,
+      selectedVariant.id,
+      logoUrl,
+      {
+        key: isRental && rental ? rentalLineKey(getVariantKey(selectedVariant), rental.start, rental.end) : getVariantKey(selectedVariant),
+        label: attributeLabel || undefined,
+      },
+      isRental && rental ? { start: rental.start, end: rental.end, unit: rentalUnit, deposit: product.rentalDeposit } : undefined,
+    );
     navigate('/panier');
   };
 
@@ -781,10 +822,18 @@ const ProductDetail = () => {
                     <span className="text-sm text-muted-foreground line-through">{formatPrice(displayOriginalPrice)}</span>
                   )}
                 </div>
-                {quantity > 1 && (
+                {isRental ? (
                   <span className="text-[11px] text-muted-foreground">
-                    {formatPrice(unitPrice)} × {quantity}
+                    {formatPrice(unitPrice)} / {unitSuffix(rentalUnit)}
+                    {quantity > 1 ? ` × ${quantity}` : ''}
+                    {rental ? ` × ${formatRentalDuration(rentalUnit, rental.units)}` : ' — choisissez vos dates'}
                   </span>
+                ) : (
+                  quantity > 1 && (
+                    <span className="text-[11px] text-muted-foreground">
+                      {formatPrice(unitPrice)} × {quantity}
+                    </span>
+                  )
                 )}
               </div>
               {attributeLabel && (
@@ -967,12 +1016,25 @@ const ProductDetail = () => {
                       ) : null}
                     </div>
                   ) : null}
+                  {isRental ? (
+                    <RentalPicker
+                      productId={product.id}
+                      variantId={selectedVariant.id}
+                      unit={rentalUnit}
+                      unitPrice={unitPrice}
+                      quantity={quantity}
+                      deposit={product.rentalDeposit}
+                      minUnits={product.rentalMinUnits}
+                      maxUnits={product.rentalMaxUnits}
+                      onChange={setRental}
+                    />
+                  ) : null}
                   <div>
                     <Label className="text-[11px] sm:text-xs mb-1 block">{packStepperLabel}</Label>
                     <QuantityInput
                       value={quantity}
                       onChange={setQuantity}
-                      max={MAX_ORDER_QUANTITY}
+                      max={isRental && rental ? Math.max(1, Math.min(MAX_ORDER_QUANTITY, rental.maxQuantity)) : MAX_ORDER_QUANTITY}
                       quickSteps={[5, 10, 25]}
                       size="sm"
                       aria-label={packStepperLabel}

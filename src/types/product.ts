@@ -36,6 +36,12 @@ export interface Product {
   marginGain?: number;
   /** Si true, le client peut uploader son logo */
   customizable?: boolean;
+  /** Location : le prix est alors le tarif par unité (jour par défaut). */
+  rentalEnabled?: boolean;
+  rentalUnit?: 'DAY' | 'WEEK';
+  rentalDeposit?: number | null;
+  rentalMinUnits?: number | null;
+  rentalMaxUnits?: number | null;
 }
 
 export interface CartItem {
@@ -43,6 +49,11 @@ export interface CartItem {
   quantity: number;
   selectedSize?: string;
   selectedVariantId?: string;
+  /** Location : période choisie (jours inclus, `YYYY-MM-DD`) et unité de facturation. */
+  rentalStart?: string;
+  rentalEnd?: string;
+  rentalUnit?: 'DAY' | 'WEEK';
+  rentalDeposit?: number | null;
   /** Clé d'identité de la ligne (front uniquement) : distingue deux variantes sans id. */
   variantKey?: string;
   /** Libellé lisible de la variante choisie (ex. « Quantité : 10 »). */

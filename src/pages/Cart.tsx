@@ -6,6 +6,7 @@ import Layout from '@/components/layout/Layout';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { QuantityInput } from '@/components/ui/QuantityInput';
+import { formatRentalDuration, formatRentalPeriod, isRentalLine, lineTotal, normalizeRentalUnit, rentalUnits } from '@/utils/rental';
 import { useCart } from '@/contexts/CartContext';
 import { formatPrice } from '@/utils/formatPrice';
 import { productsApi } from '@/services/api';
@@ -242,6 +243,14 @@ const Cart = () => {
                               {' · '}{formatPrice(item.product.price)}
                             </p>
                           )}
+                          {isRentalLine(item) && (
+                            <p>
+                              <span className="uppercase tracking-widest text-[10px] font-bold">Location :</span>{' '}
+                              {formatRentalPeriod(item.rentalStart!, item.rentalEnd!)} ·{' '}
+                              {formatRentalDuration(normalizeRentalUnit(item.rentalUnit), rentalUnits(normalizeRentalUnit(item.rentalUnit), item.rentalStart!, item.rentalEnd!))}
+                              {item.rentalDeposit ? ` · caution ${formatPrice(item.rentalDeposit * item.quantity)} à la remise` : ''}
+                            </p>
+                          )}
                           {item.customLogoUrl && (
                             <p className="text-green-700">
                               <span className="uppercase tracking-widest text-[10px] font-bold">{t('logoAttached')}</span>
@@ -257,7 +266,7 @@ const Cart = () => {
                           size="sm"
                           onChange={(q) => updateQuantity(item.product.id, q, item.selectedSize, item.variantKey ?? item.selectedVariantId)}
                         />
-                        <p className="text-lg font-bold text-primary">{formatPrice(item.product.price * item.quantity)}</p>
+                        <p className="text-lg font-bold text-primary">{formatPrice(lineTotal(item))}</p>
                       </div>
                     </div>
                   </div>

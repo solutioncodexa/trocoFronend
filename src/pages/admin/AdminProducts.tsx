@@ -72,7 +72,35 @@ type AdminFormData = {
   stockQuantity: string;
   badges: string[];
   customizable: boolean;
+  /** Location (jour par défaut) : champs texte du formulaire, convertis à l'envoi. */
+  rentalEnabled: boolean;
+  rentalUnit: string;
+  rentalDeposit: string;
+  rentalMinUnits: string;
+  rentalMaxUnits: string;
 };
+
+const RENTAL_DEFAULTS = {
+  rentalEnabled: false,
+  rentalUnit: 'DAY',
+  rentalDeposit: '',
+  rentalMinUnits: '1',
+  rentalMaxUnits: '',
+};
+
+function rentalPayload(f: AdminFormData) {
+  const num = (v: string) => {
+    const n = parseFloat(v.replace(',', '.'));
+    return Number.isFinite(n) && n > 0 ? n : undefined;
+  };
+  return {
+    rentalEnabled: f.rentalEnabled,
+    rentalUnit: f.rentalUnit === 'WEEK' ? 'WEEK' : 'DAY',
+    rentalDeposit: num(f.rentalDeposit),
+    rentalMinUnits: num(f.rentalMinUnits) ? Math.round(num(f.rentalMinUnits)!) : 1,
+    rentalMaxUnits: num(f.rentalMaxUnits) ? Math.round(num(f.rentalMaxUnits)!) : undefined,
+  };
+}
 
 const PLACEHOLDER_IMAGE = '/placeholder-modern-fixed.svg';
 
@@ -149,6 +177,7 @@ const AdminProducts = () => {
     stockQuantity: '100',
     badges: [],
     customizable: false,
+    ...RENTAL_DEFAULTS,
   });
   const [imageFiles, setImageFiles] = useState<File[]>([]);
   const [existingImageUrls, setExistingImageUrls] = useState<string[]>([]);
@@ -316,6 +345,11 @@ const AdminProducts = () => {
       stockQuantity: String(product.stockQuantity ?? 0),
       badges: product.badges,
       customizable: product.customizable === true,
+      rentalEnabled: product.rentalEnabled === true,
+      rentalUnit: product.rentalUnit === 'WEEK' ? 'WEEK' : 'DAY',
+      rentalDeposit: product.rentalDeposit ? String(product.rentalDeposit) : '',
+      rentalMinUnits: String(product.rentalMinUnits ?? 1),
+      rentalMaxUnits: product.rentalMaxUnits ? String(product.rentalMaxUnits) : '',
     });
 
     // Une variante « réelle » porte un attribut (Woo mono/multi-axes). La variante
@@ -385,6 +419,7 @@ const AdminProducts = () => {
       stockQuantity: '100',
       badges: [],
       customizable: false,
+      ...RENTAL_DEFAULTS,
     });
     setVariantRows([createEmptyVariantRow(true)]);
     setHasVariants(false);
@@ -543,6 +578,7 @@ const AdminProducts = () => {
         badges: formData.badges,
         variants: [],
         customizable: formData.customizable,
+        ...rentalPayload(formData),
       };
     } else {
       const parsedVariants = variantRows
@@ -624,6 +660,7 @@ const AdminProducts = () => {
         badges: formData.badges,
         variants: parsedVariants,
         customizable: formData.customizable,
+        ...rentalPayload(formData),
       };
     }
 
@@ -827,6 +864,11 @@ const AdminProducts = () => {
                       {badge === 'new' ? t('products.badgeNew') : badge === 'bestseller' ? t('products.badgeBestseller') : t('products.badgePromo')}
                     </Badge>
                   ))}
+                  {product.rentalEnabled && (
+                    <Badge variant="outline" className="text-[10px] border-amber-500/40 text-amber-700">
+                      Location
+                    </Badge>
+                  )}
                   {product.customizable && (
                     <Badge variant="outline" className="text-[10px] border-primary/40 text-primary">
                       {t('products.badgeLogo')}
@@ -1181,6 +1223,89 @@ const AdminProducts = () => {
                       }
                       className="mt-0.5 shrink-0"
                     />
+                  </div>
+                </section>
+
+                <section>
+                  <div
+                    className={cn(
+                      'space-y-4 rounded-2xl border p-4 transition-colors',
+                      formData.rentalEnabled ? 'border-primary/40 bg-primary/5' : 'border-border bg-muted/20',
+                    )}
+                  >
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="min-w-0 space-y-1">
+                        <Label htmlFor="rental" className="text-sm font-semibold cursor-pointer">
+                          Produit à louer
+                        </Label>
+                        <p className="text-xs text-muted-foreground leading-relaxed">
+                          Matériel de fête, voiture, électronique… Le prix du produit devient le tarif par unité de
+                          location. Le stock n&apos;est pas décrémenté : un exemplaire loué revient disponible le
+                          lendemain de la fin de la période (ex. 10 chaises, 1 louée le 10/10 → 9 le 10/10, 10 le 11/10).
+                        </p>
+                      </div>
+                      <Switch
+                        id="rental"
+                        checked={formData.rentalEnabled}
+                        onCheckedChange={(checked) => setFormData((prev) => ({ ...prev, rentalEnabled: checked }))}
+                        className="mt-0.5 shrink-0"
+                      />
+                    </div>
+                    {formData.rentalEnabled ? (
+                      <div className="grid gap-3 sm:grid-cols-2">
+                        <div>
+                          <Label>Facturation</Label>
+                          <Select
+                            value={formData.rentalUnit}
+                            onValueChange={(v) => setFormData((prev) => ({ ...prev, rentalUnit: v }))}
+                          >
+                            <SelectTrigger className="mt-1">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="DAY">Par jour (par défaut)</SelectItem>
+                              <SelectItem value="WEEK">Par semaine</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div>
+                          <Label htmlFor="rental-deposit">Caution par exemplaire (MAD)</Label>
+                          <Input
+                            id="rental-deposit"
+                            type="number"
+                            min="0"
+                            inputMode="decimal"
+                            className="mt-1"
+                            placeholder="Optionnel — réglée à la remise"
+                            value={formData.rentalDeposit}
+                            onChange={(e) => setFormData((prev) => ({ ...prev, rentalDeposit: e.target.value }))}
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor="rental-min">Durée minimale ({formData.rentalUnit === 'WEEK' ? 'semaines' : 'jours'})</Label>
+                          <Input
+                            id="rental-min"
+                            type="number"
+                            min="1"
+                            className="mt-1"
+                            value={formData.rentalMinUnits}
+                            onChange={(e) => setFormData((prev) => ({ ...prev, rentalMinUnits: e.target.value }))}
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor="rental-max">Durée maximale ({formData.rentalUnit === 'WEEK' ? 'semaines' : 'jours'})</Label>
+                          <Input
+                            id="rental-max"
+                            type="number"
+                            min="1"
+                            className="mt-1"
+                            placeholder="Illimitée"
+                            value={formData.rentalMaxUnits}
+                            onChange={(e) => setFormData((prev) => ({ ...prev, rentalMaxUnits: e.target.value }))}
+                          />
+                        </div>
+                      </div>
+                    ) : null}
                   </div>
                 </section>
 

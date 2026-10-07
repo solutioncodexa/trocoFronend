@@ -47,7 +47,21 @@ export interface ProductFormData {
   marginGain?: number;
   /** Produit personnalisable : upload logo client */
   customizable?: boolean;
+  rentalEnabled?: boolean;
+  rentalUnit?: string;
+  rentalDeposit?: number;
+  rentalMinUnits?: number;
+  rentalMaxUnits?: number;
 }
+
+export type RentalAvailability = {
+  unit: 'DAY' | 'WEEK';
+  deposit?: number | null;
+  minUnits?: number | null;
+  maxUnits?: number | null;
+  capacity: number;
+  days: { date: string; available: number }[];
+};
 
 function buildProductsQueryString(params: ProductQueryParams): string {
   const {
@@ -169,6 +183,13 @@ export const productsApi = {
     return apiRequest<void>(url, {
       method: 'DELETE',
     });
+  },
+
+  /** Location : quantité disponible par jour sur [from, to] (jours `YYYY-MM-DD`). */
+  rentalAvailability: async (id: string, from: string, to: string, variantId?: string) => {
+    const qs = new URLSearchParams({ from, to });
+    if (variantId) qs.set('variantId', variantId);
+    return apiRequest<RentalAvailability>(buildApiUrl(`/products/${id}/rental-availability?${qs}`));
   },
 
   frequentlyBought: async (id: string, limit = 4): Promise<ProductListItemDTO[]> => {

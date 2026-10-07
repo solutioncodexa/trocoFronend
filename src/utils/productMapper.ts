@@ -50,6 +50,11 @@ export const mapProductDetailToProduct = (dto: ProductDetailDTO): Product => {
     badges: (dto.badges || []) as ('new' | 'bestseller' | 'promo')[],
     createdAt: dto.createdAt || new Date().toISOString(),
     customizable: dto.customizable === true,
+    rentalEnabled: dto.rentalEnabled === true,
+    rentalUnit: dto.rentalUnit?.toUpperCase() === 'WEEK' ? 'WEEK' : 'DAY',
+    rentalDeposit: dto.rentalDeposit ?? null,
+    rentalMinUnits: dto.rentalMinUnits ?? null,
+    rentalMaxUnits: dto.rentalMaxUnits ?? null,
   };
 };
 

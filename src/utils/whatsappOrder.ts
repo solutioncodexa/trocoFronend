@@ -1,5 +1,6 @@
 import type { CartItem } from '@/types/product';
 import { formatPrice } from '@/utils/formatPrice';
+import { formatRentalPeriod, lineTotal } from '@/utils/rental';
 
 function whatsappDigits(raw?: string | null): string | null {
   if (!raw?.trim()) return null;
@@ -47,7 +48,7 @@ export function buildProductWhatsAppMessage(
 export function buildCartWhatsAppMessage(items: CartItem[], total: number): string {
   const lines = items.map(
     (i) =>
-      `• ${i.product.name}${i.variantLabel || i.selectedSize ? ` (${i.variantLabel || i.selectedSize})` : ''} x${i.quantity} — ${formatPrice(i.product.price * i.quantity)}`,
+      `• ${i.product.name}${i.variantLabel || i.selectedSize ? ` (${i.variantLabel || i.selectedSize})` : ''}${i.rentalStart && i.rentalEnd ? ` [location ${formatRentalPeriod(i.rentalStart, i.rentalEnd)}]` : ''} x${i.quantity} — ${formatPrice(lineTotal(i))}`,
   );
   return ['Bonjour, je souhaite commander mon panier :', '', ...lines, '', `Total indicatif : ${formatPrice(total)}`].join(
     '\n',
