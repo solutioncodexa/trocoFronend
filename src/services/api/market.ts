@@ -12,6 +12,11 @@ export type MarketConfig = {
   } | null;
 };
 
+export type EmailTemplates = {
+  note?: string | null;
+  signature?: string | null;
+};
+
 export type CityRate = {
   id: number;
   carrierCode: string;
@@ -57,6 +62,12 @@ export const marketApi = {
 
   updateConfig: (body: Partial<MarketConfig>) =>
     apiRequest<MarketConfig>(buildApiUrl('/market/config'), { method: 'PUT', body: JSON.stringify(body) }),
+
+  emailTemplates: async (): Promise<EmailTemplates | null> =>
+    asObject(await apiRequest<EmailTemplates | unknown[]>(buildApiUrl('/market/email-templates'))),
+
+  updateEmailTemplates: (body: EmailTemplates) =>
+    apiRequest<EmailTemplates>(buildApiUrl('/market/email-templates'), { method: 'PUT', body: JSON.stringify(body) }),
 
   cityRates: () => apiRequest<CityRate[]>(buildApiUrl('/market/city-rates')),
 

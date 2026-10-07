@@ -1,4 +1,5 @@
 import { buildWhatsAppMessageUrl } from '@/utils/whatsappOrder';
+import { whatsappDigits } from '@/utils/phone';
 
 /**
  * Confirmation d'une commande (paiement à la livraison) par WhatsApp : le commerçant ouvre une conversation avec le
@@ -7,12 +8,7 @@ import { buildWhatsAppMessageUrl } from '@/utils/whatsappOrder';
 
 /** Numéro marocain en format international sans « + » (06 12 34 56 78 → 212612345678). `null` si inutilisable. */
 export function customerWhatsAppNumber(phone?: string | null): string | null {
-  if (!phone) return null;
-  let digits = phone.replace(/\D/g, '');
-  if (digits.startsWith('00')) digits = digits.slice(2);
-  else if (digits.startsWith('0')) digits = `212${digits.slice(1)}`;
-  else if (digits.length === 9 && /^[567]/.test(digits)) digits = `212${digits}`;
-  return digits.length >= 10 && digits.length <= 15 ? digits : null;
+  return whatsappDigits(phone);
 }
 
 type Lang = 'fr' | 'en' | 'ar' | 'darija' | 'darija-ar';
@@ -26,14 +22,14 @@ export type OrderMessageInput = {
   lang: Lang;
   storeName: string;
   customerName?: string | null;
-  items: { name: string; quantity: number }[];
+  items: { name: string; quantity: number; variant?: string }[];
   total: string;
   city?: string | null;
 };
 
 /** Message de confirmation : récapitulatif de la commande et demande de réponse « oui » pour la valider. */
 export function buildOrderConfirmationMessage(i: OrderMessageInput): string {
-  const lines = i.items.filter((x) => x.name).map((x) => `• ${x.name} × ${x.quantity}`);
+  const lines = i.items.filter((x) => x.name).map((x) => `• ${x.name}${x.variant ? ` (${x.variant})` : ''} × ${x.quantity}`);
   const name = i.customerName?.trim() ?? '';
   const where = i.city?.trim() ?? '';
   const text = {

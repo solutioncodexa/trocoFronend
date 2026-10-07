@@ -21,6 +21,23 @@ const AdminMarket = () => {
   const [rate, setRate] = useState({ carrierCode: 'AMANA', city: 'Casablanca', fee: '35' });
   const [referral, setReferral] = useState({ code: '', rewardMad: '30', referrerLabel: '' });
   const [instructions, setInstructions] = useState('');
+  const emailQuery = useQuery({ queryKey: ['email-templates'], queryFn: () => marketApi.emailTemplates() });
+  const [emailNote, setEmailNote] = useState<string | null>(null);
+  const [emailSignature, setEmailSignature] = useState<string | null>(null);
+  const saveEmail = useMutation({
+    mutationFn: () =>
+      marketApi.updateEmailTemplates({
+        note: emailNote ?? emailQuery.data?.note ?? '',
+        signature: emailSignature ?? emailQuery.data?.signature ?? '',
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['email-templates'] });
+      setEmailNote(null);
+      setEmailSignature(null);
+      toast.success('Emails clients enregistrés');
+    },
+    onError: (err: Error) => toastError(err, 'Enregistrement impossible'),
+  });
 
   const saveConfig = useMutation({
     mutationFn: marketApi.updateConfig,
@@ -122,6 +139,47 @@ const AdminMarket = () => {
               Enregistrer les instructions
             </Button>
           </div>
+        </section>
+
+        <section className="rounded-lg border border-border bg-card p-4 space-y-4">
+          <h2 className="font-medium">Emails envoyés à vos clients</h2>
+          <p className="text-sm text-muted-foreground">
+            Confirmation, expédition, statut : ajoutez votre message et votre signature. Variables :{' '}
+            <code>{'{client}'}</code>, <code>{'{boutique}'}</code>, <code>{'{commande}'}</code>.
+          </p>
+          <div>
+            <Label htmlFor="email-note">Message ajouté à chaque email</Label>
+            <textarea
+              id="email-note"
+              className="mt-1.5 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+              rows={3}
+              maxLength={1000}
+              value={emailNote ?? emailQuery.data?.note ?? ''}
+              onChange={(e) => setEmailNote(e.target.value)}
+              placeholder="Ex. Pour toute question, répondez à cet email ou écrivez-nous sur WhatsApp."
+            />
+          </div>
+          <div>
+            <Label htmlFor="email-signature">Signature (remplace la signature automatique)</Label>
+            <textarea
+              id="email-signature"
+              className="mt-1.5 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+              rows={3}
+              maxLength={500}
+              value={emailSignature ?? emailQuery.data?.signature ?? ''}
+              onChange={(e) => setEmailSignature(e.target.value)}
+              placeholder={"L’équipe {boutique}\nTél. 06 12 34 56 78"}
+            />
+          </div>
+          <Button
+            type="button"
+            size="sm"
+            disabled={saveEmail.isPending || (emailNote === null && emailSignature === null)}
+            onClick={() => saveEmail.mutate()}
+          >
+            {saveEmail.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}
+            Enregistrer
+          </Button>
         </section>
 
         <section className="rounded-lg border border-border bg-card p-4 space-y-3">

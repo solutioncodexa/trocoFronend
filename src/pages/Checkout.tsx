@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef, type ReactNode } from 'react';
+import { isValidPhone, normalizePhone } from '@/utils/phone';
 import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { Check, Banknote, CheckCircle, Verified, Tag, X, Loader2, ArrowRight, Sparkles, CreditCard, Truck, ShieldCheck } from 'lucide-react';
@@ -443,6 +444,10 @@ const Checkout = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (formData.phone && !isValidPhone(formData.phone)) {
+      toast.error('Numéro de téléphone invalide (ex. 06 12 34 56 78)');
+      return;
+    }
     if (!formData.fullName || !formData.phone || !formData.address || !formData.city) {
       toast.error('Veuillez remplir tous les champs obligatoires');
       return;
@@ -460,7 +465,8 @@ const Checkout = () => {
         sku: item.product.sku,
       },
       quantity: item.quantity,
-      selectedSize: item.selectedSize || item.variantLabel || undefined,
+      selectedSize: item.selectedSize || undefined,
+      variantLabel: item.variantLabel || undefined,
       selectedVariantId: item.selectedVariantId,
       customLogoUrl: item.customLogoUrl,
     }));
@@ -472,7 +478,7 @@ const Checkout = () => {
       items: cartItems,
       customer: {
         fullName: formData.fullName,
-        phone: formData.phone,
+        phone: normalizePhone(formData.phone) ?? formData.phone,
         email: formData.email.trim() || undefined,
         address: formData.address,
         city: formData.city,

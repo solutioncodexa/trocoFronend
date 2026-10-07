@@ -27,7 +27,7 @@ export type StarterPack = {
 
 export const DEFAULT_STARTER_PACK_KEY = 'general';
 
-export const STARTER_PACKS: StarterPack[] = [
+const ALL_PACKS: StarterPack[] = [
   {
     key: 'mode',
     label: 'Mode & vêtements',
@@ -211,6 +211,13 @@ export const STARTER_PACKS: StarterPack[] = [
       { name: 'Édition limitée exemple', shortDescription: 'Remplacez-moi par votre produit.', description: 'Ceci est un produit d’exemple. Modifiez son nom, sa description, son prix et ajoutez vos photos depuis l’admin.', price: 399, category: 'idees-cadeaux', badges: ['new'] },
     ],
   },
+];
+
+/** Secteurs marocains en tête des sélecteurs (création de boutique, onboarding). */
+const MOROCCAN_FIRST = ['artisanat', 'traditionnel', 'naturel', 'patisserie'];
+export const STARTER_PACKS: StarterPack[] = [
+  ...MOROCCAN_FIRST.map((k) => ALL_PACKS.find((p) => p.key === k)).filter((p): p is StarterPack => !!p),
+  ...ALL_PACKS.filter((p) => !MOROCCAN_FIRST.includes(p.key)),
 ];
 
 export function getStarterPack(key?: string | null): StarterPack {

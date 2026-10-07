@@ -35,6 +35,8 @@ export interface CartItemDTO {
   quantity: number;
   selectedSize?: string;
   selectedVariantId?: string;
+  /** Libellé lisible de la variante (ex. « Quantité : 10 »). */
+  variantLabel?: string;
   /** @deprecated leftover jewelry field — unused for packaging */
   selectedGoldType?: string;
   customLogoUrl?: string;

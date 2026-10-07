@@ -462,6 +462,7 @@ const AdminOrders = () => {
                         customerName: selectedOrder.customer?.fullName,
                         items: (selectedOrder.items ?? []).map((it) => ({
                           name: it.product?.name ?? '',
+                          variant: [it.variantLabel, it.selectedSize].filter(Boolean).join(' · ') || undefined,
                           quantity: it.quantity,
                         })),
                         total: formatPrice(selectedOrder.total ?? 0),
@@ -523,6 +524,18 @@ const AdminOrders = () => {
                         <p className="font-body text-sm text-muted-foreground">
                           {item.product?.weight}g • {t('orders.qty')}: {item.quantity}
                         </p>
+                        {item.variantLabel || item.selectedSize ? (
+                          <p className="mt-1 inline-flex flex-wrap gap-1.5 text-xs">
+                            {item.variantLabel ? (
+                              <span className="rounded-full bg-primary/10 px-2 py-0.5 font-medium text-primary">
+                                {item.variantLabel}
+                              </span>
+                            ) : null}
+                            {item.selectedSize ? (
+                              <span className="rounded-full bg-muted px-2 py-0.5 font-medium">{item.selectedSize}</span>
+                            ) : null}
+                          </p>
+                        ) : null}
                       </div>
                       <p className="font-body font-medium">
                         {formatPrice((item.product?.price ?? 0) * item.quantity)}
