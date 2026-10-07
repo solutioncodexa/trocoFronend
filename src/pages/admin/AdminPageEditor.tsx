@@ -934,7 +934,17 @@ function BlockFields({
             block.type === 'countdown' ? 'Sous-titre' : 'Message',
             true,
           )}
-          {block.type === 'countdown' ? field('endsAt', 'Date et heure de fin') : null}
+          {block.type === 'countdown' ? (
+            <div>
+              <Label>Date et heure de fin</Label>
+              <Input
+                className="mt-1.5"
+                type="datetime-local"
+                value={String(c.endsAt ?? '').slice(0, 16)}
+                onChange={(e) => onChange('endsAt', e.target.value)}
+              />
+            </div>
+          ) : null}
           {field('ctaLabel', 'Texte du bouton')}
           {field('ctaHref', 'Lien du bouton')}
         </div>

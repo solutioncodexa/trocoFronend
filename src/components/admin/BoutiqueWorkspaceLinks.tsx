@@ -1,15 +1,25 @@
 import { Link, useLocation } from 'react-router-dom';
-import { FileText, LayoutPanelLeft, MessageSquare, Palette, Settings2, Store } from 'lucide-react';
+import {
+  FileText,
+  LayoutPanelLeft,
+  MessageSquare,
+  Palette,
+  Settings2,
+  Store,
+  Wand2,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
+/** Raccourcis boutique (les routes restent ; le menu latéral ne garde que Paramètres). */
 const LINKS = [
-  { href: '/admin/boutique-en-ligne', label: 'Vue d’ensemble', icon: Store },
+  { href: '/admin/reglages', label: 'Paramètres', icon: Settings2 },
   { href: '/admin/parametres', label: 'Apparence', icon: Palette },
   { href: '/admin/pages', label: 'Pages', icon: FileText },
   { href: '/admin/sections', label: 'Navigation', icon: LayoutPanelLeft },
   { href: '/admin/top-bar-messages', label: 'Bandeau', icon: MessageSquare },
-  { href: '/admin/reglages', label: 'Réglages', icon: Settings2 },
+  { href: '/admin/onboarding', label: 'Assistant', icon: Wand2 },
+  { href: '/admin/boutique-en-ligne', label: 'Vue d’ensemble', icon: Store },
 ] as const;
 
 type Props = {

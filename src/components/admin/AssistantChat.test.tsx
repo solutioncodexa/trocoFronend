@@ -86,11 +86,11 @@ describe('AssistantChat — catalogue guidé', () => {
     api.generate.mockResolvedValue({ text: 'Une belle description proposée.' });
   });
 
-  it('reste invisible quand l’assistant est désactivé', async () => {
+  it('reste visible pour les parcours guidés quand le chat IA est désactivé', async () => {
     api.status.mockResolvedValue({ enabled: false });
     renderChat();
     await waitFor(() => expect(api.status).toHaveBeenCalled());
-    expect(screen.queryByRole('button', { name: fr('assistant.openAria') })).toBeNull();
+    expect(screen.getByRole('button', { name: fr('assistant.openAria') })).toBeTruthy();
   });
 
   it('crée catégories, sous-catégories puis un article, en posant les questions', async () => {

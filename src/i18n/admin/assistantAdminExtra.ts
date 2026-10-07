@@ -14,6 +14,7 @@ export type AssistantAdminMessageKey =
   | 'assistant.send'
   | 'assistant.errorGeneric'
   | 'assistant.errorSlow'
+  | 'assistant.aiDisabled'
   | 'assistant.sug.default1'
   | 'assistant.sug.default2'
   | 'assistant.sug.default3'
@@ -388,7 +389,9 @@ export type AssistantAdminMessageKey =
   | 'launch.preview'
   | 'launch.action'
   | 'launch.done'
-  | 'launch.error';
+  | 'launch.error'
+  | 'launch.needSetup'
+  | 'launch.needSetupBody';
 
 const fr: Record<AssistantAdminMessageKey, string> = {
   'assistant.fab': 'Besoin d’aide ?',
@@ -404,6 +407,8 @@ const fr: Record<AssistantAdminMessageKey, string> = {
   'assistant.send': 'Envoyer',
   'assistant.errorGeneric': 'L’assistant est momentanément indisponible. Réessayez dans un instant.',
   'assistant.errorSlow': 'L’assistant met trop de temps à répondre. Réessayez dans un instant.',
+  'assistant.aiDisabled':
+    'Le chat libre n’est pas activé sur ce serveur. Utilisez les parcours guidés ci-dessus (catalogue, paiements…).',
   'assistant.sug.default1': 'Comment changer mon logo ?',
   'assistant.sug.default2': 'Comment configurer les paiements ?',
   'assistant.sug.default3': 'Comment ajouter un produit ?',
@@ -779,6 +784,9 @@ const fr: Record<AssistantAdminMessageKey, string> = {
   'launch.action': 'Lancer ma boutique',
   'launch.done': 'Votre boutique est en ligne 🎉',
   'launch.error': 'Impossible de lancer la boutique. Réessayez.',
+  'launch.needSetup': 'Boutique pas encore prête',
+  'launch.needSetupBody':
+    'Configurez et publiez votre boutique (assistant) avant de l’ouvrir en ligne.',
 };
 
 const en: Record<AssistantAdminMessageKey, string> = {
@@ -794,6 +802,8 @@ const en: Record<AssistantAdminMessageKey, string> = {
   'assistant.send': 'Send',
   'assistant.errorGeneric': 'The assistant is temporarily unavailable. Please try again in a moment.',
   'assistant.errorSlow': 'The assistant is taking too long to answer. Please try again in a moment.',
+  'assistant.aiDisabled':
+    'Free chat is not enabled on this server. Use the guided flows above (catalog, payments…).',
   'assistant.sug.default1': 'How do I change my logo?',
   'assistant.sug.default2': 'How do I set up payments?',
   'assistant.sug.default3': 'How do I add a product?',
@@ -1169,6 +1179,9 @@ const en: Record<AssistantAdminMessageKey, string> = {
   'launch.action': 'Launch my store',
   'launch.done': 'Your store is live 🎉',
   'launch.error': 'Could not launch the store. Try again.',
+  'launch.needSetup': 'Store not ready yet',
+  'launch.needSetupBody':
+    'Configure and publish your store (setup assistant) before opening it online.',
 };
 
 const ar: Record<AssistantAdminMessageKey, string> = {
@@ -1184,6 +1197,8 @@ const ar: Record<AssistantAdminMessageKey, string> = {
   'assistant.send': 'إرسال',
   'assistant.errorGeneric': 'المساعد غير متاح مؤقتًا. حاول مرة أخرى بعد قليل.',
   'assistant.errorSlow': 'المساعد يستغرق وقتًا طويلًا للرد. حاول مرة أخرى بعد قليل.',
+  'assistant.aiDisabled':
+    'الدردشة الحرة غير مفعّلة على هذا الخادم. استخدم المسارات الموجّهة أعلاه (الكتالوج، الدفع…).',
   'assistant.sug.default1': 'كيف أغيّر شعار متجري؟',
   'assistant.sug.default2': 'كيف أضبط وسائل الدفع؟',
   'assistant.sug.default3': 'كيف أضيف منتجًا؟',
@@ -1559,6 +1574,9 @@ const ar: Record<AssistantAdminMessageKey, string> = {
   'launch.action': 'أطلق متجري',
   'launch.done': 'متجرك أصبح متاحًا على الإنترنت 🎉',
   'launch.error': 'تعذّر إطلاق المتجر. أعد المحاولة.',
+  'launch.needSetup': 'المتجر غير جاهز بعد',
+  'launch.needSetupBody':
+    'قم بإعداد متجرك ونشره (المساعد) قبل فتحه على الإنترنت.',
 };
 
 export const assistantAdminExtra: Record<StoreLocale, Record<AssistantAdminMessageKey, string>> = {

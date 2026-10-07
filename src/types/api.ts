@@ -385,6 +385,9 @@ export type TenantStoreDTO = StorefrontBootstrapDTO & {
   planCode?: string | null;
   planName?: string | null;
   trialEndsAt?: string | null;
+  /** false : boutique pas encore lancée (inscription publique). */
+  storefrontLive?: boolean;
+  previewKey?: string;
 };
 
 /** Config complète — page Paramètres admin uniquement. */

@@ -21,7 +21,6 @@ const AdminAbandonedCarts = () => {
   return (
     <AdminLayout
       title={t('abandonedCarts.title')}
-      breadcrumbs={[{ label: t('abandonedCarts.title') }]}
       description={t('abandonedCarts.description')}
     >
       {isLoading ? (

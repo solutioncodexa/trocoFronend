@@ -14,7 +14,7 @@ import AdminLayout from '@/components/admin/AdminLayout';
 import { useAdminLocale } from '@/contexts/AdminLocaleContext';
 import { BoutiqueWorkspaceLinks } from '@/components/admin/BoutiqueWorkspaceLinks';
 import { Button } from '@/components/ui/button';
-import { buildStorefrontUrl } from '@/utils/storefrontUrl';
+import { useOpenStorefront } from '@/hooks/useOpenStorefront';
 import { useStoreBrand } from '@/hooks/useStoreBrand';
 import { storeGlobalSectionsApi } from '@/services/api/storeGlobalSections';
 import { storePagesApi } from '@/services/api/storePages';
@@ -22,8 +22,8 @@ import { topBarMessagesApi } from '@/services/api/topBarMessages';
 
 const AdminOnlineStore = () => {
   const { t } = useAdminLocale();
-  const { slug, siteName, store } = useStoreBrand();
-  const storefrontUrl = buildStorefrontUrl(slug || store?.slug);
+  const { siteName } = useStoreBrand();
+  const { openStorefront } = useOpenStorefront();
 
   const { data: globalSections = [] } = useQuery({
     queryKey: ['store-global-sections', 'admin'],
@@ -111,12 +111,10 @@ const AdminOnlineStore = () => {
               </Link>
             </Button>
           )}
-          <Button variant="outline" size="sm" asChild>
-            <a href={storefrontUrl} target="_blank" rel="noopener noreferrer">
-              {t('onlineStore.viewNamed', {
-                name: siteName || t('onlineStore.viewFallback'),
-              })}
-            </a>
+          <Button variant="outline" size="sm" type="button" onClick={openStorefront}>
+            {t('onlineStore.viewNamed', {
+              name: siteName || t('onlineStore.viewFallback'),
+            })}
           </Button>
         </div>
       }

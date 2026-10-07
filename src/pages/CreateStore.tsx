@@ -361,11 +361,12 @@ const CreateStore = () => {
               />
               <button
                 type="button"
-                className="absolute end-3 top-1/2 -translate-y-1/2 text-[#e8f4f2]/55 hover:text-[#e8f4f2]"
+                className="absolute end-2 top-1/2 z-10 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-lg text-slate-600 hover:bg-slate-900/5 hover:text-slate-900"
                 onClick={() => setShowPassword((v) => !v)}
                 aria-label={showPassword ? t('password.hide') : t('password.show')}
+                title={showPassword ? t('password.hide') : t('password.show')}
               >
-                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                {showPassword ? <EyeOff className="h-4 w-4" aria-hidden /> : <Eye className="h-4 w-4" aria-hidden />}
               </button>
             </div>
             {errors.adminPassword ? (

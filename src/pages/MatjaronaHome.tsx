@@ -4,8 +4,7 @@ import { ArrowRight, Check, Minus, Store, Layers, Zap, ExternalLink, LayoutDashb
 import { platformApi } from '@/services/api/platform';
 import type { PlanMarketingDTO } from '@/types/api';
 import { useAdmin } from '@/contexts/AdminContext';
-import { useTenant } from '@/contexts/TenantContext';
-import { buildStorefrontUrl } from '@/utils/storefrontUrl';
+import { useOpenStorefront } from '@/hooks/useOpenStorefront';
 import { TRIAL_DAYS } from '@/config/site';
 
 const FALLBACK_PLANS: PlanMarketingDTO[] = [
@@ -90,9 +89,7 @@ const COMPARISON_ROWS: { label: string; values: (p: PlanMarketingDTO) => string 
 
 const MatjaronaHome = () => {
   const { isAuthenticated } = useAdmin();
-  const { slug, store } = useTenant();
-  const storeSlug = slug || store?.slug || null;
-  const storefrontUrl = storeSlug ? buildStorefrontUrl(storeSlug) : null;
+  const { canViewPublic, openStorefront } = useOpenStorefront();
 
   const { data: plans = [] } = useQuery({
     queryKey: ['platform', 'plans'],
@@ -205,9 +202,9 @@ const MatjaronaHome = () => {
         <p className="mj-rise mj-rise-3 mt-4 max-w-md text-base leading-relaxed text-[var(--mj-foam)]/70 sm:text-lg">
           Créez, personnalisez et vendez — hébergé pour le marché marocain.
         </p>
-        <div className="mj-rise mj-rise-4 mt-10 flex flex-wrap items-center gap-3 sm:gap-4">
+        <div className="mj-rise mj-rise-4 mt-10 flex max-w-xl flex-col gap-4">
           {isAuthenticated ? (
-            <>
+            <div className="flex flex-wrap items-center gap-3">
               <Link
                 to="/admin"
                 className="inline-flex items-center gap-2 rounded-md bg-[var(--mj-saffron)] px-5 py-3 text-sm font-semibold text-[var(--mj-ink)] transition hover:brightness-110"
@@ -215,47 +212,45 @@ const MatjaronaHome = () => {
                 <LayoutDashboard className="h-4 w-4" />
                 Tableau de bord
               </Link>
-              {storefrontUrl ? (
-                <a
-                  href={storefrontUrl}
+              {canViewPublic ? (
+                <button
+                  type="button"
+                  onClick={openStorefront}
                   className="inline-flex items-center gap-2 rounded-md border border-[var(--mj-foam)]/25 bg-white/5 px-5 py-3 text-sm font-semibold text-[var(--mj-foam)] backdrop-blur-sm transition hover:border-[var(--mj-foam)]/45 hover:bg-white/10"
                 >
                   Voir ma boutique
                   <ExternalLink className="h-4 w-4" />
-                </a>
+                </button>
               ) : (
+                <Link
+                  to="/admin/onboarding"
+                  className="inline-flex items-center gap-2 rounded-md border border-[var(--mj-foam)]/25 bg-white/5 px-5 py-3 text-sm font-semibold text-[var(--mj-foam)] backdrop-blur-sm transition hover:border-[var(--mj-foam)]/45 hover:bg-white/10"
+                >
+                  Configurer et publier
+                  <ArrowRight className="h-4 w-4" />
+                </Link>
+              )}
+            </div>
+          ) : (
+            <>
+              <div className="flex flex-wrap items-center gap-3">
+                <Link
+                  to="/creer-boutique"
+                  className="inline-flex items-center gap-2 rounded-md bg-[var(--mj-saffron)] px-5 py-3 text-sm font-semibold text-[var(--mj-ink)] transition hover:brightness-110"
+                >
+                  Créer ma boutique
+                  <ArrowRight className="h-4 w-4" />
+                </Link>
                 <a
                   href="#tarifs"
                   className="inline-flex items-center gap-2 rounded-md border border-[var(--mj-foam)]/25 bg-white/5 px-5 py-3 text-sm font-semibold text-[var(--mj-foam)] backdrop-blur-sm transition hover:border-[var(--mj-foam)]/45 hover:bg-white/10"
                 >
-                  Voir le plan
+                  Voir les tarifs
                 </a>
-              )}
-            </>
-          ) : (
-            <>
-              <Link
-                to="/creer-boutique"
-                className="inline-flex items-center gap-2 rounded-md bg-[var(--mj-saffron)] px-5 py-3 text-sm font-semibold text-[var(--mj-ink)] transition hover:brightness-110"
-              >
-                Créer ma boutique
-                <ArrowRight className="h-4 w-4" />
-              </Link>
-              <span className="text-xs text-[var(--mj-foam)]/70">
+              </div>
+              <p className="text-sm text-[var(--mj-foam)]/65">
                 Essai gratuit {TRIAL_DAYS} jours · sans carte bancaire
-              </span>
-              <a
-                href="#tarifs"
-                className="inline-flex items-center gap-2 rounded-md border border-[var(--mj-foam)]/25 bg-white/5 px-5 py-3 text-sm font-semibold text-[var(--mj-foam)] backdrop-blur-sm transition hover:border-[var(--mj-foam)]/45 hover:bg-white/10"
-              >
-                Voir le plan
-              </a>
-              <Link
-                to="/admin"
-                className="inline-flex items-center gap-2 px-2 py-3 text-sm font-medium text-[var(--mj-foam)]/65 underline-offset-4 transition hover:text-[var(--mj-foam)] hover:underline"
-              >
-                Connexion admin
-              </Link>
+              </p>
             </>
           )}
         </div>
@@ -408,15 +403,24 @@ const MatjaronaHome = () => {
                   Tableau de bord
                   <ArrowRight className="h-4 w-4" />
                 </Link>
-                {storefrontUrl ? (
-                  <a
-                    href={storefrontUrl}
+                {canViewPublic ? (
+                  <button
+                    type="button"
+                    onClick={openStorefront}
                     className="inline-flex items-center gap-2 rounded-md border border-[var(--mj-foam)]/25 px-6 py-3 text-sm font-semibold text-[var(--mj-foam)] transition hover:bg-white/5"
                   >
                     Voir ma boutique
                     <ExternalLink className="h-4 w-4" />
-                  </a>
-                ) : null}
+                  </button>
+                ) : (
+                  <Link
+                    to="/admin/onboarding"
+                    className="inline-flex items-center gap-2 rounded-md border border-[var(--mj-foam)]/25 px-6 py-3 text-sm font-semibold text-[var(--mj-foam)] transition hover:bg-white/5"
+                  >
+                    Configurer et publier
+                    <ArrowRight className="h-4 w-4" />
+                  </Link>
+                )}
               </>
             ) : (
               <>
@@ -427,12 +431,12 @@ const MatjaronaHome = () => {
                   Créer ma boutique
                   <ArrowRight className="h-4 w-4" />
                 </Link>
-                <Link
-                  to="/admin"
+                <a
+                  href="#tarifs"
                   className="inline-flex items-center gap-2 rounded-md border border-[var(--mj-foam)]/25 px-6 py-3 text-sm font-semibold text-[var(--mj-foam)] transition hover:bg-white/5"
                 >
-                  Connexion admin
-                </Link>
+                  Voir les tarifs
+                </a>
               </>
             )}
           </div>

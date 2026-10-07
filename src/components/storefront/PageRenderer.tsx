@@ -998,6 +998,26 @@ function TestimonialsBlock({
   );
 }
 
+/** Parse la date de fin du compte à rebours (datetime-local ou ISO). */
+function parseCountdownEnd(raw: string): number {
+  const value = raw.trim();
+  if (!value) return Number.NaN;
+  // datetime-local : "2026-10-10T18:30" → heure locale
+  const local = /^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})(?::(\d{2}))?$/.exec(value);
+  if (local) {
+    const [, y, mo, d, h, mi, sec] = local;
+    return new Date(
+      Number(y),
+      Number(mo) - 1,
+      Number(d),
+      Number(h),
+      Number(mi),
+      Number(sec ?? 0),
+    ).getTime();
+  }
+  return new Date(value).getTime();
+}
+
 function CountdownBlock({
   block,
   page,
@@ -1014,7 +1034,7 @@ function CountdownBlock({
 
   useEffect(() => {
     const tick = () => {
-      const end = new Date(endsAt).getTime();
+      const end = parseCountdownEnd(endsAt);
       const diff = end - Date.now();
       if (!Number.isFinite(end) || diff <= 0) {
         setLeft({ d: 0, h: 0, m: 0, s: 0, done: true });
@@ -1062,16 +1082,24 @@ function CountdownBlock({
             ['M', left.m],
             ['S', left.s],
           ].map(([label, val]) => (
-            <div key={String(label)} className="min-w-[4rem] rounded-xl border border-border bg-background px-3 py-2">
-              <div>{String(val).padStart(2, '0')}</div>
-              <div className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+            <div
+              key={String(label)}
+              className="min-w-[4rem] rounded-xl border border-border bg-white px-3 py-2 text-center text-neutral-900 shadow-sm"
+            >
+              <div className="tabular-nums text-neutral-900">{String(val).padStart(2, '0')}</div>
+              <div className="text-[10px] font-medium uppercase tracking-wider text-neutral-500">
                 {label}
               </div>
             </div>
           ))}
         </div>
         {left.done ? (
-          <p className="mt-4 text-sm text-muted-foreground">Offre terminée</p>
+          <p
+            className="mt-4 text-sm"
+            style={style.textColor ? { color: style.textColor, opacity: 0.85 } : undefined}
+          >
+            Offre terminée
+          </p>
         ) : str(c.ctaLabel) ? (
           <div className={cn('mt-6 flex', justifyClass(style.align))}>
             <Button

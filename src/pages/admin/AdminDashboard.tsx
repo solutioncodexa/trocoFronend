@@ -35,6 +35,7 @@ import { formatPrice } from '@/utils/formatPrice';
 import { getImageUrl } from '@/services/api';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { useStoreBrand } from '@/hooks/useStoreBrand';
+import { useOpenStorefront } from '@/hooks/useOpenStorefront';
 import { buildStorefrontUrl } from '@/utils/storefrontUrl';
 import { storePagesApi } from '@/services/api/storePages';
 import { listDemoProducts } from '@/utils/starterPack';
@@ -56,6 +57,7 @@ const AdminDashboard = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { siteName, logoUrl, slug, store } = useStoreBrand();
+  const { openStorefront, canViewPublic } = useOpenStorefront();
   const queryClient = useQueryClient();
 
   useEffect(() => {
@@ -230,11 +232,11 @@ const AdminDashboard = () => {
       assistant: 'legal',
     },
     {
-      done: hasLogo && realProductCount > 0,
+      done: hasLogo && realProductCount > 0 && canViewPublic,
       label: t('dashboard.setupViewStore'),
-      href: storefrontUrl,
+      href: canViewPublic ? storefrontUrl : '/admin/onboarding',
       icon: ExternalLink,
-      external: true,
+      external: canViewPublic,
     },
   ];
   const doneSteps = setupSteps.filter((s) => s.done).length;
@@ -262,11 +264,15 @@ const AdminDashboard = () => {
       }
       breadcrumbs={[{ label: t('dashboard.title') }]}
       actions={
-        <Button variant="outline" size="sm" className="hidden gap-1.5 sm:inline-flex" asChild>
-          <a href={storefrontUrl} target="_blank" rel="noopener noreferrer">
-            <ExternalLink className="h-3.5 w-3.5" />
-            {t('dashboard.viewStorefront')}
-          </a>
+        <Button
+          variant="outline"
+          size="sm"
+          className="hidden gap-1.5 sm:inline-flex"
+          type="button"
+          onClick={openStorefront}
+        >
+          <ExternalLink className="h-3.5 w-3.5" />
+          {t('dashboard.viewStorefront')}
         </Button>
       }
     >

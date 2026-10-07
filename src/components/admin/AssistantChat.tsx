@@ -363,10 +363,13 @@ export function AssistantChat() {
   }, [open, existingLogo, logoPalette]);
 
   // Rappel discret : nombre d'étapes de base encore à faire, tant que le chat n'a pas été ouvert pendant cette session.
+  /** Chat libre (LLM) : peut être coupé ; les parcours guidés restent disponibles. */
+  const aiChatEnabled = status?.enabled === true;
+
   const { data: nudgeSettings } = useQuery({
     queryKey: SETTINGS_KEY,
     queryFn: () => platformApi.getMyStoreSettings(),
-    enabled: Boolean(status?.enabled) && !open,
+    enabled: !open,
     staleTime: 5 * 60 * 1000,
     retry: false,
   });
@@ -388,8 +391,6 @@ export function AssistantChat() {
     window.addEventListener(ASSISTANT_FLOW_EVENT, onFlow);
     return () => window.removeEventListener(ASSISTANT_FLOW_EVENT, onFlow);
   }, []);
-
-  if (!status?.enabled) return null;
 
   // ───────────── Configuration guidée ─────────────
 
@@ -588,6 +589,10 @@ export function AssistantChat() {
   const send = (text: string) => {
     const content = text.trim().slice(0, MAX_INPUT);
     if (!content || chat.isPending) return;
+    if (!aiChatEnabled) {
+      setError(t('assistant.aiDisabled'));
+      return;
+    }
     if (looksLikeSecret(content)) {
       setInput('');
       setError(t('assistant.secret.blocked'));
@@ -684,18 +689,24 @@ export function AssistantChat() {
                 >
                   {showAllFlows ? t('assistant.flows.less') : t('assistant.flows.more')}
                 </Button>
-                <div className="flex flex-col gap-2">
-                  {suggestionsFor(pathname).map((key) => (
-                    <button
-                      key={key}
-                      type="button"
-                      onClick={() => send(t(key))}
-                      className="rounded-lg border px-3 py-2 text-start text-sm transition hover:bg-primary/5"
-                    >
-                      {t(key)}
-                    </button>
-                  ))}
-                </div>
+                {aiChatEnabled ? (
+                  <div className="flex flex-col gap-2">
+                    {suggestionsFor(pathname).map((key) => (
+                      <button
+                        key={key}
+                        type="button"
+                        onClick={() => send(t(key))}
+                        className="rounded-lg border px-3 py-2 text-start text-sm transition hover:bg-primary/5"
+                      >
+                        {t(key)}
+                      </button>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="rounded-lg bg-muted px-3 py-2 text-xs text-muted-foreground">
+                    {t('assistant.aiDisabled')}
+                  </p>
+                )}
               </div>
             ) : (
               entries.map((m, i) => (
@@ -744,11 +755,17 @@ export function AssistantChat() {
               }}
               maxLength={MAX_INPUT}
               rows={2}
-              placeholder={t('assistant.placeholder')}
+              disabled={!aiChatEnabled}
+              placeholder={aiChatEnabled ? t('assistant.placeholder') : t('assistant.aiDisabled')}
               aria-label={t('assistant.inputLabel')}
-              className="min-h-[2.5rem] flex-1 resize-none rounded-md border bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+              className="min-h-[2.5rem] flex-1 resize-none rounded-md border bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 disabled:cursor-not-allowed disabled:opacity-60"
             />
-            <Button type="submit" size="icon" disabled={!input.trim() || chat.isPending} aria-label={t('assistant.send')}>
+            <Button
+              type="submit"
+              size="icon"
+              disabled={!aiChatEnabled || !input.trim() || chat.isPending}
+              aria-label={t('assistant.send')}
+            >
               <Send className="h-4 w-4" aria-hidden />
             </Button>
           </form>

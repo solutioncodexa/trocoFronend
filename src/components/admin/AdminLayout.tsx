@@ -4,9 +4,7 @@ import {
   LayoutDashboard,
   ShoppingCart,
   Package,
-  Palette,
   Star,
-  MessageSquare,
   Image as ImageIcon,
   Ticket,
   FolderOpen,
@@ -24,7 +22,6 @@ import {
   BookOpen,
   Inbox,
   TimerReset,
-  LayoutPanelLeft,
   PanelLeftClose,
   PanelLeftOpen,
   Webhook,
@@ -32,7 +29,6 @@ import {
   Truck,
   Store,
   Settings2,
-  FileText,
   Wand2,
   PenTool,
   SlidersHorizontal,
@@ -59,7 +55,7 @@ import { PERMISSIONS } from '@/config/permissions';
 import { cn } from '@/lib/utils';
 import { BrandLogoImg } from '@/components/layout/BrandLogoImg';
 import { useStoreBrand } from '@/hooks/useStoreBrand';
-import { buildFreshStorefrontUrl } from '@/utils/storefrontUrl';
+import { useOpenStorefront } from '@/hooks/useOpenStorefront';
 import { applyDocumentBrand } from '@/utils/storeTheme';
 import {
   ADMIN_LOCALES,
@@ -131,20 +127,10 @@ const ALL_NAV: NavSection[] = [
     ],
   },
   {
-    labelKey: 'nav.onlineStore',
-    items: [
-      { href: '/admin/boutique-en-ligne', labelKey: 'nav.onlineStoreOverview', icon: Store },
-      { href: '/admin/parametres', labelKey: 'nav.appearance', icon: Palette, adminOnly: true },
-      { href: '/admin/pages', labelKey: 'nav.pages', icon: FileText },
-      { href: '/admin/sections', labelKey: 'nav.navigation', icon: LayoutPanelLeft },
-      { href: '/admin/top-bar-messages', labelKey: 'nav.topBar', icon: MessageSquare, permission: PERMISSIONS.CONTENT_MANAGE },
-      { href: '/admin/onboarding', labelKey: 'nav.onboarding', icon: Wand2, adminOnly: true },
-    ],
-  },
-  {
     labelKey: 'nav.store',
     items: [
       { href: '/admin/reglages', labelKey: 'nav.settings', icon: Settings2, adminOnly: true },
+      { href: '/admin/onboarding', labelKey: 'nav.onboarding', icon: Wand2, adminOnly: true },
     ],
   },
   {
@@ -218,7 +204,7 @@ const AdminLayout = ({
   const { siteName, logoUrl, slug } = useStoreBrand();
   const { t, locale, setLocale, dir } = useAdminLocale();
   useAdminPwa();
-  const storefrontUrl = buildFreshStorefrontUrl(slug || store?.slug);
+  const { openStorefront } = useOpenStorefront();
   const [sidebarOpenInternal, setSidebarOpenInternal] = useState(() => window.innerWidth >= 1024);
   const isSidebarOpen = sidebarOpenProp ?? sidebarOpenInternal;
   const setIsSidebarOpen = (open: boolean) => {
@@ -388,12 +374,11 @@ const AdminLayout = ({
           <Button
             variant="ghost"
             className="w-full justify-start gap-2 text-white/75 hover:bg-white/10 hover:text-white"
-            asChild
+            type="button"
+            onClick={openStorefront}
           >
-            <a href={storefrontUrl} target="_blank" rel="noopener noreferrer" title={storefrontUrl}>
-              <ExternalLink className="h-4 w-4" />
-              {t('common.viewStore')}
-            </a>
+            <ExternalLink className="h-4 w-4" />
+            {t('common.viewStore')}
           </Button>
           {!isSuperAdmin ? (
             <Button
@@ -422,12 +407,12 @@ const AdminLayout = ({
           isSidebarOpen && (dir === 'rtl' ? 'lg:pr-[17.5rem]' : 'lg:pl-[17.5rem]'),
         )}
       >
-        <header className="flex h-[4.25rem] shrink-0 items-center justify-between gap-3 border-b border-border/80 bg-white/90 px-4 backdrop-blur-md sm:px-6">
-          <div className="flex min-w-0 items-center gap-3">
+        <header className="flex min-h-[4.25rem] shrink-0 items-center justify-between gap-3 border-b border-border/80 bg-white/90 px-4 py-3 backdrop-blur-md sm:px-6">
+          <div className="flex min-w-0 items-start gap-3">
             <button
               type="button"
               className={cn(
-                'rounded-lg p-2 text-muted-foreground hover:bg-muted',
+                'mt-0.5 rounded-lg p-2 text-muted-foreground hover:bg-muted',
                 isSidebarOpen && 'lg:hidden',
               )}
               onClick={() => setIsSidebarOpen(true)}
@@ -440,7 +425,7 @@ const AdminLayout = ({
             {isSidebarOpen ? (
               <button
                 type="button"
-                className="hidden rounded-lg p-2 text-muted-foreground hover:bg-muted lg:inline-flex"
+                className="mt-0.5 hidden rounded-lg p-2 text-muted-foreground hover:bg-muted lg:inline-flex"
                 onClick={() => setIsSidebarOpen(false)}
                 aria-label={t('common.hideMenu')}
                 title={t('common.hideMenu')}
@@ -448,11 +433,13 @@ const AdminLayout = ({
                 <PanelLeftClose className="h-5 w-5" />
               </button>
             ) : null}
-            <div className="min-w-0">
-              {breadcrumbs && breadcrumbs.length > 0 && (
-                <div className="mb-0.5 flex items-center gap-1 text-xs text-muted-foreground">
+            <div className="min-w-0 space-y-1">
+              {breadcrumbs &&
+                breadcrumbs.length > 0 &&
+                !(breadcrumbs.length === 1 && breadcrumbs[0].label === title) && (
+                <div className="flex flex-wrap items-center gap-1 text-xs text-muted-foreground">
                   {breadcrumbs.map((b, i) => (
-                    <span key={b.label} className="flex items-center gap-1">
+                    <span key={`${b.label}-${i}`} className="flex items-center gap-1">
                       {i > 0 && <ChevronRight className={cn('h-3 w-3', dir === 'rtl' && 'rotate-180')} />}
                       {b.href ? (
                         <Link to={b.href} className="hover:text-foreground">
@@ -465,13 +452,15 @@ const AdminLayout = ({
                   ))}
                 </div>
               )}
-              <h1 className="truncate font-display text-lg font-semibold tracking-tight sm:text-xl">{title}</h1>
-              {(() => {
-                const helpTopic = helpTopicForPath(location.pathname);
-                return helpTopic ? <HelpTip topic={helpTopic} /> : null;
-              })()}
+              <div className="flex min-w-0 items-center gap-1.5">
+                <h1 className="truncate font-display text-lg font-semibold tracking-tight sm:text-xl">{title}</h1>
+                {(() => {
+                  const helpTopic = helpTopicForPath(location.pathname);
+                  return helpTopic ? <HelpTip topic={helpTopic} /> : null;
+                })()}
+              </div>
               {description ? (
-                <p className="truncate text-xs text-muted-foreground sm:text-sm">{description}</p>
+                <p className="line-clamp-2 text-xs text-muted-foreground sm:text-sm">{description}</p>
               ) : null}
             </div>
           </div>

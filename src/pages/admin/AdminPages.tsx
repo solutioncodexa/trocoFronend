@@ -259,6 +259,14 @@ const AdminPages = () => {
   const applyTemplate = async (tpl: PageTemplate) => {
     setApplyingTemplate(tpl.key);
     try {
+      const wantedSlug = (tpl.meta.slug || '').toLowerCase();
+      const existing = pages.find((p) => (p.slug || '').toLowerCase() === wantedSlug);
+      if (existing) {
+        toast.info(`« ${tpl.label} » existe déjà — ouverture de l’éditeur`);
+        navigate(`/admin/pages/${existing.id}`);
+        return;
+      }
+
       const page = await storePagesApi.create({
         title: tpl.meta.title,
         slug: tpl.meta.slug,
@@ -267,10 +275,10 @@ const AdminPages = () => {
         published: !!tpl.meta.published,
       });
       await storePagesApi.replaceBlocks(page.id, tpl.blocks);
-      // Re-apply meta in case create overwrote (home flag etc.)
+      // Garder le slug réellement attribué (éventuel suffixe -2 si collision).
       await storePagesApi.update(page.id, {
         title: tpl.meta.title,
-        slug: tpl.meta.slug,
+        slug: page.slug,
         isHome: !!tpl.meta.isHome,
         showInNav: tpl.meta.showInNav !== false && !tpl.meta.isHome,
         published: !!tpl.meta.published,
