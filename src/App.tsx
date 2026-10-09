@@ -35,6 +35,7 @@ const Devis = lazy(() => import("./pages/Devis"));
 const Contact = lazy(() => import("./pages/Contact"));
 const LivraisonRetours = lazy(() => import("./pages/LivraisonRetours"));
 const FAQ = lazy(() => import("./pages/FAQ"));
+const PlatformPrivacy = lazy(() => import("./pages/PlatformPrivacy"));
 const PromoCodes = lazy(() => import("./pages/PromoCodes"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 const VerifyEmail = lazy(() => import("./pages/VerifyEmail"));
@@ -182,6 +183,7 @@ const App = () => (
                     <Route path="/contact" element={<Contact />} />
                     <Route path="/livraison-retours" element={<LivraisonRetours />} />
                     <Route path="/faq" element={<FAQ />} />
+                    <Route path="/confidentialite" element={<PlatformPrivacy />} />
                     <Route path="/favoris" element={<Wishlist />} />
                     <Route path="/page/:slug" element={<CustomStorePage />} />
                     <Route path="/preview/:token" element={<PagePreview />} />
