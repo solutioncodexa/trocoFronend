@@ -31,7 +31,40 @@ export type ImportAdminMessageKey =
   | 'import.done'
   | 'import.failed'
   | 'import.seeProducts'
-  | 'import.again';
+  | 'import.again'
+  | 'ig.button'
+  | 'ig.title'
+  | 'ig.description'
+  | 'ig.links.label'
+  | 'ig.links.placeholder'
+  | 'ig.links.import'
+  | 'ig.upload.label'
+  | 'ig.upload.caption'
+  | 'ig.upload.pick'
+  | 'ig.upload.add'
+  | 'ig.upload.photos'
+  | 'ig.summary'
+  | 'ig.review.title'
+  | 'ig.empty'
+  | 'ig.field.name'
+  | 'ig.field.price'
+  | 'ig.field.stock'
+  | 'ig.field.category'
+  | 'ig.noCategory'
+  | 'ig.issue.name'
+  | 'ig.issue.price'
+  | 'ig.issue.category'
+  | 'ig.issue.image'
+  | 'ig.ai'
+  | 'ig.defaultCategory'
+  | 'ig.selectAll'
+  | 'ig.discard'
+  | 'ig.publish'
+  | 'ig.publishing'
+  | 'ig.published'
+  | 'ig.publishFailed'
+  | 'ig.seeProducts'
+  | 'ig.error';
 
 const fr: Record<ImportAdminMessageKey, string> = {
   'import.button': 'Importer (CSV)',
@@ -64,6 +97,39 @@ const fr: Record<ImportAdminMessageKey, string> = {
   'import.failed': '{n} échec(s) : {first}',
   'import.seeProducts': 'Voir les produits',
   'import.again': 'Importer un autre fichier',
+  'ig.button': 'Importer depuis Instagram',
+  'ig.title': 'Importer depuis Instagram',
+  'ig.description': 'Collez des liens de posts ou envoyez vos photos : chaque post devient un brouillon à relire, puis publiez tout en un clic.',
+  'ig.links.label': 'Liens de posts Instagram (un par ligne)',
+  'ig.links.placeholder': 'https://www.instagram.com/p/…',
+  'ig.links.import': 'Importer les liens',
+  'ig.upload.label': 'Ou envoyez les photos et la légende d\'un post',
+  'ig.upload.caption': 'Collez la légende du post (nom, prix, description…)',
+  'ig.upload.pick': 'Choisir des photos',
+  'ig.upload.add': 'Ajouter ce post',
+  'ig.upload.photos': '{n} photo(s) prête(s)',
+  'ig.summary': '{created} brouillon(s) créé(s), {dup} déjà importé(s), {bad} refusé(s).',
+  'ig.review.title': 'À relire avant publication',
+  'ig.empty': 'Aucun brouillon en attente.',
+  'ig.field.name': 'Nom',
+  'ig.field.price': 'Prix (DH)',
+  'ig.field.stock': 'Stock',
+  'ig.field.category': 'Catégorie',
+  'ig.noCategory': '— Choisir —',
+  'ig.issue.name': 'Nom manquant',
+  'ig.issue.price': 'Prix manquant',
+  'ig.issue.category': 'Catégorie manquante',
+  'ig.issue.image': 'Sans photo',
+  'ig.ai': 'Rempli par l\'IA',
+  'ig.defaultCategory': 'Catégorie par défaut pour les brouillons sans catégorie',
+  'ig.selectAll': 'Tout sélectionner',
+  'ig.discard': 'Écarter',
+  'ig.publish': 'Publier {n} produit(s)',
+  'ig.publishing': 'Publication…',
+  'ig.published': '{n} produit(s) publié(s).',
+  'ig.publishFailed': '{n} non publié(s) : {first}',
+  'ig.seeProducts': 'Voir les produits',
+  'ig.error': 'Opération impossible, réessayez.',
 };
 
 const en: Record<ImportAdminMessageKey, string> = {
@@ -97,6 +163,39 @@ const en: Record<ImportAdminMessageKey, string> = {
   'import.failed': '{n} failure(s): {first}',
   'import.seeProducts': 'View products',
   'import.again': 'Import another file',
+  'ig.button': 'Import from Instagram',
+  'ig.title': 'Import from Instagram',
+  'ig.description': 'Paste post links or upload your photos: each post becomes a draft to review, then publish everything in one click.',
+  'ig.links.label': 'Instagram post links (one per line)',
+  'ig.links.placeholder': 'https://www.instagram.com/p/…',
+  'ig.links.import': 'Import links',
+  'ig.upload.label': 'Or upload a post\'s photos and caption',
+  'ig.upload.caption': 'Paste the post caption (name, price, description…)',
+  'ig.upload.pick': 'Choose photos',
+  'ig.upload.add': 'Add this post',
+  'ig.upload.photos': '{n} photo(s) ready',
+  'ig.summary': '{created} draft(s) created, {dup} already imported, {bad} rejected.',
+  'ig.review.title': 'To review before publishing',
+  'ig.empty': 'No pending drafts.',
+  'ig.field.name': 'Name',
+  'ig.field.price': 'Price (MAD)',
+  'ig.field.stock': 'Stock',
+  'ig.field.category': 'Category',
+  'ig.noCategory': '— Choose —',
+  'ig.issue.name': 'Name missing',
+  'ig.issue.price': 'Price missing',
+  'ig.issue.category': 'Category missing',
+  'ig.issue.image': 'No photo',
+  'ig.ai': 'Filled by AI',
+  'ig.defaultCategory': 'Default category for drafts without one',
+  'ig.selectAll': 'Select all',
+  'ig.discard': 'Discard',
+  'ig.publish': 'Publish {n} product(s)',
+  'ig.publishing': 'Publishing…',
+  'ig.published': '{n} product(s) published.',
+  'ig.publishFailed': '{n} not published: {first}',
+  'ig.seeProducts': 'See products',
+  'ig.error': 'Operation failed, please retry.',
 };
 
 const ar: Record<ImportAdminMessageKey, string> = {
@@ -130,6 +229,39 @@ const ar: Record<ImportAdminMessageKey, string> = {
   'import.failed': '{n} إخفاق: {first}',
   'import.seeProducts': 'عرض المنتجات',
   'import.again': 'استيراد ملف آخر',
+  'ig.button': 'استيراد من إنستغرام',
+  'ig.title': 'استيراد من إنستغرام',
+  'ig.description': 'الصق روابط المنشورات أو ارفع صورك: كل منشور يصبح مسودة للمراجعة ثم انشر الكل بنقرة واحدة.',
+  'ig.links.label': 'روابط منشورات إنستغرام (رابط في كل سطر)',
+  'ig.links.placeholder': 'https://www.instagram.com/p/…',
+  'ig.links.import': 'استيراد الروابط',
+  'ig.upload.label': 'أو ارفع صور المنشور وتعليقه',
+  'ig.upload.caption': 'الصق تعليق المنشور (الاسم، السعر، الوصف…)',
+  'ig.upload.pick': 'اختيار الصور',
+  'ig.upload.add': 'إضافة هذا المنشور',
+  'ig.upload.photos': '{n} صورة جاهزة',
+  'ig.summary': 'تم إنشاء {created} مسودة، {dup} مستوردة سابقًا، {bad} مرفوضة.',
+  'ig.review.title': 'للمراجعة قبل النشر',
+  'ig.empty': 'لا توجد مسودات.',
+  'ig.field.name': 'الاسم',
+  'ig.field.price': 'السعر (د.م)',
+  'ig.field.stock': 'المخزون',
+  'ig.field.category': 'الفئة',
+  'ig.noCategory': '— اختر —',
+  'ig.issue.name': 'الاسم مفقود',
+  'ig.issue.price': 'السعر مفقود',
+  'ig.issue.category': 'الفئة مفقودة',
+  'ig.issue.image': 'بدون صورة',
+  'ig.ai': 'مملوء بالذكاء الاصطناعي',
+  'ig.defaultCategory': 'فئة افتراضية للمسودات بدون فئة',
+  'ig.selectAll': 'تحديد الكل',
+  'ig.discard': 'استبعاد',
+  'ig.publish': 'نشر {n} منتج',
+  'ig.publishing': 'جارٍ النشر…',
+  'ig.published': 'تم نشر {n} منتج.',
+  'ig.publishFailed': '{n} لم يُنشر: {first}',
+  'ig.seeProducts': 'عرض المنتجات',
+  'ig.error': 'تعذر تنفيذ العملية، حاول مجددًا.',
 };
 
 export const importAdminExtra: Record<StoreLocale, Record<ImportAdminMessageKey, string>> = { fr, en, ar };

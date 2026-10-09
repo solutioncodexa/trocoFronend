@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { screen, waitFor } from '@testing-library/react';
 import { renderWithProviders } from '@/test/test-utils';
 import MatjaronaHome from './MatjaronaHome';
+import { AdminLocaleProvider } from '@/contexts/AdminLocaleContext';
 
 vi.mock('@/services/api/platform', () => ({
   platformApi: {
@@ -51,7 +52,11 @@ describe('MatjaronaHome', () => {
   });
 
   it('affiche la marque et le CTA créer boutique', async () => {
-    renderWithProviders(<MatjaronaHome />);
+    renderWithProviders(
+      <AdminLocaleProvider>
+        <MatjaronaHome />
+      </AdminLocaleProvider>,
+    );
 
     expect(screen.getAllByText('Get STORE').length).toBeGreaterThan(0);
     expect(screen.getAllByRole('link', { name: /Créer ma boutique/i }).length).toBeGreaterThan(0);

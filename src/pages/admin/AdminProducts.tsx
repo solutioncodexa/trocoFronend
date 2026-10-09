@@ -829,6 +829,11 @@ const AdminProducts = () => {
           </Button>
         )}
         {canCreate && (
+          <Button variant="outline" asChild className="font-body">
+            <Link to="/admin/produits/instagram">{t('ig.button')}</Link>
+          </Button>
+        )}
+        {canCreate && (
           <Button onClick={() => handleOpenModal()} className="font-body">
             <Plus className="w-4 h-4 mr-2" />
             {t('common.add')}
