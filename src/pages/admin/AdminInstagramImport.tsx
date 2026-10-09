@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ImagePlus, Instagram, Loader2, Sparkles, Trash2 } from 'lucide-react';
 import AdminLayout from '@/components/admin/AdminLayout';
+import InstagramAccountPanel from '@/components/admin/InstagramAccountPanel';
 import { Button } from '@/components/ui/button';
 import { useAdminLocale } from '@/contexts/AdminLocaleContext';
 import { categoriesApi } from '@/services/api/categories';
@@ -243,6 +244,13 @@ const AdminInstagramImport = () => {
       breadcrumbs={[{ label: t('ig.title') }]}
     >
       <div className="mx-auto max-w-5xl space-y-6">
+        <InstagramAccountPanel
+          onImported={(items) => {
+            summarize(items);
+            void refresh();
+          }}
+        />
+
         <section className="grid gap-4 rounded-2xl border border-border bg-card p-5 sm:p-6 md:grid-cols-2">
           <div className="space-y-2">
             <label htmlFor="ig-links" className="flex items-center gap-2 font-display text-base font-semibold">

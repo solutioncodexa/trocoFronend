@@ -2,7 +2,7 @@ import { apiRequest, buildApiUrl } from '@/config/api';
 
 export interface InstagramDraft {
   id: number;
-  sourceType: 'LINK' | 'UPLOAD';
+  sourceType: 'LINK' | 'UPLOAD' | 'API';
   sourceUrl: string | null;
   caption: string | null;
   name: string | null;
@@ -34,6 +34,28 @@ export interface InstagramPublishItem {
 
 export type InstagramDraftUpdate = Partial<Pick<InstagramDraft, 'name' | 'description' | 'price' | 'stock' | 'categorySlug' | 'images'>>;
 
+export interface InstagramOAuthStatus {
+  configured: boolean;
+  connected: boolean;
+  username: string | null;
+  expiresAt: string | null;
+}
+
+export interface InstagramAccountPost {
+  id: string;
+  caption: string | null;
+  mediaType: string;
+  imageUrl: string | null;
+  permalink: string | null;
+  timestamp: string | null;
+  imported: boolean;
+}
+
+export interface InstagramAccountPage {
+  items: InstagramAccountPost[];
+  nextCursor: string | null;
+}
+
 const json = (body: unknown): RequestInit => ({ method: 'POST', body: JSON.stringify(body) });
 
 export const instagramImportApi = {
@@ -60,4 +82,19 @@ export const instagramImportApi = {
 
   publish: (ids: number[], defaultCategorySlug?: string) =>
     apiRequest<InstagramPublishItem[]>(buildApiUrl('/instagram-import/publish'), json({ ids, defaultCategorySlug })),
+
+  oauthStatus: () => apiRequest<InstagramOAuthStatus>(buildApiUrl('/instagram-import/oauth/status')),
+
+  oauthAuthorizeUrl: (returnTo: string) =>
+    apiRequest<{ url: string }>(buildApiUrl(`/instagram-import/oauth/authorize-url?returnTo=${encodeURIComponent(returnTo)}`)),
+
+  oauthDisconnect: () => apiRequest<void>(buildApiUrl('/instagram-import/oauth'), { method: 'DELETE' }),
+
+  accountPosts: (after?: string | null) =>
+    apiRequest<InstagramAccountPage>(
+      buildApiUrl(`/instagram-import/oauth/media${after ? `?after=${encodeURIComponent(after)}` : ''}`),
+    ),
+
+  importAccountPosts: (ids: string[]) =>
+    apiRequest<InstagramImportItem[]>(buildApiUrl('/instagram-import/oauth/import'), json({ ids })),
 };

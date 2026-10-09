@@ -64,7 +64,22 @@ export type ImportAdminMessageKey =
   | 'ig.published'
   | 'ig.publishFailed'
   | 'ig.seeProducts'
-  | 'ig.error';
+  | 'ig.error'
+  | 'ig.oauth.title'
+  | 'ig.oauth.hint'
+  | 'ig.oauth.notConfigured'
+  | 'ig.oauth.connect'
+  | 'ig.oauth.connectedAs'
+  | 'ig.oauth.disconnect'
+  | 'ig.oauth.load'
+  | 'ig.oauth.more'
+  | 'ig.oauth.import'
+  | 'ig.oauth.imported'
+  | 'ig.oauth.select'
+  | 'ig.oauth.empty'
+  | 'ig.oauth.done'
+  | 'ig.oauth.denied'
+  | 'ig.oauth.error';
 
 const fr: Record<ImportAdminMessageKey, string> = {
   'import.button': 'Importer (CSV)',
@@ -130,6 +145,21 @@ const fr: Record<ImportAdminMessageKey, string> = {
   'ig.publishFailed': '{n} non publié(s) : {first}',
   'ig.seeProducts': 'Voir les produits',
   'ig.error': 'Opération impossible, réessayez.',
+  'ig.oauth.title': "Mon compte Instagram",
+  'ig.oauth.hint': "Connectez votre compte Instagram professionnel (Business ou Créateur) : vos posts s'affichent ici et deviennent des brouillons en un clic. Lecture seule, nous ne publions rien.",
+  'ig.oauth.notConfigured': "La connexion Instagram n'est pas encore activée sur cette plateforme.",
+  'ig.oauth.connect': "Connecter Instagram",
+  'ig.oauth.connectedAs': "Connecté : @{user}",
+  'ig.oauth.disconnect': "Déconnecter",
+  'ig.oauth.load': "Afficher mes posts",
+  'ig.oauth.more': "Voir plus",
+  'ig.oauth.import': "Importer {n} post(s)",
+  'ig.oauth.imported': "Déjà importé",
+  'ig.oauth.select': "Choisir ce post",
+  'ig.oauth.empty': "Aucun post trouvé sur ce compte.",
+  'ig.oauth.done': "Compte Instagram connecté.",
+  'ig.oauth.denied': "Connexion annulée : aucune autorisation donnée.",
+  'ig.oauth.error': "Connexion Instagram impossible, réessayez.",
 };
 
 const en: Record<ImportAdminMessageKey, string> = {
@@ -196,6 +226,21 @@ const en: Record<ImportAdminMessageKey, string> = {
   'ig.publishFailed': '{n} not published: {first}',
   'ig.seeProducts': 'See products',
   'ig.error': 'Operation failed, please retry.',
+  'ig.oauth.title': "My Instagram account",
+  'ig.oauth.hint': "Connect your professional Instagram account (Business or Creator): your posts show up here and become drafts in one click. Read-only, we never post anything.",
+  'ig.oauth.notConfigured': "Instagram connection is not enabled on this platform yet.",
+  'ig.oauth.connect': "Connect Instagram",
+  'ig.oauth.connectedAs': "Connected: @{user}",
+  'ig.oauth.disconnect': "Disconnect",
+  'ig.oauth.load': "Show my posts",
+  'ig.oauth.more': "Load more",
+  'ig.oauth.import': "Import {n} post(s)",
+  'ig.oauth.imported': "Already imported",
+  'ig.oauth.select': "Select this post",
+  'ig.oauth.empty': "No posts found on this account.",
+  'ig.oauth.done': "Instagram account connected.",
+  'ig.oauth.denied': "Connection cancelled: no permission was given.",
+  'ig.oauth.error': "Could not connect Instagram, please retry.",
 };
 
 const ar: Record<ImportAdminMessageKey, string> = {
@@ -262,6 +307,21 @@ const ar: Record<ImportAdminMessageKey, string> = {
   'ig.publishFailed': '{n} لم يُنشر: {first}',
   'ig.seeProducts': 'عرض المنتجات',
   'ig.error': 'تعذر تنفيذ العملية، حاول مجددًا.',
+  'ig.oauth.title': "حسابي على إنستغرام",
+  'ig.oauth.hint': "اربط حساب إنستغرام الاحترافي (تجاري أو منشئ محتوى): تظهر منشوراتك هنا وتتحول إلى مسودات بنقرة واحدة. للقراءة فقط، لن ننشر أي شيء.",
+  'ig.oauth.notConfigured': "ربط إنستغرام غير مفعّل بعد على هذه المنصة.",
+  'ig.oauth.connect': "ربط إنستغرام",
+  'ig.oauth.connectedAs': "متصل: @{user}",
+  'ig.oauth.disconnect': "فصل الحساب",
+  'ig.oauth.load': "عرض منشوراتي",
+  'ig.oauth.more': "عرض المزيد",
+  'ig.oauth.import': "استيراد {n} منشور",
+  'ig.oauth.imported': "تم استيراده",
+  'ig.oauth.select': "اختيار هذا المنشور",
+  'ig.oauth.empty': "لا توجد منشورات في هذا الحساب.",
+  'ig.oauth.done': "تم ربط حساب إنستغرام.",
+  'ig.oauth.denied': "أُلغي الربط: لم يتم منح أي إذن.",
+  'ig.oauth.error': "تعذر ربط إنستغرام، حاول مجددًا.",
 };
 
 export const importAdminExtra: Record<StoreLocale, Record<ImportAdminMessageKey, string>> = { fr, en, ar };
