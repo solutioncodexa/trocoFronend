@@ -71,6 +71,7 @@ export async function getMe(): Promise<UserInfoDTO | null> {
   try {
     const data = await apiRequest<UserInfoDTO>(buildApiUrl('/auth/me'), {
       method: 'GET',
+      forceAuth: true,
     });
     return data;
   } catch {

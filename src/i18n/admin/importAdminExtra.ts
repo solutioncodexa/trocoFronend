@@ -79,7 +79,8 @@ export type ImportAdminMessageKey =
   | 'ig.oauth.empty'
   | 'ig.oauth.done'
   | 'ig.oauth.denied'
-  | 'ig.oauth.error';
+  | 'ig.oauth.error'
+  | 'ig.oauth.popup';
 
 const fr: Record<ImportAdminMessageKey, string> = {
   'import.button': 'Importer (CSV)',
@@ -160,6 +161,7 @@ const fr: Record<ImportAdminMessageKey, string> = {
   'ig.oauth.done': "Compte Instagram connecté.",
   'ig.oauth.denied': "Connexion annulée : aucune autorisation donnée.",
   'ig.oauth.error': "Connexion Instagram impossible, réessayez.",
+  'ig.oauth.popup': "Autorisez les pop-ups pour ouvrir Instagram dans un nouvel onglet.",
 };
 
 const en: Record<ImportAdminMessageKey, string> = {
@@ -241,6 +243,7 @@ const en: Record<ImportAdminMessageKey, string> = {
   'ig.oauth.done': "Instagram account connected.",
   'ig.oauth.denied': "Connection cancelled: no permission was given.",
   'ig.oauth.error': "Could not connect Instagram, please retry.",
+  'ig.oauth.popup': "Allow pop-ups so Instagram can open in a new tab.",
 };
 
 const ar: Record<ImportAdminMessageKey, string> = {
@@ -322,6 +325,7 @@ const ar: Record<ImportAdminMessageKey, string> = {
   'ig.oauth.done': "تم ربط حساب إنستغرام.",
   'ig.oauth.denied': "أُلغي الربط: لم يتم منح أي إذن.",
   'ig.oauth.error': "تعذر ربط إنستغرام، حاول مجددًا.",
+  'ig.oauth.popup': "اسمح بالنوافذ المنبثقة لفتح إنستغرام في علامة تبويب جديدة.",
 };
 
 export const importAdminExtra: Record<StoreLocale, Record<ImportAdminMessageKey, string>> = { fr, en, ar };

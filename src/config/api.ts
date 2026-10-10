@@ -47,7 +47,17 @@ const getFreshAccessToken = (): Promise<string | null> => {
   return refreshPromise;
 };
 
+/** Onglet ouvert pour Instagram : une 401 ici ne doit pas déconnecter l'onglet admin d'origine. */
+const isInstagramOauthTab = (): boolean => {
+  try {
+    return !!window.opener && window.location.pathname.startsWith('/admin/produits/instagram');
+  } catch {
+    return false;
+  }
+};
+
 const clearAuthAndRedirect = (): void => {
+  if (isInstagramOauthTab()) return;
   localStorage.removeItem(ACCESS_TOKEN_KEY);
   localStorage.removeItem(REFRESH_TOKEN_KEY);
   try {
@@ -103,13 +113,15 @@ export const buildApiUrl = (endpoint: string): string => {
 export type ApiRequestOptions = RequestInit & {
   /** Ne pas envoyer le JWT admin (ex. POST /orders vitrine — tenant via Host/slug). */
   skipAuth?: boolean;
+  /** Envoyer le JWT même hors des pages admin (restauration de session sur la landing). */
+  forceAuth?: boolean;
 };
 
 export const apiRequest = async <T>(
   url: string,
   options: ApiRequestOptions = {}
 ): Promise<T> => {
-  const { skipAuth = false, ...fetchOptions } = options;
+  const { skipAuth = false, forceAuth = false, ...fetchOptions } = options;
   const token = getAuthToken();
   const headers: Record<string, string> = {
     ...((fetchOptions.headers as Record<string, string>) || {}),
@@ -117,7 +129,7 @@ export const apiRequest = async <T>(
   if (!headers['Content-Type'] && !(fetchOptions.body instanceof FormData)) {
     headers['Content-Type'] = 'application/json';
   }
-  const attachAdminToken = Boolean(token) && !skipAuth && isAdminSurface();
+  const attachAdminToken = Boolean(token) && !skipAuth && (forceAuth || isAdminSurface());
   if (attachAdminToken && token) {
     headers['Authorization'] = `Bearer ${token}`;
   }

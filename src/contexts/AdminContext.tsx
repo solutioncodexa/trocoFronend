@@ -100,11 +100,11 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
       if (me && isBackofficeRole(me.role) && me.active !== false) {
         setUser(me);
         await syncStoreBrand(me.role, me.fournisseurId);
-      } else if (onAdminSurface) {
+      } else if (onAdminSurface && !window.opener) {
         authApi.clearStoredAuth();
       }
     } catch {
-      if (onAdminSurface) authApi.clearStoredAuth();
+      if (onAdminSurface && !window.opener) authApi.clearStoredAuth();
     } finally {
       setIsLoading(false);
     }

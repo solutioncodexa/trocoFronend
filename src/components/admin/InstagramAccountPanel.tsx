@@ -27,19 +27,40 @@ const InstagramAccountPanel = ({ onImported }: { onImported: (items: InstagramIm
 
   const { data: status } = useQuery({ queryKey: STATUS_KEY, queryFn: instagramImportApi.oauthStatus });
 
-  // Retour d'Instagram : ?instagram=connected|denied|error, puis on nettoie l'adresse.
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const result = params.get('instagram');
-    if (!result) return;
+  const applyOauthResult = (result: string) => {
     setMessage({
       text: result === 'connected' ? t('ig.oauth.done') : result === 'denied' ? t('ig.oauth.denied') : t('ig.oauth.error'),
       error: result !== 'connected',
     });
-    params.delete('instagram');
-    const rest = params.toString();
-    window.history.replaceState(null, '', window.location.pathname + (rest ? `?${rest}` : ''));
     void queryClient.invalidateQueries({ queryKey: STATUS_KEY });
+  };
+
+  // Retour dans cet onglet (secours) ou message depuis l'onglet Instagram.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const result = params.get('instagram');
+    if (result) {
+      applyOauthResult(result);
+      params.delete('instagram');
+      const rest = params.toString();
+      window.history.replaceState(null, '', window.location.pathname + (rest ? `?${rest}` : ''));
+    }
+
+    const onMessage = (event: MessageEvent) => {
+      if (event.origin !== window.location.origin) return;
+      const data = event.data as { source?: string; result?: string } | null;
+      if (!data || data.source !== 'getstore-instagram' || !data.result) return;
+      applyOauthResult(data.result);
+    };
+    const onFocus = () => {
+      void queryClient.invalidateQueries({ queryKey: STATUS_KEY });
+    };
+    window.addEventListener('message', onMessage);
+    window.addEventListener('focus', onFocus);
+    return () => {
+      window.removeEventListener('message', onMessage);
+      window.removeEventListener('focus', onFocus);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -47,11 +68,25 @@ const InstagramAccountPanel = ({ onImported }: { onImported: (items: InstagramIm
 
   const connect = useMutation({
     mutationFn: () => instagramImportApi.oauthAuthorizeUrl(window.location.origin + RETURN_PATH),
-    onSuccess: ({ url }) => {
-      window.location.href = url;
-    },
     onError: fail,
   });
+
+  const openConnect = () => {
+    // Ouvert dans le clic (geste utilisateur) pour ne pas être bloqué, sans quitter la page admin.
+    const tab = window.open('about:blank', '_blank');
+    if (!tab) {
+      setMessage({ text: t('ig.oauth.popup'), error: true });
+      return;
+    }
+    connect.mutate(undefined, {
+      onSuccess: ({ url }) => {
+        tab.location.href = url;
+      },
+      onError: () => {
+        tab.close();
+      },
+    });
+  };
 
   const disconnect = useMutation({
     mutationFn: instagramImportApi.oauthDisconnect,
@@ -119,7 +154,7 @@ const InstagramAccountPanel = ({ onImported }: { onImported: (items: InstagramIm
       {status?.configured && !status.connected ? (
         <>
           <p className="text-sm text-muted-foreground">{t('ig.oauth.hint')}</p>
-          <Button type="button" onClick={() => connect.mutate()} disabled={connect.isPending}>
+          <Button type="button" onClick={openConnect} disabled={connect.isPending}>
             {connect.isPending ? <Loader2 className="me-2 h-4 w-4 animate-spin" aria-hidden /> : null}
             {t('ig.oauth.connect')}
           </Button>

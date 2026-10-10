@@ -7,6 +7,14 @@ vi.mock('@/contexts/TenantContext', () => ({
   useTenant: vi.fn(),
 }));
 
+vi.mock('@/contexts/AdminContext', () => ({
+  useAdmin: () => ({
+    isAuthenticated: false,
+    isSuperAdmin: false,
+    isLoading: false,
+  }),
+}));
+
 vi.mock('@/pages/Index', () => ({
   default: () => <div>Storefront Index</div>,
 }));

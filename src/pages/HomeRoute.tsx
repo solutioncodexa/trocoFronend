@@ -1,4 +1,6 @@
+import { Navigate } from 'react-router-dom';
 import NeutralBootLoader from '@/components/layout/NeutralBootLoader';
+import { useAdmin } from '@/contexts/AdminContext';
 import { useTenant } from '@/contexts/TenantContext';
 import Index from '@/pages/Index';
 import MatjaronaHome from '@/pages/MatjaronaHome';
@@ -8,6 +10,7 @@ import MatjaronaHome from '@/pages/MatjaronaHome';
  */
 const HomeRoute = () => {
   const { store, isLoading, slug, storeUnavailableMessage, isPlatformHost } = useTenant();
+  const { isAuthenticated, isSuperAdmin, isLoading: authLoading } = useAdmin();
 
   // Attente bootstrap : loader neutre (pas les couleurs Get STORE).
   // Si un cache thème existe, `store` est déjà hydraté → on affiche Index tout de suite.
@@ -29,6 +32,14 @@ const HomeRoute = () => {
         </p>
       </div>
     );
+  }
+
+  if (authLoading) {
+    return <NeutralBootLoader />;
+  }
+
+  if (isAuthenticated) {
+    return <Navigate to={isSuperAdmin ? '/super-admin/dashboard' : '/admin/dashboard'} replace />;
   }
 
   return <MatjaronaHome />;

@@ -40,7 +40,7 @@
     --safe-bottom: env(safe-area-inset-bottom, 0px);
     --safe-left: env(safe-area-inset-left, 0px);
 
-    /* ─── Troco Design System — rose & bleu ciel (brand) ─── */
+    /* ─── Troco Design System — ciel (brand) ─── */
     --background: 340 40% 99%;
     --foreground: 220 18% 12%;
 
@@ -50,8 +50,8 @@
     --popover: 0 0% 100%;
     --popover-foreground: 220 18% 12%;
 
-    /* Rose marque (#E97B94 → CTA) */
-    --primary: 344 70% 60%;
+    /* Ciel (#0284c7 → CTA) */
+    --primary: 200 98% 39%;
     --primary-foreground: 0 0% 100%;
 
     /* Bleu ciel clair (fonds / chips) */
@@ -76,7 +76,7 @@
 
     --border: 330 20% 90%;
     --input: 330 18% 91%;
-    --ring: 344 70% 60%;
+    --ring: 200 98% 39%;
 
     --radius: 0.75rem;
 
@@ -84,35 +84,35 @@
     --sky: 203 63% 65%;
     --sky-light: 203 55% 88%;
     --sky-dark: 203 50% 42%;
-    --gold: 344 70% 60%;
-    --gold-light: 344 72% 74%;
-    --gold-dark: 344 55% 48%;
+    --gold: 200 98% 39%;
+    --gold-light: 200 90% 62%;
+    --gold-dark: 200 98% 32%;
     --cream: 340 45% 97%;
     --cream-dark: 203 40% 94%;
     --charcoal: 220 18% 14%;
     --charcoal-light: 220 10% 40%;
 
-    --gradient-gold: linear-gradient(135deg, hsl(344, 70%, 58%) 0%, hsl(344, 65%, 68%) 45%, hsl(203, 63%, 62%) 100%);
-    /* CTA bandeau : rose → bleu ciel (texte clair) */
-    --gradient-hero: linear-gradient(135deg, hsl(344, 58%, 48%) 0%, hsl(344, 52%, 55%) 42%, hsl(203, 58%, 48%) 100%);
-    --gradient-card: linear-gradient(180deg, hsl(0, 0%, 100%) 0%, hsl(340, 35%, 98%) 100%);
-    --gradient-mesh: radial-gradient(at 15% 15%, hsl(344 70% 90% / 0.85) 0, transparent 48%),
-      radial-gradient(at 85% 10%, hsl(203 60% 90% / 0.7) 0, transparent 42%),
-      radial-gradient(at 55% 85%, hsl(344 50% 94% / 0.55) 0, transparent 45%);
+    --gradient-gold: linear-gradient(135deg, hsl(200, 98%, 34%) 0%, hsl(200, 90%, 48%) 45%, hsl(199, 85%, 58%) 100%);
+    /* CTA bandeau : ciel (texte clair) */
+    --gradient-hero: linear-gradient(135deg, hsl(200, 98%, 32%) 0%, hsl(200, 90%, 42%) 42%, hsl(199, 85%, 48%) 100%);
+    --gradient-card: linear-gradient(180deg, hsl(0, 0%, 100%) 0%, hsl(200, 40%, 98%) 100%);
+    --gradient-mesh: radial-gradient(at 15% 15%, hsl(200 90% 90% / 0.85) 0, transparent 48%),
+      radial-gradient(at 85% 10%, hsl(199 70% 90% / 0.7) 0, transparent 42%),
+      radial-gradient(at 55% 85%, hsl(200 50% 94% / 0.55) 0, transparent 45%);
 
-    --shadow-gold: 0 8px 24px -6px hsl(344, 70%, 55%, 0.28);
+    --shadow-gold: 0 8px 24px -6px hsl(200, 98%, 39%, 0.28);
     --shadow-elegant: 0 12px 40px -12px hsl(220, 20%, 12%, 0.12);
     --shadow-card: 0 1px 2px hsl(220 15% 12% / 0.04), 0 4px 16px -4px hsl(220 15% 12% / 0.08);
     --shadow-soft: 0 1px 3px hsl(220 15% 12% / 0.06);
 
     --sidebar-background: 0 0% 100%;
     --sidebar-foreground: 220 18% 16%;
-    --sidebar-primary: 344 70% 60%;
+    --sidebar-primary: 200 98% 39%;
     --sidebar-primary-foreground: 0 0% 100%;
     --sidebar-accent: 340 35% 97%;
     --sidebar-accent-foreground: 220 18% 16%;
     --sidebar-border: 330 18% 91%;
-    --sidebar-ring: 344 70% 60%;
+    --sidebar-ring: 200 98% 39%;
   }
 
   .dark {
@@ -125,8 +125,8 @@
     --popover: 220 20% 11%;
     --popover-foreground: 340 20% 96%;
 
-    --primary: 344 65% 68%;
-    --primary-foreground: 220 25% 10%;
+    --primary: 200 90% 55%;
+    --primary-foreground: 0 0% 100%;
 
     --secondary: 203 25% 18%;
     --secondary-foreground: 203 50% 88%;
@@ -142,14 +142,14 @@
 
     --border: 220 14% 20%;
     --input: 220 14% 20%;
-    --ring: 344 65% 68%;
+    --ring: 200 90% 55%;
 
     --sky: 203 55% 58%;
     --sky-light: 203 35% 28%;
     --sky-dark: 203 60% 72%;
-    --gold: 344 65% 68%;
-    --gold-light: 344 55% 76%;
-    --gold-dark: 344 60% 52%;
+    --gold: 200 90% 55%;
+    --gold-light: 200 85% 70%;
+    --gold-dark: 200 90% 42%;
     --cream: 220 16% 14%;
     --cream-dark: 220 18% 11%;
     --charcoal: 340 20% 96%;
@@ -157,12 +157,12 @@
 
     --sidebar-background: 220 20% 10%;
     --sidebar-foreground: 340 20% 96%;
-    --sidebar-primary: 344 65% 68%;
-    --sidebar-primary-foreground: 220 25% 10%;
+    --sidebar-primary: 200 90% 55%;
+    --sidebar-primary-foreground: 0 0% 100%;
     --sidebar-accent: 220 16% 14%;
     --sidebar-accent-foreground: 340 20% 96%;
     --sidebar-border: 220 14% 18%;
-    --sidebar-ring: 344 65% 68%;
+    --sidebar-ring: 200 90% 55%;
   }
 }
 
@@ -560,7 +560,7 @@
     background: linear-gradient(
       to right,
       hsl(220, 22%, 10%, 0.88) 0%,
-      hsl(344, 30%, 18%, 0.55) 50%,
+      hsl(200, 40%, 18%, 0.55) 50%,
       hsl(203, 35%, 22%, 0.3) 100%
     );
   }
@@ -690,8 +690,8 @@
   }
 
   @keyframes pulse-gold {
-    0%, 100% { box-shadow: 0 0 0 0 hsl(344, 70%, 60%, 0.35); }
-    50% { box-shadow: 0 0 0 14px hsl(344, 70%, 60%, 0); }
+    0%, 100% { box-shadow: 0 0 0 0 hsl(200, 98%, 39%, 0.35); }
+    50% { box-shadow: 0 0 0 14px hsl(200, 98%, 39%, 0); }
   }
 
   /* Dotted border for upload area */
@@ -740,6 +740,29 @@
 
   .scrollbar-app::-webkit-scrollbar-thumb:hover {
     filter: brightness(0.92);
+  }
+
+  /* Menu admin sombre : fine, sans reprendre la couleur de la boutique. */
+  .scrollbar-sidebar {
+    scrollbar-width: thin;
+    scrollbar-color: rgb(255 255 255 / 0.28) transparent;
+  }
+
+  .scrollbar-sidebar::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  .scrollbar-sidebar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .scrollbar-sidebar::-webkit-scrollbar-thumb {
+    background: rgb(255 255 255 / 0.22);
+    border-radius: 9999px;
+  }
+
+  .scrollbar-sidebar::-webkit-scrollbar-thumb:hover {
+    background: rgb(255 255 255 / 0.42);
   }
 
   /* Soft inset border for panels */

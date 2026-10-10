@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <title>Instagram</title>
+  </head>
+  <body>
+    <p>Vous pouvez fermer cet onglet et revenir à Get STORE.</p>
+    <script>
+      (function () {
+        var params = new URLSearchParams(window.location.search);
+        var result = params.get('instagram') || 'error';
+        var next = params.get('next') || '/admin/produits/instagram';
+        if (next.charAt(0) !== '/' || next.charAt(1) === '/' || next.indexOf('\\') !== -1) {
+          next = '/admin/produits/instagram';
+        }
+        var payload = { source: 'getstore-instagram', result: result };
+        try {
+          if (window.opener && !window.opener.closed) {
+            window.opener.postMessage(payload, window.location.origin);
+            window.close();
+            return;
+          }
+        } catch (e) {}
+        // Pas de redirection vers l'admin : un rechargement de cette page effaçait la session.
+        document.body.insertAdjacentHTML(
+          'beforeend',
+          '<p><a href="' + next + '">Revenir à Get STORE</a></p>',
+        );
+      })();
+    </script>
+  </body>
+</html>

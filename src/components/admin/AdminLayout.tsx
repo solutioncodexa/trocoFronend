@@ -1,4 +1,4 @@
-import { ReactNode, useEffect, useMemo, useState } from 'react';
+import { ReactNode, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard,
@@ -100,6 +100,9 @@ type NavItem = {
 };
 
 type NavSection = { labelKey: AdminMessageKey; items: NavItem[] };
+
+/** Le menu est remonté à chaque page : on garde le défilement pour ne pas revenir sur Tableau de bord. */
+let navScrollTop = 0;
 
 const ALL_NAV: NavSection[] = [
   {
@@ -258,6 +261,26 @@ const AdminLayout = ({
   const isActive = (href: string) =>
     location.pathname === href || location.pathname.startsWith(`${href}/`);
 
+  const navRef = useRef<HTMLElement>(null);
+  useLayoutEffect(() => {
+    const nav = navRef.current;
+    if (!nav) return;
+    nav.scrollTop = navScrollTop;
+    const active = nav.querySelector<HTMLElement>('[data-nav-active="true"]');
+    if (active) {
+      const navRect = nav.getBoundingClientRect();
+      const itemRect = active.getBoundingClientRect();
+      if (itemRect.top < navRect.top || itemRect.bottom > navRect.bottom) {
+        active.scrollIntoView({ block: 'nearest' });
+      }
+    }
+    const onScroll = () => {
+      navScrollTop = nav.scrollTop;
+    };
+    nav.addEventListener('scroll', onScroll, { passive: true });
+    return () => nav.removeEventListener('scroll', onScroll);
+  }, [location.pathname]);
+
   return (
     <div className="flex h-screen min-h-0 overflow-hidden bg-[hsl(220_20%_97%)]" dir={dir} lang={locale}>
       <StockAlertDialog />
@@ -318,10 +341,10 @@ const AdminLayout = ({
           </div>
         </div>
 
-        <nav className="min-h-0 flex-1 space-y-5 overflow-y-auto overscroll-contain p-3 scrollbar-app">
+        <nav ref={navRef} className="scrollbar-sidebar min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain px-2.5 py-3 pe-1.5">
           {navSections.map((section) => (
             <div key={section.labelKey}>
-              <p className="mb-1.5 px-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-white/40">
+              <p className="mb-1 px-3 text-[10px] font-semibold uppercase tracking-[0.16em] text-white/35">
                 {t(section.labelKey)}
               </p>
               <div className="space-y-0.5">
@@ -332,6 +355,7 @@ const AdminLayout = ({
                     onClick={() => {
                       if (window.innerWidth < 1024) setIsSidebarOpen(false);
                     }}
+                    data-nav-active={isActive(item.href) ? 'true' : undefined}
                     className={cn(
                       'flex items-center gap-3 rounded-xl px-3 py-2.5 font-body text-sm transition-all duration-200',
                       isActive(item.href)
@@ -422,45 +446,38 @@ const AdminLayout = ({
               <PanelLeftOpen className="hidden h-5 w-5 lg:block" />
               <Menu className="h-5 w-5 lg:hidden" />
             </button>
-            {isSidebarOpen ? (
-              <button
-                type="button"
-                className="mt-0.5 hidden rounded-lg p-2 text-muted-foreground hover:bg-muted lg:inline-flex"
-                onClick={() => setIsSidebarOpen(false)}
-                aria-label={t('common.hideMenu')}
-                title={t('common.hideMenu')}
-              >
-                <PanelLeftClose className="h-5 w-5" />
-              </button>
-            ) : null}
-            <div className="min-w-0 space-y-1">
+            <div className="min-w-0">
               {breadcrumbs &&
                 breadcrumbs.length > 0 &&
                 !(breadcrumbs.length === 1 && breadcrumbs[0].label === title) && (
-                <div className="flex flex-wrap items-center gap-1 text-xs text-muted-foreground">
+                <nav aria-label="Fil d'Ariane" className="mb-1 flex flex-wrap items-center gap-1 text-[11px] font-medium uppercase tracking-[0.12em] text-muted-foreground/80">
                   {breadcrumbs.map((b, i) => (
                     <span key={`${b.label}-${i}`} className="flex items-center gap-1">
-                      {i > 0 && <ChevronRight className={cn('h-3 w-3', dir === 'rtl' && 'rotate-180')} />}
+                      {i > 0 && <ChevronRight className={cn('h-3 w-3 opacity-60', dir === 'rtl' && 'rotate-180')} />}
                       {b.href ? (
-                        <Link to={b.href} className="hover:text-foreground">
+                        <Link to={b.href} className="transition-colors hover:text-primary">
                           {b.label}
                         </Link>
                       ) : (
-                        <span>{b.label}</span>
+                        <span className="text-foreground/70">{b.label}</span>
                       )}
                     </span>
                   ))}
-                </div>
+                </nav>
               )}
-              <div className="flex min-w-0 items-center gap-1.5">
-                <h1 className="truncate font-display text-lg font-semibold tracking-tight sm:text-xl">{title}</h1>
+              <div className="flex min-w-0 items-center gap-2">
+                <h1 className="truncate font-display text-xl font-semibold tracking-tight text-foreground sm:text-[1.35rem]">
+                  {title}
+                </h1>
                 {(() => {
                   const helpTopic = helpTopicForPath(location.pathname);
                   return helpTopic ? <HelpTip topic={helpTopic} /> : null;
                 })()}
               </div>
               {description ? (
-                <p className="line-clamp-2 text-xs text-muted-foreground sm:text-sm">{description}</p>
+                <p className="mt-1 line-clamp-2 max-w-2xl text-[13px] leading-relaxed text-muted-foreground">
+                  {description}
+                </p>
               ) : null}
             </div>
           </div>
