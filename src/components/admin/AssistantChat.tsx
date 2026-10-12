@@ -1,7 +1,7 @@
 import { Fragment, useEffect, useRef, useState, type ReactNode } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { BookOpen, CreditCard, Crown, PencilLine, ShieldCheck, FolderTree, Loader2, Megaphone, Palette, MessageCircle, Send, Sparkles, Trash2, Truck, Wand2, X } from 'lucide-react';
+import { BookOpen, CreditCard, Crown, PencilLine, ShieldCheck, FolderTree, Loader2, Megaphone, Palette, History, ImagePlus, MessageCircle, Rocket, Plus, Send, Sparkles, Trash2, Truck, Wand2, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { assistantApi } from '@/services/api/assistant';
 import { platformApi } from '@/services/api/platform';
@@ -10,6 +10,8 @@ import {
   buildFlow,
   isCatalogWidget,
   isContentWidget,
+  isAtzWidget,
+  isLogoWidget,
   isDesignWidget,
   isGrowthWidget,
   isLegalWidget,
@@ -38,6 +40,7 @@ import { ASSISTANT_FLOW_EVENT, type AssistantFlowId } from '@/utils/assistantBus
 import { useAssistantTools } from './useAssistantTools';
 import { useComplianceFlow } from './useComplianceFlow';
 import { useContentFlow } from './useContentFlow';
+import { useLogoFlow } from './useLogoFlow';
 import { useGrowthFlow } from './useGrowthFlow';
 import { useManageFlow } from './useManageFlow';
 import { useMarketingFlow } from './useMarketingFlow';
@@ -100,29 +103,62 @@ const ASK_KEY: Record<FlowStepId, AdminMessageKey> = {
   whatsappBusiness: 'assistant.flow.wab.ask',
 };
 
-function loadHistory(): Entry[] {
+type Conversation = { id: string; title: string; entries: Entry[] };
+type ChatStore = { active: string; items: Conversation[] };
+
+const MAX_CONVERSATIONS = 10;
+const FAB_HIDDEN_KEY = 'troco_assistant_fab_hidden';
+
+const newConversation = (): Conversation => ({
+  id: `c${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`,
+  title: '',
+  entries: [],
+});
+
+/** Une clé par boutique : deux boutiques ouvertes dans le même navigateur ne partagent jamais leurs conversations. */
+const storageKeyFor = (tenantId: number | string | null | undefined) => `${STORAGE_KEY}:${tenantId ?? 'none'}`;
+
+function isEntry(m: unknown): m is Entry {
+  const e = m as Entry | null;
+  return !!e && (e.role === 'user' || e.role === 'assistant') && typeof e.content === 'string';
+}
+
+function loadStore(key: string): ChatStore {
   try {
-    const raw = sessionStorage.getItem(STORAGE_KEY);
-    const parsed: unknown = raw ? JSON.parse(raw) : [];
-    if (!Array.isArray(parsed)) return [];
-    return parsed.filter(
-      (m): m is Entry =>
-        !!m && (m.role === 'user' || m.role === 'assistant') && typeof m.content === 'string',
-    );
+    const raw = sessionStorage.getItem(key);
+    const parsed = raw ? (JSON.parse(raw) as Partial<ChatStore>) : null;
+    const items = Array.isArray(parsed?.items)
+      ? parsed.items
+          .filter((c): c is Conversation => !!c && typeof c.id === 'string' && Array.isArray(c.entries))
+          .map((c) => ({ id: c.id, title: String(c.title ?? ''), entries: c.entries.filter(isEntry) }))
+      : [];
+    if (items.length === 0) items.push(newConversation());
+    const active = items.some((c) => c.id === parsed?.active) ? (parsed?.active as string) : items[0].id;
+    return { active, items };
   } catch {
-    return [];
+    const c = newConversation();
+    return { active: c.id, items: [c] };
   }
 }
 
 /** Les outils (widgets) ne sont pas conservés : une configuration interrompue se relance depuis le début. */
-function saveHistory(entries: Entry[]) {
+function saveStore(key: string, store: ChatStore) {
   try {
-    const plain = entries.slice(-30).map(({ role, content }) => ({ role, content }));
-    sessionStorage.setItem(STORAGE_KEY, JSON.stringify(plain));
+    const items = store.items.slice(0, MAX_CONVERSATIONS).map((c) => ({
+      id: c.id,
+      title: c.title,
+      entries: c.entries.slice(-30).map(({ role, content }) => ({ role, content })),
+    }));
+    sessionStorage.setItem(key, JSON.stringify({ active: store.active, items }));
   } catch {
-    /* stockage indisponible : la conversation reste en mémoire */
+    /* stockage indisponible : les conversations restent en mémoire */
   }
 }
+
+const titleFrom = (entries: Entry[]) => {
+  const first = entries.find((e) => e.role === 'user')?.content.trim().replace(/\s+/g, ' ') ?? '';
+  return first.length > 40 ? `${first.slice(0, 40)}…` : first;
+};
 
 /** Transforme les adresses d'écrans admin (/admin/reglages) en liens cliquables. */
 function linkify(text: string, onNavigate: () => void): ReactNode[] {
@@ -153,10 +189,64 @@ export function AssistantChat() {
   const { store, refresh: refreshTenant, loadFromAdminSession } = useTenant();
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
-  const [entries, setEntries] = useState<Entry[]>(loadHistory);
+  const tenantKey = storageKeyFor(store?.fournisseurId);
+  const [chatStore, setChatStore] = useState<ChatStore>(() => loadStore(tenantKey));
+  const [loadedKey, setLoadedKey] = useState(tenantKey);
+  const [showHistory, setShowHistory] = useState(false);
+  const [fabHidden, setFabHidden] = useState(() => {
+    try {
+      return localStorage.getItem(FAB_HIDDEN_KEY) === '1';
+    } catch {
+      return false;
+    }
+  });
+  const storeRef = useRef(chatStore);
+  storeRef.current = chatStore;
+  useEffect(() => {
+    if (tenantKey === loadedKey) return;
+    setLoadedKey(tenantKey);
+    setShowHistory(false);
+    const loaded = loadStore(tenantKey);
+    storeRef.current = loaded;
+    setChatStore(loaded);
+  }, [tenantKey, loadedKey]);
+  const active = chatStore.items.find((c) => c.id === chatStore.active) ?? chatStore.items[0];
+  const entries = active.entries;
+  /** Met à jour les messages de la conversation active et les enregistre pour la boutique courante. */
+  const setEntries = (update: Entry[] | ((prev: Entry[]) => Entry[])) => {
+    const cur = storeRef.current;
+    const conv = cur.items.find((c) => c.id === cur.active) ?? cur.items[0];
+    const nextEntries = typeof update === 'function' ? update(conv.entries) : update;
+    const next: ChatStore = {
+      ...cur,
+      items: cur.items.map((c) =>
+        c.id === conv.id ? { ...c, entries: nextEntries, title: c.title || titleFrom(nextEntries) } : c,
+      ),
+    };
+    storeRef.current = next;
+    setChatStore(next);
+    saveStore(tenantKey, next);
+  };
   const [input, setInput] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [flowStep, setFlowStep] = useState<string | null>(null);
+  // Parcours « de A à Z » : enchaîne les parcours existants, chacun pouvant être lancé, passé ou arrêté.
+  const atz = useRef({ active: false, idx: -1, running: false });
+  const atzAdvance = useRef<() => void>(() => undefined);
+  /** Fin d'un parcours (étape remise à zéro) : si le A à Z est en cours, on propose l'étape suivante. */
+  const stepWatch = (step: string | null) => {
+    setFlowStep(step);
+    if (step === null && atz.current.active && atz.current.running) {
+      atz.current.running = false;
+      window.setTimeout(() => atzAdvance.current(), 700);
+    }
+  };
+  /** Étape du A à Z affichée dans la barre de progression (null : parcours inactif). */
+  const [atzIdx, setAtzIdx] = useState<number | null>(null);
+  const stopAtz = () => {
+    atz.current = { active: false, idx: -1, running: false };
+    setAtzIdx(null);
+  };
   const [busy, setBusy] = useState(false);
   const [showAllFlows, setShowAllFlows] = useState(false);
   // Rempli à chaque rendu : lance un parcours demandé depuis un autre écran (ex. liste « Premiers pas »).
@@ -173,11 +263,7 @@ export function AssistantChat() {
   });
 
   const push = (...added: Entry[]) =>
-    setEntries((prev) => {
-      const next = [...prev, ...added];
-      saveHistory(next);
-      return next;
-    });
+    setEntries((prev) => [...prev, ...added]);
 
   const clearWidgets = () => setEntries((prev) => prev.map((e) => (e.widget ? { ...e, widget: undefined } : e)));
 
@@ -233,7 +319,7 @@ export function AssistantChat() {
     setBusy,
     push,
     clearWidgets,
-    setStep: setFlowStep,
+    setStep: stepWatch,
     storeName: store?.siteName,
     invalidate: () =>
       void queryClient.invalidateQueries({ predicate: (q) => /categor|product/i.test(JSON.stringify(q.queryKey)) }),
@@ -245,7 +331,7 @@ export function AssistantChat() {
     setBusy,
     push,
     clearWidgets,
-    setStep: setFlowStep,
+    setStep: stepWatch,
     planCode: store?.planCode,
     saveSettings,
     invalidate: () =>
@@ -260,7 +346,7 @@ export function AssistantChat() {
     setBusy,
     push,
     clearWidgets,
-    setStep: setFlowStep,
+    setStep: stepWatch,
     invalidate: () =>
       void queryClient.invalidateQueries({ predicate: (q) => /shipping/i.test(JSON.stringify(q.queryKey)) }),
   });
@@ -272,7 +358,7 @@ export function AssistantChat() {
     setBusy,
     push,
     clearWidgets,
-    setStep: setFlowStep,
+    setStep: stepWatch,
     saveSettings,
     invalidate: () =>
       void queryClient.invalidateQueries({
@@ -287,7 +373,7 @@ export function AssistantChat() {
     setBusy,
     push,
     clearWidgets,
-    setStep: setFlowStep,
+    setStep: stepWatch,
     saveSettings,
     applySettings,
   });
@@ -298,7 +384,7 @@ export function AssistantChat() {
     setBusy,
     push,
     clearWidgets,
-    setStep: setFlowStep,
+    setStep: stepWatch,
     saveSettings,
     invalidate: () =>
       void queryClient.invalidateQueries({ predicate: (q) => /store-pages|store-settings/i.test(JSON.stringify(q.queryKey)) }),
@@ -310,7 +396,7 @@ export function AssistantChat() {
     setBusy,
     push,
     clearWidgets,
-    setStep: setFlowStep,
+    setStep: stepWatch,
     invalidate: () =>
       void queryClient.invalidateQueries({ predicate: (q) => /product|categor/i.test(JSON.stringify(q.queryKey)) }),
   });
@@ -322,10 +408,22 @@ export function AssistantChat() {
     setBusy,
     push,
     clearWidgets,
-    setStep: setFlowStep,
+    setStep: stepWatch,
     saveSettings,
     invalidate: () =>
       void queryClient.invalidateQueries({ predicate: (q) => /store-pages|store-settings/i.test(JSON.stringify(q.queryKey)) }),
+  });
+
+  const logoFlow = useLogoFlow({
+    t,
+    busy,
+    setBusy,
+    push,
+    clearWidgets,
+    setStep: stepWatch,
+    saveSettings,
+    invalidate: () =>
+      void queryClient.invalidateQueries({ predicate: (q) => /store-settings|tenant|storefront/i.test(JSON.stringify(q.queryKey)) }),
   });
 
   const payments = usePaymentsFlow({
@@ -334,7 +432,7 @@ export function AssistantChat() {
     setBusy,
     push,
     clearWidgets,
-    setStep: setFlowStep,
+    setStep: stepWatch,
     saveSettings,
     applySettings,
   });
@@ -397,7 +495,7 @@ export function AssistantChat() {
   const askNext = () => {
     const next = queue.current.shift();
     if (!next) {
-      setFlowStep(null);
+      stepWatch(null);
       push({ role: 'assistant', content: t('assistant.flow.done') });
       return;
     }
@@ -500,9 +598,11 @@ export function AssistantChat() {
   };
 
   const flowList: { key: AssistantFlowId; label: string; Icon: typeof Wand2; run: () => void }[] = [
+    { key: 'atz', label: t('assistant.atz.start'), Icon: Rocket, run: () => startAtz() },
     { key: 'basics', label: t('assistant.flow.start'), Icon: Wand2, run: () => void startFlow() },
     { key: 'catalog', label: t('assistant.catalog.start'), Icon: FolderTree, run: () => void catalog.start() },
     { key: 'design', label: t('assistant.design.start'), Icon: Palette, run: () => void design.start() },
+    { key: 'logo', label: t('assistant.logo.start'), Icon: ImagePlus, run: () => void logoFlow.start() },
     { key: 'shipping', label: t('assistant.ship.start'), Icon: Truck, run: () => void shipping.start() },
     { key: 'marketing', label: t('assistant.mkt.start'), Icon: Megaphone, run: () => void marketing.start() },
     { key: 'growth', label: t('assistant.growth.start'), Icon: Crown, run: () => void growth.start() },
@@ -511,9 +611,57 @@ export function AssistantChat() {
     { key: 'content', label: t('assistant.content.start'), Icon: BookOpen, run: () => void content.start() },
     { key: 'payments', label: t('assistant.pay.start'), Icon: CreditCard, run: () => void payments.start() },
   ];
-  runFlow.current = (id) => flowList.find((f) => f.key === id)?.run();
-  // Écran d'accueil du chat : les 4 parcours essentiels, les autres derrière « Plus de parcours ».
-  const visibleFlows = showAllFlows ? flowList : flowList.slice(0, 4);
+  // Ordre du A à Z : l'essentiel d'abord, puis l'identité, le contenu, le catalogue, la vente et la conformité.
+  const ATZ_ORDER: AssistantFlowId[] = ['basics', 'logo', 'design', 'content', 'catalog', 'shipping', 'payments', 'legal', 'marketing'];
+  const atzLabel = (key: AssistantFlowId) => flowList.find((f) => f.key === key)?.label ?? key;
+
+  atzAdvance.current = () => {
+    const state = atz.current;
+    if (!state.active) return;
+    state.idx += 1;
+    state.running = false;
+    setAtzIdx(state.idx < ATZ_ORDER.length ? state.idx : null);
+    if (state.idx >= ATZ_ORDER.length) {
+      stopAtz();
+      setFlowStep(null);
+      push({ role: 'assistant', content: t('assistant.atz.done') });
+      return;
+    }
+    push({
+      role: 'assistant',
+      content: t('assistant.atz.step', { n: state.idx + 1, total: ATZ_ORDER.length, name: atzLabel(ATZ_ORDER[state.idx]) }),
+      widget: { kind: 'atz' },
+    });
+  };
+
+  const startAtz = () => {
+    atz.current = { active: true, idx: -1, running: false };
+    push({ role: 'user', content: t('assistant.atz.start') }, { role: 'assistant', content: t('assistant.atz.intro') });
+    atzAdvance.current();
+  };
+
+  const atzGo = () => {
+    const key = ATZ_ORDER[atz.current.idx];
+    clearWidgets();
+    push({ role: 'user', content: t('assistant.atz.go') });
+    atz.current.running = true;
+    flowList.find((f) => f.key === key)?.run();
+  };
+  const atzSkip = () => {
+    clearWidgets();
+    push({ role: 'user', content: t('assistant.flow.skip') });
+    atzAdvance.current();
+  };
+  const atzStop = () => {
+    clearWidgets();
+    push({ role: 'user', content: t('assistant.atz.stop') }, { role: 'assistant', content: t('assistant.atz.stopped') });
+    stopAtz();
+    setFlowStep(null);
+  };
+
+  runFlow.current = (id) => (id === 'atz' ? startAtz() : flowList.find((f) => f.key === id)?.run());
+  // Écran d'accueil du chat : les 6 parcours essentiels, les autres derrière « Plus de parcours ».
+  const visibleFlows = showAllFlows ? flowList : flowList.slice(0, 6);
 
   const renderWidget = (w: AnyWidget): ReactNode => {
     switch (w.kind) {
@@ -579,6 +727,22 @@ export function AssistantChat() {
         if (isLegalWidget(w)) return compliance.renderWidget(w);
         if (isManageWidget(w)) return manage.renderWidget(w);
         if (isContentWidget(w)) return content.renderWidget(w);
+        if (isLogoWidget(w)) return logoFlow.renderWidget(w);
+        if (isAtzWidget(w)) {
+          return (
+            <div className="mt-2 flex flex-wrap gap-2">
+              <Button type="button" size="sm" disabled={busy} onClick={atzGo}>
+                {t('assistant.atz.go')}
+              </Button>
+              <Button type="button" size="sm" variant="outline" disabled={busy} onClick={atzSkip}>
+                {t('assistant.flow.skip')}
+              </Button>
+              <Button type="button" size="sm" variant="ghost" disabled={busy} onClick={atzStop}>
+                {t('assistant.atz.stop')}
+              </Button>
+            </div>
+          );
+        }
         if (isToolWidget(w)) return tools.renderWidget(w);
         return payments.renderWidget(w);
     }
@@ -600,23 +764,86 @@ export function AssistantChat() {
     }
     const next: Entry[] = [...entries, { role: 'user', content }];
     setEntries(next);
-    saveHistory(next);
     setInput('');
     setError(null);
     chat.mutate(next);
   };
 
   const reset = () => {
+    stopAtz();
     queue.current = [];
     setFlowStep(null);
     setEntries([]);
     setError(null);
-    saveHistory([]);
+  };
+
+  const commit = (next: ChatStore) => {
+    storeRef.current = next;
+    setChatStore(next);
+    saveStore(tenantKey, next);
+  };
+
+  const startConversation = () => {
+    stopAtz();
+    queue.current = [];
+    setFlowStep(null);
+    setError(null);
+    setShowHistory(false);
+    const cur = storeRef.current;
+    // Une conversation vide existe déjà : on la réutilise plutôt que d'en empiler.
+    const empty = cur.items.find((c) => c.entries.length === 0);
+    const conv = empty ?? newConversation();
+    commit({ active: conv.id, items: empty ? cur.items : [conv, ...cur.items].slice(0, MAX_CONVERSATIONS) });
+  };
+
+  const switchConversation = (id: string) => {
+    stopAtz();
+    queue.current = [];
+    setFlowStep(null);
+    setError(null);
+    setShowHistory(false);
+    commit({ ...storeRef.current, active: id });
+  };
+
+  const deleteConversation = (id: string) => {
+    const cur = storeRef.current;
+    let items = cur.items.filter((c) => c.id !== id);
+    if (items.length === 0) items = [newConversation()];
+    commit({ active: items.some((c) => c.id === cur.active) ? cur.active : items[0].id, items });
+  };
+
+  const setFabVisibility = (hidden: boolean) => {
+    setFabHidden(hidden);
+    try {
+      localStorage.setItem(FAB_HIDDEN_KEY, hidden ? '1' : '0');
+    } catch {
+      /* préférence non conservée */
+    }
   };
 
   return (
     <>
-      {!open ? (
+      {!open && fabHidden ? (
+        <button
+          type="button"
+          onClick={() => setFabVisibility(false)}
+          aria-label={t('assistant.showFab')}
+          title={t('assistant.showFab')}
+          className="fixed bottom-4 end-0 z-40 flex h-10 w-3 items-center justify-center rounded-s-md bg-primary/50 text-primary-foreground opacity-60 transition hover:w-5 hover:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+        >
+          <MessageCircle className="h-3 w-3" aria-hidden />
+        </button>
+      ) : !open ? (
+        <div className="group fixed bottom-4 end-4 z-40">
+          <button
+            type="button"
+            onClick={() => setFabVisibility(true)}
+            aria-label={t('assistant.hideFab')}
+            title={t('assistant.hideFab')}
+            className="absolute -start-2 -top-2 z-10 flex h-5 w-5 items-center justify-center rounded-full border bg-background text-muted-foreground shadow transition hover:text-foreground focus-visible:opacity-100 max-sm:opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
+          >
+            <X className="h-3 w-3" aria-hidden />
+          </button>
         <button
           type="button"
           onClick={() => {
@@ -624,7 +851,7 @@ export function AssistantChat() {
             setOpen(true);
           }}
           aria-label={t('assistant.openAria')}
-          className="fixed bottom-4 end-4 z-40 flex h-12 items-center gap-2 rounded-full bg-primary px-4 text-sm font-medium text-primary-foreground shadow-lg transition hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+          className="relative flex h-12 items-center gap-2 rounded-full bg-primary px-4 text-sm font-medium text-primary-foreground shadow-lg transition hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
         >
           <MessageCircle className="h-5 w-5" aria-hidden />
           <span className="hidden sm:inline">{t('assistant.fab')}</span>
@@ -638,6 +865,7 @@ export function AssistantChat() {
             </span>
           ) : null}
         </button>
+        </div>
       ) : (
         <section
           role="dialog"
@@ -651,6 +879,14 @@ export function AssistantChat() {
               {t('assistant.title')}
             </div>
             <div className="flex items-center gap-1">
+              <Button type="button" variant="ghost" size="icon" className="h-7 w-7" onClick={startConversation} aria-label={t('assistant.newChat')} title={t('assistant.newChat')}>
+                <Plus className="h-4 w-4" aria-hidden />
+              </Button>
+              {chatStore.items.length > 1 ? (
+                <Button type="button" variant="ghost" size="icon" className="h-7 w-7" onClick={() => setShowHistory((v) => !v)} aria-expanded={showHistory} aria-label={t('assistant.history')} title={t('assistant.history')}>
+                  <History className="h-4 w-4" aria-hidden />
+                </Button>
+              ) : null}
               {entries.length > 0 ? (
                 <Button type="button" variant="ghost" size="icon" className="h-7 w-7" onClick={reset} aria-label={t('assistant.clear')} title={t('assistant.clear')}>
                   <Trash2 className="h-4 w-4" aria-hidden />
@@ -661,6 +897,21 @@ export function AssistantChat() {
               </Button>
             </div>
           </header>
+
+          {showHistory ? (
+            <ul className="max-h-48 divide-y overflow-y-auto border-b bg-background text-sm" aria-label={t('assistant.history')}>
+              {chatStore.items.map((c) => (
+                <li key={c.id} className={cn('flex items-center gap-1 px-2', c.id === active.id && 'bg-primary/5')}>
+                  <button type="button" className="min-w-0 flex-1 truncate py-2 text-start" onClick={() => switchConversation(c.id)}>
+                    {c.title || t('assistant.untitled')}
+                  </button>
+                  <Button type="button" variant="ghost" size="icon" className="h-7 w-7 shrink-0" onClick={() => deleteConversation(c.id)} aria-label={t('assistant.deleteChat')} title={t('assistant.deleteChat')}>
+                    <Trash2 className="h-3.5 w-3.5" aria-hidden />
+                  </Button>
+                </li>
+              ))}
+            </ul>
+          ) : null}
 
           <div className="flex-1 space-y-3 overflow-y-auto p-3 text-sm" aria-live="polite">
             {entries.length === 0 ? (
@@ -736,6 +987,22 @@ export function AssistantChat() {
             ) : null}
             <div ref={endRef} />
           </div>
+
+          {atzIdx !== null ? (
+            <div className="flex items-center justify-between gap-2 border-t bg-primary/5 px-3 py-1.5 text-xs">
+              <span className="font-medium">
+                {t('assistant.atz.step', { n: atzIdx + 1, total: ATZ_ORDER.length, name: atzLabel(ATZ_ORDER[atzIdx]) })}
+              </span>
+              <span className="flex shrink-0 gap-1">
+                <Button type="button" variant="ghost" size="sm" className="h-6 px-2 text-xs" disabled={busy} onClick={atzSkip}>
+                  {t('assistant.flow.skip')}
+                </Button>
+                <Button type="button" variant="ghost" size="sm" className="h-6 px-2 text-xs" disabled={busy} onClick={atzStop}>
+                  {t('assistant.atz.stop')}
+                </Button>
+              </span>
+            </div>
+          ) : null}
 
           <form
             className="flex items-end gap-2 border-t p-2"

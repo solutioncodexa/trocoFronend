@@ -156,6 +156,15 @@ export type ContentWidget =
   | { kind: 'kyesno'; id: 'faq' | 'contactPage' }
   | { kind: 'kfield'; field: 'email' | 'city' | 'about' };
 
+/** Widgets de la conversation « créer mon logo » (questions, puis aperçu à valider). */
+export type LogoWidget =
+  | { kind: 'lfield'; field: 'brand' }
+  | { kind: 'lpick'; id: 'sector' | 'style' | 'symbol' | 'colors' }
+  | { kind: 'lpreview'; logoUrl: string; faviconUrl: string };
+
+/** Parcours « configuration de A à Z » : proposition de lancer, passer ou arrêter l'étape en cours. */
+export type AtzWidget = { kind: 'atz' };
+
 /** Carte de confirmation d'une action à fort impact proposée par le modèle. */
 export type ToolWidget =
   | { kind: 'tpending'; actionId: string; tool: string; display: Record<string, string> }
@@ -172,6 +181,8 @@ export type AnyWidget =
   | LegalWidget
   | ManageWidget
   | ContentWidget
+  | LogoWidget
+  | AtzWidget
   | ToolWidget;
 
 const CATALOG_KINDS = new Set(['cyesno', 'activity', 'catTree', 'catPick', 'cfield', 'photos', 'cconfirm']);
@@ -197,5 +208,10 @@ export const isManageWidget = (w: AnyWidget): w is ManageWidget => MANAGE_KINDS.
 
 const CONTENT_KINDS = new Set(['kyesno', 'kfield']);
 export const isContentWidget = (w: AnyWidget): w is ContentWidget => CONTENT_KINDS.has(w.kind);
+
+const LOGO_KINDS = new Set(['lfield', 'lpick', 'lpreview']);
+export const isLogoWidget = (w: AnyWidget): w is LogoWidget => LOGO_KINDS.has(w.kind);
+
+export const isAtzWidget = (w: AnyWidget): w is AtzWidget => w.kind === 'atz';
 
 export const isToolWidget = (w: AnyWidget): w is ToolWidget => w.kind === 'tpending' || w.kind === 'tundo';

@@ -12,7 +12,9 @@ export type AssistantFlowId =
   | 'legal'
   | 'manage'
   | 'content'
-  | 'payments';
+  | 'payments'
+  | 'logo'
+  | 'atz';
 
 export const ASSISTANT_FLOW_EVENT = 'troco:assistant-flow';
 

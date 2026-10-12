@@ -7,6 +7,60 @@ export type AssistantAdminMessageKey =
   | 'assistant.title'
   | 'assistant.intro'
   | 'assistant.thinking'
+  | 'assistant.newChat'
+  | 'assistant.history'
+  | 'assistant.hideFab'
+  | 'assistant.showFab'
+  | 'assistant.untitled'
+  | 'assistant.deleteChat'
+  | 'assistant.logo.start'
+  | 'assistant.logo.intro'
+  | 'assistant.logo.brand.ask'
+  | 'assistant.logo.brand.placeholder'
+  | 'assistant.logo.sector.ask'
+  | 'assistant.logo.sector.jewelry'
+  | 'assistant.logo.sector.fashion'
+  | 'assistant.logo.sector.beauty'
+  | 'assistant.logo.sector.food'
+  | 'assistant.logo.sector.craft'
+  | 'assistant.logo.sector.tech'
+  | 'assistant.logo.sector.home'
+  | 'assistant.logo.sector.other'
+  | 'assistant.logo.style.ask'
+  | 'assistant.logo.style.minimal'
+  | 'assistant.logo.style.modern'
+  | 'assistant.logo.style.luxury'
+  | 'assistant.logo.style.moroccan'
+  | 'assistant.logo.style.playful'
+  | 'assistant.logo.symbol.ask'
+  | 'assistant.logo.symbol.monogram'
+  | 'assistant.logo.symbol.icon'
+  | 'assistant.logo.symbol.text'
+  | 'assistant.logo.symbol.surprise'
+  | 'assistant.logo.colors.ask'
+  | 'assistant.logo.colors.shop'
+  | 'assistant.logo.colors.blue'
+  | 'assistant.logo.colors.green'
+  | 'assistant.logo.colors.red'
+  | 'assistant.logo.colors.blackgold'
+  | 'assistant.logo.colors.pink'
+  | 'assistant.logo.colors.purple'
+  | 'assistant.logo.colors.surprise'
+  | 'assistant.logo.generating'
+  | 'assistant.logo.preview'
+  | 'assistant.logo.previewAlt'
+  | 'assistant.logo.apply'
+  | 'assistant.logo.again'
+  | 'assistant.logo.restart'
+  | 'assistant.logo.applied'
+  | 'assistant.logo.error'
+  | 'assistant.atz.start'
+  | 'assistant.atz.intro'
+  | 'assistant.atz.step'
+  | 'assistant.atz.go'
+  | 'assistant.atz.stop'
+  | 'assistant.atz.stopped'
+  | 'assistant.atz.done'
   | 'assistant.clear'
   | 'assistant.close'
   | 'assistant.placeholder'
@@ -400,6 +454,60 @@ const fr: Record<AssistantAdminMessageKey, string> = {
   'assistant.intro':
     'Posez-moi une question sur la configuration de votre boutique. Je vous explique comment faire, étape par étape.',
   'assistant.thinking': 'L’assistant réfléchit…',
+  'assistant.newChat': 'Nouvelle conversation',
+  'assistant.history': 'Conversations',
+  'assistant.hideFab': 'Masquer le bouton d’aide',
+  'assistant.showFab': 'Afficher le bouton d’aide',
+  'assistant.untitled': 'Nouvelle conversation',
+  'assistant.deleteChat': 'Supprimer cette conversation',
+  'assistant.logo.start': 'Créer mon logo avec l’IA',
+  'assistant.logo.intro': 'Je vais vous poser 5 questions rapides, puis je crée votre logo. Vous pouvez en générer jusqu’à {n} par jour ; rien n’est appliqué avant votre accord.',
+  'assistant.logo.brand.ask': 'Quel est le nom de votre marque ?',
+  'assistant.logo.brand.placeholder': 'Nom affiché sur le logo',
+  'assistant.logo.sector.ask': 'Que vendez-vous ?',
+  'assistant.logo.sector.jewelry': 'Bijoux',
+  'assistant.logo.sector.fashion': 'Mode et vêtements',
+  'assistant.logo.sector.beauty': 'Beauté et cosmétiques',
+  'assistant.logo.sector.food': 'Alimentation',
+  'assistant.logo.sector.craft': 'Artisanat et déco',
+  'assistant.logo.sector.tech': 'Électronique',
+  'assistant.logo.sector.home': 'Maison et meubles',
+  'assistant.logo.sector.other': 'Autre',
+  'assistant.logo.style.ask': 'Quel style vous plaît ?',
+  'assistant.logo.style.minimal': 'Minimaliste',
+  'assistant.logo.style.modern': 'Moderne',
+  'assistant.logo.style.luxury': 'Luxe élégant',
+  'assistant.logo.style.moroccan': 'Marocain traditionnel',
+  'assistant.logo.style.playful': 'Fun et coloré',
+  'assistant.logo.symbol.ask': 'Quel type de logo ?',
+  'assistant.logo.symbol.monogram': 'Une lettre (monogramme)',
+  'assistant.logo.symbol.icon': 'Une icône + le nom',
+  'assistant.logo.symbol.text': 'Le nom seul',
+  'assistant.logo.symbol.surprise': 'Surprenez-moi',
+  'assistant.logo.colors.ask': 'Quelles couleurs ?',
+  'assistant.logo.colors.shop': 'Les couleurs de ma boutique',
+  'assistant.logo.colors.blue': 'Bleu',
+  'assistant.logo.colors.green': 'Vert',
+  'assistant.logo.colors.red': 'Rouge',
+  'assistant.logo.colors.blackgold': 'Noir et or',
+  'assistant.logo.colors.pink': 'Rose',
+  'assistant.logo.colors.purple': 'Violet',
+  'assistant.logo.colors.surprise': 'Au choix de l’IA',
+  'assistant.logo.generating': 'Je crée votre logo, cela prend quelques secondes…',
+  'assistant.logo.preview': 'Voici votre logo. Il servira aussi d’icône de l’onglet (favicon). Vous l’appliquez ?',
+  'assistant.logo.previewAlt': 'Aperçu du logo généré',
+  'assistant.logo.apply': 'Appliquer ce logo',
+  'assistant.logo.again': 'Une autre version',
+  'assistant.logo.restart': 'Changer mes réponses',
+  'assistant.logo.applied': 'Votre logo est en place, sur la boutique et dans l’onglet du navigateur.',
+  'assistant.logo.error': 'Je n’ai pas pu créer le logo. {msg}',
+  'assistant.atz.start': 'Configurer toute ma boutique, de A à Z',
+  'assistant.atz.intro': 'Je vous guide pas à pas : les bases, le logo, le design, le contenu, le catalogue, la livraison, le paiement, la conformité puis le marketing. À chaque étape, vous pouvez la faire, la passer ou arrêter, et reprendre plus tard.',
+  'assistant.atz.step': 'Étape {n} sur {total} : {name}',
+  'assistant.atz.go': 'C’est parti',
+  'assistant.atz.stop': 'Arrêter ici',
+  'assistant.atz.stopped': 'D’accord, on s’arrête là. Vous pouvez relancer le parcours quand vous voulez : les étapes déjà faites sont conservées.',
+  'assistant.atz.done': 'Votre boutique est configurée de A à Z. Vous pouvez tout ajuster plus tard depuis les réglages, ou me poser une question.',
   'assistant.clear': 'Effacer la conversation',
   'assistant.close': 'Fermer l’assistant',
   'assistant.placeholder': 'Votre question…',
@@ -795,6 +903,60 @@ const en: Record<AssistantAdminMessageKey, string> = {
   'assistant.title': 'Setup assistant',
   'assistant.intro': 'Ask me anything about setting up your store. I will walk you through it, step by step.',
   'assistant.thinking': 'The assistant is thinking…',
+  'assistant.newChat': 'New conversation',
+  'assistant.history': 'Conversations',
+  'assistant.hideFab': 'Hide the help button',
+  'assistant.showFab': 'Show the help button',
+  'assistant.untitled': 'New conversation',
+  'assistant.deleteChat': 'Delete this conversation',
+  'assistant.logo.start': 'Create my logo with AI',
+  'assistant.logo.intro': 'I will ask you 5 quick questions, then create your logo. You can generate up to {n} per day; nothing is applied until you agree.',
+  'assistant.logo.brand.ask': 'What is your brand name?',
+  'assistant.logo.brand.placeholder': 'Name shown on the logo',
+  'assistant.logo.sector.ask': 'What do you sell?',
+  'assistant.logo.sector.jewelry': 'Jewelry',
+  'assistant.logo.sector.fashion': 'Fashion and clothing',
+  'assistant.logo.sector.beauty': 'Beauty and cosmetics',
+  'assistant.logo.sector.food': 'Food',
+  'assistant.logo.sector.craft': 'Crafts and decor',
+  'assistant.logo.sector.tech': 'Electronics',
+  'assistant.logo.sector.home': 'Home and furniture',
+  'assistant.logo.sector.other': 'Other',
+  'assistant.logo.style.ask': 'Which style do you like?',
+  'assistant.logo.style.minimal': 'Minimalist',
+  'assistant.logo.style.modern': 'Modern',
+  'assistant.logo.style.luxury': 'Elegant luxury',
+  'assistant.logo.style.moroccan': 'Traditional Moroccan',
+  'assistant.logo.style.playful': 'Fun and colorful',
+  'assistant.logo.symbol.ask': 'What kind of logo?',
+  'assistant.logo.symbol.monogram': 'A letter (monogram)',
+  'assistant.logo.symbol.icon': 'An icon + the name',
+  'assistant.logo.symbol.text': 'Name only',
+  'assistant.logo.symbol.surprise': 'Surprise me',
+  'assistant.logo.colors.ask': 'Which colors?',
+  'assistant.logo.colors.shop': 'My shop colors',
+  'assistant.logo.colors.blue': 'Blue',
+  'assistant.logo.colors.green': 'Green',
+  'assistant.logo.colors.red': 'Red',
+  'assistant.logo.colors.blackgold': 'Black and gold',
+  'assistant.logo.colors.pink': 'Pink',
+  'assistant.logo.colors.purple': 'Purple',
+  'assistant.logo.colors.surprise': 'AI’s choice',
+  'assistant.logo.generating': 'Creating your logo, this takes a few seconds…',
+  'assistant.logo.preview': 'Here is your logo. It will also be used as the tab icon (favicon). Apply it?',
+  'assistant.logo.previewAlt': 'Generated logo preview',
+  'assistant.logo.apply': 'Apply this logo',
+  'assistant.logo.again': 'Another version',
+  'assistant.logo.restart': 'Change my answers',
+  'assistant.logo.applied': 'Your logo is live, on the shop and in the browser tab.',
+  'assistant.logo.error': 'I could not create the logo. {msg}',
+  'assistant.atz.start': 'Set up my whole shop, from A to Z',
+  'assistant.atz.intro': 'I will guide you step by step: basics, logo, design, content, catalog, shipping, payment, compliance, then marketing. For each step you can do it, skip it or stop and resume later.',
+  'assistant.atz.step': 'Step {n} of {total}: {name}',
+  'assistant.atz.go': 'Let’s go',
+  'assistant.atz.stop': 'Stop here',
+  'assistant.atz.stopped': 'Okay, we stop here. You can restart the journey anytime: completed steps are kept.',
+  'assistant.atz.done': 'Your shop is set up from A to Z. You can adjust everything later in settings, or ask me anything.',
   'assistant.clear': 'Clear conversation',
   'assistant.close': 'Close the assistant',
   'assistant.placeholder': 'Your question…',
@@ -1190,6 +1352,60 @@ const ar: Record<AssistantAdminMessageKey, string> = {
   'assistant.title': 'مساعد الإعداد',
   'assistant.intro': 'اسألني عن أي شيء يخص إعداد متجرك، وسأشرح لك الخطوات واحدة تلو الأخرى.',
   'assistant.thinking': 'المساعد يفكّر…',
+  'assistant.newChat': 'محادثة جديدة',
+  'assistant.history': 'المحادثات',
+  'assistant.hideFab': 'إخفاء زر المساعدة',
+  'assistant.showFab': 'إظهار زر المساعدة',
+  'assistant.untitled': 'محادثة جديدة',
+  'assistant.deleteChat': 'حذف هذه المحادثة',
+  'assistant.logo.start': 'إنشاء شعاري بالذكاء الاصطناعي',
+  'assistant.logo.intro': 'سأطرح عليك 5 أسئلة سريعة ثم أنشئ شعارك. يمكنك توليد حتى {n} يوميًا، ولن يُطبَّق شيء قبل موافقتك.',
+  'assistant.logo.brand.ask': 'ما اسم علامتك التجارية؟',
+  'assistant.logo.brand.placeholder': 'الاسم الظاهر على الشعار',
+  'assistant.logo.sector.ask': 'ماذا تبيع؟',
+  'assistant.logo.sector.jewelry': 'مجوهرات',
+  'assistant.logo.sector.fashion': 'أزياء وملابس',
+  'assistant.logo.sector.beauty': 'جمال ومستحضرات تجميل',
+  'assistant.logo.sector.food': 'مواد غذائية',
+  'assistant.logo.sector.craft': 'حرف وديكور',
+  'assistant.logo.sector.tech': 'إلكترونيات',
+  'assistant.logo.sector.home': 'منزل وأثاث',
+  'assistant.logo.sector.other': 'آخر',
+  'assistant.logo.style.ask': 'أي أسلوب يعجبك؟',
+  'assistant.logo.style.minimal': 'بسيط',
+  'assistant.logo.style.modern': 'عصري',
+  'assistant.logo.style.luxury': 'فخامة أنيقة',
+  'assistant.logo.style.moroccan': 'مغربي تقليدي',
+  'assistant.logo.style.playful': 'مرح وملوّن',
+  'assistant.logo.symbol.ask': 'أي نوع من الشعارات؟',
+  'assistant.logo.symbol.monogram': 'حرف (مونوغرام)',
+  'assistant.logo.symbol.icon': 'أيقونة مع الاسم',
+  'assistant.logo.symbol.text': 'الاسم فقط',
+  'assistant.logo.symbol.surprise': 'فاجئني',
+  'assistant.logo.colors.ask': 'أي ألوان؟',
+  'assistant.logo.colors.shop': 'ألوان متجري',
+  'assistant.logo.colors.blue': 'أزرق',
+  'assistant.logo.colors.green': 'أخضر',
+  'assistant.logo.colors.red': 'أحمر',
+  'assistant.logo.colors.blackgold': 'أسود وذهبي',
+  'assistant.logo.colors.pink': 'وردي',
+  'assistant.logo.colors.purple': 'بنفسجي',
+  'assistant.logo.colors.surprise': 'اختيار الذكاء الاصطناعي',
+  'assistant.logo.generating': 'أنشئ شعارك، يستغرق ذلك بضع ثوانٍ…',
+  'assistant.logo.preview': 'هذا شعارك، وسيُستخدم أيضًا كأيقونة للتبويب (favicon). هل تريد تطبيقه؟',
+  'assistant.logo.previewAlt': 'معاينة الشعار المُنشأ',
+  'assistant.logo.apply': 'تطبيق هذا الشعار',
+  'assistant.logo.again': 'نسخة أخرى',
+  'assistant.logo.restart': 'تغيير إجاباتي',
+  'assistant.logo.applied': 'شعارك مُطبَّق على المتجر وعلى تبويب المتصفح.',
+  'assistant.logo.error': 'تعذّر إنشاء الشعار. {msg}',
+  'assistant.atz.start': 'إعداد متجري كاملًا من الألف إلى الياء',
+  'assistant.atz.intro': 'سأرشدك خطوة بخطوة: الأساسيات، الشعار، التصميم، المحتوى، الكتالوج، التوصيل، الدفع، الامتثال ثم التسويق. في كل خطوة يمكنك تنفيذها أو تخطيها أو التوقف والعودة لاحقًا.',
+  'assistant.atz.step': 'الخطوة {n} من {total}: {name}',
+  'assistant.atz.go': 'هيا نبدأ',
+  'assistant.atz.stop': 'التوقف هنا',
+  'assistant.atz.stopped': 'حسنًا، نتوقف هنا. يمكنك إعادة تشغيل المسار في أي وقت، والخطوات المنجزة محفوظة.',
+  'assistant.atz.done': 'تم إعداد متجرك من الألف إلى الياء. يمكنك تعديل كل شيء لاحقًا من الإعدادات أو سؤالي عن أي شيء.',
   'assistant.clear': 'مسح المحادثة',
   'assistant.close': 'إغلاق المساعد',
   'assistant.placeholder': 'اكتب سؤالك…',

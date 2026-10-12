@@ -35,6 +35,13 @@ export const assistantApi = {
       body: JSON.stringify({ fournisseurId, tokens }),
     }),
 
+  /** Génère un logo + favicon (sans les appliquer). Compte dans le quota quotidien d'images. */
+  generateLogo: (payload: { brandName: string; sector?: string; style?: string; symbol?: string; colors?: string }) =>
+    apiRequest<{ logoUrl: string; faviconUrl: string }>(buildApiUrl('/assistant/logo'), {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+
   usage: () => apiRequest<AiUsage>(buildApiUrl('/assistant/usage')),
 
   status: () => apiRequest<{ enabled: boolean }>(buildApiUrl('/assistant/status')),
