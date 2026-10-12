@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Building2, CalendarPlus, ExternalLink, LogOut, Package, Plus, Power } from 'lucide-react';
+import { Building2, CalendarPlus, ExternalLink, LogOut, Package, Plus, Power, Sparkles } from 'lucide-react';
 import { trialDaysLeft } from '@/components/admin/TrialBanner';
 import { TRIAL_DAYS } from '@/config/site';
 import { Button } from '@/components/ui/button';
@@ -26,6 +26,7 @@ import {
 import { EmptyState } from '@/components/ui/EmptyState';
 import { useAdmin } from '@/contexts/AdminContext';
 import { platformApi } from '@/services/api/platform';
+import { assistantApi } from '@/services/api/assistant';
 import { toast } from 'sonner';
 import { toastError } from '@/utils/toastMessages';
 import { buildStorefrontUrl } from '@/utils/storefrontUrl';
@@ -45,6 +46,8 @@ const SuperAdminDashboard = () => {
   const { isAuthenticated, isSuperAdmin, isLoading: authLoading, logout, user } = useAdmin();
   const queryClient = useQueryClient();
   const [createOpen, setCreateOpen] = useState(false);
+  const [topupTarget, setTopupTarget] = useState<{ id: number; name: string } | null>(null);
+  const [topupTokens, setTopupTokens] = useState('100000');
   const [slugTouched, setSlugTouched] = useState(false);
   const [form, setForm] = useState({
     name: '',
@@ -53,6 +56,15 @@ const SuperAdminDashboard = () => {
     adminPassword: '',
     adminFullName: '',
     planCode: 'basic',
+  });
+
+  const topupMutation = useMutation({
+    mutationFn: (v: { id: number; tokens: number }) => assistantApi.topup(v.id, v.tokens),
+    onSuccess: (res) => {
+      toast.success(`Solde de tokens supplémentaires : ${res.balance.toLocaleString('fr-FR')}`);
+      setTopupTarget(null);
+    },
+    onError: (e) => toastError(e, 'Recharge impossible'),
   });
 
   const { data: fournisseurs = [], isLoading } = useQuery({
@@ -268,6 +280,15 @@ const SuperAdminDashboard = () => {
                               Boutique
                             </a>
                           </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="gap-1"
+                            onClick={() => setTopupTarget({ id: f.id, name: f.name })}
+                          >
+                            <Sparkles className="h-3.5 w-3.5" />
+                            Tokens IA
+                          </Button>
                           {f.trialEndsAt && (status === 'TRIAL' || pending) ? (
                             <Button
                               variant="outline"
@@ -332,6 +353,40 @@ const SuperAdminDashboard = () => {
           </div>
         )}
       </main>
+
+      <Dialog open={topupTarget !== null} onOpenChange={(o) => !o && setTopupTarget(null)}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Tokens IA supplémentaires</DialogTitle>
+            <DialogDescription>
+              {topupTarget?.name} — ces tokens ne servent qu’après épuisement du budget du jour du plan. Un nombre négatif
+              retire des tokens.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Label htmlFor="topup-tokens">Tokens</Label>
+            <Input
+              id="topup-tokens"
+              type="number"
+              step={10000}
+              value={topupTokens}
+              onChange={(e) => setTopupTokens(e.target.value)}
+            />
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setTopupTarget(null)}>
+              Annuler
+            </Button>
+            <Button
+              type="button"
+              disabled={topupMutation.isPending || !topupTarget || !Number.isFinite(Number(topupTokens)) || Number(topupTokens) === 0}
+              onClick={() => topupTarget && topupMutation.mutate({ id: topupTarget.id, tokens: Math.trunc(Number(topupTokens)) })}
+            >
+              Appliquer
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
         <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-md">

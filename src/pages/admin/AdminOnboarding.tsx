@@ -88,6 +88,7 @@ const AdminOnboarding = () => {
 
   const [step, setStep] = useState(initialStep);
   const [published, setPublished] = useState(false);
+  const [extraPages, setExtraPages] = useState<string[]>([]);
   const [themeKey, setThemeKey] = useState<StoreThemeKey>(normalizeThemeKey(draft?.themeKey) || 'classic');
   const [fontPair, setFontPair] = useState(draft?.fontPair || 'display_sans');
   const [radiusPreset, setRadiusPreset] = useState(draft?.radiusPreset || 'soft');
@@ -248,6 +249,20 @@ const AdminOnboarding = () => {
     onError: (e) => toastError(e, 'Création de la page d’accueil impossible'),
   });
 
+  const addExtraPages = useMutation({
+    mutationFn: async () => {
+      const existing = await storePagesApi.list();
+      const taken = new Set(existing.map((p) => (p.slug || '').toLowerCase()));
+      for (const key of extraPages) {
+        const tpl = PAGE_TEMPLATES.find((p) => p.key === key);
+        if (!tpl || taken.has(tpl.meta.slug.toLowerCase())) continue;
+        const page = await storePagesApi.create({ ...tpl.meta, isHome: false, published: true });
+        await storePagesApi.replaceBlocks(page.id!, tpl.blocks, 'Assistant de création');
+      }
+    },
+    onError: (e) => toastError(e, 'Création des pages supplémentaires impossible'),
+  });
+
   const addLegal = useMutation({
     mutationFn: () =>
       createLegalPages({
@@ -291,6 +306,7 @@ const AdminOnboarding = () => {
     mutationFn: async () => {
       if (publishHome) await createHome.mutateAsync();
       if (createLegal) await addLegal.mutateAsync();
+      if (extraPages.length > 0) await addExtraPages.mutateAsync();
       // « Publier ma boutique » la rend aussi visible des clients.
       await platformApi.setStorefrontLive(true);
     },
@@ -795,6 +811,28 @@ const AdminOnboarding = () => {
                       <span className="mt-0.5 block text-xs text-muted-foreground">{LEGAL_DISCLAIMER}</span>
                     </span>
                   </label>
+                  <div className="space-y-2 rounded-xl border border-border p-4 text-sm">
+                    <strong>Pages supplémentaires</strong>
+                    <span className="block text-xs text-muted-foreground">
+                      Cochez celles à créer maintenant ; vous pourrez en ajouter d’autres plus tard depuis « Pages ».
+                    </span>
+                    {PAGE_TEMPLATES.filter((p) => !p.meta.isHome).map((tpl) => (
+                      <label key={tpl.key} className="flex items-start gap-3 pt-1">
+                        <input
+                          type="checkbox"
+                          className="mt-1"
+                          checked={extraPages.includes(tpl.key)}
+                          onChange={(e) =>
+                            setExtraPages((prev) => (e.target.checked ? [...prev, tpl.key] : prev.filter((k) => k !== tpl.key)))
+                          }
+                        />
+                        <span>
+                          {tpl.label}
+                          <span className="block text-xs text-muted-foreground">{tpl.description}</span>
+                        </span>
+                      </label>
+                    ))}
+                  </div>
                   {!settings?.logoUrl && !logoUrl ? (
                     <p className="text-xs text-amber-800">Astuce : vous pouvez ajouter votre logo à l’étape Style.</p>
                   ) : null}

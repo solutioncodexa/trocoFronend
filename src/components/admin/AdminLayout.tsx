@@ -127,6 +127,7 @@ const ALL_NAV: NavSection[] = [
       { href: '/admin/produits', labelKey: 'nav.products', icon: Package, permission: PERMISSIONS.PRODUCTS_VIEW },
       { href: '/admin/categories', labelKey: 'nav.categories', icon: FolderOpen, permission: PERMISSIONS.CATALOG_MANAGE },
       { href: '/admin/attributs', labelKey: 'nav.attributes', icon: SlidersHorizontal, permission: PERMISSIONS.CATALOG_MANAGE },
+      { href: '/admin/visuels', labelKey: 'nav.adVisuals', icon: ImageIcon, permission: PERMISSIONS.PRODUCTS_VIEW },
     ],
   },
   {

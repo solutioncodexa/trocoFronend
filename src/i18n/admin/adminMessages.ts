@@ -53,6 +53,7 @@ export type AdminMessageKey =
   | 'nav.products'
   | 'nav.categories'
   | 'nav.attributes'
+  | 'nav.adVisuals'
   | 'nav.onlineStoreOverview'
   | 'nav.appearance'
   | 'nav.pages'
@@ -278,6 +279,7 @@ const fr: Record<AdminCoreMessageKey, string> = {
   'nav.products': 'Produits',
   'nav.categories': 'Catégories',
   'nav.attributes': 'Attributs & variantes',
+  'nav.adVisuals': 'Affiches & visuels pub',
   'nav.onlineStoreOverview': 'Vue d’ensemble',
   'nav.appearance': 'Apparence',
   'nav.pages': 'Pages',
@@ -499,6 +501,7 @@ const ar: Record<AdminCoreMessageKey, string> = {
   'nav.products': 'المنتجات',
   'nav.categories': 'الفئات',
   'nav.attributes': 'السمات والمتغيرات',
+  'nav.adVisuals': 'ملصقات وصور إعلانية',
   'nav.onlineStoreOverview': 'نظرة عامة',
   'nav.appearance': 'المظهر',
   'nav.pages': 'الصفحات',
@@ -718,6 +721,7 @@ const en: Record<AdminCoreMessageKey, string> = {
   'nav.products': 'Products',
   'nav.categories': 'Categories',
   'nav.attributes': 'Attributes & variants',
+  'nav.adVisuals': 'Posters & ad visuals',
   'nav.onlineStoreOverview': 'Overview',
   'nav.appearance': 'Appearance',
   'nav.pages': 'Pages',

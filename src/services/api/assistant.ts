@@ -17,7 +17,26 @@ export type AssistantAction = {
   error?: string | null;
 };
 
+export type AiMeter = { used: number; limit: number };
+export type AiUsage = {
+  plan: string;
+  messages: AiMeter;
+  tokens: AiMeter;
+  images: AiMeter;
+  topupTokens: number;
+  days: { day: string; messages: number; tokens: number; images: number }[];
+};
+
 export const assistantApi = {
+  /** Super-admin : ajoute (ou retire, si négatif) des tokens IA à une boutique. */
+  topup: (fournisseurId: number, tokens: number) =>
+    apiRequest<{ fournisseurId: number; balance: number }>(buildApiUrl('/assistant/topup'), {
+      method: 'POST',
+      body: JSON.stringify({ fournisseurId, tokens }),
+    }),
+
+  usage: () => apiRequest<AiUsage>(buildApiUrl('/assistant/usage')),
+
   status: () => apiRequest<{ enabled: boolean }>(buildApiUrl('/assistant/status')),
 
   /**

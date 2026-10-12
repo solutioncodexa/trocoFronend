@@ -8,7 +8,8 @@ export type AiCopyKind =
   | 'product_description'
   | 'hero'
   | 'faq'
-  | 'cta';
+  | 'cta'
+  | 'ad_headline';
 export type AiCopyTone = 'pro' | 'friendly' | 'luxury';
 
 export type AiCopyGeneratePayload = {

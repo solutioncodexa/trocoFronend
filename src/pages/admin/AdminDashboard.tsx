@@ -20,6 +20,7 @@ import { useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Sparkles, Truck } from 'lucide-react';
 import { assistantApi } from '@/services/api/assistant';
+import AiUsageCard from '@/components/admin/AiUsageCard';
 import { shippingApi } from '@/services/api/shipping';
 import { requestAssistantFlow, type AssistantFlowId } from '@/utils/assistantBus';
 import AdminLayout from '@/components/admin/AdminLayout';
@@ -432,6 +433,8 @@ const AdminDashboard = () => {
           </Card>
         ))}
       </div>
+
+      {assistantStatus?.enabled ? <AiUsageCard /> : null}
 
       <div className="mb-8 grid gap-4 sm:grid-cols-2">
         <Link to="/admin/stock?filter=low" className="block h-full">

@@ -36,6 +36,7 @@ const Contact = lazy(() => import("./pages/Contact"));
 const LivraisonRetours = lazy(() => import("./pages/LivraisonRetours"));
 const FAQ = lazy(() => import("./pages/FAQ"));
 const PlatformPrivacy = lazy(() => import("./pages/PlatformPrivacy"));
+const PlatformTerms = lazy(() => import("./pages/PlatformTerms"));
 const PromoCodes = lazy(() => import("./pages/PromoCodes"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 const VerifyEmail = lazy(() => import("./pages/VerifyEmail"));
@@ -45,6 +46,7 @@ const AdminDashboard = lazy(() => import("./pages/admin/AdminDashboard"));
 const AdminProducts = lazy(() => import("./pages/admin/AdminProducts"));
 const AdminProductImport = lazy(() => import("./pages/admin/AdminProductImport"));
 const AdminInstagramImport = lazy(() => import("./pages/admin/AdminInstagramImport"));
+const AdminAdVisuals = lazy(() => import("./pages/admin/AdminAdVisuals"));
 const AdminOrders = lazy(() => import("./pages/admin/AdminOrders"));
 const AdminCustomRequests = lazy(() => import("./pages/admin/AdminCustomRequests"));
 const AdminCategories = lazy(() => import("./pages/admin/AdminCategories"));
@@ -184,6 +186,7 @@ const App = () => (
                     <Route path="/livraison-retours" element={<LivraisonRetours />} />
                     <Route path="/faq" element={<FAQ />} />
                     <Route path="/confidentialite" element={<PlatformPrivacy />} />
+                    <Route path="/conditions-utilisation" element={<PlatformTerms />} />
                     <Route path="/favoris" element={<Wishlist />} />
                     <Route path="/page/:slug" element={<CustomStorePage />} />
                     <Route path="/preview/:token" element={<PagePreview />} />
@@ -219,6 +222,7 @@ const App = () => (
                     <Route path="/admin" element={<AdminLogin />} />
                     <Route path="/admin/dashboard" element={<ProtectedAdminRoute><AdminDashboard /></ProtectedAdminRoute>} />
                     <Route path="/admin/produits/import" element={<ProtectedAdminRoute permission={PERMISSIONS.PRODUCTS_CREATE}><AdminProductImport /></ProtectedAdminRoute>} />
+                    <Route path="/admin/visuels" element={<ProtectedAdminRoute permission={PERMISSIONS.PRODUCTS_VIEW}><AdminAdVisuals /></ProtectedAdminRoute>} />
                     <Route path="/admin/produits/instagram" element={<ProtectedAdminRoute permission={PERMISSIONS.PRODUCTS_CREATE}><AdminInstagramImport /></ProtectedAdminRoute>} />
                     <Route path="/admin/produits" element={<ProtectedAdminRoute permission={PERMISSIONS.PRODUCTS_VIEW}><AdminProducts /></ProtectedAdminRoute>} />
                     <Route path="/admin/commandes" element={<ProtectedAdminRoute permission={PERMISSIONS.ORDERS_VIEW}><AdminOrders /></ProtectedAdminRoute>} />

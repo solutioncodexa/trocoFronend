@@ -293,6 +293,13 @@ const AdminOrders = () => {
                   <SelectItem value="cancelled">{t('status.cancelled')}</SelectItem>
                 </SelectContent>
               </Select>
+              {order.customer?.phone ? (
+                <Button asChild variant="outline" size="sm" className="h-8 px-2" aria-label={t('common.phone')}>
+                  <a href={`tel:${order.customer.phone}`}>
+                    <Phone className="w-4 h-4" />
+                  </a>
+                </Button>
+              ) : null}
               <Button variant="outline" size="sm" className="h-8 text-xs" onClick={() => handleViewOrder(order)}>
                 <Eye className="w-4 h-4 mr-1" />
                 {t('common.details')}

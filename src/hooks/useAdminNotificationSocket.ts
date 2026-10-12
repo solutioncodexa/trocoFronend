@@ -19,6 +19,37 @@ export function buildWsUrl(token: string): string {
   return `${proto}//${window.location.host}${path}?access_token=${encodeURIComponent(token)}`;
 }
 
+/** Bip court + notification navigateur (si permission accordée) à chaque nouvelle commande. */
+function alertNewOrder(dto: NotificationDTO) {
+  try {
+    const Ctx = window.AudioContext ?? (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+    if (Ctx) {
+      const ctx = new Ctx();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.frequency.value = 880;
+      gain.gain.setValueAtTime(0.15, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.4);
+      osc.connect(gain).connect(ctx.destination);
+      osc.start();
+      osc.stop(ctx.currentTime + 0.4);
+      osc.onended = () => void ctx.close();
+    }
+  } catch {
+    /* autoplay bloqué : pas grave, le badge suffit */
+  }
+  try {
+    if (typeof Notification === 'undefined') return;
+    if (Notification.permission === 'granted') {
+      if (document.hidden) new Notification(dto.title, { body: dto.message });
+    } else if (Notification.permission === 'default') {
+      void Notification.requestPermission();
+    }
+  } catch {
+    /* ignoré */
+  }
+}
+
 /**
  * STOMP admin (pattern MizanePro) — topic `/topic/store.{fournisseurId}`.
  * Invalide React Query à chaque push ; badge mis à jour sans poll 30s.
@@ -73,6 +104,7 @@ export function useAdminNotificationSocket(fournisseurId?: number | null) {
             });
             if (!dto.read) {
               qc.setQueryData<number>(['notifications', 'unread-count'], (c) => (c ?? 0) + 1);
+              if (dto.type === 'ORDER') alertNewOrder(dto);
             }
             void qc.invalidateQueries({ queryKey: ['notifications'] });
           } catch {
