@@ -5,28 +5,44 @@ import { useNavigate } from 'react-router-dom';
 import {
   ArrowLeft,
   ArrowRight,
+  Camera,
   CheckCircle2,
   Copy,
+  Download,
   ExternalLink,
+  FileSpreadsheet,
   ImagePlus,
   Loader2,
   MessageCircle,
+  Monitor,
   Package,
   Rocket,
+  Smartphone,
   Sparkles,
   Trash2,
+  Wand2,
 } from 'lucide-react';
 import AdminLayout from '@/components/admin/AdminLayout';
 import ImageUpload from '@/components/admin/ImageUpload';
+import { QRCodeCanvas } from 'qrcode.react';
+import { QuickProductDialog, type QuickProductReplace } from '@/components/admin/QuickProductDialog';
 import { StoreAppearanceLivePreview } from '@/components/admin/StoreAppearanceLivePreview';
 import { useAdminLocale } from '@/contexts/AdminLocaleContext';
+import type { AdminMessageKey } from '@/i18n/admin/adminMessages';
+import { appearanceOptLabel } from '@/i18n/admin/appearanceOptionI18n';
+import { createStoreMessages, type CreateStoreKey } from '@/i18n/createStoreMessages';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { platformApi } from '@/services/api/platform';
 import { storePagesApi } from '@/services/api/storePages';
 import { productsApi } from '@/services/api/products';
-import { uploadImage } from '@/services/api/upload';
+import { categoriesApi } from '@/services/api/categories';
+import { getImageUrl, uploadImage } from '@/services/api/upload';
+import { paletteFromFile, type Palette } from '@/config/paletteFromImage';
+import { proposeCopy } from '@/config/copyProposal';
+import type { DemoCategory } from '@/demo/mockCatalog';
+import { mapProductListItemListToProducts } from '@/utils/productMapper';
 import { PAGE_TEMPLATES } from '@/config/pageTemplates';
 import { STORE_THEMES, normalizeThemeKey, type StoreThemeKey } from '@/config/storeThemes';
 import { FONT_PAIRS, RADIUS_PRESETS } from '@/config/storefrontTheme';
@@ -36,7 +52,9 @@ import {
   STYLE_PRESETS,
   getStylePreset,
   styleAppearanceOverride,
+  type StylePreset,
 } from '@/config/stylePresets';
+import { normalizePhone } from '@/utils/phone';
 import { useTenant } from '@/contexts/TenantContext';
 import { PlanLockBadge } from '@/components/admin/PlanLockBadge';
 import { isThemeAllowed, themeMinPlan } from '@/config/planGates';
@@ -47,7 +65,6 @@ import {
 } from '@/config/starterPacks';
 import { applyStarterPack, listDemoProducts, removeDemoProducts } from '@/utils/starterPack';
 import { createLegalPages } from '@/utils/legalPages';
-import { LEGAL_DISCLAIMER } from '@/config/legalPages';
 import { buildStorefrontUrl } from '@/utils/storefrontUrl';
 import {
   clearOnboardingDraft,
@@ -58,7 +75,7 @@ import {
 import { toast } from 'sonner';
 import { toastError } from '@/utils/toastMessages';
 
-const STEPS = ['Style', 'Contact', 'Catalogue', 'Publication'] as const;
+const STEPS = ['ob.step.style', 'ob.step.contact', 'ob.step.catalog', 'ob.step.publish'] as const satisfies readonly AdminMessageKey[];
 const LAST_STEP = STEPS.length - 1;
 
 /** Palettes rapides : un clic remplace couleur principale + secondaire. */
@@ -70,6 +87,14 @@ const PALETTES: { label: string; primary: string; secondary: string }[] = [
   { label: 'Olive', primary: '#4D7C0F', secondary: '#365314' },
   { label: 'Indigo', primary: '#4338CA', secondary: '#1E1B4B' },
 ];
+
+/** 3 styles conseillés pour le secteur, en priorité ceux inclus dans le plan du marchand. */
+function recommendedStyles(sector: string, planCode?: string | null): StylePreset[] {
+  const keys = [STYLE_FOR_SECTOR[sector] ?? 'classique', 'classique', ...STYLE_PRESETS.map((p) => p.key)];
+  const unique = [...new Set(keys)].map((k) => getStylePreset(k)).filter((p): p is StylePreset => !!p);
+  const allowed = unique.filter((p) => isThemeAllowed(planCode, p.themeKey));
+  return [...allowed, ...unique.filter((p) => !allowed.includes(p))].slice(0, 3);
+}
 
 function clampStep(value: number) {
   if (!Number.isFinite(value)) return 0;
@@ -107,6 +132,21 @@ const AdminOnboarding = () => {
   const [publishHome, setPublishHome] = useState(draft?.publishHome ?? true);
   const [createLegal, setCreateLegal] = useState(true);
   const [contact, setContact] = useState({ phone: '', whatsapp: '', city: '', email: '' });
+  // WhatsApp = même numéro que le téléphone (cas le plus courant) : un seul champ à remplir.
+  const [waSame, setWaSame] = useState(true);
+  // Secteur déjà choisi à l'inscription : on l'affiche replié au lieu de redemander toute la grille.
+  const [changeSector, setChangeSector] = useState(!draft?.sector);
+  const [showAllStyles, setShowAllStyles] = useState(false);
+  const [seeded, setSeeded] = useState(!!draft?.seeded);
+  // Tant que le marchand n'a pas choisi lui-même un style, on applique celui conseillé pour son secteur.
+  const styleTouched = useRef(!!draft?.style);
+  // Couleurs extraites du logo envoyé : proposées, jamais appliquées sans clic.
+  const [logoPalette, setLogoPalette] = useState<Palette | null>(null);
+  const [suggestingTagline, setSuggestingTagline] = useState(false);
+  const [previewDevice, setPreviewDevice] = useState<'desktop' | 'mobile'>('desktop');
+  const [quickOpen, setQuickOpen] = useState(false);
+  const qrRef = useRef<HTMLCanvasElement>(null);
+  const [quickReplace, setQuickReplace] = useState<QuickProductReplace | null>(null);
 
   const { data: settings, isLoading } = useQuery({
     queryKey: ['store-settings', 'me'],
@@ -126,6 +166,36 @@ const AdminOnboarding = () => {
     staleTime: 15_000,
   });
 
+  // Vrais produits et catégories (y compris ceux d'exemple) dans l'aperçu, pour voir sa boutique remplie.
+  const { data: previewProductsPage } = useQuery({
+    queryKey: ['products', 'onboarding-preview'],
+    queryFn: () => productsApi.getAllProducts({ page: 0, size: 8 }),
+    staleTime: 30_000,
+  });
+  const previewProducts = useMemo(
+    () => mapProductListItemListToProducts(previewProductsPage?.content ?? []),
+    [previewProductsPage?.content],
+  );
+  const { data: categoryCards = [] } = useQuery({
+    queryKey: ['categories', 'cards', 'onboarding-preview'],
+    queryFn: () => categoriesApi.getCardCategories(),
+    staleTime: 30_000,
+  });
+  const previewCategories: DemoCategory[] = useMemo(
+    () =>
+      categoryCards
+        .filter((c) => !c.parentId)
+        .slice(0, 5)
+        .map((c) => ({
+          id: String(c.id),
+          name: c.name,
+          slug: c.slug,
+          image: c.heroImageUrl ? getImageUrl(c.heroImageUrl) : '',
+          count: 0,
+        })),
+    [categoryCards],
+  );
+
   // Préremplissage depuis les réglages existants (sans écraser ce que le marchand a déjà saisi).
   useEffect(() => {
     if (!settings) return;
@@ -137,8 +207,11 @@ const AdminOnboarding = () => {
     if (!draft?.themeKey) setThemeKey(normalizeThemeKey(settings.themeKey));
     if (!draft?.fontPair && settings.fontPair) setFontPair(settings.fontPair);
     if (!draft?.radiusPreset && settings.radiusPreset) setRadiusPreset(settings.radiusPreset);
+    if (settings.contactWhatsapp && normalizePhone(settings.contactWhatsapp) !== normalizePhone(settings.contactPhone)) {
+      setWaSame(false);
+    }
     setContact((prev) => ({
-      phone: prev.phone || settings.contactPhone || '',
+      phone: prev.phone || settings.contactPhone || draft?.phone || '',
       whatsapp: prev.whatsapp || settings.contactWhatsapp || '',
       city: prev.city || settings.contactCity || '',
       email: prev.email || settings.contactEmail || '',
@@ -166,18 +239,31 @@ const AdminOnboarding = () => {
       secondaryColor,
       publishHome,
       sector,
-      style: styleKey,
+      style: styleTouched.current ? styleKey : undefined,
+      phone: draft?.phone,
+      seeded,
     });
-  }, [step, themeKey, fontPair, radiusPreset, siteName, tagline, primaryColor, secondaryColor, publishHome, sector, styleKey]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step, themeKey, fontPair, radiusPreset, siteName, tagline, primaryColor, secondaryColor, publishHome, sector, styleKey, seeded]);
 
   const pack = getStarterPack(sector || DEFAULT_STARTER_PACK_KEY);
+  const sectorLabel = (key: string) =>
+    createStoreMessages[locale][`sector.${key}` as CreateStoreKey] ?? getStarterPack(key).label;
+  const sectorDesc = (key: string) => t(`ob.sector.${key}.desc` as AdminMessageKey);
+  const styleLabel = (key: string) => t(`ob.stylePreset.${key}` as AdminMessageKey);
+  const recommended = useMemo(() => recommendedStyles(sector, store?.planCode), [sector, store?.planCode]);
+  const visibleStyles = showAllStyles
+    ? STYLE_PRESETS
+    : !styleKey || recommended.some((p) => p.key === styleKey)
+      ? recommended
+      : [...recommended.slice(0, 2), getStylePreset(styleKey)!];
 
   /** Applique un style complet : thème, couleurs, polices, arrondis et agencement. */
   const applyStyle = (key: string) => {
     const preset = getStylePreset(key);
     if (!preset) return;
     if (!isThemeAllowed(store?.planCode, preset.themeKey)) {
-      toast.message(`Le style « ${preset.label} » demande un plan supérieur.`);
+      toast.message(t('ob.planLocked.style', { name: styleLabel(preset.key) }));
       return;
     }
     setStyleKey(preset.key);
@@ -209,19 +295,19 @@ const AdminOnboarding = () => {
         ...(appearanceOverride ? { appearance } : {}),
       }),
     onSuccess: syncStore,
-    onError: (e) => toastError(e, 'Enregistrement impossible'),
+    onError: (e) => toastError(e, t('ob.err.save')),
   });
 
   const saveContact = useMutation({
     mutationFn: () =>
       platformApi.updateMyStoreSettings({
-        contactPhone: contact.phone.trim() || undefined,
-        contactWhatsapp: contact.whatsapp.trim() || undefined,
+        contactPhone: normalizePhone(contact.phone) ?? undefined,
+        contactWhatsapp: normalizePhone(waSame ? contact.phone : contact.whatsapp) ?? undefined,
         contactCity: contact.city.trim() || undefined,
         contactEmail: contact.email.trim() || undefined,
       }),
     onSuccess: syncStore,
-    onError: (e) => toastError(e, 'Enregistrement impossible'),
+    onError: (e) => toastError(e, t('ob.err.save')),
   });
 
   const createHome = useMutation({
@@ -246,7 +332,7 @@ const AdminOnboarding = () => {
       const page = await storePagesApi.create({ ...tpl.meta, title: tpl.meta.title || 'Accueil boutique', published: true });
       await storePagesApi.replaceBlocks(page.id!, tpl.blocks, 'Assistant de création');
     },
-    onError: (e) => toastError(e, 'Création de la page d’accueil impossible'),
+    onError: (e) => toastError(e, t('ob.err.home')),
   });
 
   const addExtraPages = useMutation({
@@ -260,7 +346,7 @@ const AdminOnboarding = () => {
         await storePagesApi.replaceBlocks(page.id!, tpl.blocks, 'Assistant de création');
       }
     },
-    onError: (e) => toastError(e, 'Création des pages supplémentaires impossible'),
+    onError: (e) => toastError(e, t('ob.err.extraPages')),
   });
 
   const addLegal = useMutation({
@@ -271,7 +357,7 @@ const AdminOnboarding = () => {
         contactPhone: contact.phone || undefined,
         contactCity: contact.city || undefined,
       }),
-    onError: (e) => toastError(e, 'Création des pages légales impossible'),
+    onError: (e) => toastError(e, t('ob.err.legal')),
   });
 
   const refreshCatalog = () => {
@@ -286,21 +372,82 @@ const AdminOnboarding = () => {
       refreshCatalog();
       toast.success(
         res.productsCreated > 0
-          ? `${res.productsCreated} produit(s) d’exemple ajouté(s)`
-          : 'Les produits d’exemple sont déjà présents',
+          ? t('ob.demo.added', { count: res.productsCreated })
+          : t('ob.demo.already'),
       );
     },
-    onError: (e) => toastError(e, 'Ajout des produits d’exemple impossible'),
+    onError: (e) => toastError(e, t('ob.err.demoAdd')),
   });
 
   const clearDemo = useMutation({
     mutationFn: () => removeDemoProducts(),
     onSuccess: (count) => {
       refreshCatalog();
-      toast.success(`${count} produit(s) d’exemple supprimé(s)`);
+      toast.success(t('ob.demo.removed', { count }));
     },
-    onError: (e) => toastError(e, 'Suppression impossible'),
+    onError: (e) => toastError(e, t('ob.err.delete')),
   });
+
+  // Boutique jamais vide : produits d'exemple du secteur ajoutés une seule fois, en tâche de fond.
+  const autoSeed = useMutation({
+    mutationFn: () => applyStarterPack(sector, locale),
+    onSuccess: (res) => {
+      refreshCatalog();
+      if (res.productsCreated > 0) {
+        toast.success(t('ob.demo.auto', { count: res.productsCreated }));
+      }
+    },
+  });
+
+  useEffect(() => {
+    if (seeded || !sector || !productPage || productCount > 0) return;
+    setSeeded(true);
+    autoSeed.mutate();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [seeded, sector, productPage, productCount]);
+
+  // Style conseillé appliqué d'office (le marchand peut en changer en un clic).
+  useEffect(() => {
+    if (styleTouched.current || !settings || !store || !sector || styleKey) return;
+    applyStyle(recommended[0].key);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [settings, store, sector, styleKey, recommended]);
+
+  const chooseSector = (key: string) => {
+    setSector(key);
+    setChangeSector(false);
+    if (!styleTouched.current) setStyleKey('');
+  };
+
+  const chooseStyle = (key: string) => {
+    styleTouched.current = true;
+    applyStyle(key);
+  };
+
+  /** Envoi du logo : on en profite pour lire ses couleurs dominantes (proposées ensuite au marchand). */
+  const uploadLogo = async (file: File) => {
+    void paletteFromFile(file)
+      .then((p) => setLogoPalette(p))
+      .catch(() => setLogoPalette(null));
+    return uploadImage(file);
+  };
+
+  const applyLogoPalette = () => {
+    if (!logoPalette) return;
+    setPrimaryColor(logoPalette.primary);
+    setSecondaryColor(logoPalette.secondary);
+    setLogoPalette(null);
+    toast.success(t('ob.logoPalette.applied'));
+  };
+
+  /** Accroche proposée par l'IA (secteur + nom), avec une phrase simple si l'IA ne répond pas. */
+  const suggestTagline = async () => {
+    setSuggestingTagline(true);
+    const topic = sector ? `${sectorLabel(sector)} — ${sectorDesc(sector)}` : siteName;
+    const text = await proposeCopy('tagline', topic, { storeName: siteName, locale });
+    setTagline(text || t('ob.tagline.fallback', { sector: sector ? sectorLabel(sector) : siteName }));
+    setSuggestingTagline(false);
+  };
 
   const publish = useMutation({
     mutationFn: async () => {
@@ -348,8 +495,11 @@ const AdminOnboarding = () => {
     }
   };
 
-  const openAddProduct = () => {
-    navigate(`/admin/produits?action=new&${ONBOARDING_RETURN_QUERY}=1`);
+  const fullProductFormHref = `/admin/produits?action=new&${ONBOARDING_RETURN_QUERY}=1`;
+
+  const openQuickProduct = (replace: QuickProductReplace | null) => {
+    setQuickReplace(replace);
+    setQuickOpen(true);
   };
 
   const storefrontUrl = buildStorefrontUrl(store?.slug ?? settings?.slug);
@@ -362,12 +512,40 @@ const AdminOnboarding = () => {
 
   const preview = (
     <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-soft">
-      <p className="border-b border-border bg-muted/40 px-4 py-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-        Aperçu en direct
-      </p>
-      <div className="max-h-[70vh] overflow-auto">
+      <div className="flex items-center justify-between gap-2 border-b border-border bg-muted/40 px-4 py-1.5">
+        <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{t('ob.preview')}</p>
+        <div className="flex gap-1" role="group" aria-label={t('ob.preview')}>
+          {(
+            [
+              ['desktop', Monitor, 'ob.device.desktop'],
+              ['mobile', Smartphone, 'ob.device.mobile'],
+            ] as const
+          ).map(([key, Icon, label]) => (
+            <button
+              key={key}
+              type="button"
+              aria-pressed={previewDevice === key}
+              aria-label={t(label)}
+              title={t(label)}
+              onClick={() => setPreviewDevice(key)}
+              className={`rounded-md p-1.5 transition ${
+                previewDevice === key ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              <Icon className="h-4 w-4" aria-hidden />
+            </button>
+          ))}
+        </div>
+      </div>
+      <div
+        className={`max-h-[70vh] overflow-auto ${
+          previewDevice === 'mobile' ? 'mx-auto my-3 w-[390px] max-w-full rounded-2xl border-4 border-stone-800' : ''
+        }`}
+      >
         <StoreAppearanceLivePreview
-          siteName={siteName || 'Ma boutique'}
+          catalogProducts={previewProducts}
+          catalogCategories={previewCategories}
+          siteName={siteName || t('ob.myStore')}
           tagline={tagline}
           logoUrl={logoUrl || undefined}
           primaryColor={primaryColor || '#0F766E'}
@@ -378,31 +556,31 @@ const AdminOnboarding = () => {
           themeKey={themeKey}
           contactEmail={contact.email}
           contactPhone={contact.phone}
-          contactWhatsapp={contact.whatsapp}
+          contactWhatsapp={waSame ? contact.phone : contact.whatsapp}
           contactCity={contact.city}
         />
       </div>
     </div>
   );
 
-  const shareMessage = `Découvrez ${siteName || 'ma boutique'} : ${storefrontUrl}`;
+  const shareMessage = t('ob.share', { name: siteName || t('ob.myStore'), url: storefrontUrl });
 
   if (published) {
     return (
       <AdminLayout
         title={t('onboarding.title')}
         description={t('onboarding.description')}
-        breadcrumbs={[{ label: 'Assistant' }]}
+        breadcrumbs={[{ label: t('ob.crumb') }]}
       >
         <div className="mx-auto max-w-2xl space-y-6 py-4 text-center">
           <Rocket className="mx-auto h-14 w-14 text-primary" aria-hidden />
-          <h2 className="font-display text-2xl font-semibold">Votre boutique est en ligne !</h2>
+          <h2 className="font-display text-2xl font-semibold">{t('ob.done.title')}</h2>
           <p className="text-sm text-muted-foreground">
             {pendingActivation
-              ? 'Elle sera visible publiquement dès son activation par Get STORE. Vous pouvez déjà prévisualiser votre vitrine.'
-              : 'Partagez-la dès maintenant avec vos premiers clients.'}
+              ? t('ob.done.pending')
+              : t('ob.done.share')}
           </p>
-          <div className="flex items-center gap-2 rounded-xl border border-border bg-card p-3 text-left">
+          <div className="flex items-center gap-2 rounded-xl border border-border bg-card p-3 text-start">
             <span className="min-w-0 flex-1 truncate font-mono text-sm">{storefrontUrl}</span>
             <Button
               type="button"
@@ -412,17 +590,40 @@ const AdminOnboarding = () => {
               onClick={() => {
                 void navigator.clipboard
                   ?.writeText(storefrontUrl)
-                  .then(() => toast.success('Lien copié'))
-                  .catch(() => toast.error('Copie impossible'));
+                  .then(() => toast.success(t('ob.copied')))
+                  .catch(() => toast.error(t('ob.copyFailed')));
               }}
             >
-              <Copy className="h-3.5 w-3.5" /> Copier
+              <Copy className="h-3.5 w-3.5" /> {t('ob.copy')}
             </Button>
+          </div>
+          <div className="flex flex-col items-center gap-4 rounded-2xl border border-border bg-card p-5 sm:flex-row sm:text-start">
+            <QRCodeCanvas ref={qrRef} value={storefrontUrl} size={132} marginSize={2} className="shrink-0 rounded-lg" />
+            <div className="space-y-2">
+              <p className="font-display text-sm font-semibold">{t('ob.qr.title')}</p>
+              <p className="text-xs text-muted-foreground">{t('ob.qr.hint')}</p>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className="gap-1.5"
+                onClick={() => {
+                  const canvas = qrRef.current;
+                  if (!canvas) return;
+                  const a = document.createElement('a');
+                  a.href = canvas.toDataURL('image/png');
+                  a.download = `qr-${store?.slug ?? settings?.slug ?? 'boutique'}.png`;
+                  a.click();
+                }}
+              >
+                <Download className="h-3.5 w-3.5" /> {t('ob.qr.download')}
+              </Button>
+            </div>
           </div>
           <div className="flex flex-wrap justify-center gap-3">
             <Button asChild className="gap-2">
               <a href={storefrontUrl} target="_blank" rel="noopener noreferrer">
-                <ExternalLink className="h-4 w-4" /> Voir ma boutique
+                <ExternalLink className="h-4 w-4" /> {t('ob.viewStore')}
               </a>
             </Button>
             <Button asChild variant="outline" className="gap-2">
@@ -431,37 +632,37 @@ const AdminOnboarding = () => {
                 target="_blank"
                 rel="noopener noreferrer"
               >
-                <MessageCircle className="h-4 w-4" /> Partager sur WhatsApp
+                <MessageCircle className="h-4 w-4" /> {t('ob.shareWa')}
               </a>
             </Button>
           </div>
-          <div className="rounded-2xl border border-border bg-card p-5 text-left">
-            <p className="font-display text-sm font-semibold">Pour aller plus loin</p>
+          <div className="rounded-2xl border border-border bg-card p-5 text-start">
+            <p className="font-display text-sm font-semibold">{t('ob.next.title')}</p>
             <ul className="mt-3 space-y-2 text-sm">
               <li>
                 <Link className="text-primary hover:underline" to="/admin/produits?action=new">
-                  Ajouter vos vrais produits avec photos
+                  {t('ob.next.products')}
                 </Link>
               </li>
               <li>
                 <Link className="text-primary hover:underline" to="/admin/top-bar-messages">
-                  Ajouter un bandeau promo (livraison gratuite, offre…)
+                  {t('ob.next.topbar')}
                 </Link>
               </li>
               <li>
                 <Link className="text-primary hover:underline" to="/admin/sections">
-                  Personnaliser le menu et le pied de page
+                  {t('ob.next.menu')}
                 </Link>
               </li>
               <li>
                 <Link className="text-primary hover:underline" to="/admin/pages">
-                  Modifier vos pages avec le constructeur
+                  {t('ob.next.pages')}
                 </Link>
               </li>
             </ul>
           </div>
           <Button type="button" variant="ghost" onClick={() => navigate('/admin/dashboard')}>
-            Aller au tableau de bord
+            {t('ob.toDashboard')}
           </Button>
         </div>
       </AdminLayout>
@@ -474,12 +675,12 @@ const AdminOnboarding = () => {
       description={t('onboarding.description')}
       breadcrumbs={[
         { label: t('appearance.onlineStoreCrumb'), href: '/admin/boutique-en-ligne' },
-        { label: 'Assistant' },
+        { label: t('ob.crumb') },
       ]}
       wide
     >
       <div className="mx-auto max-w-6xl space-y-6">
-        <nav aria-label="Étapes" className="flex flex-wrap gap-2">
+        <nav aria-label={t('ob.stepsNav')} className="flex flex-wrap gap-2">
           {STEPS.map((label, i) => (
             <button
               key={label}
@@ -494,15 +695,22 @@ const AdminOnboarding = () => {
                     : 'bg-muted text-muted-foreground hover:bg-muted/70'
               }`}
             >
-              {i + 1}. {label}
+              {i + 1}. {t(label)}
             </button>
           ))}
         </nav>
+        <div className="space-y-1.5">
+          <div className="h-1.5 overflow-hidden rounded-full bg-muted" aria-hidden>
+            <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${((step + 1) / STEPS.length) * 100}%` }} />
+          </div>
+          <p className="text-xs text-muted-foreground">
+            {t('ob.stepCounter', { n: step + 1, total: STEPS.length, min: STEPS.length - step })}
+          </p>
+        </div>
 
         {pendingActivation ? (
           <div className="rounded-2xl border border-amber-500/40 bg-amber-50 p-4 text-sm text-amber-950">
-            Votre boutique est <strong>prête côté design</strong> mais reste{' '}
-            <strong>en attente d’activation Get STORE</strong> avant d’être visible publiquement.
+            {t('ob.pendingBanner')}
           </div>
         ) : null}
 
@@ -511,79 +719,66 @@ const AdminOnboarding = () => {
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
           </div>
         ) : (
-          <div className={step <= 1 ? 'grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]' : ''}>
+          <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
             <div className="space-y-6">
               {step === 0 ? (
                 <section className="space-y-6 rounded-2xl border border-border bg-card p-6">
                   <div>
-                    <h2 className="font-display text-xl font-semibold">Le style de votre boutique</h2>
+                    <h2 className="font-display text-xl font-semibold">{t('ob.style.title')}</h2>
                     <p className="mt-1 text-sm text-muted-foreground">
-                      Tout est modifiable plus tard. L’aperçu se met à jour en direct.
+                      {t('ob.style.subtitle')}
                     </p>
                   </div>
 
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    <div className="sm:col-span-2">
-                      <Label htmlFor="ob-name">Nom de la boutique</Label>
-                      <Input id="ob-name" className="mt-1.5" value={siteName} onChange={(e) => setSiteName(e.target.value)} />
-                    </div>
-                    <div className="sm:col-span-2">
-                      <Label htmlFor="ob-tagline">Accroche</Label>
-                      <Input
-                        id="ob-tagline"
-                        className="mt-1.5"
-                        value={tagline}
-                        placeholder="Ex. L’artisanat marocain livré chez vous"
-                        onChange={(e) => setTagline(e.target.value)}
-                      />
-                    </div>
-                    <div className="sm:col-span-2">
-                      <Label className="mb-1.5 flex items-center gap-1.5">
-                        <ImagePlus className="h-3.5 w-3.5" /> Logo (optionnel)
-                      </Label>
-                      <ImageUpload value={logoUrl} onChange={setLogoUrl} onUpload={uploadImage} />
-                    </div>
+                  <div>
+                    <Label htmlFor="ob-name">{t('ob.name')}</Label>
+                    <Input id="ob-name" className="mt-1.5" value={siteName} onChange={(e) => setSiteName(e.target.value)} />
                   </div>
 
                   <div>
-                    <Label className="mb-2 block">Votre activité</Label>
-                    <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-                      {STARTER_PACKS.map((p) => (
-                        <button
-                          key={p.key}
-                          type="button"
-                          aria-pressed={sector === p.key}
-                          onClick={() => {
-                            setSector(p.key);
-                            if (!styleKey) {
-                              const suggested = STYLE_FOR_SECTOR[p.key] ?? 'classique';
-                              const sp = getStylePreset(suggested);
-                              applyStyle(sp && isThemeAllowed(store?.planCode, sp.themeKey) ? suggested : 'classique');
-                            } else if (isThemeAllowed(store?.planCode, p.suggestedTheme)) setThemeKey(p.suggestedTheme);
-                          }}
-                          className={`rounded-xl border p-3 text-left text-xs transition ${
-                            sector === p.key ? 'border-primary ring-2 ring-primary/25' : 'border-border hover:border-primary/40'
-                          }`}
-                        >
-                          <span className="block text-sm font-semibold">{p.label}</span>
-                          <span className="mt-0.5 block text-muted-foreground">{p.description}</span>
-                        </button>
-                      ))}
-                    </div>
+                    <Label className="mb-2 block">{t('ob.sector')}</Label>
+                    {sector && !changeSector ? (
+                      <div className="flex items-center justify-between gap-3 rounded-xl border border-border bg-muted/30 px-4 py-3">
+                        <div className="min-w-0">
+                          <p className="text-sm font-semibold">{sectorLabel(sector)}</p>
+                          <p className="truncate text-xs text-muted-foreground">{sectorDesc(sector)}</p>
+                        </div>
+                        <Button type="button" size="sm" variant="ghost" onClick={() => setChangeSector(true)}>
+                          {t('ob.change')}
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                        {STARTER_PACKS.map((p) => (
+                          <button
+                            key={p.key}
+                            type="button"
+                            aria-pressed={sector === p.key}
+                            onClick={() => chooseSector(p.key)}
+                            className={`rounded-xl border p-3 text-start text-xs transition ${
+                              sector === p.key ? 'border-primary ring-2 ring-primary/25' : 'border-border hover:border-primary/40'
+                            }`}
+                          >
+                            <span className="block text-sm font-semibold">{sectorLabel(p.key)}</span>
+                            <span className="mt-0.5 block text-muted-foreground">{sectorDesc(p.key)}</span>
+                          </button>
+                        ))}
+                      </div>
+                    )}
                   </div>
 
                   <div>
-                    <Label className="mb-2 block">Style de la boutique</Label>
+                    <Label className="mb-2 block">{showAllStyles ? t('ob.styles.all') : t('ob.styles.recommended')}</Label>
                     <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-                      {STYLE_PRESETS.map((preset) => {
+                      {visibleStyles.map((preset) => {
                         const fonts = FONT_PAIRS.find((f) => f.key === preset.fontPair);
                         return (
                           <button
                             key={preset.key}
                             type="button"
                             aria-pressed={styleKey === preset.key}
-                            onClick={() => applyStyle(preset.key)}
-                            className={`rounded-xl border p-3 text-left transition ${
+                            onClick={() => chooseStyle(preset.key)}
+                            className={`rounded-xl border p-3 text-start transition ${
                               styleKey === preset.key ? 'border-primary ring-2 ring-primary/25' : 'border-border hover:border-primary/40'
                             }`}
                           >
@@ -597,23 +792,78 @@ const AdminOnboarding = () => {
                               <span className="h-4 w-10 bg-white/90" style={{ borderRadius: preset.radiusPreset === 'sharp' ? 0 : preset.radiusPreset === 'subtle' ? 4 : 999 }} />
                             </div>
                             <div className="flex flex-wrap items-center gap-1">
-                              <p className="text-sm font-semibold">{preset.label}</p>
+                              <p className="text-sm font-semibold">{styleLabel(preset.key)}</p>
                               {!isThemeAllowed(store?.planCode, preset.themeKey) ? (
                                 <PlanLockBadge tone="light" plan={themeMinPlan(preset.themeKey)} />
                               ) : null}
                             </div>
-                            <p className="text-xs text-muted-foreground">{preset.description}</p>
+                            <p className="text-xs text-muted-foreground">{t(`ob.stylePreset.${preset.key}.desc` as AdminMessageKey)}</p>
                           </button>
                         );
                       })}
                     </div>
+                    <button
+                      type="button"
+                      className="mt-2 text-xs font-medium text-primary hover:underline"
+                      onClick={() => setShowAllStyles((v) => !v)}
+                    >
+                      {showAllStyles ? t('ob.styles.showRecommended') : t('ob.styles.showAll', { count: STYLE_PRESETS.length })}
+                    </button>
                   </div>
 
+                  <details className="rounded-xl border border-border p-4" open={!!(logoUrl || tagline) || undefined}>
+                    <summary className="cursor-pointer text-sm font-semibold">{t('ob.brand.summary')}</summary>
+                    <div className="mt-4 space-y-4">
+                      <div>
+                        <div className="flex items-center justify-between gap-2">
+                          <Label htmlFor="ob-tagline">{t('ob.tagline')}</Label>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="ghost"
+                            className="h-7 gap-1.5 text-xs text-primary"
+                            disabled={suggestingTagline}
+                            onClick={() => void suggestTagline()}
+                          >
+                            {suggestingTagline ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Wand2 className="h-3.5 w-3.5" />}
+                            {t('ob.tagline.suggest')}
+                          </Button>
+                        </div>
+                        <Input
+                          id="ob-tagline"
+                          className="mt-1.5"
+                          value={tagline}
+                          placeholder={t('ob.tagline.placeholder')}
+                          onChange={(e) => setTagline(e.target.value)}
+                        />
+                      </div>
+                      <div>
+                        <Label className="mb-1.5 flex items-center gap-1.5">
+                          <ImagePlus className="h-3.5 w-3.5" /> {t('ob.logo')}
+                        </Label>
+                        <ImageUpload value={logoUrl} onChange={setLogoUrl} onUpload={uploadLogo} />
+                        {logoPalette && logoUrl ? (
+                          <div className="mt-3 flex flex-wrap items-center gap-3 rounded-xl border border-primary/30 bg-primary/5 p-3">
+                            <span
+                              className="h-8 w-12 shrink-0 rounded-md border border-border"
+                              style={{ background: `linear-gradient(135deg, ${logoPalette.primary} 50%, ${logoPalette.secondary} 50%)` }}
+                              aria-hidden
+                            />
+                            <span className="min-w-0 flex-1 text-sm">{t('ob.logoPalette.title')}</span>
+                            <Button type="button" size="sm" onClick={applyLogoPalette}>
+                              {t('ob.logoPalette.apply')}
+                            </Button>
+                          </div>
+                        ) : null}
+                      </div>
+                    </div>
+                  </details>
+
                   <details className="rounded-xl border border-border p-4">
-                    <summary className="cursor-pointer text-sm font-semibold">Personnaliser en détail</summary>
+                    <summary className="cursor-pointer text-sm font-semibold">{t('ob.details')}</summary>
                     <div className="mt-4 space-y-6">
                   <div>
-                    <Label className="mb-2 block">Design</Label>
+                    <Label className="mb-2 block">{t('ob.design')}</Label>
                     <div className="grid grid-cols-2 gap-2">
                       {STORE_THEMES.map((theme) => (
                         <button
@@ -622,12 +872,12 @@ const AdminOnboarding = () => {
                           aria-pressed={themeKey === theme.key}
                           onClick={() => {
                             if (!isThemeAllowed(store?.planCode, theme.key)) {
-                              toast.message(`Le thème « ${theme.label} » demande un plan supérieur.`);
+                              toast.message(t('ob.planLocked.theme', { name: t(`ob.theme.${theme.key}` as AdminMessageKey) }));
                               return;
                             }
                             setThemeKey(theme.key);
                           }}
-                          className={`rounded-xl border p-3 text-left transition ${
+                          className={`rounded-xl border p-3 text-start transition ${
                             themeKey === theme.key ? 'border-primary ring-2 ring-primary/25' : 'border-border hover:border-primary/40'
                           }`}
                         >
@@ -636,26 +886,26 @@ const AdminOnboarding = () => {
                             style={{ background: `linear-gradient(135deg, ${theme.demoPrimary}, ${theme.demoSecondary})` }}
                           />
                           <div className="flex flex-wrap items-center gap-1">
-                            <p className="text-sm font-semibold">{theme.label}</p>
+                            <p className="text-sm font-semibold">{t(`ob.theme.${theme.key}` as AdminMessageKey)}</p>
                             {!isThemeAllowed(store?.planCode, theme.key) ? (
                               <PlanLockBadge tone="light" plan={themeMinPlan(theme.key)} />
                             ) : null}
                           </div>
-                          <p className="text-xs text-muted-foreground">{theme.description}</p>
+                          <p className="text-xs text-muted-foreground">{t(`ob.theme.${theme.key}.desc` as AdminMessageKey)}</p>
                         </button>
                       ))}
                     </div>
                   </div>
 
                   <div>
-                    <Label className="mb-2 block">Couleurs</Label>
+                    <Label className="mb-2 block">{t('ob.colors')}</Label>
                     <div className="mb-3 flex flex-wrap gap-2">
                       {PALETTES.map((p) => (
                         <button
                           key={p.label}
                           type="button"
                           title={p.label}
-                          aria-label={`Palette ${p.label}`}
+                          aria-label={t('ob.palette', { name: p.label })}
                           onClick={() => {
                             setPrimaryColor(p.primary);
                             setSecondaryColor(p.secondary);
@@ -669,11 +919,11 @@ const AdminOnboarding = () => {
                     </div>
                     <div className="grid grid-cols-2 gap-3">
                       <div>
-                        <Label htmlFor="ob-c1" className="text-xs">Principale</Label>
+                        <Label htmlFor="ob-c1" className="text-xs">{t('ob.color.primary')}</Label>
                         <Input id="ob-c1" type="color" className="mt-1 h-10" value={primaryColor || '#0F766E'} onChange={(e) => setPrimaryColor(e.target.value)} />
                       </div>
                       <div>
-                        <Label htmlFor="ob-c2" className="text-xs">Secondaire</Label>
+                        <Label htmlFor="ob-c2" className="text-xs">{t('ob.color.secondary')}</Label>
                         <Input id="ob-c2" type="color" className="mt-1 h-10" value={secondaryColor || '#0369A1'} onChange={(e) => setSecondaryColor(e.target.value)} />
                       </div>
                     </div>
@@ -681,32 +931,32 @@ const AdminOnboarding = () => {
 
                   <div className="grid gap-4 sm:grid-cols-2">
                     <div>
-                      <Label className="mb-2 block">Polices</Label>
+                      <Label className="mb-2 block">{t('ob.fonts')}</Label>
                       {FONT_PAIRS.map((p) => (
                         <button
                           key={p.key}
                           type="button"
                           onClick={() => setFontPair(p.key)}
-                          className={`mb-2 w-full rounded-lg border px-3 py-2 text-left text-sm ${
+                          className={`mb-2 w-full rounded-lg border px-3 py-2 text-start text-sm ${
                             fontPair === p.key ? 'border-primary bg-primary/5' : 'border-border'
                           }`}
                         >
-                          {p.label}
+                          {appearanceOptLabel(locale, 'font', p.key, p.label)}
                         </button>
                       ))}
                     </div>
                     <div>
-                      <Label className="mb-2 block">Arrondis</Label>
+                      <Label className="mb-2 block">{t('ob.radius')}</Label>
                       {RADIUS_PRESETS.map((p) => (
                         <button
                           key={p.key}
                           type="button"
                           onClick={() => setRadiusPreset(p.key)}
-                          className={`mb-2 w-full rounded-lg border px-3 py-2 text-left text-sm ${
+                          className={`mb-2 w-full rounded-lg border px-3 py-2 text-start text-sm ${
                             radiusPreset === p.key ? 'border-primary bg-primary/5' : 'border-border'
                           }`}
                         >
-                          {p.label}
+                          {appearanceOptLabel(locale, 'radius', p.key, p.label)}
                         </button>
                       ))}
                     </div>
@@ -719,28 +969,33 @@ const AdminOnboarding = () => {
               {step === 1 ? (
                 <section className="space-y-5 rounded-2xl border border-border bg-card p-6">
                   <div>
-                    <h2 className="font-display text-xl font-semibold">Comment vos clients vous joignent</h2>
+                    <h2 className="font-display text-xl font-semibold">{t('ob.contact.title')}</h2>
                     <p className="mt-1 text-sm text-muted-foreground">
-                      Affiché dans le pied de page, la page contact et les pages légales. Le numéro WhatsApp ajoute le
-                      bouton « Commander sur WhatsApp ».
+                      {t('ob.contact.subtitle')}
                     </p>
                   </div>
                   <div className="grid gap-4 sm:grid-cols-2">
                     <div>
-                      <Label htmlFor="ob-phone">Téléphone</Label>
-                      <Input id="ob-phone" type="tel" className="mt-1.5" value={contact.phone} placeholder="06 00 00 00 00" onChange={(e) => setContact({ ...contact, phone: e.target.value })} />
+                      <Label htmlFor="ob-phone">{t('ob.phone')}</Label>
+                      <Input id="ob-phone" type="tel" dir="ltr" className="mt-1.5" value={contact.phone} placeholder="06 00 00 00 00" onChange={(e) => setContact({ ...contact, phone: e.target.value })} />
+                      <label className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
+                        <input type="checkbox" checked={waSame} onChange={(e) => setWaSame(e.target.checked)} />
+                        {t('ob.waSame')}
+                      </label>
+                    </div>
+                    {waSame ? null : (
+                      <div>
+                        <Label htmlFor="ob-wa">{t('ob.whatsapp')}</Label>
+                        <Input id="ob-wa" type="tel" dir="ltr" className="mt-1.5" value={contact.whatsapp} placeholder="06 00 00 00 00" onChange={(e) => setContact({ ...contact, whatsapp: e.target.value })} />
+                      </div>
+                    )}
+                    <div>
+                      <Label htmlFor="ob-city">{t('ob.city')}</Label>
+                      <Input id="ob-city" className="mt-1.5" value={contact.city} placeholder={t('ob.city.placeholder')} onChange={(e) => setContact({ ...contact, city: e.target.value })} />
                     </div>
                     <div>
-                      <Label htmlFor="ob-wa">WhatsApp</Label>
-                      <Input id="ob-wa" type="tel" className="mt-1.5" value={contact.whatsapp} placeholder="212600000000" onChange={(e) => setContact({ ...contact, whatsapp: e.target.value })} />
-                    </div>
-                    <div>
-                      <Label htmlFor="ob-city">Ville</Label>
-                      <Input id="ob-city" className="mt-1.5" value={contact.city} placeholder="Casablanca" onChange={(e) => setContact({ ...contact, city: e.target.value })} />
-                    </div>
-                    <div>
-                      <Label htmlFor="ob-email">Email de contact</Label>
-                      <Input id="ob-email" type="email" className="mt-1.5" value={contact.email} onChange={(e) => setContact({ ...contact, email: e.target.value })} />
+                      <Label htmlFor="ob-email">{t('ob.email')}</Label>
+                      <Input id="ob-email" type="email" dir="ltr" className="mt-1.5" value={contact.email} onChange={(e) => setContact({ ...contact, email: e.target.value })} />
                     </div>
                   </div>
                 </section>
@@ -749,72 +1004,133 @@ const AdminOnboarding = () => {
               {step === 2 ? (
                 <section className="space-y-5 rounded-2xl border border-border bg-card p-6">
                   <div>
-                    <h2 className="font-display text-xl font-semibold">Votre catalogue</h2>
+                    <h2 className="font-display text-xl font-semibold">{t('ob.catalog.title')}</h2>
                     <p className="mt-1 text-sm text-muted-foreground">
-                      Démarrez avec des produits d’exemple ({pack.label}) puis remplacez-les, ou ajoutez directement vos
-                      produits. Vous pouvez aussi passer cette étape.
+                      {t('ob.catalog.subtitle', { pack: sectorLabel(pack.key) })}
                     </p>
                   </div>
                   {productCount > 0 ? (
                     <p className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-900">
-                      {productCount} produit{productCount > 1 ? 's' : ''} dans le catalogue
-                      {demoProducts.length > 0 ? ` (dont ${demoProducts.length} d’exemple)` : ''}.
+                      {demoProducts.length > 0
+                        ? t('ob.catalog.countWithDemo', { count: productCount, demo: demoProducts.length })
+                        : t('ob.catalog.count', { count: productCount })}
                     </p>
                   ) : null}
-                  <div className="flex flex-wrap gap-3">
-                    <Button type="button" className="gap-2" disabled={busy} onClick={() => addDemo.mutate()}>
-                      {addDemo.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-                      Ajouter des produits d’exemple
-                    </Button>
-                    <Button type="button" variant="outline" className="gap-2" onClick={openAddProduct}>
-                      <Package className="h-4 w-4" />
-                      {productCount > 0 ? 'Ajouter un autre produit' : 'Ajouter mon premier produit'}
-                    </Button>
-                    {demoProducts.length > 0 ? (
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        className="gap-2 text-destructive hover:text-destructive"
-                        disabled={busy}
-                        onClick={() => clearDemo.mutate()}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                        Supprimer les {demoProducts.length} produits d’exemple
-                      </Button>
-                    ) : null}
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    {(
+                      [
+                        { key: 'demo', icon: Sparkles, onClick: () => addDemo.mutate(), pending: addDemo.isPending },
+                        { key: 'quick', icon: Package, onClick: () => openQuickProduct(null) },
+                        { key: 'instagram', icon: Camera, href: '/admin/produits/instagram' },
+                        { key: 'csv', icon: FileSpreadsheet, href: '/admin/produits/import' },
+                      ] as const
+                    ).map((source) => {
+                      const body = (
+                        <>
+                          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                            {'pending' in source && source.pending ? (
+                              <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+                            ) : (
+                              <source.icon className="h-4 w-4" aria-hidden />
+                            )}
+                          </span>
+                          <span className="min-w-0">
+                            <span className="block text-sm font-semibold">{t(`ob.source.${source.key}` as AdminMessageKey)}</span>
+                            <span className="block text-xs text-muted-foreground">
+                              {t(`ob.source.${source.key}.desc` as AdminMessageKey)}
+                            </span>
+                          </span>
+                        </>
+                      );
+                      const cls =
+                        'flex items-start gap-3 rounded-xl border border-border p-3 text-start transition hover:border-primary/40 hover:bg-muted/30 disabled:opacity-60';
+                      return 'href' in source ? (
+                        <Link key={source.key} to={source.href} className={cls}>
+                          {body}
+                        </Link>
+                      ) : (
+                        <button key={source.key} type="button" className={cls} disabled={busy} onClick={source.onClick}>
+                          {body}
+                        </button>
+                      );
+                    })}
                   </div>
+                  {demoProducts.length > 0 ? (
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="text-sm font-semibold">{t('ob.demoList.title')}</p>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="ghost"
+                          className="gap-1.5 text-destructive hover:text-destructive"
+                          disabled={busy}
+                          onClick={() => clearDemo.mutate()}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                          {t('ob.catalog.removeDemo', { count: demoProducts.length })}
+                        </Button>
+                      </div>
+                      <ul className="divide-y divide-border rounded-xl border border-border">
+                        {demoProducts.map((p) => (
+                          <li key={p.id} className="flex items-center gap-3 px-3 py-2">
+                            {p.images?.[0] ? (
+                              <img src={getImageUrl(p.images[0])} alt="" className="h-10 w-10 shrink-0 rounded-md object-cover" />
+                            ) : (
+                              <span className="h-10 w-10 shrink-0 rounded-md bg-muted" aria-hidden />
+                            )}
+                            <span className="min-w-0 flex-1">
+                              <span className="block truncate text-sm">{p.name}</span>
+                              <span className="block text-xs text-muted-foreground" dir="ltr">{p.price} MAD</span>
+                            </span>
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              onClick={() =>
+                                openQuickProduct({ id: p.id, name: p.name, price: p.price, category: p.category })
+                              }
+                            >
+                              {t('ob.demoList.replace')}
+                            </Button>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  ) : null}
                 </section>
               ) : null}
 
               {step === 3 ? (
                 <section className="space-y-5 rounded-2xl border border-border bg-card p-6">
                   <div>
-                    <h2 className="font-display text-xl font-semibold">Prêt à publier</h2>
+                    <h2 className="font-display text-xl font-semibold">{t('ob.publish.title')}</h2>
                     <p className="mt-1 text-sm text-muted-foreground">
-                      Un clic prépare votre page d’accueil et vos pages légales. Tout reste modifiable ensuite.
+                      {t('ob.publish.subtitle')}
                     </p>
                   </div>
                   <label className="flex items-start gap-3 rounded-xl border border-border p-4 text-sm">
                     <input type="checkbox" className="mt-1" checked={publishHome} onChange={(e) => setPublishHome(e.target.checked)} />
                     <span>
-                      <strong>Page d’accueil complète</strong>
+                      <strong>{t('ob.publish.home')}</strong>
                       <span className="mt-0.5 block text-muted-foreground">
-                        Bannière, avantages, catégories, produits, histoire, avis, blog et newsletter — modifiable bloc par
-                        bloc.
+                        {t('ob.publish.homeDesc')}
                       </span>
                     </span>
                   </label>
                   <label className="flex items-start gap-3 rounded-xl border border-border p-4 text-sm">
                     <input type="checkbox" className="mt-1" checked={createLegal} onChange={(e) => setCreateLegal(e.target.checked)} />
                     <span>
-                      <strong>Pages légales</strong> (mentions légales, CGV, retours, confidentialité)
-                      <span className="mt-0.5 block text-xs text-muted-foreground">{LEGAL_DISCLAIMER}</span>
+                      <strong>{t('ob.publish.legal')}</strong> {t('ob.publish.legalPages')}
+                      <span className="mt-0.5 block text-xs text-muted-foreground">{t('ob.publish.legalDisclaimer')}</span>
                     </span>
                   </label>
-                  <div className="space-y-2 rounded-xl border border-border p-4 text-sm">
-                    <strong>Pages supplémentaires</strong>
-                    <span className="block text-xs text-muted-foreground">
-                      Cochez celles à créer maintenant ; vous pourrez en ajouter d’autres plus tard depuis « Pages ».
+                  <details className="space-y-2 rounded-xl border border-border p-4 text-sm" open={extraPages.length > 0 || undefined}>
+                    <summary className="cursor-pointer font-semibold">
+                      {t('ob.publish.extra')}{extraPages.length > 0 ? ` · ${extraPages.length}` : ''}
+                    </summary>
+                    <span className="mt-2 block text-xs text-muted-foreground">
+                      {t('ob.publish.extraHint')}
                     </span>
                     {PAGE_TEMPLATES.filter((p) => !p.meta.isHome).map((tpl) => (
                       <label key={tpl.key} className="flex items-start gap-3 pt-1">
@@ -827,22 +1143,22 @@ const AdminOnboarding = () => {
                           }
                         />
                         <span>
-                          {tpl.label}
-                          <span className="block text-xs text-muted-foreground">{tpl.description}</span>
+                          {t(`ob.tpl.${tpl.key}` as AdminMessageKey)}
+                          <span className="block text-xs text-muted-foreground">{t(`ob.tpl.${tpl.key}.desc` as AdminMessageKey)}</span>
                         </span>
                       </label>
                     ))}
-                  </div>
+                  </details>
                   {!settings?.logoUrl && !logoUrl ? (
-                    <p className="text-xs text-amber-800">Astuce : vous pouvez ajouter votre logo à l’étape Style.</p>
+                    <p className="text-xs text-amber-800">{t('ob.tip.logo')}</p>
                   ) : null}
                   {productCount === 0 ? (
                     <p className="text-xs text-amber-800">
-                      Astuce : votre catalogue est vide — ajoutez des produits à l’étape Catalogue.
+                      {t('ob.tip.catalog')}
                     </p>
                   ) : null}
                   {publish.isError ? (
-                    <p className="text-sm text-destructive">La publication a échoué : réessayez (rien n’est perdu).</p>
+                    <p className="text-sm text-destructive">{t('ob.publish.failed')}</p>
                   ) : null}
                   <Button
                     type="button"
@@ -852,38 +1168,52 @@ const AdminOnboarding = () => {
                     onClick={() => publish.mutate()}
                   >
                     {publish.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Rocket className="h-4 w-4" />}
-                    Publier ma boutique
+                    {t('ob.publish.cta')}
                   </Button>
                 </section>
               ) : null}
 
               <div className="flex justify-between gap-3">
                 <Button type="button" variant="outline" className="gap-2" disabled={step === 0 || busy} onClick={() => void go(step - 1)}>
-                  <ArrowLeft className="h-4 w-4" /> Retour
+                  <ArrowLeft className="h-4 w-4 rtl:rotate-180" /> {t('ob.back')}
                 </Button>
                 {step < LAST_STEP ? (
-                  <div className="flex gap-2">
+                  <div className="flex flex-wrap justify-end gap-2">
+                    {step <= 1 ? (
+                      // Tout a une valeur par défaut correcte : on peut publier sans passer par Contact et Catalogue.
+                      <Button type="button" variant="ghost" className="gap-1.5" disabled={busy} onClick={() => void go(LAST_STEP)}>
+                        <Rocket className="h-4 w-4" /> {t('ob.publishNow')}
+                      </Button>
+                    ) : null}
                     {step >= 1 ? (
                       <Button type="button" variant="ghost" disabled={busy} onClick={() => goToStep(step + 1)}>
-                        Passer
+                        {t('ob.skip')}
                       </Button>
                     ) : null}
                     <Button type="button" className="gap-2" disabled={busy} onClick={() => void go(step + 1)}>
                       {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-                      Continuer <ArrowRight className="h-4 w-4" />
+                      {t('ob.continue')} <ArrowRight className="h-4 w-4 rtl:rotate-180" />
                     </Button>
                   </div>
                 ) : null}
               </div>
             </div>
 
-            {step <= 1 ? <div className="lg:sticky lg:top-4 lg:self-start">{preview}</div> : null}
+            <div className="lg:sticky lg:top-4 lg:self-start">{preview}</div>
           </div>
         )}
 
+        <QuickProductDialog
+          open={quickOpen}
+          onOpenChange={setQuickOpen}
+          replace={quickReplace}
+          fullFormHref={fullProductFormHref}
+          onDone={refreshCatalog}
+        />
+
         {step === 2 && productCount > 0 ? (
           <p className="text-center text-xs text-muted-foreground">
-            <Link to="/admin/produits" className="underline">Gérer mon catalogue</Link>
+            <Link to="/admin/produits" className="underline">{t('ob.catalog.manage')}</Link>
           </p>
         ) : null}
       </div>

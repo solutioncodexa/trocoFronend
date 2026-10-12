@@ -23,6 +23,9 @@ export type DashboardAdminMessageKey =
   | 'dashboard.setupContact'
   | 'dashboard.setupRealProduct'
   | 'dashboard.setupLegal'
+  | 'dashboard.setupReplaceDemo'
+  | 'dashboard.setupShare'
+  | 'dashboard.shareMessage'
   | 'dashboard.setupProgress'
   | 'dashboard.qaNewProduct'
   | 'dashboard.qaCategory'
@@ -76,6 +79,9 @@ const fr: Record<DashboardAdminMessageKey, string> = {
   'dashboard.setupContact': 'Renseigner téléphone / WhatsApp',
   'dashboard.setupRealProduct': 'Ajouter un vrai produit',
   'dashboard.setupLegal': 'Créer les pages légales',
+  'dashboard.setupReplaceDemo': 'Remplacer les produits d’exemple ({count})',
+  'dashboard.setupShare': 'Partager la boutique sur WhatsApp',
+  'dashboard.shareMessage': 'Découvrez {name} : {url}',
   'dashboard.setupProgress': '{done} / {total} étapes terminées',
   'dashboard.qaNewProduct': 'Nouveau produit',
   'dashboard.qaCategory': 'Catégorie',
@@ -130,6 +136,9 @@ const en: Record<DashboardAdminMessageKey, string> = {
   'dashboard.setupContact': 'Add phone / WhatsApp',
   'dashboard.setupRealProduct': 'Add a real product',
   'dashboard.setupLegal': 'Create the legal pages',
+  'dashboard.setupReplaceDemo': 'Replace the sample products ({count})',
+  'dashboard.setupShare': 'Share the store on WhatsApp',
+  'dashboard.shareMessage': 'Discover {name}: {url}',
   'dashboard.setupProgress': '{done} / {total} steps done',
   'dashboard.qaNewProduct': 'New product',
   'dashboard.qaCategory': 'Category',
@@ -184,6 +193,9 @@ const ar: Record<DashboardAdminMessageKey, string> = {
   'dashboard.setupContact': 'أضف الهاتف / واتساب',
   'dashboard.setupRealProduct': 'أضف منتجًا حقيقيًا',
   'dashboard.setupLegal': 'أنشئ الصفحات القانونية',
+  'dashboard.setupReplaceDemo': 'استبدل المنتجات التجريبية ({count})',
+  'dashboard.setupShare': 'شارك المتجر عبر واتساب',
+  'dashboard.shareMessage': 'اكتشفوا {name}: {url}',
   'dashboard.setupProgress': '{done} / {total} خطوات منجزة',
   'dashboard.qaNewProduct': 'منتج جديد',
   'dashboard.qaCategory': 'فئة',

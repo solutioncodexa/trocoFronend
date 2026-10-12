@@ -11,7 +11,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
-/** Raccourcis boutique (les routes restent ; le menu latéral ne garde que Paramètres). */
+/** Raccourcis entre les écrans boutique (le menu latéral « Boutique en ligne » liste aussi les principaux). */
 const LINKS = [
   { href: '/admin/reglages', label: 'Paramètres', icon: Settings2 },
   { href: '/admin/parametres', label: 'Apparence', icon: Palette },

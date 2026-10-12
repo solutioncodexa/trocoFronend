@@ -15,8 +15,9 @@ import {
   ImagePlus,
   Phone,
   FileText,
+  MessageCircle,
 } from 'lucide-react';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Sparkles, Truck } from 'lucide-react';
 import { assistantApi } from '@/services/api/assistant';
@@ -52,6 +53,17 @@ const ORDER_STATUS_KEYS: Record<string, AdminMessageKey> = {
   contacted: 'status.contacted',
   completed: 'status.completed',
 };
+
+/** « Boutique partagée » : mémorisé par boutique dans ce navigateur (rien à suivre côté serveur). */
+const sharedKey = (slug?: string | null) => `troco.storeShared.${slug ?? ''}`;
+
+function readShared(slug?: string | null): boolean {
+  try {
+    return !!slug && localStorage.getItem(sharedKey(slug)) === '1';
+  } catch {
+    return false;
+  }
+}
 
 const AdminDashboard = () => {
   const { t } = useAdminLocale();
@@ -115,6 +127,20 @@ const AdminDashboard = () => {
     onError: () => toast.error(t('launch.error')),
   });
   const storefrontUrl = buildStorefrontUrl(slug || store?.slug || storeSettings?.slug);
+  const storeSlug = slug || store?.slug || storeSettings?.slug;
+  const [shared, setShared] = useState(() => readShared(storeSlug));
+  useEffect(() => setShared(readShared(storeSlug)), [storeSlug]);
+  const markShared = () => {
+    setShared(true);
+    try {
+      if (storeSlug) localStorage.setItem(sharedKey(storeSlug), '1');
+    } catch {
+      // stockage indisponible : la case restera simplement à cocher
+    }
+  };
+  const whatsappShareUrl = `https://wa.me/?text=${encodeURIComponent(
+    t('dashboard.shareMessage', { name: siteName || '', url: storefrontUrl }),
+  )}`;
   const { data: ordersPage } = useQuery({
     queryKey: ['orders', 'dashboard'],
     queryFn: () => ordersApi.getAllOrders({ page: 0, size: 5 }),
@@ -196,6 +222,7 @@ const AdminDashboard = () => {
     icon: typeof Package;
     external?: boolean;
     assistant?: AssistantFlowId;
+    onClick?: () => void;
   }[] = [
     {
       done: hasLogo,
@@ -219,6 +246,12 @@ const AdminDashboard = () => {
       assistant: 'catalog',
     },
     {
+      done: demoProducts.length === 0,
+      label: t('dashboard.setupReplaceDemo', { count: demoProducts.length }),
+      href: '/admin/onboarding?step=2',
+      icon: Sparkles,
+    },
+    {
       done: (carriers?.length ?? 0) > 0,
       label: t('dashboard.setupShipping'),
       href: '/admin/livraison',
@@ -238,6 +271,14 @@ const AdminDashboard = () => {
       href: canViewPublic ? storefrontUrl : '/admin/onboarding',
       icon: ExternalLink,
       external: canViewPublic,
+    },
+    {
+      done: shared,
+      label: t('dashboard.setupShare'),
+      href: whatsappShareUrl,
+      icon: MessageCircle,
+      external: true,
+      onClick: markShared,
     },
   ];
   const doneSteps = setupSteps.filter((s) => s.done).length;
@@ -341,6 +382,7 @@ const AdminDashboard = () => {
                     href={step.href}
                     target="_blank"
                     rel="noopener noreferrer"
+                    onClick={step.onClick}
                     className="flex items-center gap-3 rounded-xl border border-border bg-[hsl(220_20%_98%)] px-4 py-3 transition hover:border-primary"
                   >
                     {step.done ? (

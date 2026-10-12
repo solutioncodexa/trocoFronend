@@ -14,6 +14,10 @@ export type OnboardingDraft = {
   sector?: string;
   /** Style complet choisi (`STYLE_PRESETS`). */
   style?: string;
+  /** Téléphone saisi à l'inscription : préremplit téléphone et WhatsApp. */
+  phone?: string;
+  /** Produits d'exemple déjà ajoutés automatiquement (une seule fois). */
+  seeded?: boolean;
 };
 
 export function readOnboardingDraft(): OnboardingDraft | null {

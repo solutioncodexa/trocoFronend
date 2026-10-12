@@ -33,6 +33,9 @@ import {
   PenTool,
   SlidersHorizontal,
   Globe,
+  Palette,
+  FileText,
+  LayoutPanelLeft,
 } from 'lucide-react';
 import AdminNotification from './AdminNotification';
 import AdminFirstUseGuide from './AdminFirstUseGuide';
@@ -119,6 +122,7 @@ const ALL_NAV: NavSection[] = [
       { href: '/admin/paniers-abandonnes', labelKey: 'nav.abandonedCarts', icon: TimerReset, permission: PERMISSIONS.ORDERS_VIEW },
       { href: '/admin/personnalisations', labelKey: 'nav.customRequests', icon: PenTool, permission: PERMISSIONS.CUSTOM_ORDERS_VIEW },
       { href: '/admin/stock', labelKey: 'nav.stock', icon: Warehouse, permission: PERMISSIONS.STOCK_VIEW },
+      { href: '/admin/livraison', labelKey: 'nav.shipping', icon: Truck, permission: PERMISSIONS.ORDERS_VIEW },
     ],
   },
   {
@@ -131,10 +135,14 @@ const ALL_NAV: NavSection[] = [
     ],
   },
   {
-    labelKey: 'nav.store',
+    // Tout ce qui fait la vitrine, regroupé : le marchand ne cherche plus l'Apparence dans les raccourcis.
+    labelKey: 'nav.onlineStore',
     items: [
-      { href: '/admin/reglages', labelKey: 'nav.settings', icon: Settings2, adminOnly: true },
       { href: '/admin/onboarding', labelKey: 'nav.onboarding', icon: Wand2, adminOnly: true },
+      { href: '/admin/parametres', labelKey: 'nav.appearance', icon: Palette, adminOnly: true },
+      { href: '/admin/pages', labelKey: 'nav.pages', icon: FileText },
+      { href: '/admin/sections', labelKey: 'nav.navigation', icon: LayoutPanelLeft },
+      { href: '/admin/reglages', labelKey: 'nav.settings', icon: Settings2, adminOnly: true },
     ],
   },
   {
@@ -159,7 +167,6 @@ const ALL_NAV: NavSection[] = [
     labelKey: 'nav.compliance',
     items: [
       { href: '/admin/conformite', labelKey: 'nav.privacy', icon: Shield, permission: PERMISSIONS.PRIVACY_MANAGE },
-      { href: '/admin/livraison', labelKey: 'nav.shipping', icon: Truck, permission: PERMISSIONS.ORDERS_VIEW },
       { href: '/admin/marche', labelKey: 'nav.market', icon: Store, permission: PERMISSIONS.ORDERS_VIEW },
     ],
   },
@@ -249,11 +256,6 @@ const AdminLayout = ({
     })).filter((s) => s.items.length > 0);
   }, [hasPermission, isAdmin]);
 
-  if (!isAuthenticated) {
-    navigate('/admin');
-    return null;
-  }
-
   const handleLogout = () => {
     logout();
     navigate('/admin');
@@ -281,6 +283,12 @@ const AdminLayout = ({
     nav.addEventListener('scroll', onScroll, { passive: true });
     return () => nav.removeEventListener('scroll', onScroll);
   }, [location.pathname]);
+
+  // Après tous les hooks : leur nombre ne doit pas changer quand la session expire.
+  if (!isAuthenticated) {
+    navigate('/admin');
+    return null;
+  }
 
   return (
     <div className="flex h-screen min-h-0 overflow-hidden bg-[hsl(220_20%_97%)]" dir={dir} lang={locale}>

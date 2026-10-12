@@ -12,7 +12,7 @@ import { interpolate } from '@/i18n/messages';
 import { markStockAlertPending } from '@/utils/stockAlertSession';
 import { buildStorefrontUrl } from '@/utils/storefrontUrl';
 import { writeOnboardingDraft } from '@/utils/onboardingSession';
-import { STARTER_PACKS, getStarterPack } from '@/config/starterPacks';
+import { STARTER_PACKS } from '@/config/starterPacks';
 import { TRIAL_DAYS } from '@/config/site';
 import { toast } from 'sonner';
 
@@ -192,15 +192,13 @@ const CreateStore = () => {
         planCode: form.planCode || 'basic',
       });
       setStoredTenantSlug(created.slug);
-      // Le secteur choisi ici préremplit l'assistant (thème conseillé + produits d'exemple).
-      if (sector) {
-        writeOnboardingDraft({
-          step: 0,
-          sector,
-          themeKey: getStarterPack(sector).suggestedTheme,
-          siteName: created.name,
-        });
-      }
+      // Le secteur et le téléphone saisis ici préremplissent l'assistant (style conseillé, produits d'exemple, contact).
+      writeOnboardingDraft({
+        step: 0,
+        sector: sector || undefined,
+        siteName: created.name,
+        phone: form.phone.trim() || undefined,
+      });
       const auth = await login(form.adminEmail.trim(), form.adminPassword);
       if (auth.ok) {
         markStockAlertPending();
