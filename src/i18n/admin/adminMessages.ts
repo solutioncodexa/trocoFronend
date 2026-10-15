@@ -62,6 +62,7 @@ export type AdminMessageKey =
   | 'nav.navigation'
   | 'nav.topBar'
   | 'nav.onboarding'
+  | 'nav.templates'
   | 'nav.settings'
   | 'nav.promoModals'
   | 'nav.promoCodes'
@@ -289,6 +290,7 @@ const fr: Record<AdminCoreMessageKey, string> = {
   'nav.navigation': 'Navigation',
   'nav.topBar': 'Bandeau',
   'nav.onboarding': 'Assistant',
+  'nav.templates': 'Modèles',
   'nav.settings': 'Paramètres',
   'nav.promoModals': 'Pop-ups promo',
   'nav.promoCodes': 'Codes promo',
@@ -511,6 +513,7 @@ const ar: Record<AdminCoreMessageKey, string> = {
   'nav.navigation': 'التنقل',
   'nav.topBar': 'الشريط العلوي',
   'nav.onboarding': 'المساعد',
+  'nav.templates': 'القوالب',
   'nav.settings': 'الإعدادات',
   'nav.promoModals': 'نوافذ ترويجية',
   'nav.promoCodes': 'أكواد الخصم',
@@ -730,6 +733,7 @@ const en: Record<AdminCoreMessageKey, string> = {
   'nav.pages': 'Pages',
   'nav.navigation': 'Navigation',
   'nav.topBar': 'Announcement bar',
+  'nav.templates': 'Templates',
   'nav.onboarding': 'Setup assistant',
   'nav.settings': 'Settings',
   'nav.promoModals': 'Promo pop-ups',

@@ -75,6 +75,7 @@ const AdminApiKeys = lazy(() => import("./pages/admin/AdminApiKeys"));
 const AdminShipping = lazy(() => import("./pages/admin/AdminShipping"));
 const AdminMarket = lazy(() => import("./pages/admin/AdminMarket"));
 const AdminOnboarding = lazy(() => import("./pages/admin/AdminOnboarding"));
+const AdminTemplates = lazy(() => import("./pages/admin/AdminTemplates"));
 const AdminOnlineStore = lazy(() => import("./pages/admin/AdminOnlineStore"));
 const BlogList = lazy(() => import("./pages/BlogList"));
 const BlogPost = lazy(() => import("./pages/BlogPost"));
@@ -242,6 +243,7 @@ const App = () => (
                     <Route path="/admin/parametres" element={<ProtectedAdminRoute adminOnly><AdminStoreSettings /></ProtectedAdminRoute>} />
                     <Route path="/admin/reglages" element={<ProtectedAdminRoute adminOnly><AdminStoreSettings /></ProtectedAdminRoute>} />
                     <Route path="/admin/boutique-en-ligne" element={<ProtectedAdminRoute><AdminOnlineStore /></ProtectedAdminRoute>} />
+                    <Route path="/admin/modeles" element={<ProtectedAdminRoute adminOnly><AdminTemplates /></ProtectedAdminRoute>} />
                     <Route path="/admin/onboarding" element={<ProtectedAdminRoute adminOnly><AdminOnboarding /></ProtectedAdminRoute>} />
                     <Route path="/admin/pages" element={<ProtectedAdminRoute><AdminPages /></ProtectedAdminRoute>} />
                     <Route path="/admin/pages/:id" element={<ProtectedAdminRoute><AdminPageEditor /></ProtectedAdminRoute>} />

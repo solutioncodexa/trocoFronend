@@ -9,7 +9,7 @@ export type DemoCategory = {
   count: number;
 };
 
-const IMG = {
+export const IMG = {
   bag: 'https://images.unsplash.com/photo-1590874103328-eac38a683073?w=800&h=1000&fit=crop&q=80',
   box: 'https://images.unsplash.com/photo-1607083206869-4c7672e72a8a?w=800&h=1000&fit=crop&q=80',
   candle: 'https://images.unsplash.com/photo-1603006905003-be475563bc59?w=800&h=1000&fit=crop&q=80',

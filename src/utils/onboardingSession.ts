@@ -18,6 +18,14 @@ export type OnboardingDraft = {
   phone?: string;
   /** Produits d'exemple déjà ajoutés automatiquement (une seule fois). */
   seeded?: boolean;
+  /** Modèle de boutique choisi avant l'assistant (SITE_TEMPLATES). */
+  template?: string;
+  /** Pages supplémentaires cochées dans le modèle (PAGE_TEMPLATES). */
+  extraPages?: string[];
+  /** Agencement (clé de `APPEARANCE_LOOK_PRESETS`) de la variante choisie. */
+  look?: string;
+  /** Page d'accueil du modèle ('home-complete' par défaut). */
+  homeTemplate?: string;
 };
 
 export function readOnboardingDraft(): OnboardingDraft | null {

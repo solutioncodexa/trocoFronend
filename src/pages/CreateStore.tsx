@@ -209,7 +209,7 @@ const CreateStore = () => {
             ? t('created.pending', { name: created.name })
             : t('created.trial', { name: created.name, days: TRIAL_DAYS }),
         );
-        navigate('/admin/onboarding', {
+        navigate('/admin/modeles', {
           replace: true,
           state: { onboarding: true, pendingActivation },
         });

@@ -3,13 +3,11 @@ import {
   Package,
   ShoppingCart,
   Palette,
-  DollarSign,
   TrendingUp,
   AlertTriangle,
   PackageX,
   FolderOpen,
   CheckCircle2,
-  Circle,
   ExternalLink,
   Store,
   ImagePlus,
@@ -17,9 +15,9 @@ import {
   FileText,
   MessageCircle,
 } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Sparkles, Truck } from 'lucide-react';
+import { ArrowRight, Sparkles, Truck } from 'lucide-react';
 import { assistantApi } from '@/services/api/assistant';
 import AiUsageCard from '@/components/admin/AiUsageCard';
 import { shippingApi } from '@/services/api/shipping';
@@ -28,7 +26,6 @@ import AdminLayout from '@/components/admin/AdminLayout';
 import { useAdminLocale } from '@/contexts/AdminLocaleContext';
 import type { AdminMessageKey } from '@/i18n/admin/adminMessages';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ordersApi } from '@/services/api/orders';
 import { customOrdersApi } from '@/services/api/customOrders';
 import { statsApi } from '@/services/api/stats';
@@ -153,49 +150,15 @@ const AdminDashboard = () => {
   const orders = ordersPage?.content ?? [];
   const customOrders = customOrdersPage?.content ?? [];
 
-  const stats = [
-    {
-      title: t('dashboard.statProducts'),
-      value: dash?.productCount ?? 0,
-      icon: Package,
-      color: 'bg-blue-500',
-      href: '/admin/produits',
-    },
-    {
-      title: t('nav.orders'),
-      value: dash?.orderCount ?? 0,
-      subValue: t('dashboard.newOrdersCount', { count: dash?.newOrderCount ?? 0 }),
-      icon: ShoppingCart,
-      color: 'bg-green-500',
-      href: '/admin/commandes',
-    },
-    {
-      title: t('dashboard.statCustom'),
-      value: dash?.customOrderCount ?? 0,
-      subValue: t('dashboard.pendingCount', { count: dash?.pendingCustomOrderCount ?? 0 }),
-      icon: Palette,
-      color: 'bg-purple-500',
-      href: '/admin/personnalisations',
-    },
-    {
-      title: t('dashboard.statRevenue'),
-      value: formatPrice(dash?.deliveredRevenue ?? 0),
-      subValue: t('dashboard.delivered12m'),
-      icon: DollarSign,
-      color: 'bg-primary',
-      href: '/admin/revenus',
-    },
-  ];
-
   const getStatusBadge = (status: string) => {
     const styles: Record<string, string> = {
-      new: 'bg-blue-100 text-blue-800',
-      confirmed: 'bg-yellow-100 text-yellow-800',
-      delivered: 'bg-green-100 text-green-800',
-      cancelled: 'bg-red-100 text-red-800',
-      pending: 'bg-orange-100 text-orange-800',
-      contacted: 'bg-purple-100 text-purple-800',
-      completed: 'bg-green-100 text-green-800',
+      new: 'bg-blue-100 text-blue-800 dark:bg-blue-500/20 dark:text-blue-200',
+      confirmed: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-500/20 dark:text-yellow-200',
+      delivered: 'bg-green-100 text-green-800 dark:bg-green-500/20 dark:text-green-200',
+      cancelled: 'bg-red-100 text-red-800 dark:bg-red-500/20 dark:text-red-200',
+      pending: 'bg-orange-100 text-orange-800 dark:bg-orange-500/20 dark:text-orange-200',
+      contacted: 'bg-purple-100 text-purple-800 dark:bg-purple-500/20 dark:text-purple-200',
+      completed: 'bg-green-100 text-green-800 dark:bg-green-500/20 dark:text-green-200',
     };
     const labelKey = ORDER_STATUS_KEYS[status];
     return (
@@ -298,6 +261,39 @@ const AdminDashboard = () => {
     { href: '/admin/revenus', label: t('nav.revenue'), icon: TrendingUp },
   ];
 
+  // Revenus en tête : c'est le chiffre qu'un marchand vient chercher en premier.
+  const figures = [
+    { title: t('dashboard.statRevenue'), value: formatPrice(dash?.deliveredRevenue ?? 0), subValue: t('dashboard.delivered12m'), href: '/admin/revenus', lead: true },
+    { title: t('nav.orders'), value: dash?.orderCount ?? 0, subValue: t('dashboard.newOrdersCount', { count: dash?.newOrderCount ?? 0 }), href: '/admin/commandes' },
+    { title: t('dashboard.statCustom'), value: dash?.customOrderCount ?? 0, subValue: t('dashboard.pendingCount', { count: dash?.pendingCustomOrderCount ?? 0 }), href: '/admin/personnalisations' },
+    { title: t('dashboard.statProducts'), value: dash?.productCount ?? 0, href: '/admin/produits' },
+  ];
+
+  // Ce qui demande une action maintenant : n'apparaît que s'il y a quelque chose à traiter.
+  const attention = [
+    { n: dash?.newOrderCount ?? 0, label: t('dashboard.newOrdersCount', { count: dash?.newOrderCount ?? 0 }), href: '/admin/commandes', icon: ShoppingCart, tone: 'text-primary' },
+    { n: dash?.pendingCustomOrderCount ?? 0, label: t('dashboard.pendingCount', { count: dash?.pendingCustomOrderCount ?? 0 }), href: '/admin/personnalisations', icon: Palette, tone: 'text-primary' },
+    { n: dash?.lowStockCount ?? 0, label: `${t('dashboard.lowStock')} : ${dash?.lowStockCount ?? 0}`, href: '/admin/stock?filter=low', icon: AlertTriangle, tone: 'text-amber-600 dark:text-amber-400' },
+    { n: dash?.outOfStockCount ?? 0, label: `${t('dashboard.outOfStock')} : ${dash?.outOfStockCount ?? 0}`, href: '/admin/stock?filter=out', icon: PackageX, tone: 'text-destructive' },
+  ].filter((a) => a.n > 0);
+
+  // À faire d'abord, fait ensuite ; la première étape à faire devient l'action mise en avant.
+  const orderedSteps = [...setupSteps.filter((s) => !s.done), ...setupSteps.filter((s) => s.done)];
+  const nextStep = orderedSteps.find((s) => !s.done);
+
+  const FOCUS = 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2';
+
+  const StepLink = ({ step, className, children }: { step: (typeof setupSteps)[number]; className: string; children: ReactNode }) =>
+    step.external ? (
+      <a href={step.href} target="_blank" rel="noopener noreferrer" onClick={step.onClick} className={className}>
+        {children}
+      </a>
+    ) : (
+      <Link to={step.href} className={className}>
+        {children}
+      </Link>
+    );
+
   return (
     <AdminLayout
       title={t('dashboard.title')}
@@ -340,254 +336,223 @@ const AdminDashboard = () => {
         </div>
       ) : null}
       {pendingActivation ? (
-        <div className="mb-6 rounded-2xl border border-amber-500/40 bg-amber-50 p-4 sm:p-5">
-          <p className="font-display text-base font-semibold text-amber-950">
+        <div className="mb-6 rounded-2xl border border-amber-500/40 bg-amber-50 p-4 dark:bg-amber-500/10 sm:p-5">
+          <p className="font-display text-base font-semibold text-amber-950 dark:text-amber-200">
             {t('dashboard.pendingActivationTitle')}
           </p>
-          <p className="mt-1 text-sm text-amber-900/80">
+          <p className="mt-1 text-sm text-amber-900/80 dark:text-amber-200/80">
             {t('dashboard.pendingActivationBody')}
           </p>
         </div>
       ) : null}
+
       {showOnboarding ? (
-        <div className="mb-8 rounded-2xl border border-primary/20 bg-white p-5 shadow-soft sm:p-6">
-          <h2 className="font-display text-lg font-semibold">
-            {t('dashboard.setupTitle')}
-          </h2>
-          <p className="mt-1 text-sm text-muted-foreground">
-            {t('dashboard.setupRemaining', { count: pendingSteps })}
-          </p>
-          <div className="mt-3 flex items-center gap-3">
-            <div
-              className="h-2 flex-1 overflow-hidden rounded-full bg-muted"
-              role="progressbar"
-              aria-valuemin={0}
-              aria-valuemax={setupSteps.length}
-              aria-valuenow={doneSteps}
-            >
-              <div
-                className="h-full rounded-full bg-primary transition-all"
-                style={{ width: `${(doneSteps / setupSteps.length) * 100}%` }}
-              />
+        <section aria-labelledby="dash-setup" className="mb-8 overflow-hidden rounded-2xl border border-border bg-card">
+          <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-2 p-5 pb-4 sm:p-6 sm:pb-4">
+            <div>
+              <h2 id="dash-setup" className="font-display text-lg font-semibold">{t('dashboard.setupTitle')}</h2>
+              <p className="mt-0.5 text-sm text-muted-foreground">{t('dashboard.setupRemaining', { count: pendingSteps })}</p>
             </div>
-            <span className="text-xs font-medium text-muted-foreground">
-              {t('dashboard.setupProgress', { done: doneSteps, total: setupSteps.length })}
-            </span>
+            <div className="flex items-center gap-3">
+              {/* Un cran par étape : on voit combien il en reste sans lire un pourcentage. */}
+              <div
+                className="flex gap-1"
+                role="progressbar"
+                aria-valuemin={0}
+                aria-valuemax={setupSteps.length}
+                aria-valuenow={doneSteps}
+                aria-label={t('dashboard.setupProgress', { done: doneSteps, total: setupSteps.length })}
+              >
+                {setupSteps.map((s) => (
+                  <span key={s.label} className={`h-2 w-4 rounded-full ${s.done ? 'bg-primary' : 'bg-muted'}`} />
+                ))}
+              </div>
+              <span className="text-xs font-medium text-muted-foreground">
+                {t('dashboard.setupProgress', { done: doneSteps, total: setupSteps.length })}
+              </span>
+            </div>
           </div>
-          <ul className="mt-5 grid gap-3 sm:grid-cols-2">
-            {setupSteps.map((step) => (
-              <li key={step.label} className="flex items-center gap-2">
-                {step.external ? (
-                  <a
-                    href={step.href}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    onClick={step.onClick}
-                    className="flex items-center gap-3 rounded-xl border border-border bg-[hsl(220_20%_98%)] px-4 py-3 transition hover:border-primary"
+          <ul className="divide-y divide-border border-t border-border">
+            {orderedSteps.map((step) => {
+              const featured = step === nextStep;
+              return (
+                <li
+                  key={step.label}
+                  className={`flex items-center gap-2 ${featured ? 'bg-primary/5' : ''}`}
+                >
+                  <StepLink
+                    step={step}
+                    className={`group flex min-h-11 min-w-0 flex-1 items-center gap-3 px-5 sm:px-6 ${featured ? 'py-4' : 'py-2.5'} ${FOCUS}`}
                   >
-                    {step.done ? (
-                      <CheckCircle2 className="h-5 w-5 shrink-0 text-emerald-600" />
-                    ) : (
-                      <Circle className="h-5 w-5 shrink-0 text-muted-foreground" />
-                    )}
-                    <step.icon className="h-4 w-4 shrink-0 text-primary" />
-                    <span className="text-sm font-medium">{step.label}</span>
-                  </a>
-                ) : (
-                  <Link
-                    to={step.href}
-                    className="flex items-center gap-3 rounded-xl border border-border bg-[hsl(220_20%_98%)] px-4 py-3 transition hover:border-primary"
-                  >
-                    {step.done ? (
-                      <CheckCircle2 className="h-5 w-5 shrink-0 text-emerald-600" />
-                    ) : (
-                      <Circle className="h-5 w-5 shrink-0 text-muted-foreground" />
-                    )}
-                    <step.icon className="h-4 w-4 shrink-0 text-primary" />
-                    <span className="text-sm font-medium">{step.label}</span>
-                  </Link>
-                )}
-                {assistantStatus?.enabled && !step.done && step.assistant ? (
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    className="shrink-0 gap-1"
-                    onClick={() => requestAssistantFlow(step.assistant as AssistantFlowId)}
-                  >
-                    <Sparkles className="h-3.5 w-3.5" aria-hidden />
-                    {t('dashboard.setupWithAssistant')}
-                  </Button>
-                ) : null}
-              </li>
-            ))}
+                    <span
+                      className={`flex shrink-0 items-center justify-center rounded-full ${
+                        step.done
+                          ? 'h-6 w-6 bg-emerald-500/15 text-emerald-600 dark:text-emerald-400'
+                          : featured
+                            ? 'h-9 w-9 bg-primary text-primary-foreground'
+                            : 'h-6 w-6 border border-border text-muted-foreground'
+                      }`}
+                    >
+                      {step.done ? (
+                        <CheckCircle2 className="h-4 w-4" aria-hidden />
+                      ) : (
+                        <step.icon className={featured ? 'h-4 w-4' : 'h-3.5 w-3.5'} aria-hidden />
+                      )}
+                    </span>
+                    <span
+                      className={`min-w-0 flex-1 truncate ${
+                        step.done
+                          ? 'text-sm text-muted-foreground line-through decoration-muted-foreground/40'
+                          : featured
+                            ? 'text-base font-semibold'
+                            : 'text-sm font-medium'
+                      }`}
+                    >
+                      {step.label}
+                    </span>
+                    {!step.done ? (
+                      <ArrowRight
+                        className={`h-4 w-4 shrink-0 transition-transform rtl:rotate-180 motion-reduce:transition-none ${
+                          featured ? 'text-primary' : 'text-muted-foreground opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100'
+                        }`}
+                        aria-hidden
+                      />
+                    ) : null}
+                  </StepLink>
+                  {assistantStatus?.enabled && !step.done && step.assistant ? (
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      className="me-4 shrink-0 gap-1 sm:me-5"
+                      onClick={() => requestAssistantFlow(step.assistant as AssistantFlowId)}
+                    >
+                      <Sparkles className="h-3.5 w-3.5" aria-hidden />
+                      {t('dashboard.setupWithAssistant')}
+                    </Button>
+                  ) : null}
+                </li>
+              );
+            })}
           </ul>
-        </div>
+        </section>
       ) : null}
 
-      <div className="mb-8">
-        <h2 className="mb-3 font-display text-base font-semibold">{t('dashboard.quickActions')}</h2>
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-          {quickActions.map((action) => (
-            <Link
-              key={action.href}
-              to={action.href}
-              className="group rounded-2xl border border-border/80 bg-white p-4 text-center shadow-soft transition hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md"
-            >
-              <span className="mx-auto mb-2 flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary transition group-hover:bg-primary group-hover:text-primary-foreground">
-                <action.icon className="h-5 w-5" />
-              </span>
-              <p className="text-xs font-medium sm:text-sm">{action.label}</p>
-            </Link>
-          ))}
-        </div>
-      </div>
-
-      <div className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {stats.map((stat, index) => (
-          <Card key={index} className="h-full border-border/80 bg-white shadow-soft transition hover:shadow-md">
-            <div className="flex h-full flex-col justify-center gap-3 p-5">
-              <div className="flex items-center justify-between gap-4">
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm text-muted-foreground">{stat.title}</p>
-                  <p className="mt-1 font-display text-2xl font-semibold tracking-tight text-foreground">
-                    {stat.value}
-                  </p>
-                  {stat.subValue ? (
-                    <p className="mt-1 text-xs text-muted-foreground">{stat.subValue}</p>
-                  ) : null}
-                </div>
-                <div
-                  className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${stat.color}`}
-                >
-                  <stat.icon className="h-5 w-5 text-white" aria-hidden />
-                </div>
-              </div>
-              {stat.href ? (
-                <Link
-                  to={stat.href}
-                  className="inline-flex text-sm font-medium text-primary hover:underline"
-                >
-                  {t('dashboard.viewAllArrow')}
-                </Link>
-              ) : null}
-            </div>
-          </Card>
+      <div className="mb-3 grid gap-px overflow-hidden rounded-2xl border border-border bg-border sm:grid-cols-2 lg:grid-cols-[1.5fr_1fr_1fr_1fr]">
+        {figures.map((f) => (
+          <Link
+            key={f.title}
+            to={f.href}
+            className={`group bg-card p-5 transition-colors hover:bg-muted/40 ${FOCUS} focus-visible:ring-inset focus-visible:ring-offset-0`}
+          >
+            <p className="text-sm text-muted-foreground">{f.title}</p>
+            <p className={`mt-1 font-display font-semibold tracking-tight ${f.lead ? 'text-4xl' : 'text-2xl'}`}>{f.value}</p>
+            {f.subValue ? <p className="mt-1 text-xs text-muted-foreground">{f.subValue}</p> : null}
+          </Link>
         ))}
       </div>
 
+      {attention.length > 0 ? (
+        <ul className="mb-3 flex flex-wrap gap-2">
+          {attention.map((a) => (
+            <li key={a.href}>
+              <Link
+                to={a.href}
+                className={`inline-flex min-h-11 items-center gap-2 rounded-full border border-border bg-card px-3.5 text-sm font-medium transition-colors hover:border-primary/50 sm:min-h-9 ${FOCUS}`}
+              >
+                <a.icon className={`h-4 w-4 ${a.tone}`} aria-hidden />
+                {a.label}
+              </Link>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+
+      <nav aria-label={t('dashboard.quickActions')} className="mb-8 flex flex-wrap gap-x-5 gap-y-1 text-sm">
+        {quickActions.map((action) => (
+          <Link
+            key={action.href}
+            to={action.href}
+            className={`inline-flex min-h-11 items-center gap-1.5 rounded-md text-muted-foreground transition-colors hover:text-foreground sm:min-h-9 ${FOCUS}`}
+          >
+            <action.icon className="h-4 w-4" aria-hidden />
+            {action.label}
+          </Link>
+        ))}
+      </nav>
+
       {assistantStatus?.enabled ? <AiUsageCard /> : null}
 
-      <div className="mb-8 grid gap-4 sm:grid-cols-2">
-        <Link to="/admin/stock?filter=low" className="block h-full">
-          <Card className="h-full transition-shadow hover:shadow-lg">
-            <div className="flex h-full items-center gap-4 p-5">
-              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-amber-500">
-                <AlertTriangle className="h-5 w-5 text-white" aria-hidden />
-              </div>
-              <div className="min-w-0">
-                <p className="text-sm text-muted-foreground">{t('dashboard.lowStock')}</p>
-                <p className="font-display text-xl font-semibold tracking-tight">
-                  {dash?.lowStockCount ?? 0}
-                </p>
-              </div>
-            </div>
-          </Card>
-        </Link>
-        <Link to="/admin/stock?filter=out" className="block h-full">
-          <Card className="h-full transition-shadow hover:shadow-lg">
-            <div className="flex h-full items-center gap-4 p-5">
-              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-red-500">
-                <PackageX className="h-5 w-5 text-white" aria-hidden />
-              </div>
-              <div className="min-w-0">
-                <p className="text-sm text-muted-foreground">{t('dashboard.outOfStock')}</p>
-                <p className="font-display text-xl font-semibold tracking-tight">
-                  {dash?.outOfStockCount ?? 0}
-                </p>
-              </div>
-            </div>
-          </Card>
-        </Link>
-      </div>
-
-      <div className="grid lg:grid-cols-2 gap-6">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="font-display text-lg">{t('dashboard.recentOrders')}</CardTitle>
-            <Link to="/admin/commandes" className="font-body text-sm text-primary hover:underline">
+      <div className="grid gap-6 lg:grid-cols-2">
+        <section aria-labelledby="dash-orders" className="rounded-2xl border border-border bg-card">
+          <div className="flex items-center justify-between gap-3 px-5 pt-4 sm:px-6">
+            <h2 id="dash-orders" className="font-display text-lg font-semibold">{t('dashboard.recentOrders')}</h2>
+            <Link to="/admin/commandes" className={`rounded-md py-2 text-sm text-primary hover:underline ${FOCUS}`}>
               {t('dashboard.viewAll')}
             </Link>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
+          </div>
+          {orders.length > 0 ? (
+            <ul className="mt-2 divide-y divide-border">
               {orders.map((order) => (
-                <div
-                  key={order.id}
-                  className="flex items-center justify-between p-3 bg-muted/50 rounded-lg"
-                >
-                  <div>
-                    <p className="font-body font-medium">{order.id}</p>
-                    <p className="font-body text-sm text-muted-foreground">
-                      {order.customer?.fullName}
-                    </p>
-                  </div>
-                  <div className="text-right">
-                    <p className="font-body font-medium">{formatPrice(order.total ?? 0)}</p>
-                    {getStatusBadge(order.status)}
-                  </div>
-                </div>
+                <li key={order.id}>
+                  <Link
+                    to="/admin/commandes"
+                    className={`flex items-center justify-between gap-3 px-5 py-3 transition-colors hover:bg-muted/40 sm:px-6 ${FOCUS}`}
+                  >
+                    <span className="min-w-0">
+                      <span className="block font-medium">{order.id}</span>
+                      <span className="block truncate text-sm text-muted-foreground">{order.customer?.fullName}</span>
+                    </span>
+                    <span className="flex shrink-0 flex-col items-end gap-1">
+                      <span className="font-medium">{formatPrice(order.total ?? 0)}</span>
+                      {getStatusBadge(order.status)}
+                    </span>
+                  </Link>
+                </li>
               ))}
-              {orders.length === 0 && (
-                <EmptyState icon={ShoppingCart} title={t('dashboard.noOrders')} className="py-6" />
-              )}
-            </div>
-          </CardContent>
-        </Card>
+            </ul>
+          ) : (
+            <EmptyState icon={ShoppingCart} title={t('dashboard.noOrders')} className="py-8" />
+          )}
+        </section>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="font-display text-lg">{t('dashboard.pendingCustomizations')}</CardTitle>
-            <Link to="/admin/personnalisations" className="font-body text-sm text-primary hover:underline">
+        <section aria-labelledby="dash-custom" className="rounded-2xl border border-border bg-card">
+          <div className="flex items-center justify-between gap-3 px-5 pt-4 sm:px-6">
+            <h2 id="dash-custom" className="font-display text-lg font-semibold">{t('dashboard.pendingCustomizations')}</h2>
+            <Link to="/admin/personnalisations" className={`rounded-md py-2 text-sm text-primary hover:underline ${FOCUS}`}>
               {t('dashboard.viewAll')}
             </Link>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {customOrders.length > 0 ? (
-                customOrders.map((request) => (
-                  <div
-                    key={request.id}
-                    className="flex items-center gap-4 p-3 bg-muted/50 rounded-lg"
+          </div>
+          {customOrders.length > 0 ? (
+            <ul className="mt-2 divide-y divide-border">
+              {customOrders.map((request) => (
+                <li key={request.id}>
+                  <Link
+                    to="/admin/personnalisations"
+                    className={`flex items-center gap-4 px-5 py-3 transition-colors hover:bg-muted/40 sm:px-6 ${FOCUS}`}
                   >
                     {request.imageUrl ? (
-                      <img
-                        src={getImageUrl(request.imageUrl)}
-                        alt={t('dashboard.modelAlt')}
-                        className="w-12 h-12 rounded-lg object-cover"
-                      />
+                      <img src={getImageUrl(request.imageUrl)} alt={t('dashboard.modelAlt')} className="h-12 w-12 shrink-0 rounded-lg object-cover" />
                     ) : (
-                      <div className="w-12 h-12 rounded-lg bg-muted flex items-center justify-center">
-                        <Palette className="w-6 h-6 text-muted-foreground" />
-                      </div>
+                      <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-muted">
+                        <Palette className="h-6 w-6 text-muted-foreground" aria-hidden />
+                      </span>
                     )}
-                    <div className="flex-1 min-w-0">
-                      <p className="font-body font-medium truncate">
-                        {request.customer?.fullName}
-                      </p>
-                      <p className="font-body text-sm text-muted-foreground capitalize">
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate font-medium">{request.customer?.fullName}</span>
+                      <span className="block truncate text-sm capitalize text-muted-foreground">
                         {request.type} - {request.style}
-                      </p>
-                    </div>
+                      </span>
+                    </span>
                     {getStatusBadge(request.status)}
-                  </div>
-                ))
-              ) : (
-                <EmptyState icon={Palette} title={t('dashboard.noCustomRequests')} className="py-6" />
-              )}
-            </div>
-          </CardContent>
-        </Card>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <EmptyState icon={Palette} title={t('dashboard.noCustomRequests')} className="py-8" />
+          )}
+        </section>
       </div>
     </AdminLayout>
   );

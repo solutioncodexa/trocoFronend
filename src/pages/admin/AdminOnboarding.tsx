@@ -28,6 +28,9 @@ import {
 import AdminLayout from '@/components/admin/AdminLayout';
 import ImageUpload from '@/components/admin/ImageUpload';
 import { QRCodeCanvas } from 'qrcode.react';
+import { OnboardingStepper } from '@/components/admin/onboarding/OnboardingStepper';
+import { PageWireframe } from '@/components/admin/onboarding/PageWireframe';
+import { StyleSpecimen } from '@/components/admin/onboarding/StyleSpecimen';
 import { QuickProductDialog, type QuickProductReplace } from '@/components/admin/QuickProductDialog';
 import { StoreAppearanceLivePreview } from '@/components/admin/StoreAppearanceLivePreview';
 import { useAdminLocale } from '@/contexts/AdminLocaleContext';
@@ -47,6 +50,8 @@ import { proposeCopy } from '@/config/copyProposal';
 import type { DemoCategory } from '@/demo/mockCatalog';
 import { mapProductListItemListToProducts } from '@/utils/productMapper';
 import { PAGE_TEMPLATES } from '@/config/pageTemplates';
+import { TEMPLATES_COPY } from '@/config/siteTemplates';
+import { APPEARANCE_LOOK_PRESETS } from '@/config/appearancePresets';
 import { STORE_THEMES, normalizeThemeKey, type StoreThemeKey } from '@/config/storeThemes';
 import { FONT_PAIRS, RADIUS_PRESETS } from '@/config/storefrontTheme';
 import { normalizeAppearance, type StoreAppearance } from '@/config/storeAppearance';
@@ -132,7 +137,7 @@ const AdminOnboarding = () => {
 
   const [step, setStep] = useState(initialStep);
   const [published, setPublished] = useState(false);
-  const [extraPages, setExtraPages] = useState<string[]>([]);
+  const [extraPages, setExtraPages] = useState<string[]>(draft?.extraPages ?? []);
   const [themeKey, setThemeKey] = useState<StoreThemeKey>(normalizeThemeKey(draft?.themeKey) || 'classic');
   const [fontPair, setFontPair] = useState(draft?.fontPair || 'display_sans');
   const [radiusPreset, setRadiusPreset] = useState(draft?.radiusPreset || 'soft');
@@ -145,6 +150,8 @@ const AdminOnboarding = () => {
   const [styleKey, setStyleKey] = useState(draft?.style || '');
   // Agencement (grille, cartes, en-tête…) apporté par le style choisi ; null = on garde l'existant.
   const [appearanceOverride, setAppearanceOverride] = useState<Partial<StoreAppearance> | null>(() => {
+    const look = APPEARANCE_LOOK_PRESETS.find((l) => l.key === draft?.look);
+    if (look) return look.appearance;
     const preset = getStylePreset(draft?.style);
     return preset ? styleAppearanceOverride(preset) : null;
   });
@@ -273,9 +280,13 @@ const AdminOnboarding = () => {
       style: styleTouched.current ? styleKey : undefined,
       phone: draft?.phone,
       seeded,
+      template: draft?.template,
+      look: draft?.look,
+      extraPages,
+      homeTemplate: draft?.homeTemplate,
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [step, themeKey, fontPair, radiusPreset, siteName, tagline, primaryColor, secondaryColor, publishHome, sector, styleKey, seeded]);
+  }, [step, themeKey, fontPair, radiusPreset, siteName, tagline, primaryColor, secondaryColor, publishHome, sector, styleKey, seeded, extraPages]);
 
   const pack = getStarterPack(sector || DEFAULT_STARTER_PACK_KEY);
   const sectorLabel = (key: string) =>
@@ -351,7 +362,7 @@ const AdminOnboarding = () => {
 
   const createHome = useMutation({
     mutationFn: async () => {
-      const tpl = PAGE_TEMPLATES.find((p) => p.key === 'home-complete');
+      const tpl = PAGE_TEMPLATES.find((p) => p.key === (draft?.homeTemplate ?? 'home-complete'));
       if (!tpl) throw new Error(t('ob.err.template'));
       const existing = await storePagesApi.list();
       const home =
@@ -554,7 +565,7 @@ const AdminOnboarding = () => {
   const preview = (
     <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-soft">
       <div className="flex items-center justify-between gap-2 border-b border-border bg-muted/40 px-4 py-1.5">
-        <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{t('ob.preview')}</p>
+        <p className="text-sm font-semibold">{t('ob.preview')}</p>
         <div className="flex gap-1" role="group" aria-label={t('ob.preview')}>
           {(
             [
@@ -613,9 +624,13 @@ const AdminOnboarding = () => {
         description={t('onboarding.description')}
         breadcrumbs={[{ label: t('ob.crumb') }]}
       >
-        <div className="mx-auto max-w-2xl space-y-6 py-4 text-center">
-          <Rocket className="mx-auto h-14 w-14 text-primary" aria-hidden />
-          <h2 ref={headingRef} tabIndex={-1} className="font-display text-2xl font-semibold outline-none">{t('ob.done.title')}</h2>
+        <div className="mx-auto max-w-2xl space-y-6 py-4">
+          <div className="flex items-center gap-4">
+            <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-primary text-primary-foreground">
+              <Rocket className="h-7 w-7 rtl:-scale-x-100" aria-hidden />
+            </span>
+            <h2 ref={headingRef} tabIndex={-1} className="font-display text-2xl font-semibold outline-none">{t('ob.done.title')}</h2>
+          </div>
           <p className="text-sm text-muted-foreground">
             {pendingActivation
               ? t('ob.done.pending')
@@ -638,7 +653,7 @@ const AdminOnboarding = () => {
               <Copy className="h-3.5 w-3.5" /> {t('ob.copy')}
             </Button>
           </div>
-          <div className="flex flex-col items-center gap-4 rounded-2xl border border-border bg-card p-5 sm:flex-row sm:text-start">
+          <div className="flex flex-col gap-4 rounded-2xl border border-border bg-card p-5 sm:flex-row sm:items-center">
             <QRCodeCanvas ref={qrRef} role="img" aria-label={t('ob.qr.title')} value={storefrontUrl} size={132} marginSize={2} className="shrink-0 rounded-lg" />
             <div className="space-y-2">
               <p className="font-display text-sm font-semibold">{t('ob.qr.title')}</p>
@@ -661,7 +676,7 @@ const AdminOnboarding = () => {
               </Button>
             </div>
           </div>
-          <div className="flex flex-wrap justify-center gap-3">
+          <div className="flex flex-wrap gap-3">
             <Button asChild className="gap-2">
               <a href={storefrontUrl} target="_blank" rel="noopener noreferrer">
                 <ExternalLink className="h-4 w-4" /> {t('ob.viewStore')}
@@ -721,33 +736,14 @@ const AdminOnboarding = () => {
       wide
     >
       <div className="mx-auto max-w-6xl space-y-6">
-        <nav aria-label={t('ob.stepsNav')} className="flex flex-wrap gap-2">
-          {STEPS.map((label, i) => (
-            <button
-              key={label}
-              type="button"
-              onClick={() => void go(i)}
-              aria-current={i === step ? 'step' : undefined}
-              className={`inline-flex min-h-11 items-center rounded-full px-3.5 text-xs font-semibold transition sm:min-h-9 ${FOCUS_RING} ${
-                i === step
-                  ? 'bg-primary text-primary-foreground'
-                  : i < step
-                    ? 'bg-primary/15 text-primary hover:bg-primary/25'
-                    : 'bg-muted text-muted-foreground hover:bg-muted/70'
-              }`}
-            >
-              {i + 1}. {t(label)}
-            </button>
-          ))}
-        </nav>
-        <div className="space-y-1.5">
-          <div className="h-1.5 overflow-hidden rounded-full bg-muted" aria-hidden>
-            <div className="h-full rounded-full bg-primary transition-all motion-reduce:transition-none" style={{ width: `${((step + 1) / STEPS.length) * 100}%` }} />
-          </div>
-          <p className="text-xs text-muted-foreground">
-            {t('ob.stepCounter', { n: step + 1, total: STEPS.length, min: STEPS.length - step })}
-          </p>
-        </div>
+        {/* Étape 1 = choix du modèle (page dédiée) ; les étapes de l'assistant suivent. */}
+        <OnboardingStepper
+          labels={[TEMPLATES_COPY[locale].step, ...STEPS.map((label) => t(label))]}
+          current={step + 1}
+          ariaLabel={t('ob.stepsNav')}
+          counter={t('ob.stepCounter', { n: step + 2, total: STEPS.length + 1, min: STEPS.length - step })}
+          onSelect={(i) => (i === 0 ? navigate('/admin/modeles') : void go(i - 1))}
+        />
 
         {pendingActivation ? (
           <div className="rounded-2xl border border-amber-500/40 bg-amber-50 p-4 text-sm text-amber-950">
@@ -831,7 +827,6 @@ const AdminOnboarding = () => {
                     <Label className="mb-2 block">{showAllStyles ? t('ob.styles.all') : t('ob.styles.recommended')}</Label>
                     <div role="radiogroup" aria-label={t('ob.styles.recommended')} onKeyDown={onRadioKeyDown} className="grid grid-cols-2 gap-2 sm:grid-cols-3">
                       {visibleStyles.map((preset) => {
-                        const fonts = FONT_PAIRS.find((f) => f.key === preset.fontPair);
                         return (
                           <button
                             key={preset.key}
@@ -844,14 +839,8 @@ const AdminOnboarding = () => {
                               styleKey === preset.key ? 'border-primary ring-2 ring-primary/25' : 'border-border hover:border-primary/40'
                             }`}
                           >
-                            <div
-                              className="mb-2 flex h-10 items-center justify-between rounded-md px-2"
-                              style={{ background: `linear-gradient(135deg, ${preset.primaryColor}, ${preset.secondaryColor})` }}
-                            >
-                              <span className="text-lg font-semibold text-white" style={{ fontFamily: fonts?.display }}>
-                                Aa
-                              </span>
-                              <span className="h-4 w-10 bg-white/90" style={{ borderRadius: preset.radiusPreset === 'sharp' ? 0 : preset.radiusPreset === 'subtle' ? 4 : 999 }} />
+                            <div className="mb-2">
+                              <StyleSpecimen preset={preset} label={styleLabel(preset.key)} />
                             </div>
                             <div className="flex flex-wrap items-center gap-1">
                               {styleKey === preset.key ? <Check className="h-4 w-4 text-primary" aria-hidden /> : null}
@@ -1097,7 +1086,7 @@ const AdminOnboarding = () => {
                         : t('ob.catalog.count', { count: productCount })}
                     </p>
                   ) : null}
-                  <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="grid gap-3 sm:grid-cols-3">
                     {(
                       [
                         { key: 'demo', icon: Sparkles, onClick: () => addDemo.mutate(), pending: addDemo.isPending },
@@ -1123,8 +1112,13 @@ const AdminOnboarding = () => {
                           </span>
                         </>
                       );
-                      const cls =
-                        'flex items-start gap-3 rounded-xl border border-border p-3 text-start transition hover:border-primary/40 hover:bg-muted/30 disabled:opacity-60';
+                      // Les produits d'exemple sont le chemin le plus rapide : carte pleine largeur, mise en avant.
+                      const featured = source.key === 'demo';
+                      const cls = `flex items-start gap-3 rounded-xl border p-3 text-start transition disabled:opacity-60 ${FOCUS_RING} ${
+                        featured
+                          ? 'border-primary/50 bg-primary/5 p-4 hover:bg-primary/10 sm:col-span-3'
+                          : 'border-border hover:border-primary/40 hover:bg-muted/30'
+                      }`;
                       return 'href' in source ? (
                         <Link key={source.key} to={source.href} className={cls}>
                           {body}
@@ -1213,22 +1207,41 @@ const AdminOnboarding = () => {
                     <span className="mt-2 block text-xs text-muted-foreground">
                       {t('ob.publish.extraHint')}
                     </span>
-                    {PAGE_TEMPLATES.filter((p) => !p.meta.isHome).map((tpl) => (
-                      <label key={tpl.key} className="flex items-start gap-3 py-1.5">
-                        <input
-                          type="checkbox"
-                          className="mt-0.5 h-5 w-5 shrink-0 accent-primary"
-                          checked={extraPages.includes(tpl.key)}
-                          onChange={(e) =>
-                            setExtraPages((prev) => (e.target.checked ? [...prev, tpl.key] : prev.filter((k) => k !== tpl.key)))
-                          }
-                        />
-                        <span>
-                          {t(`ob.tpl.${tpl.key}` as AdminMessageKey)}
-                          <span className="block text-xs text-muted-foreground">{t(`ob.tpl.${tpl.key}.desc` as AdminMessageKey)}</span>
-                        </span>
-                      </label>
-                    ))}
+                    <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                      {PAGE_TEMPLATES.filter((p) => !p.meta.isHome).map((tpl) => {
+                        const checked = extraPages.includes(tpl.key);
+                        return (
+                          <label
+                            key={tpl.key}
+                            className={`relative flex cursor-pointer items-start gap-3 rounded-xl border p-3 transition has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring has-[:focus-visible]:ring-offset-2 ${
+                              checked ? 'border-primary bg-primary/5 ring-2 ring-primary/25' : 'border-border hover:border-primary/40'
+                            }`}
+                          >
+                            <input
+                              type="checkbox"
+                              className="peer sr-only"
+                              checked={checked}
+                              onChange={(e) =>
+                                setExtraPages((prev) => (e.target.checked ? [...prev, tpl.key] : prev.filter((k) => k !== tpl.key)))
+                              }
+                            />
+                            <PageWireframe blocks={tpl.blocks} />
+                            <span className="min-w-0 flex-1">
+                              <span className="block text-sm font-semibold">{t(`ob.tpl.${tpl.key}` as AdminMessageKey)}</span>
+                              <span className="mt-0.5 block text-xs text-muted-foreground">{t(`ob.tpl.${tpl.key}.desc` as AdminMessageKey)}</span>
+                            </span>
+                            <span
+                              aria-hidden
+                              className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 ${
+                                checked ? 'border-primary bg-primary text-primary-foreground' : 'border-border'
+                              }`}
+                            >
+                              {checked ? <Check className="h-3 w-3" /> : null}
+                            </span>
+                          </label>
+                        );
+                      })}
+                    </div>
                   </details>
                   {!settings?.logoUrl && !logoUrl ? (
                     <p className="text-xs text-amber-800 dark:text-amber-300">{t('ob.tip.logo')}</p>

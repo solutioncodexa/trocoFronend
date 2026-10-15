@@ -25,6 +25,21 @@ import {
   orderConfirmationUrl,
 } from '@/utils/orderWhatsapp';
 
+/** Ordre du parcours d'une commande à la livraison : un appel, une confirmation, puis la livraison ou le retour. */
+const ORDER_STATUSES = ['new', 'calling', 'unreachable', 'confirmed', 'delivered', 'returned', 'cancelled'] as const;
+
+const STATUS_DOT: Record<string, string> = {
+  new: 'bg-blue-500',
+  calling: 'bg-indigo-500',
+  unreachable: 'bg-orange-500',
+  confirmed: 'bg-yellow-500',
+  delivered: 'bg-green-500',
+  returned: 'bg-rose-500',
+  cancelled: 'bg-red-500',
+};
+
+const FOCUS_RING = 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2';
+
 const AdminOrders = () => {
   const { t } = useAdminLocale();
   const brand = useStoreBrand();
@@ -83,13 +98,13 @@ const AdminOrders = () => {
 
   const getStatusStyle = (status: string) => {
     const styles: Record<string, string> = {
-      new: 'bg-blue-100 text-blue-800 border-blue-200',
-      calling: 'bg-indigo-100 text-indigo-800 border-indigo-200',
-      unreachable: 'bg-orange-100 text-orange-800 border-orange-200',
-      confirmed: 'bg-yellow-100 text-yellow-800 border-yellow-200',
-      delivered: 'bg-green-100 text-green-800 border-green-200',
-      returned: 'bg-rose-100 text-rose-800 border-rose-200',
-      cancelled: 'bg-red-100 text-red-800 border-red-200',
+      new: 'bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-500/20 dark:text-blue-200 dark:border-blue-500/30',
+      calling: 'bg-indigo-100 text-indigo-800 border-indigo-200 dark:bg-indigo-500/20 dark:text-indigo-200 dark:border-indigo-500/30',
+      unreachable: 'bg-orange-100 text-orange-800 border-orange-200 dark:bg-orange-500/20 dark:text-orange-200 dark:border-orange-500/30',
+      confirmed: 'bg-yellow-100 text-yellow-800 border-yellow-200 dark:bg-yellow-500/20 dark:text-yellow-200 dark:border-yellow-500/30',
+      delivered: 'bg-green-100 text-green-800 border-green-200 dark:bg-green-500/20 dark:text-green-200 dark:border-green-500/30',
+      returned: 'bg-rose-100 text-rose-800 border-rose-200 dark:bg-rose-500/20 dark:text-rose-200 dark:border-rose-500/30',
+      cancelled: 'bg-red-100 text-red-800 border-red-200 dark:bg-red-500/20 dark:text-red-200 dark:border-red-500/30',
     };
     return styles[status] ?? '';
   };
@@ -203,31 +218,35 @@ const AdminOrders = () => {
         </Button>
       </p>
 
-      <div className="flex flex-col sm:flex-row gap-4 mb-6">
-        <div className="flex-1 relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+      <div className="mb-4">
+        <div className="relative">
+          <Search className="pointer-events-none absolute start-3 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" aria-hidden />
           <Input
             placeholder={t('orders.searchPlaceholder')}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10"
+            className="ps-10"
           />
         </div>
-        <Select value={filterStatus} onValueChange={handleFilterStatusChange}>
-          <SelectTrigger className="w-full sm:w-48">
-            <SelectValue placeholder={t('common.status')} />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">{t('orders.allStatuses')}</SelectItem>
-            <SelectItem value="new">{t('status.new')}</SelectItem>
-            <SelectItem value="calling">{t('status.calling')}</SelectItem>
-            <SelectItem value="unreachable">{t('status.unreachable')}</SelectItem>
-            <SelectItem value="confirmed">{t('status.confirmed')}</SelectItem>
-            <SelectItem value="delivered">{t('status.delivered')}</SelectItem>
-            <SelectItem value="returned">{t('status.returned')}</SelectItem>
-            <SelectItem value="cancelled">{t('status.cancelled')}</SelectItem>
-          </SelectContent>
-        </Select>
+        <div role="group" aria-label={t('common.status')} className="-mx-1 mt-3 flex gap-1.5 overflow-x-auto px-1 pb-1">
+          {(['all', ...ORDER_STATUSES] as const).map((key) => {
+            const active = filterStatus === key;
+            return (
+              <button
+                key={key}
+                type="button"
+                aria-pressed={active}
+                onClick={() => handleFilterStatusChange(key)}
+                className={`inline-flex min-h-11 shrink-0 items-center gap-1.5 rounded-full border px-3.5 text-sm font-medium transition-colors sm:min-h-9 ${FOCUS_RING} ${
+                  active ? 'border-foreground bg-foreground text-background' : 'border-border bg-card text-muted-foreground hover:border-foreground/40 hover:text-foreground'
+                }`}
+              >
+                {key !== 'all' ? <span className={`h-2 w-2 rounded-full ${STATUS_DOT[key]}`} aria-hidden /> : null}
+                {key === 'all' ? t('orders.allStatuses') : getStatusLabel(key)}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       {/* Mobile: card layout */}
@@ -284,13 +303,9 @@ const AdminOrders = () => {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="new">{t('status.new')}</SelectItem>
-                  <SelectItem value="calling">{t('status.calling')}</SelectItem>
-                  <SelectItem value="unreachable">{t('status.unreachable')}</SelectItem>
-                  <SelectItem value="confirmed">{t('status.confirmed')}</SelectItem>
-                  <SelectItem value="delivered">{t('status.delivered')}</SelectItem>
-                  <SelectItem value="returned">{t('status.returned')}</SelectItem>
-                  <SelectItem value="cancelled">{t('status.cancelled')}</SelectItem>
+                  {ORDER_STATUSES.map((key) => (
+                    <SelectItem key={key} value={key}>{getStatusLabel(key)}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
               {order.customer?.phone ? (
@@ -301,7 +316,7 @@ const AdminOrders = () => {
                 </Button>
               ) : null}
               <Button variant="outline" size="sm" className="h-8 text-xs" onClick={() => handleViewOrder(order)}>
-                <Eye className="w-4 h-4 mr-1" />
+                <Eye className="me-1 h-4 w-4" />
                 {t('common.details')}
               </Button>
             </div>
@@ -321,15 +336,15 @@ const AdminOrders = () => {
           <table className="w-full">
             <thead className="bg-muted/50">
               <tr>
-                <th className="px-4 py-3 text-left font-body text-sm font-medium text-muted-foreground">ID</th>
-                <th className="px-4 py-3 text-left font-body text-sm font-medium text-muted-foreground">{t('common.customer')}</th>
-                <th className="px-4 py-3 text-left font-body text-sm font-medium text-muted-foreground">{t('common.city')}</th>
-                <th className="px-4 py-3 text-left font-body text-sm font-medium text-muted-foreground">{t('common.product')}</th>
-                <th className="px-4 py-3 text-left font-body text-sm font-medium text-muted-foreground">{t('common.total')}</th>
-                <th className="px-4 py-3 text-left font-body text-sm font-medium text-muted-foreground">{t('common.payment')}</th>
-                <th className="px-4 py-3 text-left font-body text-sm font-medium text-muted-foreground">{t('common.date')}</th>
-                <th className="px-4 py-3 text-left font-body text-sm font-medium text-muted-foreground">{t('common.status')}</th>
-                <th className="px-4 py-3 text-right font-body text-sm font-medium text-muted-foreground">{t('common.actions')}</th>
+                <th className="px-4 py-3 text-start font-body text-sm font-medium text-muted-foreground">ID</th>
+                <th className="px-4 py-3 text-start font-body text-sm font-medium text-muted-foreground">{t('common.customer')}</th>
+                <th className="px-4 py-3 text-start font-body text-sm font-medium text-muted-foreground">{t('common.city')}</th>
+                <th className="px-4 py-3 text-start font-body text-sm font-medium text-muted-foreground">{t('common.product')}</th>
+                <th className="px-4 py-3 text-start font-body text-sm font-medium text-muted-foreground">{t('common.total')}</th>
+                <th className="px-4 py-3 text-start font-body text-sm font-medium text-muted-foreground">{t('common.payment')}</th>
+                <th className="px-4 py-3 text-start font-body text-sm font-medium text-muted-foreground">{t('common.date')}</th>
+                <th className="px-4 py-3 text-start font-body text-sm font-medium text-muted-foreground">{t('common.status')}</th>
+                <th className="px-4 py-3 text-end font-body text-sm font-medium text-muted-foreground">{t('common.actions')}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
@@ -338,7 +353,11 @@ const AdminOrders = () => {
                   <td className="px-4 py-3 font-body font-medium">{order.id}</td>
                   <td className="px-4 py-3">
                     <p className="font-body">{order.customer?.fullName}</p>
-                    <p className="font-body text-xs text-muted-foreground">{order.customer?.phone}</p>
+                    {order.customer?.phone ? (
+                      <a href={`tel:${order.customer.phone}`} dir="ltr" className={`inline-block rounded text-xs text-muted-foreground hover:text-primary hover:underline ${FOCUS_RING}`}>
+                        {order.customer.phone}
+                      </a>
+                    ) : null}
                   </td>
                   <td className="px-4 py-3 font-body text-muted-foreground">{order.customer?.city ?? '—'}</td>
                   <td className="px-4 py-3">
@@ -372,7 +391,7 @@ const AdminOrders = () => {
                   <td className="px-4 py-3">
                     <p className="font-body text-sm">{getPaymentLabel(order.paymentMethod)}</p>
                     {order.paymentStatus ? (
-                      <p className="font-body text-[10px] text-muted-foreground uppercase tracking-wide">
+                      <p className="font-body text-xs text-muted-foreground">
                         {order.paymentStatus}
                       </p>
                     ) : null}
@@ -389,19 +408,15 @@ const AdminOrders = () => {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="new">{t('status.new')}</SelectItem>
-                        <SelectItem value="calling">{t('status.calling')}</SelectItem>
-                        <SelectItem value="unreachable">{t('status.unreachable')}</SelectItem>
-                        <SelectItem value="confirmed">{t('status.confirmed')}</SelectItem>
-                        <SelectItem value="delivered">{t('status.delivered')}</SelectItem>
-                        <SelectItem value="returned">{t('status.returned')}</SelectItem>
-                        <SelectItem value="cancelled">{t('status.cancelled')}</SelectItem>
+                        {ORDER_STATUSES.map((key) => (
+                          <SelectItem key={key} value={key}>{getStatusLabel(key)}</SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </td>
-                  <td className="px-4 py-3 text-right">
+                  <td className="px-4 py-3 text-end">
                     <Button variant="outline" size="sm" onClick={() => handleViewOrder(order)}>
-                      <Eye className="w-4 h-4 mr-2" />
+                      <Eye className="me-2 h-4 w-4" />
                       {t('common.details')}
                     </Button>
                   </td>
@@ -534,7 +549,7 @@ const AdminOrders = () => {
                         </p>
                         {item.rentalStart && item.rentalEnd ? (
                           <p className="mt-1 inline-flex flex-wrap items-center gap-1.5 text-xs">
-                            <span className="rounded-full bg-amber-500/15 px-2 py-0.5 font-medium text-amber-800">
+                            <span className="rounded-full bg-amber-500/15 px-2 py-0.5 font-medium text-amber-800 dark:text-amber-200">
                               Location {formatRentalPeriod(item.rentalStart, item.rentalEnd)}
                               {item.rentalUnits ? ` · ${item.rentalUnits} ${item.rentalUnits > 1 ? 'unités' : 'unité'}` : ''}
                             </span>
@@ -589,13 +604,9 @@ const AdminOrders = () => {
                     <SelectValue placeholder={t('orders.changeStatus')} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="new">{t('status.new')}</SelectItem>
-                    <SelectItem value="calling">{t('status.calling')}</SelectItem>
-                    <SelectItem value="unreachable">{t('status.unreachable')}</SelectItem>
-                    <SelectItem value="confirmed">{t('status.confirmed')}</SelectItem>
-                    <SelectItem value="delivered">{t('status.delivered')}</SelectItem>
-                    <SelectItem value="returned">{t('status.returned')}</SelectItem>
-                    <SelectItem value="cancelled">{t('status.cancelled')}</SelectItem>
+                    {ORDER_STATUSES.map((key) => (
+                      <SelectItem key={key} value={key}>{getStatusLabel(key)}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
                 <Button variant="outline" onClick={() => setIsDetailOpen(false)}>

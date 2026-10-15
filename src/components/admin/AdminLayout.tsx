@@ -9,6 +9,7 @@ import {
   Ticket,
   FolderOpen,
   ChevronRight,
+  ChevronDown,
   LogOut,
   ExternalLink,
   Menu,
@@ -36,6 +37,7 @@ import {
   Palette,
   FileText,
   LayoutPanelLeft,
+  LayoutTemplate,
 } from 'lucide-react';
 import AdminNotification from './AdminNotification';
 import AdminFirstUseGuide from './AdminFirstUseGuide';
@@ -104,6 +106,19 @@ type NavItem = {
 
 type NavSection = { labelKey: AdminMessageKey; items: NavItem[] };
 
+/** Sections ouvertes d'emblée : ce qu'on utilise chaque jour. Le reste se déplie au besoin (ou s'ouvre si la page courante y est). */
+const DEFAULT_OPEN_SECTIONS = new Set<AdminMessageKey>(['nav.sales', 'nav.catalog', 'nav.onlineStore']);
+const NAV_OPEN_STORAGE_KEY = 'troco.adminNav.open';
+const NAV_FOCUS = 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 focus-visible:ring-offset-0';
+
+function readNavOpen(): Record<string, boolean> {
+  try {
+    return JSON.parse(localStorage.getItem(NAV_OPEN_STORAGE_KEY) || '{}') as Record<string, boolean>;
+  } catch {
+    return {};
+  }
+}
+
 /** Le menu est remonté à chaque page : on garde le défilement pour ne pas revenir sur Tableau de bord. */
 let navScrollTop = 0;
 
@@ -138,6 +153,7 @@ const ALL_NAV: NavSection[] = [
     // Tout ce qui fait la vitrine, regroupé : le marchand ne cherche plus l'Apparence dans les raccourcis.
     labelKey: 'nav.onlineStore',
     items: [
+      { href: '/admin/modeles', labelKey: 'nav.templates', icon: LayoutTemplate, adminOnly: true },
       { href: '/admin/onboarding', labelKey: 'nav.onboarding', icon: Wand2, adminOnly: true },
       { href: '/admin/parametres', labelKey: 'nav.appearance', icon: Palette, adminOnly: true },
       { href: '/admin/pages', labelKey: 'nav.pages', icon: FileText },
@@ -223,6 +239,18 @@ const AdminLayout = ({
     onSidebarOpenChange?.(open);
   };
   const [forceGuideOpen, setForceGuideOpen] = useState(false);
+  const [navOpen, setNavOpen] = useState<Record<string, boolean>>(readNavOpen);
+  const toggleSection = (key: string, open: boolean) => {
+    setNavOpen((prev) => {
+      const next = { ...prev, [key]: open };
+      try {
+        localStorage.setItem(NAV_OPEN_STORAGE_KEY, JSON.stringify(next));
+      } catch {
+        // stockage indisponible : l'état reste valable pour la session
+      }
+      return next;
+    });
+  };
 
   // Titre boutique OK ; favicon = toujours plateforme (IMG_6526) en admin.
   // Sur Apparence, le workspace peut prévisualiser le favicon boutique dans l’onglet.
@@ -291,7 +319,7 @@ const AdminLayout = ({
   }
 
   return (
-    <div className="flex h-screen min-h-0 overflow-hidden bg-[hsl(220_20%_97%)]" dir={dir} lang={locale}>
+    <div className="flex h-screen min-h-0 overflow-hidden bg-muted/40" dir={dir} lang={locale}>
       <StockAlertDialog />
       <AdminFirstUseGuide
         forceOpen={forceGuideOpen}
@@ -340,58 +368,84 @@ const AdminLayout = ({
           </button>
         </div>
 
-        <div className="border-b border-white/10 px-4 py-3">
-          <div className="flex items-center justify-between gap-2">
-            <div className="min-w-0">
-              <p className="truncate text-sm font-medium text-white">{siteName || t('common.myStore')}</p>
-              <p className="truncate text-[11px] text-white/50">{slug ? `${slug}.…` : t('common.sellerSpace')}</p>
-            </div>
-            {statusBadge(store?.status, t)}
-          </div>
+        <div className="flex items-center justify-between gap-2 border-b border-white/10 px-4 py-2.5">
+          <p className="truncate text-xs text-white/60" dir="ltr">{slug ? `${slug}.…` : t('common.sellerSpace')}</p>
+          {statusBadge(store?.status, t)}
         </div>
 
         <nav ref={navRef} className="scrollbar-sidebar min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain px-2.5 py-3 pe-1.5">
-          {navSections.map((section) => (
-            <div key={section.labelKey}>
-              <p className="mb-1 px-3 text-[10px] font-semibold uppercase tracking-[0.16em] text-white/35">
-                {t(section.labelKey)}
-              </p>
-              <div className="space-y-0.5">
-                {section.items.map((item) => (
-                  <Link
-                    key={item.href}
-                    to={item.href}
-                    onClick={() => {
-                      if (window.innerWidth < 1024) setIsSidebarOpen(false);
-                    }}
-                    data-nav-active={isActive(item.href) ? 'true' : undefined}
+          {navSections.map((section, index) => {
+            const hasActive = section.items.some((item) => isActive(item.href));
+            // Aperçu (Tableau de bord, Revenus) reste toujours visible : ce n'est pas un groupe à replier.
+            const collapsible = index > 0;
+            const open = !collapsible || (navOpen[section.labelKey] ?? (DEFAULT_OPEN_SECTIONS.has(section.labelKey) || hasActive));
+            const listId = `nav-${section.labelKey}`;
+            return (
+              <div key={section.labelKey}>
+                {collapsible ? (
+                  <button
+                    type="button"
+                    aria-expanded={open}
+                    aria-controls={listId}
+                    onClick={() => toggleSection(section.labelKey, !open)}
                     className={cn(
-                      'flex items-center gap-3 rounded-xl px-3 py-2.5 font-body text-sm transition-all duration-200',
-                      isActive(item.href)
-                        ? 'bg-primary text-primary-foreground shadow-soft font-medium'
-                        : 'text-white/70 hover:bg-white/8 hover:text-white',
+                      'mb-0.5 flex min-h-9 w-full items-center justify-between gap-2 rounded-lg px-3 text-xs font-medium text-white/55 transition-colors hover:text-white',
+                      NAV_FOCUS,
                     )}
                   >
-                    <item.icon className="h-4 w-4 shrink-0 opacity-90" />
-                    <span className="truncate">{t(item.labelKey)}</span>
-                    {(() => {
-                      const gate = adminPlanGate(item.href);
-                      return gate && !isPlanAtLeast(store?.planCode, gate.plan) ? (
-                        <PlanLockBadge plan={gate.plan} className="ms-auto" />
-                      ) : null;
-                    })()}
-                  </Link>
-                ))}
+                    <span className="flex items-center gap-2">
+                      {t(section.labelKey)}
+                      {!open && hasActive ? <span className="h-1.5 w-1.5 rounded-full bg-primary" aria-hidden /> : null}
+                    </span>
+                    <ChevronDown className={cn('h-3.5 w-3.5 transition-transform motion-reduce:transition-none', !open && '-rotate-90 rtl:rotate-90')} aria-hidden />
+                  </button>
+                ) : null}
+                <div id={listId} hidden={!open} className="space-y-0.5">
+                  {section.items.map((item) => {
+                    const active = isActive(item.href);
+                    return (
+                      <Link
+                        key={item.href}
+                        to={item.href}
+                        onClick={() => {
+                          if (window.innerWidth < 1024) setIsSidebarOpen(false);
+                        }}
+                        data-nav-active={active ? 'true' : undefined}
+                        aria-current={active ? 'page' : undefined}
+                        className={cn(
+                          'relative flex min-h-10 items-center gap-3 rounded-lg px-3 py-2 font-body text-sm transition-colors',
+                          NAV_FOCUS,
+                          active ? 'bg-white/10 font-medium text-white' : 'text-white/65 hover:bg-white/5 hover:text-white',
+                        )}
+                      >
+                        {active ? <span className="absolute inset-y-1.5 start-0 w-0.5 rounded-full bg-primary" aria-hidden /> : null}
+                        <item.icon className={cn('h-4 w-4 shrink-0', active ? 'text-primary' : 'opacity-80')} aria-hidden />
+                        <span className="truncate">{t(item.labelKey)}</span>
+                        {(() => {
+                          const gate = adminPlanGate(item.href);
+                          return gate && !isPlanAtLeast(store?.planCode, gate.plan) ? (
+                            <PlanLockBadge plan={gate.plan} className="ms-auto" />
+                          ) : null;
+                        })()}
+                      </Link>
+                    );
+                  })}
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </nav>
 
-        <div className="shrink-0 space-y-1.5 border-t border-white/10 p-3">
-          <div className="rounded-xl bg-white/5 px-3 py-2.5">
-            <p className="truncate text-xs font-medium text-white">{user?.fullName || user?.email}</p>
-            <p className="text-[10px] uppercase tracking-wide text-white/45">{user?.role}</p>
-          </div>
+        <div className="shrink-0 space-y-2 border-t border-white/10 p-3">
+          <Button
+            variant="outline"
+            className="w-full justify-start gap-2 border-white/20 bg-transparent text-white hover:bg-white/10 hover:text-white"
+            type="button"
+            onClick={openStorefront}
+          >
+            <ExternalLink className="h-4 w-4" />
+            {t('common.viewStore')}
+          </Button>
           {isSuperAdmin ? (
             <Button
               variant="ghost"
@@ -404,33 +458,32 @@ const AdminLayout = ({
               </Link>
             </Button>
           ) : null}
-          <Button
-            variant="ghost"
-            className="w-full justify-start gap-2 text-white/75 hover:bg-white/10 hover:text-white"
-            type="button"
-            onClick={openStorefront}
-          >
-            <ExternalLink className="h-4 w-4" />
-            {t('common.viewStore')}
-          </Button>
-          {!isSuperAdmin ? (
-            <Button
-              variant="ghost"
-              className="w-full justify-start gap-2 text-white/75 hover:bg-white/10 hover:text-white"
-              onClick={() => setForceGuideOpen(true)}
+          <div className="flex items-center gap-1 pt-1">
+            <div className="min-w-0 flex-1 px-1">
+              <p className="truncate text-xs font-medium text-white">{user?.fullName || user?.email}</p>
+              <p className="truncate text-[11px] text-white/50">{user?.role}</p>
+            </div>
+            {!isSuperAdmin ? (
+              <button
+                type="button"
+                className={cn('flex h-10 w-10 items-center justify-center rounded-lg text-white/70 transition-colors hover:bg-white/10 hover:text-white', NAV_FOCUS)}
+                onClick={() => setForceGuideOpen(true)}
+                aria-label={t('guide.menu')}
+                title={t('guide.menu')}
+              >
+                <BookOpen className="h-4 w-4" />
+              </button>
+            ) : null}
+            <button
+              type="button"
+              className={cn('flex h-10 w-10 items-center justify-center rounded-lg text-white/70 transition-colors hover:bg-white/10 hover:text-white', NAV_FOCUS)}
+              onClick={handleLogout}
+              aria-label={t('common.logout')}
+              title={t('common.logout')}
             >
-              <BookOpen className="h-4 w-4" />
-              {t('guide.menu')}
-            </Button>
-          ) : null}
-          <Button
-            variant="ghost"
-            className="w-full justify-start gap-2 text-white/75 hover:bg-white/10 hover:text-white"
-            onClick={handleLogout}
-          >
-            <LogOut className="h-4 w-4" />
-            {t('common.logout')}
-          </Button>
+              <LogOut className="h-4 w-4 rtl:-scale-x-100" />
+            </button>
+          </div>
         </div>
       </aside>
 
@@ -440,7 +493,7 @@ const AdminLayout = ({
           isSidebarOpen && (dir === 'rtl' ? 'lg:pr-[17.5rem]' : 'lg:pl-[17.5rem]'),
         )}
       >
-        <header className="flex min-h-[4.25rem] shrink-0 items-center justify-between gap-3 border-b border-border/80 bg-white/90 px-4 py-3 backdrop-blur-md sm:px-6">
+        <header className="flex min-h-[4.25rem] shrink-0 items-center justify-between gap-3 border-b border-border/80 bg-background/90 px-4 py-3 backdrop-blur-md sm:px-6">
           <div className="flex min-w-0 items-start gap-3">
             <button
               type="button"
@@ -459,7 +512,7 @@ const AdminLayout = ({
               {breadcrumbs &&
                 breadcrumbs.length > 0 &&
                 !(breadcrumbs.length === 1 && breadcrumbs[0].label === title) && (
-                <nav aria-label="Fil d'Ariane" className="mb-1 flex flex-wrap items-center gap-1 text-[11px] font-medium uppercase tracking-[0.12em] text-muted-foreground/80">
+                <nav aria-label="Fil d'Ariane" className="mb-1 flex flex-wrap items-center gap-1 text-xs text-muted-foreground">
                   {breadcrumbs.map((b, i) => (
                     <span key={`${b.label}-${i}`} className="flex items-center gap-1">
                       {i > 0 && <ChevronRight className={cn('h-3 w-3 opacity-60', dir === 'rtl' && 'rotate-180')} />}
@@ -494,7 +547,7 @@ const AdminLayout = ({
             {actions}
             <Select value={locale} onValueChange={(v) => setLocale(v as AdminLocale)}>
               <SelectTrigger
-                className="h-9 w-auto min-w-[7.5rem] gap-1.5 border-border/80 bg-white px-2.5 text-xs sm:min-w-[9rem]"
+                className="h-9 w-auto min-w-[7.5rem] gap-1.5 border-border/80 bg-background px-2.5 text-xs sm:min-w-[9rem]"
                 aria-label={t('common.language')}
               >
                 <Globe className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
