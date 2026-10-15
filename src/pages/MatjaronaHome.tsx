@@ -1,11 +1,16 @@
+import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
-import { ArrowRight, Check, Minus, Store, Layers, Zap, ExternalLink, LayoutDashboard } from 'lucide-react';
+import { Check, Minus } from 'lucide-react';
 import { platformApi } from '@/services/api/platform';
 import type { PlanMarketingDTO } from '@/types/api';
 import { useAdmin } from '@/contexts/AdminContext';
+import { useAdminLocale } from '@/contexts/AdminLocaleContext';
 import { useOpenStorefront } from '@/hooks/useOpenStorefront';
 import { TRIAL_DAYS } from '@/config/site';
+import { slugify } from '@/utils/slug';
+import { buildStorefrontUrl } from '@/utils/storefrontUrl';
+import { landingCopy, type LandingCopy } from './matjaronaCopy';
 
 const FALLBACK_PLANS: PlanMarketingDTO[] = [
   {
@@ -13,7 +18,7 @@ const FALLBACK_PLANS: PlanMarketingDTO[] = [
     code: 'basic',
     name: 'Basic',
     priceMad: 79,
-    description: 'Idéal pour démarrer — jusqu\'à 50 produits',
+    description: '',
     maxProducts: 50,
     maxStaff: 1,
     maxOrdersPerMonth: 100,
@@ -27,7 +32,7 @@ const FALLBACK_PLANS: PlanMarketingDTO[] = [
     code: 'pro',
     name: 'Pro',
     priceMad: 199,
-    description: 'Pour croître — domaine, WhatsApp, panier abandonné',
+    description: '',
     maxProducts: 500,
     maxStaff: 3,
     maxOrdersPerMonth: 1000,
@@ -41,7 +46,7 @@ const FALLBACK_PLANS: PlanMarketingDTO[] = [
     code: 'business',
     name: 'Business',
     priceMad: 399,
-    description: 'Pour scaler — illimité, webhooks complets, onboarding',
+    description: '',
     maxProducts: null,
     maxStaff: 10,
     maxOrdersPerMonth: null,
@@ -52,44 +57,63 @@ const FALLBACK_PLANS: PlanMarketingDTO[] = [
   },
 ];
 
-function fmtLimit(n: number | null | undefined, unit = ''): string {
-  if (n == null) return 'Illimité';
-  return `${n.toLocaleString('fr-MA')}${unit}`;
+const LOCALES = [
+  { code: 'fr', label: 'Français' },
+  { code: 'ar', label: 'العربية' },
+  { code: 'en', label: 'English' },
+] as const;
+
+function fmtLimit(n: number | null | undefined, c: LandingCopy): string {
+  if (n == null) return c.unlimited;
+  return n.toLocaleString('fr-MA');
 }
 
-function planHighlights(plan: PlanMarketingDTO): string[] {
+function planHighlights(plan: PlanMarketingDTO, c: LandingCopy): string[] {
   const f = plan.features ?? {};
   return [
-    `Produits : ${fmtLimit(plan.maxProducts)}`,
-    `Comptes STAFF : ${plan.maxStaff === 1 ? '1 (propriétaire)' : fmtLimit(plan.maxStaff)}`,
-    `Commandes/mois : ${fmtLimit(plan.maxOrdersPerMonth)}`,
-    plan.customDomain ? 'Domaine personnalisé' : 'Sous-domaine uniquement',
-    f.abTesting ? 'Page builder + A/B' : 'Éditeur simple',
-    f.abandonedCart ? (f.abandonedCartAdvanced ? 'Panier abandonné avancé' : 'Panier abandonné') : 'Codes promo',
-    `Pixels : ${fmtLimit(plan.maxPixels)}`,
-    f.whatsappBusiness ? (f.whatsappMultiTemplates ? 'WhatsApp + modèles' : 'WhatsApp Business') : 'Sans WhatsApp Business',
-    f.webhooks === 'all' ? 'Webhooks (tous events)' : f.webhooks === 'order_created' ? 'Webhooks order.created' : 'Sans webhooks',
-    `Stockage : ${plan.storageMb != null ? `${Math.round(plan.storageMb / 1024)} Go` : '—'}`,
+    `${c.rowProducts} : ${fmtLimit(plan.maxProducts, c)}`,
+    `${c.rowOrders} : ${fmtLimit(plan.maxOrdersPerMonth, c)}`,
+    plan.customDomain ? c.rowDomain : c.subdomainOnly,
+    f.abandonedCart ? c.rowAbandoned : c.rowPromo,
+    f.whatsappBusiness ? c.rowWhatsapp : c.noWhatsapp,
   ];
 }
 
-const COMPARISON_ROWS: { label: string; values: (p: PlanMarketingDTO) => string | boolean }[] = [
-  { label: 'Produits', values: (p) => fmtLimit(p.maxProducts) },
-  { label: 'Comptes STAFF', values: (p) => (p.maxStaff === 1 ? '1 (propriétaire)' : fmtLimit(p.maxStaff)) },
-  { label: 'Commandes / mois', values: (p) => fmtLimit(p.maxOrdersPerMonth) },
-  { label: 'Domaine personnalisé', values: (p) => !!p.customDomain },
-  { label: 'Thèmes', values: (p) => (p.features?.themes === 'basic' ? '2 thèmes' : p.features?.themes === 'all_early' ? 'Tous + anticipé' : 'Tous') },
-  { label: 'Page builder / A-B', values: (p) => (p.features?.abTesting ? (p.features?.pageBuilder === 'full_versions' ? 'Complet + versions' : 'Complet + A/B') : 'Simple') },
-  { label: 'Panier abandonné', values: (p) => !!p.features?.abandonedCart },
-  { label: 'Pixels marketing', values: (p) => fmtLimit(p.maxPixels) },
-  { label: 'WhatsApp Business', values: (p) => !!p.features?.whatsappBusiness },
-  { label: 'Webhooks', values: (p) => (p.features?.webhooks === 'all' ? 'Tous' : p.features?.webhooks === 'order_created' ? 'order.created' : false) },
-  { label: 'Stockage médias', values: (p) => (p.storageMb != null ? `${Math.round(p.storageMb / 1024)} Go` : '—') },
-];
+type Cell = string | boolean;
+
+function comparisonRows(c: LandingCopy): { label: string; value: (p: PlanMarketingDTO) => Cell }[] {
+  return [
+    { label: c.rowProducts, value: (p) => fmtLimit(p.maxProducts, c) },
+    { label: c.rowStaff, value: (p) => (p.maxStaff === 1 ? c.ownerOnly : fmtLimit(p.maxStaff, c)) },
+    { label: c.rowOrders, value: (p) => fmtLimit(p.maxOrdersPerMonth, c) },
+    { label: c.rowDomain, value: (p) => !!p.customDomain },
+    { label: c.rowThemes, value: (p) => (p.features?.themes === 'basic' ? c.themesTwo : c.themesAll) },
+    { label: c.rowBuilder, value: (p) => (p.features?.abTesting ? c.builderFull : c.builderSimple) },
+    { label: c.rowAbandoned, value: (p) => !!p.features?.abandonedCart },
+    { label: c.rowPixels, value: (p) => fmtLimit(p.maxPixels, c) },
+    { label: c.rowWhatsapp, value: (p) => !!p.features?.whatsappBusiness },
+    { label: c.rowWebhooks, value: (p) => (p.features?.webhooks === 'all' ? c.webhooksAll : p.features?.webhooks === 'order_created' ? 'order.created' : false) },
+    { label: c.rowStorage, value: (p) => (p.storageMb != null ? `${Math.round(p.storageMb / 1024)} GB` : '—') },
+  ];
+}
+
+/** Adresse affichée sur le ticket : l'hôte réel de la boutique, sinon l'identifiant seul (dev local). */
+function ticketAddress(slug: string): string {
+  if (!slug) return '';
+  try {
+    const host = new URL(buildStorefrontUrl(slug)).host;
+    return host.includes(slug) ? host : slug;
+  } catch {
+    return slug;
+  }
+}
 
 const MatjaronaHome = () => {
   const { isAuthenticated } = useAdmin();
+  const { locale, setLocale, dir } = useAdminLocale();
   const { canViewPublic, openStorefront } = useOpenStorefront();
+  const c = landingCopy[locale] ?? landingCopy.fr;
+  const [shopName, setShopName] = useState('');
 
   const { data: plans = [] } = useQuery({
     queryKey: ['platform', 'plans'],
@@ -97,357 +121,364 @@ const MatjaronaHome = () => {
     staleTime: 10 * 60 * 1000,
   });
 
-  const sortedPlans = [...(plans.length > 0 ? plans : FALLBACK_PLANS)].sort(
-    (a, b) => Number(a.priceMad ?? 0) - Number(b.priceMad ?? 0),
+  const sortedPlans = useMemo(
+    () => [...(plans.length > 0 ? plans : FALLBACK_PLANS)].sort((a, b) => Number(a.priceMad ?? 0) - Number(b.priceMad ?? 0)),
+    [plans],
+  );
+  const rows = useMemo(() => comparisonRows(c), [c]);
+
+  const trimmedName = shopName.trim();
+  const slug = slugify(trimmedName);
+  const address = ticketAddress(slug);
+  const createHref = trimmedName ? `/creer-boutique?nom=${encodeURIComponent(trimmedName)}` : '/creer-boutique';
+  const total = c.orderLines.reduce((sum, l) => sum + l.qty * l.price, 0);
+
+  const dashboardActions = (
+    <div className="gs-actions">
+      <Link to="/admin" className="gs-btn gs-btn-lemon">{c.dashboard}</Link>
+      {canViewPublic ? (
+        <button type="button" onClick={openStorefront} className="gs-btn gs-btn-ghost">{c.viewShop}</button>
+      ) : (
+        <Link to="/admin/onboarding" className="gs-btn gs-btn-ghost">{c.finishSetup}</Link>
+      )}
+    </div>
   );
 
   return (
-    <div className="matjarona-root min-h-screen text-[var(--mj-ink)]">
-      <style>{`
-        .matjarona-root {
-          --mj-ink: #0a1628;
-          --mj-foam: #e8f4f2;
-          --mj-lagoon: #0d9488;
-          --mj-lagoon-deep: #0f766e;
-          --mj-saffron: #e8a317;
-          --mj-mist: rgba(232, 244, 242, 0.08);
-          font-family: 'Figtree', ui-sans-serif, sans-serif;
-          background:
-            radial-gradient(120% 80% at 10% -10%, #134e4a 0%, transparent 55%),
-            radial-gradient(90% 60% at 100% 0%, #1e3a5f 0%, transparent 50%),
-            linear-gradient(165deg, #071018 0%, #0a1628 42%, #0c1f2e 100%);
-          color: var(--mj-foam);
-        }
-        .matjarona-root .font-mj {
-          font-family: 'Syne', ui-sans-serif, sans-serif;
-        }
-        @keyframes mj-drift {
-          0%, 100% { transform: translate3d(0, 0, 0) scale(1); opacity: 0.45; }
-          50% { transform: translate3d(2%, -3%, 0) scale(1.06); opacity: 0.7; }
-        }
-        @keyframes mj-rise {
-          from { opacity: 0; transform: translateY(18px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-        @keyframes mj-shimmer {
-          0% { background-position: 0% 50%; }
-          100% { background-position: 100% 50%; }
-        }
-        .mj-orb {
-          animation: mj-drift 14s ease-in-out infinite;
-        }
-        .mj-rise {
-          animation: mj-rise 0.85s ease-out both;
-        }
-        .mj-rise-2 { animation-delay: 0.12s; }
-        .mj-rise-3 { animation-delay: 0.24s; }
-        .mj-rise-4 { animation-delay: 0.36s; }
-        .mj-line {
-          background: linear-gradient(90deg, transparent, var(--mj-saffron), var(--mj-lagoon), transparent);
-          background-size: 200% 100%;
-          animation: mj-shimmer 8s linear infinite;
-        }
-        @media (prefers-reduced-motion: reduce) {
-          .mj-orb, .mj-rise, .mj-line { animation: none !important; }
-          .mj-rise { opacity: 1; transform: none; }
-        }
-      `}</style>
+    <div className="gs-root" dir={dir} lang={locale}>
+      <style>{CSS}</style>
 
-      {/* Atmosphere */}
-      <div className="pointer-events-none fixed inset-0 overflow-hidden" aria-hidden>
-        <div className="mj-orb absolute -left-24 top-10 h-[28rem] w-[28rem] rounded-full bg-teal-500/20 blur-3xl" />
-        <div
-          className="mj-orb absolute -right-16 bottom-0 h-[22rem] w-[22rem] rounded-full bg-sky-600/15 blur-3xl"
-          style={{ animationDelay: '-4s' }}
-        />
-        <div
-          className="absolute inset-0 opacity-[0.07]"
-          style={{
-            backgroundImage:
-              'url("data:image/svg+xml,%3Csvg width=\'60\' height=\'60\' viewBox=\'0 0 60 60\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cg fill=\'none\' fill-rule=\'evenodd\'%3E%3Cg fill=\'%23e8f4f2\' fill-opacity=\'1\'%3E%3Cpath d=\'M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z\'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")',
-          }}
-        />
-      </div>
-
-      <header className="relative z-10 mx-auto flex w-full max-w-6xl items-center justify-between px-5 py-6 sm:px-8">
-        <span className="font-mj text-xl font-extrabold tracking-tight text-[var(--mj-foam)] sm:text-2xl">
-          Get STORE
-        </span>
-        {isAuthenticated ? (
-          <Link
-            to="/admin"
-            className="text-sm font-medium text-[var(--mj-foam)]/70 transition-colors hover:text-[var(--mj-foam)]"
-          >
-            Tableau de bord
-          </Link>
-        ) : (
-          <Link
-            to="/admin"
-            className="text-sm font-medium text-[var(--mj-foam)]/70 transition-colors hover:text-[var(--mj-foam)]"
-          >
-            Connexion admin
-          </Link>
-        )}
-      </header>
-
-      {/* Hero — brand first, one composition */}
-      <section className="relative z-10 mx-auto flex min-h-[calc(100vh-5.5rem)] w-full max-w-6xl flex-col justify-center px-5 pb-20 pt-6 sm:px-8 sm:pb-28">
-        <p className="mj-rise font-mj text-[clamp(3.5rem,12vw,7.5rem)] font-extrabold leading-[0.9] tracking-tight text-[var(--mj-foam)]">
-          Get STORE
-        </p>
-        <div className="mj-line mj-rise mj-rise-2 mt-5 h-px w-full max-w-md opacity-80" />
-        <h1 className="mj-rise mj-rise-2 mt-8 max-w-xl font-mj text-2xl font-bold leading-snug tracking-tight text-[var(--mj-foam)] sm:text-3xl md:text-4xl">
-          Votre boutique en ligne, prête en quelques minutes
-        </h1>
-        <p className="mj-rise mj-rise-3 mt-4 max-w-md text-base leading-relaxed text-[var(--mj-foam)]/70 sm:text-lg">
-          Créez, personnalisez et vendez — hébergé pour le marché marocain.
-        </p>
-        <div className="mj-rise mj-rise-4 mt-10 flex max-w-xl flex-col gap-4">
-          {isAuthenticated ? (
-            <div className="flex flex-wrap items-center gap-3">
-              <Link
-                to="/admin"
-                className="inline-flex items-center gap-2 rounded-md bg-[var(--mj-saffron)] px-5 py-3 text-sm font-semibold text-[var(--mj-ink)] transition hover:brightness-110"
-              >
-                <LayoutDashboard className="h-4 w-4" />
-                Tableau de bord
-              </Link>
-              {canViewPublic ? (
+      <section className="gs-hero">
+        <header className="gs-bar">
+          <span className="gs-mark">Get STORE</span>
+          <nav className="gs-bar-end" aria-label={c.navLabel}>
+            <div className="gs-langs" role="group" aria-label={c.langLabel}>
+              {LOCALES.map((l) => (
                 <button
+                  key={l.code}
                   type="button"
-                  onClick={openStorefront}
-                  className="inline-flex items-center gap-2 rounded-md border border-[var(--mj-foam)]/25 bg-white/5 px-5 py-3 text-sm font-semibold text-[var(--mj-foam)] backdrop-blur-sm transition hover:border-[var(--mj-foam)]/45 hover:bg-white/10"
+                  lang={l.code}
+                  aria-pressed={locale === l.code}
+                  onClick={() => setLocale(l.code)}
+                  className="gs-lang"
                 >
-                  Voir ma boutique
-                  <ExternalLink className="h-4 w-4" />
+                  {l.label}
                 </button>
-              ) : (
-                <Link
-                  to="/admin/onboarding"
-                  className="inline-flex items-center gap-2 rounded-md border border-[var(--mj-foam)]/25 bg-white/5 px-5 py-3 text-sm font-semibold text-[var(--mj-foam)] backdrop-blur-sm transition hover:border-[var(--mj-foam)]/45 hover:bg-white/10"
-                >
-                  Configurer et publier
-                  <ArrowRight className="h-4 w-4" />
-                </Link>
-              )}
+              ))}
             </div>
-          ) : (
-            <>
-              <div className="flex flex-wrap items-center gap-3">
-                <Link
-                  to="/creer-boutique"
-                  className="inline-flex items-center gap-2 rounded-md bg-[var(--mj-saffron)] px-5 py-3 text-sm font-semibold text-[var(--mj-ink)] transition hover:brightness-110"
-                >
-                  Créer ma boutique
-                  <ArrowRight className="h-4 w-4" />
-                </Link>
-                <a
-                  href="#tarifs"
-                  className="inline-flex items-center gap-2 rounded-md border border-[var(--mj-foam)]/25 bg-white/5 px-5 py-3 text-sm font-semibold text-[var(--mj-foam)] backdrop-blur-sm transition hover:border-[var(--mj-foam)]/45 hover:bg-white/10"
-                >
-                  Voir les tarifs
-                </a>
+            <Link to="/admin" className="gs-login">{isAuthenticated ? c.dashboard : c.login}</Link>
+          </nav>
+        </header>
+
+        <div className="gs-hero-grid">
+          <div className="gs-hero-copy">
+            <h1 className="gs-h1">{c.heroTitle}</h1>
+            <p className="gs-lede">{c.heroText}</p>
+
+            {isAuthenticated ? (
+              dashboardActions
+            ) : (
+              <form
+                className="gs-start"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  window.location.assign(createHref);
+                }}
+              >
+                <label htmlFor="gs-shop-name" className="gs-start-label">{c.nameLabel}</label>
+                <div className="gs-start-row">
+                  <input
+                    id="gs-shop-name"
+                    value={shopName}
+                    onChange={(e) => setShopName(e.target.value.slice(0, 40))}
+                    placeholder={c.namePlaceholder}
+                    autoComplete="off"
+                    className="gs-input"
+                  />
+                  <Link to={createHref} className="gs-btn gs-btn-lemon">{c.createShop}</Link>
+                </div>
+                <p className="gs-note">{c.trialNote.replace('{days}', String(TRIAL_DAYS))}</p>
+              </form>
+            )}
+          </div>
+
+          <div className="gs-slip-wrap" aria-label={c.slipLabel} role="img">
+            <div className="gs-slip" aria-hidden>
+              <div className="gs-line" style={{ ['--i' as string]: 0 }}>
+                <p className={`gs-slip-shop ${trimmedName ? '' : 'is-empty'}`}>{trimmedName || c.namePlaceholder}</p>
+                <p className="gs-slip-addr">{address || c.addressPlaceholder}</p>
               </div>
-              <p className="text-sm text-[var(--mj-foam)]/65">
-                Essai gratuit {TRIAL_DAYS} jours · sans carte bancaire
-              </p>
-            </>
-          )}
+              <div className="gs-line gs-slip-meta" style={{ ['--i' as string]: 1 }}>
+                <span>{c.orderNo} 0412</span>
+                <span>{c.orderChannel}</span>
+              </div>
+              <ul className="gs-slip-items">
+                {c.orderLines.map((l, i) => (
+                  <li key={l.name} className="gs-line" style={{ ['--i' as string]: i + 2 }}>
+                    <span>{l.qty} × {l.name}</span>
+                    <span className="gs-num">{l.qty * l.price} {c.currency}</span>
+                  </li>
+                ))}
+              </ul>
+              <div className="gs-line gs-slip-total" style={{ ['--i' as string]: c.orderLines.length + 2 }}>
+                <span>{c.total}</span>
+                <span className="gs-num">{total} {c.currency}</span>
+              </div>
+              <p className="gs-line gs-slip-pay" style={{ ['--i' as string]: c.orderLines.length + 3 }}>{c.payOnDelivery}</p>
+              <span className="gs-stamp">{c.stamp}</span>
+            </div>
+          </div>
         </div>
       </section>
 
-      {/* Pricing */}
-      <section id="tarifs" className="relative z-10 border-t border-white/10 bg-black/20 py-20 sm:py-28">
-        <div className="mx-auto max-w-6xl px-5 sm:px-8">
-          <h2 className="font-mj text-3xl font-bold tracking-tight sm:text-4xl">Choisissez votre plan</h2>
-          <p className="mt-3 max-w-lg text-[var(--mj-foam)]/65">
-            Basic, Pro ou Business — évoluez quand votre boutique grandit. Paiement CMI sécurisé.
-          </p>
-          <div className="mt-12 grid gap-6 md:grid-cols-3">
-            {sortedPlans.map((plan, index) => (
-              <div
-                key={plan.code}
-                className={`rounded-2xl border p-6 ${
-                  index === 1
-                    ? 'border-[var(--mj-lagoon)] bg-[var(--mj-lagoon)]/10'
-                    : 'border-white/10 bg-white/5'
-                }`}
-              >
-                <p className="font-mj text-sm font-semibold uppercase tracking-[0.2em] text-[var(--mj-lagoon)]">
-                  {plan.name}
+      <section className="gs-section" aria-labelledby="gs-features">
+        <h2 id="gs-features" className="gs-h2">{c.featuresTitle}</h2>
+        <ul className="gs-ledger">
+          {c.features.map((f) => (
+            <li key={f.title} className="gs-ledger-row">
+              <h3 className="gs-ledger-title">{f.title}</h3>
+              <p className="gs-ledger-text">{f.text}</p>
+            </li>
+          ))}
+        </ul>
+      </section>
+
+      <section className="gs-section gs-steps-section" aria-labelledby="gs-steps">
+        <h2 id="gs-steps" className="gs-h2">{c.stepsTitle}</h2>
+        <ol className="gs-steps">
+          {c.steps.map((s, i) => (
+            <li key={s.title} className="gs-step">
+              <span className="gs-step-n" aria-hidden>{(i + 1).toLocaleString(locale === 'ar' ? 'ar-MA' : 'fr-MA')}</span>
+              <h3 className="gs-step-title">{s.title}</h3>
+              <p className="gs-step-text">{s.text}</p>
+            </li>
+          ))}
+        </ol>
+      </section>
+
+      <section id="tarifs" className="gs-section" aria-labelledby="gs-pricing">
+        <h2 id="gs-pricing" className="gs-h2">{c.pricingTitle}</h2>
+        <p className="gs-section-lede">{c.pricingText.replace('{days}', String(TRIAL_DAYS))}</p>
+
+        <div className="gs-plans">
+          {sortedPlans.map((plan, index) => {
+            const featured = index === 1;
+            return (
+              <article key={plan.code} className={`gs-plan ${featured ? 'is-featured' : ''}`}>
+                <h3 className="gs-plan-name">{plan.name}</h3>
+                <p className="gs-plan-price">
+                  <span className="gs-num gs-plan-amount">{Number(plan.priceMad)}</span>
+                  <span className="gs-plan-unit">{c.currency} {c.perMonth}</span>
                 </p>
-                <p className="mt-3 font-mj text-4xl font-extrabold tracking-tight">
-                  {Number(plan.priceMad)}{' '}
-                  <span className="text-xl font-bold">DH</span>
-                  <span className="ml-1 text-sm font-medium text-[var(--mj-foam)]/55">/mois</span>
-                </p>
-                <p className="mt-4 text-sm text-[var(--mj-foam)]/65">
-                  {plan.description || 'Boutique en ligne Get STORE'}
-                </p>
-                <ul className="mt-5 space-y-2 text-sm text-[var(--mj-foam)]/80">
-                  {planHighlights(plan).slice(0, 6).map((line) => (
-                    <li key={line} className="flex gap-2">
-                      <Check className="mt-0.5 h-4 w-4 shrink-0 text-[var(--mj-lagoon)]" aria-hidden />
+                <ul className="gs-plan-list">
+                  {planHighlights(plan, c).map((line) => (
+                    <li key={line}>
+                      <Check className="gs-ico" aria-hidden />
                       <span>{line}</span>
                     </li>
                   ))}
                 </ul>
-                <Link
-                  to={`/creer-boutique?plan=${encodeURIComponent(plan.code)}`}
-                  className="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-md bg-[var(--mj-lagoon)] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[var(--mj-lagoon-deep)]"
-                >
-                  Choisir {plan.name}
-                  <ArrowRight className="h-4 w-4" />
+                <Link to={`/creer-boutique?plan=${encodeURIComponent(plan.code)}`} className={`gs-btn ${featured ? 'gs-btn-night' : 'gs-btn-line'}`}>
+                  {c.choosePlan.replace('{plan}', plan.name)}
                 </Link>
-              </div>
-            ))}
-          </div>
+              </article>
+            );
+          })}
+        </div>
 
-          <div className="mt-16 overflow-x-auto rounded-2xl border border-white/10 bg-black/25">
-            <table className="min-w-[720px] w-full text-left text-sm">
-              <thead>
-                <tr className="border-b border-white/10 text-[var(--mj-foam)]/70">
-                  <th className="px-4 py-3 font-medium">Fonctionnalité</th>
-                  {sortedPlans.map((p) => (
-                    <th key={p.code} className="px-4 py-3 font-mj font-semibold text-[var(--mj-foam)]">
-                      {p.name}
-                      <span className="mt-1 block text-xs font-normal text-[var(--mj-foam)]/55">
-                        ~{Number(p.priceMad)} DH/mois
-                      </span>
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {COMPARISON_ROWS.map((row) => (
-                  <tr key={row.label} className="border-b border-white/5">
-                    <td className="px-4 py-3 text-[var(--mj-foam)]/75">{row.label}</td>
-                    {sortedPlans.map((p) => {
-                      const v = row.values(p);
-                      return (
-                        <td key={p.code} className="px-4 py-3">
-                          {typeof v === 'boolean' ? (
-                            v ? (
-                              <Check className="h-4 w-4 text-[var(--mj-lagoon)]" aria-label="Oui" />
-                            ) : (
-                              <Minus className="h-4 w-4 text-[var(--mj-foam)]/35" aria-label="Non" />
-                            )
-                          ) : (
-                            <span>{v}</span>
-                          )}
-                        </td>
-                      );
-                    })}
-                  </tr>
+        <div className="gs-table-wrap">
+          <table className="gs-table">
+            <caption className="gs-sr">{c.compareCaption}</caption>
+            <thead>
+              <tr>
+                <th scope="col">{c.compareFeature}</th>
+                {sortedPlans.map((p) => (
+                  <th key={p.code} scope="col">{p.name}</th>
                 ))}
-              </tbody>
-            </table>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((row) => (
+                <tr key={row.label}>
+                  <th scope="row">{row.label}</th>
+                  {sortedPlans.map((p) => {
+                    const v = row.value(p);
+                    return (
+                      <td key={p.code}>
+                        {typeof v === 'boolean' ? (
+                          v ? <Check className="gs-ico" aria-label={c.yes} /> : <Minus className="gs-ico gs-ico-off" aria-label={c.no} />
+                        ) : (
+                          v
+                        )}
+                      </td>
+                    );
+                  })}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section className="gs-closing">
+        <h2 className="gs-h2 gs-closing-title">{c.closingTitle}</h2>
+        {isAuthenticated ? (
+          dashboardActions
+        ) : (
+          <div className="gs-actions">
+            <Link to="/creer-boutique" className="gs-btn gs-btn-lemon">{c.createShop}</Link>
+            <Link to="/admin" className="gs-btn gs-btn-ghost">{c.login}</Link>
           </div>
-        </div>
+        )}
       </section>
 
-      {/* How it works */}
-      <section id="comment-ca-marche" className="relative z-10 py-20 sm:py-28">
-        <div className="mx-auto max-w-6xl px-5 sm:px-8">
-          <h2 className="font-mj text-3xl font-bold tracking-tight sm:text-4xl">Comment ça marche</h2>
-          <p className="mt-3 max-w-lg text-[var(--mj-foam)]/65">
-            Trois étapes pour ouvrir votre espace de vente.
-          </p>
-          <ol className="mt-14 grid gap-12 sm:grid-cols-3 sm:gap-8">
-            {[
-              {
-                icon: Store,
-                title: 'Créez votre espace',
-                text: 'Choisissez un nom et un slug. Votre boutique est prête à personnaliser.',
-              },
-              {
-                icon: Layers,
-                title: 'Personnalisez',
-                text: 'Couleurs, logo, sections accueil — votre identité, votre rythme.',
-              },
-              {
-                icon: Zap,
-                title: 'Vendez',
-                text: 'Ajoutez vos produits, recevez les commandes, gérez tout depuis l’admin.',
-              },
-            ].map((step, i) => (
-              <li key={step.title} className="relative">
-                <span className="font-mj text-xs font-bold uppercase tracking-[0.25em] text-[var(--mj-saffron)]">
-                  0{i + 1}
-                </span>
-                <step.icon className="mt-4 h-7 w-7 text-[var(--mj-lagoon)]" aria-hidden />
-                <h3 className="mt-4 font-mj text-xl font-bold">{step.title}</h3>
-                <p className="mt-2 text-sm leading-relaxed text-[var(--mj-foam)]/65">{step.text}</p>
-              </li>
-            ))}
-          </ol>
-        </div>
-      </section>
-
-      {/* CTA */}
-      <section className="relative z-10 border-t border-white/10 py-20 sm:py-24">
-        <div className="mx-auto max-w-6xl px-5 text-center sm:px-8">
-          <h2 className="font-mj text-3xl font-bold tracking-tight sm:text-4xl">
-            Prêt à ouvrir votre boutique ?
-          </h2>
-          <p className="mx-auto mt-3 max-w-md text-[var(--mj-foam)]/65">
-            Créez votre boutique en quelques minutes, ou connectez-vous si elle existe déjà.
-          </p>
-          <div className="mt-10 flex flex-wrap items-center justify-center gap-3">
-            {isAuthenticated ? (
-              <>
-                <Link
-                  to="/admin"
-                  className="inline-flex items-center gap-2 rounded-md bg-[var(--mj-lagoon)] px-6 py-3 text-sm font-semibold text-white transition hover:bg-[var(--mj-lagoon-deep)]"
-                >
-                  Tableau de bord
-                  <ArrowRight className="h-4 w-4" />
-                </Link>
-                {canViewPublic ? (
-                  <button
-                    type="button"
-                    onClick={openStorefront}
-                    className="inline-flex items-center gap-2 rounded-md border border-[var(--mj-foam)]/25 px-6 py-3 text-sm font-semibold text-[var(--mj-foam)] transition hover:bg-white/5"
-                  >
-                    Voir ma boutique
-                    <ExternalLink className="h-4 w-4" />
-                  </button>
-                ) : (
-                  <Link
-                    to="/admin/onboarding"
-                    className="inline-flex items-center gap-2 rounded-md border border-[var(--mj-foam)]/25 px-6 py-3 text-sm font-semibold text-[var(--mj-foam)] transition hover:bg-white/5"
-                  >
-                    Configurer et publier
-                    <ArrowRight className="h-4 w-4" />
-                  </Link>
-                )}
-              </>
-            ) : (
-              <>
-                <Link
-                  to="/creer-boutique"
-                  className="inline-flex items-center gap-2 rounded-md bg-[var(--mj-lagoon)] px-6 py-3 text-sm font-semibold text-white transition hover:bg-[var(--mj-lagoon-deep)]"
-                >
-                  Créer ma boutique
-                  <ArrowRight className="h-4 w-4" />
-                </Link>
-                <a
-                  href="#tarifs"
-                  className="inline-flex items-center gap-2 rounded-md border border-[var(--mj-foam)]/25 px-6 py-3 text-sm font-semibold text-[var(--mj-foam)] transition hover:bg-white/5"
-                >
-                  Voir les tarifs
-                </a>
-              </>
-            )}
-          </div>
-        </div>
-      </section>
-
-      <footer className="relative z-10 border-t border-white/10 py-8 text-center text-xs text-[var(--mj-foam)]/40">
-        © {new Date().getFullYear()} Get STORE
+      <footer className="gs-footer">
+        <span>© {new Date().getFullYear()} Get STORE</span>
+        <span className="gs-footer-links">
+          <Link to="/confidentialite">{c.privacy}</Link>
+          <Link to="/conditions-utilisation">{c.terms}</Link>
+        </span>
       </footer>
     </div>
   );
 };
+
+const CSS = `
+.gs-root {
+  --blue: #2336c4;
+  --blue-soft: #3a4ed6;
+  --night: #0e1650;
+  --plaster: #f5f7fc;
+  --rule: #d5daee;
+  --pink: #e8386f;
+  --lemon: #f2d54b;
+  --body: 'Readex Pro', 'Figtree', ui-sans-serif, sans-serif;
+  --display: 'Bricolage Grotesque', 'Readex Pro', ui-sans-serif, sans-serif;
+  background: var(--plaster);
+  color: var(--night);
+  font-family: var(--body);
+  font-weight: 400;
+  line-height: 1.6;
+  min-height: 100vh;
+}
+.gs-root[lang='ar'] { --display: 'Reem Kufi', 'Readex Pro', ui-sans-serif, sans-serif; line-height: 1.85; }
+.gs-root *, .gs-root *::before, .gs-root *::after { box-sizing: border-box; }
+.gs-root :where(h1, h2, h3, p, ul, ol) { margin: 0; padding: 0; }
+.gs-root :where(ul, ol) { list-style: none; }
+.gs-root a, .gs-root button { font: inherit; }
+.gs-root :focus-visible { outline: 3px solid var(--lemon); outline-offset: 3px; }
+.gs-section :focus-visible, .gs-table-wrap :focus-visible { outline-color: var(--blue); }
+.gs-num { font-variant-numeric: tabular-nums; }
+.gs-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+/* Hero */
+.gs-hero { background: var(--blue); color: #fff; padding-bottom: clamp(4rem, 9vw, 7rem); overflow: hidden; }
+.gs-bar { display: flex; align-items: center; justify-content: space-between; gap: 1rem; max-width: 72rem; margin: 0 auto; padding: 1.25rem clamp(1.25rem, 4vw, 2rem); }
+.gs-mark { white-space: nowrap; font-family: 'Bricolage Grotesque', sans-serif; font-weight: 800; font-size: 1.4rem; letter-spacing: -0.02em; }
+.gs-bar-end { display: flex; align-items: center; gap: 1.25rem; flex-wrap: wrap; justify-content: flex-end; }
+.gs-langs { display: flex; gap: 0.25rem; }
+.gs-lang { background: none; border: 0; color: rgba(255,255,255,.72); padding: 0.4rem 0.6rem; border-radius: 0.4rem; cursor: pointer; font-size: 0.875rem; }
+.gs-lang:hover { color: #fff; }
+.gs-lang[aria-pressed='true'] { color: var(--night); background: #fff; font-weight: 500; }
+.gs-login { color: #fff; font-size: 0.875rem; text-decoration: underline; text-underline-offset: 4px; text-decoration-color: rgba(255,255,255,.5); }
+.gs-login:hover { text-decoration-color: #fff; }
+
+.gs-hero-grid { max-width: 72rem; margin: 0 auto; padding: clamp(2rem, 6vw, 4.5rem) clamp(1.25rem, 4vw, 2rem) 0; display: grid; gap: 3.5rem; align-items: center; }
+@media (min-width: 62rem) { .gs-hero-grid { grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr); gap: 4rem; } }
+.gs-h1 { font-family: var(--display); font-weight: 800; font-size: clamp(2.6rem, 6.6vw, 5rem); line-height: 1.02; letter-spacing: -0.03em; text-wrap: balance; }
+.gs-root[lang='ar'] .gs-h1 { font-weight: 700; letter-spacing: 0; line-height: 1.3; }
+.gs-lede { margin-top: 1.5rem; max-width: 34rem; font-size: 1.125rem; color: rgba(255,255,255,.88); }
+
+.gs-start { margin-top: 2.25rem; max-width: 34rem; }
+.gs-start-label { display: block; font-size: 0.9rem; font-weight: 500; margin-bottom: 0.5rem; }
+.gs-start-row { display: flex; flex-wrap: wrap; gap: 0.75rem; }
+.gs-input { flex: 1 1 14rem; min-width: 0; height: 3.25rem; border-radius: 0.6rem; border: 2px solid transparent; padding: 0 1rem; font-size: 1rem; background: #fff; color: var(--night); }
+.gs-input::placeholder { color: #6b73a8; }
+.gs-note { margin-top: 0.75rem; font-size: 0.875rem; color: rgba(255,255,255,.8); }
+
+.gs-actions { display: flex; flex-wrap: wrap; gap: 0.75rem; margin-top: 2.25rem; }
+.gs-btn { display: inline-flex; align-items: center; justify-content: center; height: 3.25rem; padding: 0 1.5rem; border-radius: 0.6rem; font-weight: 600; font-size: 1rem; text-decoration: none; cursor: pointer; border: 2px solid transparent; transition: background-color .15s, color .15s, border-color .15s; white-space: nowrap; }
+.gs-btn-lemon { background: var(--lemon); color: var(--night); }
+.gs-btn-lemon:hover { background: #f7e27a; }
+.gs-btn-ghost { background: transparent; color: #fff; border-color: rgba(255,255,255,.55); }
+.gs-btn-ghost:hover { border-color: #fff; background: rgba(255,255,255,.08); }
+.gs-btn-night { background: var(--night); color: #fff; }
+.gs-btn-night:hover { background: #1b2570; }
+.gs-btn-line { background: transparent; color: var(--night); border-color: var(--night); }
+.gs-btn-line:hover { background: var(--night); color: #fff; }
+
+/* The slip */
+.gs-slip-wrap { display: flex; justify-content: center; padding: 0.5rem 0 1.5rem; }
+.gs-slip { position: relative; width: min(100%, 22rem); background: #fff; color: var(--night); padding: 1.75rem 1.5rem 2.75rem; transform: rotate(2.2deg); box-shadow: 0 1.5rem 3rem -1rem rgba(6,12,70,.55); font-size: 0.95rem; }
+.gs-root[dir='rtl'] .gs-slip { transform: rotate(-2.2deg); }
+.gs-slip::after { content: ''; position: absolute; inset-inline: 0; bottom: -1px; height: 12px; background: radial-gradient(circle at 9px 12px, var(--blue) 8px, transparent 8.5px) 0 0 / 18px 12px repeat-x; }
+.gs-slip-shop { font-family: var(--display); font-weight: 800; font-size: 1.6rem; line-height: 1.15; letter-spacing: -0.02em; overflow-wrap: anywhere; }
+.gs-slip-shop.is-empty { color: #9aa1cf; }
+.gs-slip-addr { margin-top: 0.25rem; font-size: 0.85rem; color: #4a5390; overflow-wrap: anywhere; }
+.gs-slip-meta { display: flex; justify-content: space-between; gap: 1rem; margin-top: 1.25rem; padding: 0.6rem 0; border-block: 2px dashed var(--rule); font-size: 0.85rem; color: #4a5390; }
+.gs-slip-items { margin-top: 0.9rem; display: grid; gap: 0.5rem; }
+.gs-slip-items li { display: flex; justify-content: space-between; gap: 1rem; }
+.gs-slip-total { display: flex; justify-content: space-between; gap: 1rem; margin-top: 1rem; padding-top: 0.75rem; border-top: 2px solid var(--night); font-weight: 700; font-size: 1.15rem; }
+.gs-slip-pay { margin-top: 0.75rem; font-size: 0.85rem; color: #4a5390; max-width: 12rem; }
+.gs-stamp { position: absolute; inset-inline-end: 1rem; bottom: 2.2rem; background: var(--lemon); color: var(--night); font-family: var(--display); font-weight: 800; font-size: 1.05rem; line-height: 1.15; text-align: center; padding: 0.55rem 0.8rem; border: 3px solid var(--night); border-radius: 0.4rem; transform: rotate(-9deg); max-width: 8rem; }
+
+@keyframes gs-print { from { clip-path: inset(0 0 100% 0); opacity: 0; transform: translateY(-6px); } to { clip-path: inset(0 0 0 0); opacity: 1; transform: none; } }
+@keyframes gs-stamp { from { opacity: 0; transform: rotate(-9deg) scale(1.9); } to { opacity: 1; transform: rotate(-9deg) scale(1); } }
+.gs-line { animation: gs-print .45s cubic-bezier(.2,.7,.2,1) both; animation-delay: calc(var(--i, 0) * 0.28s + 0.25s); }
+.gs-stamp { animation: gs-stamp .3s cubic-bezier(.2,.9,.3,1.2) both; animation-delay: 2.3s; }
+@media (prefers-reduced-motion: reduce) { .gs-line, .gs-stamp { animation: none; } }
+
+/* Sections */
+.gs-section { max-width: 72rem; margin: 0 auto; padding: clamp(4rem, 9vw, 7rem) clamp(1.25rem, 4vw, 2rem) 0; }
+.gs-h2 { font-family: var(--display); font-weight: 800; font-size: clamp(1.9rem, 4vw, 3rem); line-height: 1.08; letter-spacing: -0.025em; max-width: 24ch; text-wrap: balance; }
+.gs-root[lang='ar'] .gs-h2 { font-weight: 700; letter-spacing: 0; line-height: 1.35; }
+.gs-section-lede { margin-top: 1rem; max-width: 36rem; color: #3b4580; }
+
+.gs-ledger { margin-top: 2.5rem; border-top: 2px solid var(--night); }
+.gs-ledger-row { display: grid; gap: 0.35rem 3rem; padding: 1.4rem 0; border-bottom: 1px solid var(--rule); }
+@media (min-width: 48rem) { .gs-ledger-row { grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr); align-items: baseline; } }
+.gs-ledger-title { font-family: var(--display); font-weight: 700; font-size: 1.35rem; line-height: 1.25; letter-spacing: -0.01em; }
+.gs-ledger-text { color: #3b4580; max-width: 34rem; }
+
+.gs-steps { margin-top: 2.5rem; display: grid; gap: 2.5rem; counter-reset: s; }
+@media (min-width: 48rem) { .gs-steps { grid-template-columns: repeat(3, 1fr); gap: 2rem; } }
+.gs-step { position: relative; padding-top: 1.5rem; border-top: 2px solid var(--night); }
+.gs-step-n { display: inline-grid; place-items: center; width: 2.5rem; height: 2.5rem; border-radius: 50%; background: var(--lemon); color: var(--night); font-family: var(--display); font-weight: 800; font-size: 1.1rem; }
+.gs-step-title { margin-top: 1rem; font-family: var(--display); font-weight: 700; font-size: 1.3rem; line-height: 1.25; }
+.gs-step-text { margin-top: 0.5rem; color: #3b4580; max-width: 22rem; }
+
+/* Pricing */
+.gs-plans { margin-top: 2.75rem; display: grid; gap: 1rem; }
+@media (min-width: 52rem) { .gs-plans { grid-template-columns: repeat(3, 1fr); gap: 0; } }
+.gs-plan { display: flex; flex-direction: column; padding: 2rem 1.75rem; border: 1px solid var(--rule); background: #fff; }
+@media (min-width: 52rem) { .gs-plan + .gs-plan { border-inline-start: 0; } .gs-plan.is-featured { margin-block: -1rem; padding-block: 3rem; } }
+.gs-plan.is-featured { background: var(--pink); color: var(--night); border-color: var(--pink); }
+.gs-plan-name { font-family: var(--display); font-weight: 700; font-size: 1.35rem; }
+.gs-plan-price { margin-top: 0.75rem; display: flex; align-items: baseline; gap: 0.5rem; }
+.gs-plan-amount { font-family: var(--display); font-weight: 800; font-size: 3.25rem; line-height: 1; letter-spacing: -0.03em; }
+.gs-plan-unit { font-size: 0.95rem; }
+.gs-plan-list { margin: 1.5rem 0 2rem; display: grid; gap: 0.65rem; flex: 1; font-size: 0.95rem; }
+.gs-plan-list li { display: flex; gap: 0.6rem; align-items: flex-start; }
+.gs-ico { width: 1.1rem; height: 1.1rem; flex-shrink: 0; margin-top: 0.3rem; color: var(--blue); }
+.gs-plan.is-featured .gs-ico { color: var(--night); }
+.gs-ico-off { color: #9aa1cf; }
+
+.gs-table-wrap { margin-top: 4rem; overflow-x: auto; }
+.gs-table { width: 100%; min-width: 38rem; border-collapse: collapse; font-size: 0.95rem; }
+.gs-table th, .gs-table td { padding: 0.8rem 0.75rem; text-align: start; border-bottom: 1px solid var(--rule); vertical-align: middle; }
+.gs-table thead th { border-bottom: 2px solid var(--night); font-family: var(--display); font-weight: 700; font-size: 1.05rem; }
+.gs-table tbody th { font-weight: 400; color: #3b4580; }
+.gs-table td .gs-ico { margin-top: 0; display: block; }
+
+/* Closing */
+.gs-closing { margin-top: clamp(4rem, 9vw, 7rem); background: var(--blue); color: #fff; padding: clamp(3.5rem, 8vw, 6rem) clamp(1.25rem, 4vw, 2rem); }
+.gs-closing > * { max-width: 68rem; margin-inline: auto; }
+.gs-closing > .gs-closing-title { max-width: 68rem; }
+.gs-closing .gs-actions { display: flex; }
+.gs-footer { background: var(--night); color: rgba(255,255,255,.75); display: flex; flex-wrap: wrap; justify-content: space-between; gap: 1rem; padding: 1.5rem clamp(1.25rem, 4vw, 2rem); font-size: 0.875rem; }
+.gs-footer-links { display: flex; gap: 1.5rem; }
+.gs-footer a { color: inherit; text-underline-offset: 3px; }
+.gs-footer a:hover { color: #fff; }
+`;
 
 export default MatjaronaHome;

@@ -87,9 +87,10 @@ const CreateStore = () => {
   const fallbackSlug = useRef(`boutique-${Math.random().toString(36).slice(2, 6)}`);
   const formRef = useRef<HTMLFormElement>(null);
   const initialPlan = searchParams.get('plan')?.trim() || 'basic';
+  const initialName = (searchParams.get('nom') ?? '').trim().slice(0, 80);
   const [form, setForm] = useState({
-    name: '',
-    slug: '',
+    name: initialName,
+    slug: initialName ? slugify(initialName) : '',
     adminFullName: '',
     adminEmail: '',
     adminPassword: '',
