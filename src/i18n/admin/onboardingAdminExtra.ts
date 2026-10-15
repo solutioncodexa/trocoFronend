@@ -55,6 +55,19 @@ export type OnboardingAdminMessageKey =
   | 'ob.design'
   | 'ob.colors'
   | 'ob.palette'
+  | 'ob.err.phone'
+  | 'ob.preview.show'
+  | 'ob.preview.hide'
+  | 'ob.pal.lagon'
+  | 'ob.pal.terracotta'
+  | 'ob.pal.bordeaux'
+  | 'ob.pal.slate'
+  | 'ob.pal.olive'
+  | 'ob.pal.indigo'
+  | 'ob.err.template'
+  | 'ob.quick.err.name'
+  | 'ob.quick.err.price'
+  | 'ob.quick.err.category'
   | 'ob.color.primary'
   | 'ob.color.secondary'
   | 'ob.fonts'
@@ -234,6 +247,19 @@ const fr: Record<OnboardingAdminMessageKey, string> = {
   'ob.design': 'Design',
   'ob.colors': 'Couleurs',
   'ob.palette': 'Palette {name}',
+  'ob.err.phone': 'Numéro invalide. Exemple : 06 12 34 56 78',
+  'ob.preview.show': 'Voir l’aperçu de ma boutique',
+  'ob.preview.hide': 'Masquer l’aperçu',
+  'ob.pal.lagon': 'Lagon',
+  'ob.pal.terracotta': 'Terre cuite',
+  'ob.pal.bordeaux': 'Bordeaux',
+  'ob.pal.slate': 'Ardoise',
+  'ob.pal.olive': 'Olive',
+  'ob.pal.indigo': 'Indigo',
+  'ob.err.template': 'Modèle introuvable',
+  'ob.quick.err.name': 'Indiquez le nom du produit.',
+  'ob.quick.err.price': 'Indiquez un prix supérieur à 0.',
+  'ob.quick.err.category': 'Choisissez ou saisissez une catégorie.',
   'ob.color.primary': 'Principale',
   'ob.color.secondary': 'Secondaire',
   'ob.fonts': 'Polices',
@@ -419,6 +445,19 @@ const en: Record<OnboardingAdminMessageKey, string> = {
   'ob.design': 'Design',
   'ob.colors': 'Colors',
   'ob.palette': '{name} palette',
+  'ob.err.phone': 'Invalid number. Example: 06 12 34 56 78',
+  'ob.preview.show': 'Show my store preview',
+  'ob.preview.hide': 'Hide preview',
+  'ob.pal.lagon': 'Lagoon',
+  'ob.pal.terracotta': 'Terracotta',
+  'ob.pal.bordeaux': 'Burgundy',
+  'ob.pal.slate': 'Slate',
+  'ob.pal.olive': 'Olive',
+  'ob.pal.indigo': 'Indigo',
+  'ob.err.template': 'Template not found',
+  'ob.quick.err.name': 'Enter the product name.',
+  'ob.quick.err.price': 'Enter a price above 0.',
+  'ob.quick.err.category': 'Choose or enter a category.',
   'ob.color.primary': 'Primary',
   'ob.color.secondary': 'Secondary',
   'ob.fonts': 'Fonts',
@@ -600,6 +639,19 @@ const ar: Record<OnboardingAdminMessageKey, string> = {
   'ob.design': 'التصميم',
   'ob.colors': 'الألوان',
   'ob.palette': 'لوحة {name}',
+  'ob.err.phone': 'رقم غير صالح. مثال: 06 12 34 56 78',
+  'ob.preview.show': 'عرض معاينة متجري',
+  'ob.preview.hide': 'إخفاء المعاينة',
+  'ob.pal.lagon': 'لاغون',
+  'ob.pal.terracotta': 'طين مشوي',
+  'ob.pal.bordeaux': 'أحمر داكن',
+  'ob.pal.slate': 'أردوازي',
+  'ob.pal.olive': 'زيتوني',
+  'ob.pal.indigo': 'نيلي',
+  'ob.err.template': 'القالب غير موجود',
+  'ob.quick.err.name': 'أدخل اسم المنتج.',
+  'ob.quick.err.price': 'أدخل ثمنًا أكبر من 0.',
+  'ob.quick.err.category': 'اختر فئة أو أدخلها.',
   'ob.color.primary': 'الرئيسي',
   'ob.color.secondary': 'الثانوي',
   'ob.fonts': 'الخطوط',

@@ -1,7 +1,7 @@
-import { useEffect, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
-import { ImagePlus, Loader2 } from 'lucide-react';
+import { useEffect, useRef, useState } from "react";
+import { Link } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
+import { ImagePlus, Loader2 } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -9,22 +9,35 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { useAdminLocale } from '@/contexts/AdminLocaleContext';
-import { categoriesApi } from '@/services/api/categories';
-import { productsApi } from '@/services/api/products';
-import { compressImage } from '@/utils/compressImage';
-import { slugify } from '@/utils/slug';
-import { toast } from 'sonner';
-import { toastError } from '@/utils/toastMessages';
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { useAdminLocale } from "@/contexts/AdminLocaleContext";
+import { categoriesApi } from "@/services/api/categories";
+import { productsApi } from "@/services/api/products";
+import { compressImage } from "@/utils/compressImage";
+import { slugify } from "@/utils/slug";
+import { toast } from "sonner";
+import { toastError } from "@/utils/toastMessages";
 
-const NEW_CATEGORY = '__new__';
+const NEW_CATEGORY = "__new__";
 
-export type QuickProductReplace = { id: string; name: string; price: number; category: string };
+export type QuickProductReplace = {
+  id: string;
+  name: string;
+  price: number;
+  category: string;
+};
+
+function FieldError({ id, message }: { id: string; message: string }) {
+  return (
+    <p id={id} role="alert" className="mt-1 text-xs text-destructive">
+      {message}
+    </p>
+  );
+}
 
 /**
  * Ajout d'un produit en 30 secondes (photo, nom, prix, catégorie) sans quitter l'assistant.
@@ -46,16 +59,21 @@ export function QuickProductDialog({
   const { t } = useAdminLocale();
   const fileRef = useRef<HTMLInputElement>(null);
   const [photo, setPhoto] = useState<File | null>(null);
-  const [photoUrl, setPhotoUrl] = useState('');
-  const [name, setName] = useState('');
-  const [price, setPrice] = useState('');
-  const [category, setCategory] = useState('');
-  const [newCategory, setNewCategory] = useState('');
-  const [description, setDescription] = useState('');
+  const [photoUrl, setPhotoUrl] = useState("");
+  const [name, setName] = useState("");
+  const [price, setPrice] = useState("");
+  const [category, setCategory] = useState("");
+  const [newCategory, setNewCategory] = useState("");
+  const [description, setDescription] = useState("");
   const [saving, setSaving] = useState(false);
+  const [errors, setErrors] = useState<{
+    name?: string;
+    price?: string;
+    category?: string;
+  }>({});
 
   const { data: categories = [], isFetched: categoriesLoaded } = useQuery({
-    queryKey: ['categories', 'quick-product'],
+    queryKey: ["categories", "quick-product"],
     queryFn: () => categoriesApi.getAllCategories(),
     enabled: open,
   });
@@ -64,12 +82,13 @@ export function QuickProductDialog({
   useEffect(() => {
     if (!open) return;
     setPhoto(null);
-    setPhotoUrl('');
-    setName('');
-    setPrice(replace ? String(replace.price) : '');
-    setCategory(replace?.category ?? '');
-    setNewCategory('');
-    setDescription('');
+    setPhotoUrl("");
+    setName("");
+    setPrice(replace ? String(replace.price) : "");
+    setCategory(replace?.category ?? "");
+    setNewCategory("");
+    setDescription("");
+    setErrors({});
   }, [open, replace]);
 
   // Catégorie valide : celle du produit remplacé (slug ou nom), sinon la première existante, sinon une nouvelle.
@@ -80,9 +99,12 @@ export function QuickProductDialog({
     setCategory(byName?.slug ?? categories[0]?.slug ?? NEW_CATEGORY);
   }, [open, categoriesLoaded, categories, category]);
 
-  useEffect(() => () => {
-    if (photoUrl) URL.revokeObjectURL(photoUrl);
-  }, [photoUrl]);
+  useEffect(
+    () => () => {
+      if (photoUrl) URL.revokeObjectURL(photoUrl);
+    },
+    [photoUrl],
+  );
 
   const pickPhoto = async (file?: File) => {
     if (!file) return;
@@ -92,20 +114,37 @@ export function QuickProductDialog({
   };
 
   const save = async () => {
-    const priceValue = Number(price.replace(',', '.'));
+    const priceValue = Number(price.replace(",", "."));
     const isNewCategory = category === NEW_CATEGORY;
     const categoryName = newCategory.trim();
-    if (!name.trim() || !(priceValue > 0) || (isNewCategory ? !categoryName : !category)) {
-      toast.error(t('ob.quick.required'));
+    const next: typeof errors = {};
+    if (!name.trim()) next.name = t("ob.quick.err.name");
+    if (!(priceValue > 0)) next.price = t("ob.quick.err.price");
+    if (isNewCategory ? !categoryName : !category)
+      next.category = t("ob.quick.err.category");
+    setErrors(next);
+    if (Object.keys(next).length > 0) {
+      const firstId = next.name
+        ? "qp-name"
+        : next.price
+          ? "qp-price"
+          : isNewCategory
+            ? "qp-newcat"
+            : "qp-category";
+      document.getElementById(firstId)?.focus();
       return;
     }
     setSaving(true);
     try {
       let categorySlug = category;
       if (isNewCategory) {
-        categorySlug = slugify(categoryName) || `categorie-${Date.now().toString(36)}`;
+        categorySlug =
+          slugify(categoryName) || `categorie-${Date.now().toString(36)}`;
         if (!categories.some((c) => c.slug === categorySlug)) {
-          await categoriesApi.createCategory({ name: categoryName, slug: categorySlug });
+          await categoriesApi.createCategory({
+            name: categoryName,
+            slug: categorySlug,
+          });
         }
       }
       await productsApi.createProduct(
@@ -122,11 +161,15 @@ export function QuickProductDialog({
         // Le vrai produit existe déjà : un échec ici laisse seulement l'exemple en place.
         await productsApi.deleteProduct(replace.id).catch(() => undefined);
       }
-      toast.success(t(replace ? 'ob.quick.replaced' : 'ob.quick.done', { name: name.trim() }));
+      toast.success(
+        t(replace ? "ob.quick.replaced" : "ob.quick.done", {
+          name: name.trim(),
+        }),
+      );
       onDone();
       onOpenChange(false);
     } catch (e) {
-      toastError(e, t('ob.quick.err'));
+      toastError(e, t("ob.quick.err"));
     } finally {
       setSaving(false);
     }
@@ -136,24 +179,35 @@ export function QuickProductDialog({
     <Dialog open={open} onOpenChange={(next) => !saving && onOpenChange(next)}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>{replace ? t('ob.quick.replaceTitle', { name: replace.name }) : t('ob.quick.title')}</DialogTitle>
-          <DialogDescription>{t('ob.quick.subtitle')}</DialogDescription>
+          <DialogTitle>
+            {replace
+              ? t("ob.quick.replaceTitle", { name: replace.name })
+              : t("ob.quick.title")}
+          </DialogTitle>
+          <DialogDescription>{t("ob.quick.subtitle")}</DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4">
           <div>
-            <Label className="mb-1.5 block">{t('ob.quick.photo')}</Label>
+            <Label htmlFor="qp-photo" className="mb-1.5 block">
+              {t("ob.quick.photo")}
+            </Label>
             <button
+              id="qp-photo"
               type="button"
               onClick={() => fileRef.current?.click()}
-              className="flex h-36 w-full items-center justify-center overflow-hidden rounded-xl border-2 border-dashed border-border bg-muted/30 text-sm text-muted-foreground transition hover:border-primary/50"
+              className="flex h-36 w-full cursor-pointer items-center justify-center overflow-hidden rounded-xl border-2 border-dashed border-border bg-muted/30 text-sm text-muted-foreground transition hover:border-primary/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
             >
               {photoUrl ? (
-                <img src={photoUrl} alt="" className="h-full w-full object-cover" />
+                <img
+                  src={photoUrl}
+                  alt=""
+                  className="h-full w-full object-cover"
+                />
               ) : (
                 <span className="flex flex-col items-center gap-1.5">
                   <ImagePlus className="h-6 w-6" aria-hidden />
-                  {t('ob.quick.photoPick')}
+                  {t("ob.quick.photoPick")}
                 </span>
               )}
             </button>
@@ -164,33 +218,51 @@ export function QuickProductDialog({
               className="hidden"
               onChange={(e) => {
                 void pickPhoto(e.target.files?.[0]);
-                e.target.value = '';
+                e.target.value = "";
               }}
             />
           </div>
 
           <div>
-            <Label htmlFor="qp-name">{t('ob.quick.name')}</Label>
-            <Input id="qp-name" className="mt-1.5" value={name} onChange={(e) => setName(e.target.value)} autoFocus />
+            <Label htmlFor="qp-name">{t("ob.quick.name")}</Label>
+            <Input
+              id="qp-name"
+              className="mt-1.5"
+              value={name}
+              aria-invalid={!!errors.name}
+              aria-describedby={errors.name ? "qp-name-err" : undefined}
+              onChange={(e) => setName(e.target.value)}
+            />
+            {errors.name ? (
+              <FieldError id="qp-name-err" message={errors.name} />
+            ) : null}
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <Label htmlFor="qp-price">{t('ob.quick.price')}</Label>
+              <Label htmlFor="qp-price">{t("ob.quick.price")} (MAD)</Label>
               <Input
                 id="qp-price"
                 className="mt-1.5"
                 inputMode="decimal"
                 dir="ltr"
                 value={price}
-                onChange={(e) => setPrice(e.target.value.replace(/[^\d.,]/g, ''))}
+                aria-invalid={!!errors.price}
+                aria-describedby={errors.price ? "qp-price-err" : undefined}
+                onChange={(e) =>
+                  setPrice(e.target.value.replace(/[^\d.,]/g, ""))
+                }
               />
+              {errors.price ? (
+                <FieldError id="qp-price-err" message={errors.price} />
+              ) : null}
             </div>
             <div>
-              <Label htmlFor="qp-category">{t('ob.quick.category')}</Label>
+              <Label htmlFor="qp-category">{t("ob.quick.category")}</Label>
               <select
                 id="qp-category"
-                className="mt-1.5 h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                className="mt-1.5 h-10 w-full rounded-md border border-input bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                aria-invalid={!!errors.category && category !== NEW_CATEGORY}
                 value={category}
                 onChange={(e) => setCategory(e.target.value)}
               >
@@ -199,33 +271,61 @@ export function QuickProductDialog({
                     {c.parentName ? `${c.parentName} › ${c.name}` : c.name}
                   </option>
                 ))}
-                <option value={NEW_CATEGORY}>+ {t('ob.quick.newCategory')}</option>
+                <option value={NEW_CATEGORY}>
+                  + {t("ob.quick.newCategory")}
+                </option>
               </select>
             </div>
           </div>
 
+          {category !== NEW_CATEGORY && errors.category ? (
+            <FieldError id="qp-category-err" message={errors.category} />
+          ) : null}
+
           {category === NEW_CATEGORY ? (
-            <Input
-              aria-label={t('ob.quick.newCategory')}
-              value={newCategory}
-              placeholder={t('ob.quick.categoryPlaceholder')}
-              onChange={(e) => setNewCategory(e.target.value)}
-            />
+            <div>
+              <Input
+                id="qp-newcat"
+                aria-invalid={!!errors.category}
+                aria-describedby={errors.category ? "qp-newcat-err" : undefined}
+                aria-label={t("ob.quick.newCategory")}
+                value={newCategory}
+                placeholder={t("ob.quick.categoryPlaceholder")}
+                onChange={(e) => setNewCategory(e.target.value)}
+              />
+              {errors.category ? (
+                <FieldError id="qp-newcat-err" message={errors.category} />
+              ) : null}
+            </div>
           ) : null}
 
           <div>
-            <Label htmlFor="qp-desc">{t('ob.quick.description')}</Label>
-            <Textarea id="qp-desc" className="mt-1.5" rows={2} value={description} onChange={(e) => setDescription(e.target.value)} />
+            <Label htmlFor="qp-desc">{t("ob.quick.description")}</Label>
+            <Textarea
+              id="qp-desc"
+              className="mt-1.5"
+              rows={2}
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+            />
           </div>
         </div>
 
         <DialogFooter className="items-center gap-2 sm:justify-between">
-          <Link to={fullFormHref} className="text-xs text-muted-foreground underline hover:text-foreground">
-            {t('ob.quick.more')}
+          <Link
+            to={fullFormHref}
+            className="text-xs text-muted-foreground underline hover:text-foreground"
+          >
+            {t("ob.quick.more")}
           </Link>
-          <Button type="button" className="gap-2" disabled={saving} onClick={() => void save()}>
+          <Button
+            type="button"
+            className="h-11 gap-2 sm:h-10"
+            disabled={saving}
+            onClick={() => void save()}
+          >
             {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-            {t('ob.quick.save')}
+            {t("ob.quick.save")}
           </Button>
         </DialogFooter>
       </DialogContent>

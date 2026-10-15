@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
@@ -6,10 +6,13 @@ import {
   ArrowLeft,
   ArrowRight,
   Camera,
+  Check,
   CheckCircle2,
   Copy,
   Download,
   ExternalLink,
+  Eye,
+  EyeOff,
   FileSpreadsheet,
   ImagePlus,
   Loader2,
@@ -54,7 +57,7 @@ import {
   styleAppearanceOverride,
   type StylePreset,
 } from '@/config/stylePresets';
-import { normalizePhone } from '@/utils/phone';
+import { isValidPhone, normalizePhone } from '@/utils/phone';
 import { useTenant } from '@/contexts/TenantContext';
 import { PlanLockBadge } from '@/components/admin/PlanLockBadge';
 import { isThemeAllowed, themeMinPlan } from '@/config/planGates';
@@ -75,17 +78,19 @@ import {
 import { toast } from 'sonner';
 import { toastError } from '@/utils/toastMessages';
 
+const FOCUS_RING = 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2';
+
 const STEPS = ['ob.step.style', 'ob.step.contact', 'ob.step.catalog', 'ob.step.publish'] as const satisfies readonly AdminMessageKey[];
 const LAST_STEP = STEPS.length - 1;
 
 /** Palettes rapides : un clic remplace couleur principale + secondaire. */
-const PALETTES: { label: string; primary: string; secondary: string }[] = [
-  { label: 'Lagon', primary: '#0F766E', secondary: '#0369A1' },
-  { label: 'Terre cuite', primary: '#B45309', secondary: '#78350F' },
-  { label: 'Bordeaux', primary: '#9F1239', secondary: '#4C0519' },
-  { label: 'Ardoise', primary: '#334155', secondary: '#0F172A' },
-  { label: 'Olive', primary: '#4D7C0F', secondary: '#365314' },
-  { label: 'Indigo', primary: '#4338CA', secondary: '#1E1B4B' },
+const PALETTES: { key: string; primary: string; secondary: string }[] = [
+  { key: 'lagon', primary: '#0F766E', secondary: '#0369A1' },
+  { key: 'terracotta', primary: '#B45309', secondary: '#78350F' },
+  { key: 'bordeaux', primary: '#9F1239', secondary: '#4C0519' },
+  { key: 'slate', primary: '#334155', secondary: '#0F172A' },
+  { key: 'olive', primary: '#4D7C0F', secondary: '#365314' },
+  { key: 'indigo', primary: '#4338CA', secondary: '#1E1B4B' },
 ];
 
 /** 3 styles conseillés pour le secteur, en priorité ceux inclus dans le plan du marchand. */
@@ -94,6 +99,20 @@ function recommendedStyles(sector: string, planCode?: string | null): StylePrese
   const unique = [...new Set(keys)].map((k) => getStylePreset(k)).filter((p): p is StylePreset => !!p);
   const allowed = unique.filter((p) => isThemeAllowed(planCode, p.themeKey));
   return [...allowed, ...unique.filter((p) => !allowed.includes(p))].slice(0, 3);
+}
+
+/** Navigation aux flèches dans un groupe role="radiogroup" (inversée en RTL). */
+function onRadioKeyDown(e: KeyboardEvent<HTMLElement>) {
+  if (!['ArrowRight', 'ArrowLeft', 'ArrowDown', 'ArrowUp'].includes(e.key)) return;
+  const radios = Array.from(e.currentTarget.querySelectorAll<HTMLElement>('[role="radio"]:not([disabled])'));
+  const i = radios.indexOf(document.activeElement as HTMLElement);
+  if (i < 0) return;
+  e.preventDefault();
+  const rtl = getComputedStyle(e.currentTarget).direction === 'rtl';
+  const forward = e.key === 'ArrowDown' || e.key === (rtl ? 'ArrowLeft' : 'ArrowRight');
+  const next = radios[(i + (forward ? 1 : -1) + radios.length) % radios.length];
+  next.focus();
+  next.click();
 }
 
 function clampStep(value: number) {
@@ -137,6 +156,10 @@ const AdminOnboarding = () => {
   // Secteur déjà choisi à l'inscription : on l'affiche replié au lieu de redemander toute la grille.
   const [changeSector, setChangeSector] = useState(!draft?.sector);
   const [showAllStyles, setShowAllStyles] = useState(false);
+  // Sections repliables pilotées par l'état : elles ne doivent pas se refermer pendant la saisie.
+  const [brandOpen, setBrandOpen] = useState(!!draft?.tagline);
+  const [extraOpen, setExtraOpen] = useState(false);
+  const headingRef = useRef<HTMLHeadingElement>(null);
   const [seeded, setSeeded] = useState(!!draft?.seeded);
   // Tant que le marchand n'a pas choisi lui-même un style, on applique celui conseillé pour son secteur.
   const styleTouched = useRef(!!draft?.style);
@@ -145,6 +168,8 @@ const AdminOnboarding = () => {
   const [suggestingTagline, setSuggestingTagline] = useState(false);
   const [previewDevice, setPreviewDevice] = useState<'desktop' | 'mobile'>('desktop');
   const [quickOpen, setQuickOpen] = useState(false);
+  const [phoneChecked, setPhoneChecked] = useState(false);
+  const [previewOpen, setPreviewOpen] = useState(false);
   const qrRef = useRef<HTMLCanvasElement>(null);
   const [quickReplace, setQuickReplace] = useState<QuickProductReplace | null>(null);
 
@@ -202,6 +227,7 @@ const AdminOnboarding = () => {
     setSiteName((prev) => prev || settings.siteName || '');
     setTagline((prev) => prev || settings.tagline || '');
     setLogoUrl((prev) => prev || settings.logoUrl || '');
+    if (settings.logoUrl || settings.tagline) setBrandOpen(true);
     setPrimaryColor((prev) => prev || settings.primaryColor || '#0F766E');
     setSecondaryColor((prev) => prev || settings.secondaryColor || '#0369A1');
     if (!draft?.themeKey) setThemeKey(normalizeThemeKey(settings.themeKey));
@@ -225,6 +251,11 @@ const AdminOnboarding = () => {
     if (fromUrl == null) return;
     setStep(clampStep(Number(fromUrl)));
   }, [searchParams]);
+
+  // Écran de réussite : le focus passe sur le titre pour que le changement soit annoncé.
+  useEffect(() => {
+    if (published) requestAnimationFrame(() => headingRef.current?.focus({ preventScroll: true }));
+  }, [published]);
 
   // Brouillon local : on retrouve son avancement après un rechargement.
   useEffect(() => {
@@ -298,14 +329,22 @@ const AdminOnboarding = () => {
     onError: (e) => toastError(e, t('ob.err.save')),
   });
 
+  const phoneInvalid = !!contact.phone.trim() && !isValidPhone(contact.phone);
+  const waInvalid = !waSame && !!contact.whatsapp.trim() && !isValidPhone(contact.whatsapp);
+
   const saveContact = useMutation({
-    mutationFn: () =>
-      platformApi.updateMyStoreSettings({
+    mutationFn: async () => {
+      if (phoneInvalid || waInvalid) {
+        setPhoneChecked(true);
+        throw new Error(t('ob.err.phone'));
+      }
+      await platformApi.updateMyStoreSettings({
         contactPhone: normalizePhone(contact.phone) ?? undefined,
         contactWhatsapp: normalizePhone(waSame ? contact.phone : contact.whatsapp) ?? undefined,
         contactCity: contact.city.trim() || undefined,
         contactEmail: contact.email.trim() || undefined,
-      }),
+      });
+    },
     onSuccess: syncStore,
     onError: (e) => toastError(e, t('ob.err.save')),
   });
@@ -313,7 +352,7 @@ const AdminOnboarding = () => {
   const createHome = useMutation({
     mutationFn: async () => {
       const tpl = PAGE_TEMPLATES.find((p) => p.key === 'home-complete');
-      if (!tpl) throw new Error('Modèle introuvable');
+      if (!tpl) throw new Error(t('ob.err.template'));
       const existing = await storePagesApi.list();
       const home =
         existing.find((p) => p.isHome) ||
@@ -482,7 +521,9 @@ const AdminOnboarding = () => {
     const clamped = clampStep(nextStep);
     setStep(clamped);
     setSearchParams(clamped === 0 ? {} : { step: String(clamped) }, { replace: true });
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    const reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    window.scrollTo({ top: 0, behavior: reduceMotion ? 'auto' : 'smooth' });
+    requestAnimationFrame(() => headingRef.current?.focus({ preventScroll: true }));
   };
 
   const go = async (nextStep: number) => {
@@ -528,7 +569,7 @@ const AdminOnboarding = () => {
               aria-label={t(label)}
               title={t(label)}
               onClick={() => setPreviewDevice(key)}
-              className={`rounded-md p-1.5 transition ${
+              className={`rounded-md p-2.5 transition sm:p-1.5 ${FOCUS_RING} ${
                 previewDevice === key ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
               }`}
             >
@@ -539,7 +580,7 @@ const AdminOnboarding = () => {
       </div>
       <div
         className={`max-h-[70vh] overflow-auto ${
-          previewDevice === 'mobile' ? 'mx-auto my-3 w-[390px] max-w-full rounded-2xl border-4 border-stone-800' : ''
+          previewDevice === 'mobile' ? 'mx-auto my-3 w-[390px] max-w-full rounded-2xl border-4 border-stone-800 dark:border-stone-500' : ''
         }`}
       >
         <StoreAppearanceLivePreview
@@ -574,7 +615,7 @@ const AdminOnboarding = () => {
       >
         <div className="mx-auto max-w-2xl space-y-6 py-4 text-center">
           <Rocket className="mx-auto h-14 w-14 text-primary" aria-hidden />
-          <h2 className="font-display text-2xl font-semibold">{t('ob.done.title')}</h2>
+          <h2 ref={headingRef} tabIndex={-1} className="font-display text-2xl font-semibold outline-none">{t('ob.done.title')}</h2>
           <p className="text-sm text-muted-foreground">
             {pendingActivation
               ? t('ob.done.pending')
@@ -598,7 +639,7 @@ const AdminOnboarding = () => {
             </Button>
           </div>
           <div className="flex flex-col items-center gap-4 rounded-2xl border border-border bg-card p-5 sm:flex-row sm:text-start">
-            <QRCodeCanvas ref={qrRef} value={storefrontUrl} size={132} marginSize={2} className="shrink-0 rounded-lg" />
+            <QRCodeCanvas ref={qrRef} role="img" aria-label={t('ob.qr.title')} value={storefrontUrl} size={132} marginSize={2} className="shrink-0 rounded-lg" />
             <div className="space-y-2">
               <p className="font-display text-sm font-semibold">{t('ob.qr.title')}</p>
               <p className="text-xs text-muted-foreground">{t('ob.qr.hint')}</p>
@@ -687,7 +728,7 @@ const AdminOnboarding = () => {
               type="button"
               onClick={() => void go(i)}
               aria-current={i === step ? 'step' : undefined}
-              className={`rounded-full px-3 py-1.5 text-xs font-semibold transition ${
+              className={`inline-flex min-h-11 items-center rounded-full px-3.5 text-xs font-semibold transition sm:min-h-9 ${FOCUS_RING} ${
                 i === step
                   ? 'bg-primary text-primary-foreground'
                   : i < step
@@ -701,7 +742,7 @@ const AdminOnboarding = () => {
         </nav>
         <div className="space-y-1.5">
           <div className="h-1.5 overflow-hidden rounded-full bg-muted" aria-hidden>
-            <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${((step + 1) / STEPS.length) * 100}%` }} />
+            <div className="h-full rounded-full bg-primary transition-all motion-reduce:transition-none" style={{ width: `${((step + 1) / STEPS.length) * 100}%` }} />
           </div>
           <p className="text-xs text-muted-foreground">
             {t('ob.stepCounter', { n: step + 1, total: STEPS.length, min: STEPS.length - step })}
@@ -715,16 +756,30 @@ const AdminOnboarding = () => {
         ) : null}
 
         {isLoading ? (
-          <div className="flex justify-center py-16">
+          <div className="flex justify-center py-16" role="status" aria-busy="true" aria-label={t('onboarding.title')}>
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
           </div>
         ) : (
           <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
             <div className="space-y-6">
+              <Button
+                type="button"
+                variant="outline"
+                className="h-11 w-full gap-2 lg:hidden"
+                aria-expanded={previewOpen}
+                aria-controls="ob-preview"
+                onClick={() => {
+                  setPreviewOpen((v) => !v);
+                  if (!previewOpen) requestAnimationFrame(() => document.getElementById('ob-preview')?.scrollIntoView({ block: 'start' }));
+                }}
+              >
+                {previewOpen ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                {previewOpen ? t('ob.preview.hide') : t('ob.preview.show')}
+              </Button>
               {step === 0 ? (
                 <section className="space-y-6 rounded-2xl border border-border bg-card p-6">
                   <div>
-                    <h2 className="font-display text-xl font-semibold">{t('ob.style.title')}</h2>
+                    <h2 ref={headingRef} tabIndex={-1} className="font-display text-xl font-semibold outline-none">{t('ob.style.title')}</h2>
                     <p className="mt-1 text-sm text-muted-foreground">
                       {t('ob.style.subtitle')}
                     </p>
@@ -748,18 +803,23 @@ const AdminOnboarding = () => {
                         </Button>
                       </div>
                     ) : (
-                      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                      <div role="radiogroup" aria-label={t('ob.sector')} onKeyDown={onRadioKeyDown} className="grid grid-cols-2 gap-2 sm:grid-cols-3">
                         {STARTER_PACKS.map((p) => (
                           <button
                             key={p.key}
                             type="button"
-                            aria-pressed={sector === p.key}
+                            role="radio"
+                            aria-checked={sector === p.key}
+                            tabIndex={sector && sector !== p.key ? -1 : 0}
                             onClick={() => chooseSector(p.key)}
-                            className={`rounded-xl border p-3 text-start text-xs transition ${
+                            className={`rounded-xl border p-3 text-start text-xs transition ${FOCUS_RING} ${
                               sector === p.key ? 'border-primary ring-2 ring-primary/25' : 'border-border hover:border-primary/40'
                             }`}
                           >
-                            <span className="block text-sm font-semibold">{sectorLabel(p.key)}</span>
+                            <span className="flex items-center gap-1 text-sm font-semibold">
+                              {sector === p.key ? <Check className="h-4 w-4 text-primary" aria-hidden /> : null}
+                              {sectorLabel(p.key)}
+                            </span>
                             <span className="mt-0.5 block text-muted-foreground">{sectorDesc(p.key)}</span>
                           </button>
                         ))}
@@ -769,16 +829,18 @@ const AdminOnboarding = () => {
 
                   <div>
                     <Label className="mb-2 block">{showAllStyles ? t('ob.styles.all') : t('ob.styles.recommended')}</Label>
-                    <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                    <div role="radiogroup" aria-label={t('ob.styles.recommended')} onKeyDown={onRadioKeyDown} className="grid grid-cols-2 gap-2 sm:grid-cols-3">
                       {visibleStyles.map((preset) => {
                         const fonts = FONT_PAIRS.find((f) => f.key === preset.fontPair);
                         return (
                           <button
                             key={preset.key}
                             type="button"
-                            aria-pressed={styleKey === preset.key}
+                            role="radio"
+                            aria-checked={styleKey === preset.key}
+                            tabIndex={styleKey && styleKey !== preset.key ? -1 : 0}
                             onClick={() => chooseStyle(preset.key)}
-                            className={`rounded-xl border p-3 text-start transition ${
+                            className={`rounded-xl border p-3 text-start transition ${FOCUS_RING} ${
                               styleKey === preset.key ? 'border-primary ring-2 ring-primary/25' : 'border-border hover:border-primary/40'
                             }`}
                           >
@@ -792,6 +854,7 @@ const AdminOnboarding = () => {
                               <span className="h-4 w-10 bg-white/90" style={{ borderRadius: preset.radiusPreset === 'sharp' ? 0 : preset.radiusPreset === 'subtle' ? 4 : 999 }} />
                             </div>
                             <div className="flex flex-wrap items-center gap-1">
+                              {styleKey === preset.key ? <Check className="h-4 w-4 text-primary" aria-hidden /> : null}
                               <p className="text-sm font-semibold">{styleLabel(preset.key)}</p>
                               {!isThemeAllowed(store?.planCode, preset.themeKey) ? (
                                 <PlanLockBadge tone="light" plan={themeMinPlan(preset.themeKey)} />
@@ -804,15 +867,15 @@ const AdminOnboarding = () => {
                     </div>
                     <button
                       type="button"
-                      className="mt-2 text-xs font-medium text-primary hover:underline"
+                      className={`mt-2 inline-flex min-h-11 items-center text-xs font-medium text-primary hover:underline sm:min-h-0 ${FOCUS_RING}`}
                       onClick={() => setShowAllStyles((v) => !v)}
                     >
                       {showAllStyles ? t('ob.styles.showRecommended') : t('ob.styles.showAll', { count: STYLE_PRESETS.length })}
                     </button>
                   </div>
 
-                  <details className="rounded-xl border border-border p-4" open={!!(logoUrl || tagline) || undefined}>
-                    <summary className="cursor-pointer text-sm font-semibold">{t('ob.brand.summary')}</summary>
+                  <details className="rounded-xl border border-border p-4" open={brandOpen} onToggle={(e) => setBrandOpen(e.currentTarget.open)}>
+                    <summary className={`cursor-pointer rounded-md text-sm font-semibold ${FOCUS_RING}`}>{t('ob.brand.summary')}</summary>
                     <div className="mt-4 space-y-4">
                       <div>
                         <div className="flex items-center justify-between gap-2">
@@ -821,7 +884,7 @@ const AdminOnboarding = () => {
                             type="button"
                             size="sm"
                             variant="ghost"
-                            className="h-7 gap-1.5 text-xs text-primary"
+                            className="h-9 gap-1.5 text-xs text-primary sm:h-7"
                             disabled={suggestingTagline}
                             onClick={() => void suggestTagline()}
                           >
@@ -843,7 +906,7 @@ const AdminOnboarding = () => {
                         </Label>
                         <ImageUpload value={logoUrl} onChange={setLogoUrl} onUpload={uploadLogo} />
                         {logoPalette && logoUrl ? (
-                          <div className="mt-3 flex flex-wrap items-center gap-3 rounded-xl border border-primary/30 bg-primary/5 p-3">
+                          <div role="status" className="mt-3 flex flex-wrap items-center gap-3 rounded-xl border border-primary/30 bg-primary/5 p-3">
                             <span
                               className="h-8 w-12 shrink-0 rounded-md border border-border"
                               style={{ background: `linear-gradient(135deg, ${logoPalette.primary} 50%, ${logoPalette.secondary} 50%)` }}
@@ -860,16 +923,18 @@ const AdminOnboarding = () => {
                   </details>
 
                   <details className="rounded-xl border border-border p-4">
-                    <summary className="cursor-pointer text-sm font-semibold">{t('ob.details')}</summary>
+                    <summary className={`cursor-pointer rounded-md text-sm font-semibold ${FOCUS_RING}`}>{t('ob.details')}</summary>
                     <div className="mt-4 space-y-6">
                   <div>
                     <Label className="mb-2 block">{t('ob.design')}</Label>
-                    <div className="grid grid-cols-2 gap-2">
+                    <div role="radiogroup" aria-label={t('ob.design')} onKeyDown={onRadioKeyDown} className="grid grid-cols-2 gap-2">
                       {STORE_THEMES.map((theme) => (
                         <button
                           key={theme.key}
                           type="button"
-                          aria-pressed={themeKey === theme.key}
+                          role="radio"
+                          aria-checked={themeKey === theme.key}
+                          tabIndex={themeKey !== theme.key ? -1 : 0}
                           onClick={() => {
                             if (!isThemeAllowed(store?.planCode, theme.key)) {
                               toast.message(t('ob.planLocked.theme', { name: t(`ob.theme.${theme.key}` as AdminMessageKey) }));
@@ -877,7 +942,7 @@ const AdminOnboarding = () => {
                             }
                             setThemeKey(theme.key);
                           }}
-                          className={`rounded-xl border p-3 text-start transition ${
+                          className={`rounded-xl border p-3 text-start transition ${FOCUS_RING} ${
                             themeKey === theme.key ? 'border-primary ring-2 ring-primary/25' : 'border-border hover:border-primary/40'
                           }`}
                         >
@@ -886,6 +951,7 @@ const AdminOnboarding = () => {
                             style={{ background: `linear-gradient(135deg, ${theme.demoPrimary}, ${theme.demoSecondary})` }}
                           />
                           <div className="flex flex-wrap items-center gap-1">
+                            {themeKey === theme.key ? <Check className="h-4 w-4 text-primary" aria-hidden /> : null}
                             <p className="text-sm font-semibold">{t(`ob.theme.${theme.key}` as AdminMessageKey)}</p>
                             {!isThemeAllowed(store?.planCode, theme.key) ? (
                               <PlanLockBadge tone="light" plan={themeMinPlan(theme.key)} />
@@ -902,19 +968,24 @@ const AdminOnboarding = () => {
                     <div className="mb-3 flex flex-wrap gap-2">
                       {PALETTES.map((p) => (
                         <button
-                          key={p.label}
+                          key={p.key}
                           type="button"
-                          title={p.label}
-                          aria-label={t('ob.palette', { name: p.label })}
+                          title={t(`ob.pal.${p.key}` as AdminMessageKey)}
+                          aria-pressed={primaryColor.toLowerCase() === p.primary.toLowerCase()}
+                          aria-label={t('ob.palette', { name: t(`ob.pal.${p.key}` as AdminMessageKey) })}
                           onClick={() => {
                             setPrimaryColor(p.primary);
                             setSecondaryColor(p.secondary);
                           }}
-                          className={`h-9 w-14 rounded-lg border-2 transition ${
+                          className={`flex h-11 w-14 items-center justify-center rounded-lg border-2 transition sm:h-9 ${FOCUS_RING} ${
                             primaryColor.toLowerCase() === p.primary.toLowerCase() ? 'border-foreground' : 'border-transparent'
                           }`}
                           style={{ background: `linear-gradient(135deg, ${p.primary} 50%, ${p.secondary} 50%)` }}
-                        />
+                        >
+                          {primaryColor.toLowerCase() === p.primary.toLowerCase() ? (
+                            <Check className="h-4 w-4 text-white drop-shadow" aria-hidden />
+                          ) : null}
+                        </button>
                       ))}
                     </div>
                     <div className="grid grid-cols-2 gap-3">
@@ -930,33 +1001,41 @@ const AdminOnboarding = () => {
                   </div>
 
                   <div className="grid gap-4 sm:grid-cols-2">
-                    <div>
+                    <div role="radiogroup" aria-label={t('ob.fonts')} onKeyDown={onRadioKeyDown}>
                       <Label className="mb-2 block">{t('ob.fonts')}</Label>
                       {FONT_PAIRS.map((p) => (
                         <button
                           key={p.key}
                           type="button"
+                          role="radio"
+                          aria-checked={fontPair === p.key}
+                          tabIndex={fontPair !== p.key ? -1 : 0}
                           onClick={() => setFontPair(p.key)}
-                          className={`mb-2 w-full rounded-lg border px-3 py-2 text-start text-sm ${
+                          className={`mb-2 flex min-h-11 w-full items-center justify-between gap-2 rounded-lg border px-3 py-2 text-start text-sm sm:min-h-0 ${FOCUS_RING} ${
                             fontPair === p.key ? 'border-primary bg-primary/5' : 'border-border'
                           }`}
                         >
                           {appearanceOptLabel(locale, 'font', p.key, p.label)}
+                          {fontPair === p.key ? <Check className="h-4 w-4 text-primary" aria-hidden /> : null}
                         </button>
                       ))}
                     </div>
-                    <div>
+                    <div role="radiogroup" aria-label={t('ob.radius')} onKeyDown={onRadioKeyDown}>
                       <Label className="mb-2 block">{t('ob.radius')}</Label>
                       {RADIUS_PRESETS.map((p) => (
                         <button
                           key={p.key}
                           type="button"
+                          role="radio"
+                          aria-checked={radiusPreset === p.key}
+                          tabIndex={radiusPreset !== p.key ? -1 : 0}
                           onClick={() => setRadiusPreset(p.key)}
-                          className={`mb-2 w-full rounded-lg border px-3 py-2 text-start text-sm ${
+                          className={`mb-2 flex min-h-11 w-full items-center justify-between gap-2 rounded-lg border px-3 py-2 text-start text-sm sm:min-h-0 ${FOCUS_RING} ${
                             radiusPreset === p.key ? 'border-primary bg-primary/5' : 'border-border'
                           }`}
                         >
                           {appearanceOptLabel(locale, 'radius', p.key, p.label)}
+                          {radiusPreset === p.key ? <Check className="h-4 w-4 text-primary" aria-hidden /> : null}
                         </button>
                       ))}
                     </div>
@@ -969,7 +1048,7 @@ const AdminOnboarding = () => {
               {step === 1 ? (
                 <section className="space-y-5 rounded-2xl border border-border bg-card p-6">
                   <div>
-                    <h2 className="font-display text-xl font-semibold">{t('ob.contact.title')}</h2>
+                    <h2 ref={headingRef} tabIndex={-1} className="font-display text-xl font-semibold outline-none">{t('ob.contact.title')}</h2>
                     <p className="mt-1 text-sm text-muted-foreground">
                       {t('ob.contact.subtitle')}
                     </p>
@@ -977,25 +1056,27 @@ const AdminOnboarding = () => {
                   <div className="grid gap-4 sm:grid-cols-2">
                     <div>
                       <Label htmlFor="ob-phone">{t('ob.phone')}</Label>
-                      <Input id="ob-phone" type="tel" dir="ltr" className="mt-1.5" value={contact.phone} placeholder="06 00 00 00 00" onChange={(e) => setContact({ ...contact, phone: e.target.value })} />
-                      <label className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
-                        <input type="checkbox" checked={waSame} onChange={(e) => setWaSame(e.target.checked)} />
+                      <Input id="ob-phone" type="tel" autoComplete="tel" dir="ltr" className="mt-1.5" value={contact.phone} placeholder="06 00 00 00 00" aria-invalid={phoneChecked && phoneInvalid} aria-describedby={phoneChecked && phoneInvalid ? 'ob-phone-err' : undefined} onBlur={() => setPhoneChecked(true)} onChange={(e) => setContact({ ...contact, phone: e.target.value })} />
+                      {phoneChecked && phoneInvalid ? <p id="ob-phone-err" role="alert" className="mt-1 text-xs text-destructive">{t('ob.err.phone')}</p> : null}
+                      <label className="mt-1 flex min-h-11 items-center gap-2 text-xs text-muted-foreground sm:min-h-0 sm:py-1">
+                        <input type="checkbox" className="h-5 w-5 accent-primary" checked={waSame} onChange={(e) => setWaSame(e.target.checked)} />
                         {t('ob.waSame')}
                       </label>
                     </div>
                     {waSame ? null : (
                       <div>
                         <Label htmlFor="ob-wa">{t('ob.whatsapp')}</Label>
-                        <Input id="ob-wa" type="tel" dir="ltr" className="mt-1.5" value={contact.whatsapp} placeholder="06 00 00 00 00" onChange={(e) => setContact({ ...contact, whatsapp: e.target.value })} />
+                        <Input id="ob-wa" type="tel" autoComplete="tel" dir="ltr" className="mt-1.5" value={contact.whatsapp} placeholder="06 00 00 00 00" aria-invalid={phoneChecked && waInvalid} aria-describedby={phoneChecked && waInvalid ? 'ob-wa-err' : undefined} onBlur={() => setPhoneChecked(true)} onChange={(e) => setContact({ ...contact, whatsapp: e.target.value })} />
+                        {phoneChecked && waInvalid ? <p id="ob-wa-err" role="alert" className="mt-1 text-xs text-destructive">{t('ob.err.phone')}</p> : null}
                       </div>
                     )}
                     <div>
                       <Label htmlFor="ob-city">{t('ob.city')}</Label>
-                      <Input id="ob-city" className="mt-1.5" value={contact.city} placeholder={t('ob.city.placeholder')} onChange={(e) => setContact({ ...contact, city: e.target.value })} />
+                      <Input id="ob-city" autoComplete="address-level2" className="mt-1.5" value={contact.city} placeholder={t('ob.city.placeholder')} onChange={(e) => setContact({ ...contact, city: e.target.value })} />
                     </div>
                     <div>
                       <Label htmlFor="ob-email">{t('ob.email')}</Label>
-                      <Input id="ob-email" type="email" dir="ltr" className="mt-1.5" value={contact.email} onChange={(e) => setContact({ ...contact, email: e.target.value })} />
+                      <Input id="ob-email" type="email" autoComplete="email" dir="ltr" className="mt-1.5" value={contact.email} onChange={(e) => setContact({ ...contact, email: e.target.value })} />
                     </div>
                   </div>
                 </section>
@@ -1004,13 +1085,13 @@ const AdminOnboarding = () => {
               {step === 2 ? (
                 <section className="space-y-5 rounded-2xl border border-border bg-card p-6">
                   <div>
-                    <h2 className="font-display text-xl font-semibold">{t('ob.catalog.title')}</h2>
+                    <h2 ref={headingRef} tabIndex={-1} className="font-display text-xl font-semibold outline-none">{t('ob.catalog.title')}</h2>
                     <p className="mt-1 text-sm text-muted-foreground">
                       {t('ob.catalog.subtitle', { pack: sectorLabel(pack.key) })}
                     </p>
                   </div>
                   {productCount > 0 ? (
-                    <p className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-900">
+                    <p className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-900 dark:text-emerald-200">
                       {demoProducts.length > 0
                         ? t('ob.catalog.countWithDemo', { count: productCount, demo: demoProducts.length })
                         : t('ob.catalog.count', { count: productCount })}
@@ -1104,13 +1185,13 @@ const AdminOnboarding = () => {
               {step === 3 ? (
                 <section className="space-y-5 rounded-2xl border border-border bg-card p-6">
                   <div>
-                    <h2 className="font-display text-xl font-semibold">{t('ob.publish.title')}</h2>
+                    <h2 ref={headingRef} tabIndex={-1} className="font-display text-xl font-semibold outline-none">{t('ob.publish.title')}</h2>
                     <p className="mt-1 text-sm text-muted-foreground">
                       {t('ob.publish.subtitle')}
                     </p>
                   </div>
                   <label className="flex items-start gap-3 rounded-xl border border-border p-4 text-sm">
-                    <input type="checkbox" className="mt-1" checked={publishHome} onChange={(e) => setPublishHome(e.target.checked)} />
+                    <input type="checkbox" className="mt-0.5 h-5 w-5 shrink-0 accent-primary" checked={publishHome} onChange={(e) => setPublishHome(e.target.checked)} />
                     <span>
                       <strong>{t('ob.publish.home')}</strong>
                       <span className="mt-0.5 block text-muted-foreground">
@@ -1119,24 +1200,24 @@ const AdminOnboarding = () => {
                     </span>
                   </label>
                   <label className="flex items-start gap-3 rounded-xl border border-border p-4 text-sm">
-                    <input type="checkbox" className="mt-1" checked={createLegal} onChange={(e) => setCreateLegal(e.target.checked)} />
+                    <input type="checkbox" className="mt-0.5 h-5 w-5 shrink-0 accent-primary" checked={createLegal} onChange={(e) => setCreateLegal(e.target.checked)} />
                     <span>
                       <strong>{t('ob.publish.legal')}</strong> {t('ob.publish.legalPages')}
                       <span className="mt-0.5 block text-xs text-muted-foreground">{t('ob.publish.legalDisclaimer')}</span>
                     </span>
                   </label>
-                  <details className="space-y-2 rounded-xl border border-border p-4 text-sm" open={extraPages.length > 0 || undefined}>
-                    <summary className="cursor-pointer font-semibold">
+                  <details className="space-y-2 rounded-xl border border-border p-4 text-sm" open={extraOpen} onToggle={(e) => setExtraOpen(e.currentTarget.open)}>
+                    <summary className={`cursor-pointer rounded-md font-semibold ${FOCUS_RING}`}>
                       {t('ob.publish.extra')}{extraPages.length > 0 ? ` · ${extraPages.length}` : ''}
                     </summary>
                     <span className="mt-2 block text-xs text-muted-foreground">
                       {t('ob.publish.extraHint')}
                     </span>
                     {PAGE_TEMPLATES.filter((p) => !p.meta.isHome).map((tpl) => (
-                      <label key={tpl.key} className="flex items-start gap-3 pt-1">
+                      <label key={tpl.key} className="flex items-start gap-3 py-1.5">
                         <input
                           type="checkbox"
-                          className="mt-1"
+                          className="mt-0.5 h-5 w-5 shrink-0 accent-primary"
                           checked={extraPages.includes(tpl.key)}
                           onChange={(e) =>
                             setExtraPages((prev) => (e.target.checked ? [...prev, tpl.key] : prev.filter((k) => k !== tpl.key)))
@@ -1150,15 +1231,15 @@ const AdminOnboarding = () => {
                     ))}
                   </details>
                   {!settings?.logoUrl && !logoUrl ? (
-                    <p className="text-xs text-amber-800">{t('ob.tip.logo')}</p>
+                    <p className="text-xs text-amber-800 dark:text-amber-300">{t('ob.tip.logo')}</p>
                   ) : null}
                   {productCount === 0 ? (
-                    <p className="text-xs text-amber-800">
+                    <p className="text-xs text-amber-800 dark:text-amber-300">
                       {t('ob.tip.catalog')}
                     </p>
                   ) : null}
                   {publish.isError ? (
-                    <p className="text-sm text-destructive">{t('ob.publish.failed')}</p>
+                    <p role="alert" className="text-sm text-destructive">{t('ob.publish.failed')}</p>
                   ) : null}
                   <Button
                     type="button"
@@ -1173,25 +1254,25 @@ const AdminOnboarding = () => {
                 </section>
               ) : null}
 
-              <div className="flex justify-between gap-3">
-                <Button type="button" variant="outline" className="gap-2" disabled={step === 0 || busy} onClick={() => void go(step - 1)}>
+              <div className="sticky bottom-0 z-20 flex justify-between gap-3 border-t border-border bg-background/95 py-3 backdrop-blur lg:static lg:border-0 lg:bg-transparent lg:py-0 lg:backdrop-blur-none">
+                <Button type="button" variant="outline" className="h-11 gap-2 lg:h-10" disabled={step === 0 || busy} onClick={() => void go(step - 1)}>
                   <ArrowLeft className="h-4 w-4 rtl:rotate-180" /> {t('ob.back')}
                 </Button>
                 {step < LAST_STEP ? (
                   <div className="flex flex-wrap justify-end gap-2">
                     {step <= 1 ? (
                       // Tout a une valeur par défaut correcte : on peut publier sans passer par Contact et Catalogue.
-                      <Button type="button" variant="ghost" className="gap-1.5" disabled={busy} onClick={() => void go(LAST_STEP)}>
+                      <Button type="button" variant="ghost" className="h-11 gap-1.5 lg:h-10" disabled={busy} onClick={() => void go(LAST_STEP)}>
                         <Rocket className="h-4 w-4" /> {t('ob.publishNow')}
                       </Button>
                     ) : null}
-                    {step >= 1 ? (
-                      <Button type="button" variant="ghost" disabled={busy} onClick={() => goToStep(step + 1)}>
+                    {step === 1 ? (
+                      <Button type="button" variant="ghost" className="h-11 lg:h-10" disabled={busy} onClick={() => goToStep(step + 1)}>
                         {t('ob.skip')}
                       </Button>
                     ) : null}
-                    <Button type="button" className="gap-2" disabled={busy} onClick={() => void go(step + 1)}>
-                      {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+                    <Button type="button" className="h-11 gap-2 lg:h-10" disabled={busy} onClick={() => void go(step + 1)}>
+                      {saveStyle.isPending || saveContact.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
                       {t('ob.continue')} <ArrowRight className="h-4 w-4 rtl:rotate-180" />
                     </Button>
                   </div>
@@ -1199,7 +1280,7 @@ const AdminOnboarding = () => {
               </div>
             </div>
 
-            <div className="lg:sticky lg:top-4 lg:self-start">{preview}</div>
+            <div id="ob-preview" className={`lg:sticky lg:top-4 lg:self-start ${previewOpen ? '' : 'hidden lg:block'}`}>{preview}</div>
           </div>
         )}
 
