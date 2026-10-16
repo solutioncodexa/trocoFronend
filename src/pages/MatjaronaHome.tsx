@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { Check, Minus } from 'lucide-react';
@@ -7,6 +7,7 @@ import type { PlanMarketingDTO } from '@/types/api';
 import { useAdmin } from '@/contexts/AdminContext';
 import { useAdminLocale } from '@/contexts/AdminLocaleContext';
 import { useOpenStorefront } from '@/hooks/useOpenStorefront';
+import { useLandingMotion } from '@/hooks/useLandingMotion';
 import { TRIAL_DAYS } from '@/config/site';
 import { slugify } from '@/utils/slug';
 import { buildStorefrontUrl } from '@/utils/storefrontUrl';
@@ -114,6 +115,8 @@ const MatjaronaHome = () => {
   const { canViewPublic, openStorefront } = useOpenStorefront();
   const c = landingCopy[locale] ?? landingCopy.fr;
   const [shopName, setShopName] = useState('');
+  const rootRef = useRef<HTMLDivElement>(null);
+  useLandingMotion(rootRef);
 
   const { data: plans = [] } = useQuery({
     queryKey: ['platform', 'plans'],
@@ -145,7 +148,7 @@ const MatjaronaHome = () => {
   );
 
   return (
-    <div className="gs-root" dir={dir} lang={locale}>
+    <div ref={rootRef} className="gs-root" dir={dir} lang={locale}>
       <style>{CSS}</style>
 
       <section className="gs-hero">
